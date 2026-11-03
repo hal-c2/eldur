@@ -1,0 +1,23 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+.col{float:left;width:150px;height:30px;background:#cde;margin-right:10px}
+.r{float:right;width:40px;height:20px;background:#edc}
+.c{clear:both;height:2px;background:#000}
+.cf::after{content:"";display:table;clear:both}
+</style></head><body>
+<div id="top" style="height:4px;background:#333"></div>
+<script>
+const mk=(t,p,c,id,txt)=>{const e=document.createElement(t);if(c)e.className=c;e.id=id;if(txt)e.textContent=txt;p.appendChild(e);return e};
+const wrap=mk('div',document.body,'','wrap');
+const a=mk('div',wrap,'','a');mk('div',a,'col','a1');mk('div',a,'col','a2');
+const b=mk('div',wrap,'','b');const bw=mk('div',b,'','bw');mk('div',bw,'col','b1');
+mk('div',wrap,'','t',' some words that flow beside the floats here');
+mk('div',wrap,'c','c1');
+const d=mk('div',wrap,'','d');mk('div',d,'r','r1');mk('div',d,'r','r2');
+const e=mk('div',wrap,'','e');mk('div',e,'r','r3');
+mk('div',wrap,'c','c2');
+const s=mk('div',wrap,'','s');s.style.overflow='hidden';mk('div',s,'col','s1');
+const cf=mk('div',wrap,'cf','cf');mk('div',cf,'col','f1');mk('div',cf,'col','f2');
+mk('div',wrap,'','after','x');
+for(const n of ['wrap','a','a2','b','bw','b1','t','c1','d','r2','e','r3','c2','s','cf','f2','after']){const q=document.getElementById(n).getBoundingClientRect();console.log('CS '+n+' '+[q.x,q.y,q.width,q.height].join(','))}
+</script></body></html>

@@ -60,6 +60,9 @@ fn shown_when(obj: &Object, b: &LayoutBox<'_>, cx: &mut Emitter<'_, '_>) -> Opti
     if insets.vertical() != 0.0 || !matches!(b.style.height, eldur_css::Size::Auto) {
         return None;
     }
+    if let Some(shown) = waits_for_text(obj) {
+        return Some(shown);
+    }
     let mut ids = Vec::new();
     let mut kids: Vec<&Object> = vec![obj];
     while let Some(holder) = kids.pop() {
@@ -67,6 +70,7 @@ fn shown_when(obj: &Object, b: &LayoutBox<'_>, cx: &mut Emitter<'_, '_>) -> Opti
             if let Member::Child(kid) = member {
                 match (&kid.id, kid.get("visible")) {
                     (Some(id), Some(Value::Bool(false))) => ids.push(format!("{id}.visible")),
+                    _ if let Some(shown) = waits_for_text(kid) => ids.push(shown),
                     // An item's line of text is its only child.
                     _ if kid.type_name == "EldurLines" => kids.push(kid),
                     _ => return None,
@@ -75,6 +79,17 @@ fn shown_when(obj: &Object, b: &LayoutBox<'_>, cx: &mut Emitter<'_, '_>) -> Opti
         }
     }
     (!ids.is_empty() && ids.len() <= HiddenRun::NEAREST).then(|| ids.join(" || "))
+}
+
+/// An empty block a script may fill is kept as a `Text` with no line box; until
+/// it has text or an element, margins collapse through it as through any empty
+/// block.
+fn waits_for_text(obj: &Object) -> Option<String> {
+    let id = obj.id.as_ref()?;
+    (obj.type_name == "Text"
+        && matches!(obj.get("text"), Some(Value::String(t)) if t.is_empty())
+        && matches!(obj.get("Layout.preferredHeight"), Some(Value::Expr(_))))
+    .then(|| format!("({id}.text !== \"\" || {id}.children.length > 0)"))
 }
 
 /// The top margin of the item after a hidden run: collapsed with the bottom

@@ -760,3 +760,26 @@ fn rule_pseudo_boxes() {
 fn rule_table_row_added() {
     page("rule_table_row_added");
 }
+
+/// Classes give and take `::before`/`::after` boxes at run time: an icon goes
+/// from a static span, a block heading comes and goes on a box, a tooltip and a
+/// required-field asterisk appear, and a created span keeps its icon on its line.
+#[test]
+fn rule_pseudo_class_change() {
+    page("rule_pseudo_class_change");
+}
+
+/// The same class changes on a page whose script makes nothing the templates
+/// cannot: the boxes the classes give still come and go.
+#[test]
+fn rule_pseudo_class_closed() {
+    page("rule_pseudo_class_closed");
+}
+
+/// Floats a script makes in blocks that are no formatting context of their own
+/// go on past them, beside the floats and lines after; a clearfix the script
+/// makes holds its floats side by side.
+#[test]
+fn rule_floats_escape() {
+    page("rule_floats_escape");
+}

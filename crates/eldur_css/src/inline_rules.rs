@@ -333,9 +333,21 @@ pub(crate) fn runtime_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<R
             if !rule.media.iter().all(|m| m.matches(viewport)) {
                 continue;
             }
+            // `content` only says something on a pseudo-element: there it is
+            // what decides whether the runtime makes a box for one.
+            let on_pseudo = split_list(text).iter().any(|p| {
+                strip_pseudo(p.trim(), "before").is_some()
+                    || strip_pseudo(p.trim(), "after").is_some()
+            });
             let mut declarations: Vec<(String, String, bool)> = Vec::new();
             for d in &rule.declarations {
                 let entry = match &d.value {
+                    DeclValue::Expanded(Longhand::Content, v) if on_pseudo => {
+                        Some(("content".to_owned(), v.clone()))
+                    }
+                    DeclValue::Wide(Longhand::Content, w) if on_pseudo => {
+                        Some(("content".to_owned(), wide(w).to_owned()))
+                    }
                     DeclValue::Expanded(l, v) => property(*l)
                         .or_else(|| box_property(*l))
                         .map(|name| (name.to_owned(), v.clone())),

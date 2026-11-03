@@ -51,6 +51,10 @@ pub(crate) struct LayoutBox<'a> {
     /// content, except a disclosure triangle, which starts this box's first
     /// line (see [`Marker::in_line`]).
     pub marker: Option<Marker<'a>>,
+    /// `before` or `after` for a `::before`/`::after` laid out as a box: a
+    /// script's DOM does not see it, and the runtime keeps it at that end of
+    /// its element's children.
+    pub pseudo: Option<&'static str>,
 }
 
 /// An `outside` list marker, drawn in the margin area of the list item.
@@ -323,6 +327,7 @@ impl<'a> Builder<'a, '_> {
                 kind,
                 content: self.button_content(node),
                 marker: None,
+                pseudo: None,
             };
         }
         let mut children = Vec::new();
@@ -387,6 +392,7 @@ impl<'a> Builder<'a, '_> {
             kind,
             content,
             marker,
+            pseudo: None,
         }
     }
 
@@ -438,7 +444,7 @@ impl<'a> Builder<'a, '_> {
         self.counters.push();
         let element_style = self.styles.computed(node);
         if let Some(before) = element_style.and_then(|s| s.before.as_deref()) {
-            self.pseudo(node, before, out);
+            self.pseudo(node, before, "before", out);
         }
         let mut first_letter = element_style
             .filter(|s| is_block_level(s.style.display) || s.style.display == Display::ListItem)
@@ -500,7 +506,7 @@ impl<'a> Builder<'a, '_> {
             }
         }
         if let Some(after) = element_style.and_then(|s| s.after.as_deref()) {
-            self.pseudo(node, after, out);
+            self.pseudo(node, after, "after", out);
         }
         self.counters.pop();
     }
@@ -621,7 +627,13 @@ impl<'a> Builder<'a, '_> {
         Some(built)
     }
 
-    fn pseudo(&mut self, node: NodeId, style: &'a ComputedStyle, out: &mut Vec<Child<'a>>) {
+    fn pseudo(
+        &mut self,
+        node: NodeId,
+        style: &'a ComputedStyle,
+        side: &'static str,
+        out: &mut Vec<Child<'a>>,
+    ) {
         if style.display == Display::None {
             return;
         }
@@ -650,6 +662,7 @@ impl<'a> Builder<'a, '_> {
                 kind: kind_of(style.display),
                 content,
                 marker: None,
+                pseudo: Some(side),
             });
             out.push(if atomic && !out_of_flow {
                 Child::Inline(whitespace::Raw::Atomic(built))
@@ -886,6 +899,7 @@ fn start_first_line<'a>(
                 kind: BoxKind::Block,
                 content: Content::Empty,
                 marker: Some(triangle),
+                pseudo: None,
             },
         ),
     }
@@ -915,6 +929,7 @@ fn group<'a>(children: Vec<Child<'a>>, parent: &'a ComputedStyle) -> Content<'a>
                 kind: BoxKind::Block,
                 content: Content::Inline(items),
                 marker: None,
+                pseudo: None,
             });
         }
     };

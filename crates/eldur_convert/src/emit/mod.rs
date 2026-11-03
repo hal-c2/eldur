@@ -1032,6 +1032,22 @@ impl<'a, 'd> Emitter<'a, 'd> {
             self.transform(&mut e.obj, &b.style, &hint(self.doc, b), &what, line);
         }
         self.sticky_transform(&mut e.obj, &b.style, &hint(self.doc, b));
+        // The runtime shows, hides and keeps in place what a class change
+        // gives or takes from the element, and a script does not see it.
+        if self.runtime_dom
+            && let Some(side) = b.pseudo
+        {
+            e.obj.members.insert(
+                0,
+                Member::PropertyDecl {
+                    ty: "string".to_owned(),
+                    name: "eldurPseudo".to_owned(),
+                    value: Some(Value::String(side.to_owned())),
+                    readonly: true,
+                    required: false,
+                },
+            );
+        }
         // Every element box ends here, with its outermost object.
         if self.runtime_dom
             && let Some(node) = b.node

@@ -638,6 +638,12 @@ impl Emitter<'_, '_> {
         // the elements only runs cut.
         let mut seen = std::collections::HashSet::new();
         for piece in &list {
+            // A generated box is not a child `all_inline` sees, but the element
+            // around it reaches across it all the same: the runtime finds the
+            // box by the element's key.
+            if let Piece::Atomic(_, Some(owner)) = piece {
+                self.cut_nodes.insert(*owner);
+            }
             if let Piece::Run(items) = piece {
                 let mut spans = Vec::new();
                 each_span(items, &mut spans);
@@ -768,11 +774,22 @@ impl Emitter<'_, '_> {
                             },
                         );
                     }
+                    // The item a line holds is the one the runtime shows, hides
+                    // and keeps at its element's end.
+                    let pseudo = obj
+                        .members
+                        .iter()
+                        .position(|m| matches!(m, Member::PropertyDecl { name, .. } if name == "eldurPseudo"))
+                        .filter(|_| !part.own)
+                        .map(|at| obj.members.remove(at));
                     let mut placed = if part.own {
                         obj
                     } else {
                         self.place_atomic(obj, &part.hint, part.margins, 0.0)
                     };
+                    if let Some(pseudo) = pseudo {
+                        placed.members.insert(0, pseudo);
+                    }
                     vertical_align(&mut placed, &a.style);
                     if self.options.source_comments
                         && let Some(node) = a.node

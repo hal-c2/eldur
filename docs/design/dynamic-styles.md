@@ -984,6 +984,9 @@ change after conversion.** That is the case when the rule:
   own elements keep the converter's variants, so a theme switch on
   `<html data-theme>` stays closed;
 - gives an element a class that takes it out of flow;
+- gives `::before`/`::after` a box (`display`, `float` or `position`) through a
+  class a script writes. The runtime makes, shows and hides such boxes only on an
+  open page, and a template has no place to put one;
 - names a class at all, when a script writes a computed class name on an element
   the analysis can't name (it can be any class on any element);
 - changes a created element's width or kind of box, and matches that element by
@@ -1051,7 +1054,14 @@ At run time:
   since what flows beside a float is placed by a pass, not by a column. Margins,
   clearance and line cutting follow the rules in layout.md §5.5, as the static
   layout does. A block in the same formatting context gets the floats in its own
-  coordinates (`gAround`), and line boxes get them as `exclusion`. A text the
+  coordinates (`gAround`), and line boxes get them as `exclusion`. A float in a
+  block that is no formatting context of its own (a clearfix row a script fills)
+  is not held by it: the block's pass hands its floats up (`floats` on its
+  placement, `_gJoinFloats`) and its height leaves them out, and a later float on
+  the same side lines up beside them (`prior` in `_gPlaceFloats`). That is done
+  only where the parent is a box the runtime lays out; under a column a page wrote
+  (the body, say) the block still holds its floats. A created element a
+  template paints is adopted when it holds floats, as a written one is. A text the
   script filled before the element was in the page takes the cascade's font into
   its inline model when the element is painted (`_vInheritFont`).
 - **Generated text is the element's for a read.** A class change that gives an
@@ -1086,8 +1096,15 @@ At run time:
   A pseudo-element laid out as a box (block-level, atomic inline, floated or
   absolutely positioned) is a box of the converted tree like an element of
   that style; an absolutely positioned one leaves its line's baseline to the
-  rest (CSS 2.2 §10.8.1). Not followed: such a box that a class change adds or
-  removes (the runtime's generated text is only ever on a line), `content`
+  rest (CSS 2.2 §10.8.1). A class change or an insertion that gives an element
+  such a box makes it (`_pseudoBoxes`); one that takes it away hides it. The
+  converter marks its own boxes `eldurPseudo`, on the item a line holds when
+  the box is atomic inline (its wrapper), since that is what is shown and
+  hidden and kept at the element's end. The runtime's boxes carry their owner
+  in their record (`pseudoOf`), which still holds when being out of flow moves
+  one under its gate, and a swap to or from out-of-flow form carries the box
+  over. A script's reads of the element's children and text skip them. Not
+  followed: `content`
   other than strings, `attr()` and counters, and `counter(list-item)` in a `reversed` list or after `<li value>` (in Chromium the
   `::before` widths of a three-item reversed list whose last item has
   `value=7` fit 0, −1, −1. That is not yet understood, so it is not copied).

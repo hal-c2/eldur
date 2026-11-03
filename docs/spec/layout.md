@@ -81,6 +81,8 @@ ScrollView {
 
 **Margin collapsing rule:** the collapsed gap (`max(prev.bottom, next.top)`) goes on the following item as `Layout.topMargin`. `spacing` stays 0 and the previous item gets no bottom margin, so gaps are not doubled. Layout margins add to spacing, so this is the only way to get exact CSS gaps. Collapse only applies in block flow, not between flex or grid items.
 
+**Empty blocks a script may fill.** An empty block collapses through (CSS 2.2 §8.3.1) and is not emitted. On a script page one a script can reach is kept as a `Text` with no line box (`Layout.preferredHeight: text === "" ? 0 : -1`); margins still collapse through it, so the next item's top margin is what the empty block would hand it until the block has text or a child: `(host.text !== "" || host.children.length > 0) ? 14 : 0`.
+
 **Centering (`margin: 0 auto`)**: inside a `ColumnLayout`, use `Layout.alignment: Qt.AlignHCenter` with `Layout.preferredWidth` set to the fixed border-box width (no `fillWidth`). For `max-width` with auto width, use `Layout.fillWidth: true` plus `Layout.maximumWidth`. Use the `x` binding above when the parent is a plain `Item`.
 
 | Feature | Support | Notes |
