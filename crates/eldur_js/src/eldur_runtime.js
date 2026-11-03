@@ -1973,7 +1973,7 @@ function _pseudoTouch() {
 
 // An element in or out changes the numbers after it.
 function _counterTouch() {
-    if (_counterRules.length > 0) {
+    if (_counterRules.length > 0 || (_pseudoRules && _pseudoRules.some(_counterUsed))) {
         _pseudoTouch();
     }
 }
@@ -2031,15 +2031,18 @@ function _counterDisplayed(raw) {
 
 // The counters each of `wanted` sees at its `::before` and its `::after`: the
 // document walked in order, each element's reset, then increment, then set
-// (CSS Lists 3 §4), a counter reaching its element's following siblings.
-function _counterValues(wanted) {
+// (CSS Lists 3 §4), a counter reaching its element's following siblings. A
+// generated box counts inside its element, before or after its children.
+function _counterValues(wanted, generated) {
     var changes = new Map();
     _counterRules.forEach(function(rule, order) {
         var rank = rule.spec[0] * 1e6 + rule.spec[1] * 1e3 + rule.spec[2];
+        var side = rule.after === undefined ? "own" : rule.after ? "after" : "before";
         var found = document.querySelectorAll(rule.sel);
         for (var i = 0; i < found.length; ++i) {
             var raw = _unwrap(found[i]);
-            var entry = changes.get(raw) || {};
+            var sides = changes.get(raw) || { own: {}, before: {}, after: {} };
+            var entry = sides[side];
             rule.changes.forEach(function(change) {
                 var weight = (change[2] ? 1e9 : 0) + rank;
                 var had = entry[change[0]];
@@ -2047,7 +2050,7 @@ function _counterValues(wanted) {
                     entry[change[0]] = { list: change[1], weight: weight, order: order };
                 }
             });
-            changes.set(raw, entry);
+            changes.set(raw, sides);
         }
     });
     var frames = [[]];
@@ -2063,6 +2066,38 @@ function _counterValues(wanted) {
         frames[frames.length - 1].push(made);
         return made;
     };
+    var reset = function(name, value) {
+        var frame = frames[frames.length - 1];
+        var at = frame.filter(function(x) { return x.name === name; })[0];
+        if (at) {
+            at.value = value;
+        } else {
+            frame.push({ name: name, value: value });
+        }
+    };
+    var names = function(own, prop, name) {
+        return Boolean(own[prop]) && own[prop].list.some(function(c) { return c[0] === name; });
+    };
+    var apply = function(own, raw) {
+        (own["counter-reset"] ? own["counter-reset"].list : []).forEach(function(c) { reset(c[0], c[1]); });
+        // HTML's lists number their items whatever counters the page resets
+        // on them (measured: an `<ol>` with `counter-reset: n` restarts at i).
+        var tag = raw ? _nodeTag(raw) : "";
+        if ((tag === "ol" || tag === "ul" || tag === "menu") && !names(own, "counter-reset", "list-item")) {
+            var start = tag === "ol" ? parseInt(getAttribute(raw, "start"), 10) : NaN;
+            reset("list-item", isNaN(start) ? 0 : start - 1);
+        }
+        if (raw && !names(own, "counter-increment", "list-item")
+            && (_gHasCascade() ? _gStyle(raw).display === "list-item" : tag === "li")) {
+            innermost("list-item").value += 1;
+        }
+        (own["counter-increment"] ? own["counter-increment"].list : []).forEach(function(c) {
+            innermost(c[0]).value += c[1];
+        });
+        (own["counter-set"] ? own["counter-set"].list : []).forEach(function(c) {
+            innermost(c[0]).value = c[1];
+        });
+    };
     var snapshot = function() {
         var all = [];
         frames.forEach(function(frame) {
@@ -2075,32 +2110,23 @@ function _counterValues(wanted) {
         if (!_counterDisplayed(raw)) {
             return;
         }
-        var own = changes.get(raw);
-        if (own) {
-            var frame = frames[frames.length - 1];
-            (own["counter-reset"] ? own["counter-reset"].list : []).forEach(function(c) {
-                var at = frame.filter(function(x) { return x.name === c[0]; })[0];
-                if (at) {
-                    at.value = c[1];
-                } else {
-                    frame.push({ name: c[0], value: c[1] });
-                }
-            });
-            (own["counter-increment"] ? own["counter-increment"].list : []).forEach(function(c) {
-                innermost(c[0]).value += c[1];
-            });
-            (own["counter-set"] ? own["counter-set"].list : []).forEach(function(c) {
-                innermost(c[0]).value = c[1];
-            });
+        var sides = changes.get(raw) || { own: {}, before: {}, after: {} };
+        var made = generated.get(raw) || {};
+        apply(sides.own, raw);
+        frames.push([]);
+        if (made.before) {
+            apply(sides.before, null);
         }
         var seen = wanted.has(raw) ? { before: snapshot() } : null;
-        frames.push([]);
         _rawElementChildren(raw).forEach(visit);
-        frames.pop();
+        if (made.after) {
+            apply(sides.after, null);
+        }
         if (seen) {
             seen.after = snapshot();
             out.set(raw, seen);
         }
+        frames.pop();
     };
     var top = _unwrap(document.documentElement);
     if (top) {
@@ -2254,15 +2280,21 @@ function _pseudoFlush(baseline) {
     var numbered = null;
     if (_counterRules.length > 0 || _pseudoRules.some(_counterUsed)) {
         var wanted = new Set();
+        // Which elements have a generated box, whose own counters count.
+        var generated = new Map();
         _pseudoRules.forEach(function(rule) {
-            if (_counterUsed(rule)) {
-                var at = document.querySelectorAll(rule.sel);
-                for (var w = 0; w < at.length; ++w) {
-                    wanted.add(_unwrap(at[w]));
+            var at = rule.drawOnly ? [] : document.querySelectorAll(rule.sel);
+            for (var w = 0; w < at.length; ++w) {
+                var holder = _unwrap(at[w]);
+                var made = generated.get(holder) || {};
+                made[rule.after ? "after" : "before"] = true;
+                generated.set(holder, made);
+                if (_counterUsed(rule)) {
+                    wanted.add(holder);
                 }
             }
         });
-        numbered = wanted.size > 0 ? _counterValues(wanted) : null;
+        numbered = wanted.size > 0 ? _counterValues(wanted, generated) : null;
     }
     _pseudoRules.forEach(function(rule, order) {
         var found = document.querySelectorAll(rule.sel);

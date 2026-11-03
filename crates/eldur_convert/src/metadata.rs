@@ -509,11 +509,16 @@ pub(crate) fn counter_rules_decl(rules: &[eldur_css::CounterRule]) -> Member {
                     serde_json::json!([prop, list, important])
                 })
                 .collect();
-            serde_json::json!({
+            let mut rule = serde_json::json!({
                 "sel": r.selector,
                 "spec": [r.specificity.0, r.specificity.1, r.specificity.2],
                 "changes": changes,
-            })
+            });
+            // Most rules count on the element: the field stays out of their JSON.
+            if let Some(after) = r.after {
+                rule["after"] = serde_json::json!(after);
+            }
+            rule
         })
         .collect();
     decl(

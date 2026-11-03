@@ -1069,7 +1069,13 @@ At run time:
   importance, specificity and order, and works counters out over the whole tree
   (`_counterValues`: a reset nests a counter, an increment or a set goes to the
   innermost one) before each flush; an insert or a removal asks for one
-  (`_counterTouch`). Text drawn other than the element's own font or colour is a
+  (`_counterTouch`). A list item increments `list-item`. An `<ol>`, `<ul>` or
+  `<menu>` resets it to `start` − 1, or 0, unless its own `counter-reset`
+  names `list-item`; another counter's reset does not stop it (measured). A
+  rule on `::before`/`::after` carries its side (`after`). Where the element
+  has that generated box, its changes apply inside the element's scope, after
+  its own and before or after its children. The static numbering in
+  `boxes/counters.rs` applies the same list reset. Text drawn other than the element's own font or colour is a
   `gen` node of the element's inline model (in its own `<span>` font when its
   size or family differs); a plain `Text` takes a model only then. An element
   whose content is on lines holds it as a run at that side of the lines whose
@@ -1078,8 +1084,10 @@ At run time:
   `_gFlowGroups` keeps first or last on its lines. The converter's own
   generated text is adopted as the rules' until they say otherwise.
   Not followed: a pseudo-element laid out as a box (`display`, `position`,
-  `float`), `content` other than strings, `attr()` and counters, the
-  `list-item` counter, and counters on the pseudo-element itself.
+  `float`), `content` other than strings, `attr()` and counters, and
+  `counter(list-item)` in a `reversed` list or after `<li value>` (in Chromium the
+  `::before` widths of a three-item reversed list whose last item has
+  `value=7` fit 0, −1, −1. That is not yet understood, so it is not copied).
 - **A table a script makes is a live table.** On an open page it takes the
   form `emit/table.rs` gives a written table a script fills, with no rows
   (`_TABLE_MADE_SOURCE`): captions in a column above a box whose grid the

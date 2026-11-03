@@ -127,3 +127,30 @@ fn counters_in_generated_text_and_the_rules_that_move_them() {
         ]
     );
 }
+
+#[test]
+fn a_pseudo_elements_own_counters_name_its_element_and_side() {
+    let doc = Document::parse(
+        r#"<!DOCTYPE html><style>
+        p::before { counter-increment: n; content: counter(n); }
+        p:after, .x::after { counter-reset: m 3; content: ""; }
+        ::before { counter-set: k 1; }
+        p::marker { counter-increment: q; }
+        </style><p>a</p>"#,
+    );
+    let viewport = Viewport::default();
+    let (sheets, _) = collect_stylesheets(&doc, &mut NoSheets, &viewport);
+    let found: Vec<_> = counter_rules(&sheets, &viewport)
+        .into_iter()
+        .map(|r| (r.selector, r.specificity, r.after))
+        .collect();
+    assert_eq!(
+        found,
+        vec![
+            ("p".to_owned(), (0, 0, 2), Some(false)),
+            ("p".to_owned(), (0, 0, 2), Some(true)),
+            (".x".to_owned(), (0, 1, 1), Some(true)),
+            ("*".to_owned(), (0, 0, 1), Some(false)),
+        ]
+    );
+}

@@ -524,6 +524,14 @@ impl<'a> Builder<'a, '_> {
         let Some(style) = style else {
             return;
         };
+        if let Some(e) = self.doc.element(node)
+            && matches!(e.local_name(), "ol" | "ul" | "menu")
+        {
+            let start = (e.local_name() == "ol")
+                .then(|| e.attr("start").and_then(|s| s.trim().parse::<i64>().ok()))
+                .flatten();
+            self.counters.reset_list(style, start.map_or(0, |s| s - 1));
+        }
         self.counters.apply(style);
         match self.level(node, style) {
             Level::None => {}

@@ -1,0 +1,32 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+ol,ul{margin:0}
+ol.steps{list-style:none;padding:0}
+ol.steps li::before{content:counter(list-item, upper-roman) ". ";font-weight:bold}
+.nums{counter-reset:n}
+.nums p{margin:0}
+.nums p::before{counter-increment:n;content:"#" counter(n, lower-roman) " "}
+.nums p.skip::before{counter-increment:none;content:"- "}
+ul.x{list-style:none;padding:0}
+ul.x li::before{content:"(" counter(list-item, lower-roman) ") "}
+ol.own{counter-reset:n}
+ol.own li::before{content:counter(list-item, lower-roman) ". "}
+ol.own{list-style:none;padding:0}
+</style></head><body>
+<ol class="steps" id="st"><li><span id="s1">Mix</span></li><li><span id="s2">Bake</span></li></ol>
+<div class="nums" id="nm"><p><span id="n1">a</span></p><p class="skip"><span id="n2">b</span></p><p><span id="n3">c</span></p></div>
+<ul class="x" id="ux"><li><span id="x1">one</span><b id="x1e">.</b></li><li><span id="x2">two</span><b id="x2e">.</b></li></ul>
+<ol start="5" class="steps" id="st2"><li><span id="t1">five</span></li><li><span id="t2">six</span></li></ol>
+<ol class="steps" id="nest"><li><span id="o1">one</span><ol class="own"><li><span id="o2">in</span></li><li><span id="o3">in</span></li></ol></li><li><span id="o4">two</span></li></ol>
+<script>
+const R=n=>{const q=document.getElementById(n).getBoundingClientRect();console.log('CS '+n+' '+[q.x,q.y,q.width,q.height].join(','))};const done=()=>{document.body.appendChild(document.createElement('div')).id='csdone'};
+const $=i=>document.getElementById(i);
+const add=(p,id,tx,cls)=>{const li=document.createElement(p.tagName==='DIV'?'p':'li');if(cls)li.className=cls;const s=document.createElement('span');s.id=id;s.textContent=tx;li.appendChild(s);p.appendChild(li);return li};
+const ids=()=>['s1','s2','s3','n1','n2','n3','n4','x1','x1e','x2','x2e','t1','t2','t3','o1','o2','o3','o4','o5'].filter(i=>$(i));
+setTimeout(()=>{
+ ids().forEach(R);
+ add($('st'),'s3','Serve');add($('nm'),'n4','d');add($('st2'),'t3','seven');add($('nest').firstElementChild.lastElementChild,'o5','in');
+ $('st').insertBefore($('st').lastElementChild,$('st').firstElementChild);
+ setTimeout(()=>{ids().forEach(R);done()},50);
+},50);
+</script></body></html>

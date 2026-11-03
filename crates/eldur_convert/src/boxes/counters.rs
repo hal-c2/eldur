@@ -27,6 +27,20 @@ impl Counters {
         self.frames.pop();
     }
 
+    /// HTML's lists number their items whatever counters the page resets on
+    /// them (measured: an `<ol>` with `counter-reset: n` restarts at 1), unless
+    /// it resets `list-item` itself.
+    pub(super) fn reset_list(&mut self, style: &ComputedStyle, value: i64) {
+        if style.counter_reset.iter().any(|c| c.name == "list-item") {
+            return;
+        }
+        let frame = self.frames.last_mut().expect("a frame");
+        match frame.iter_mut().find(|(n, _)| n == "list-item") {
+            Some(c) => c.1 = value,
+            None => frame.push(("list-item".to_owned(), value)),
+        }
+    }
+
     /// The element's `counter-reset`, then `counter-increment`, then
     /// `counter-set`: the order Chromium applies them in.
     pub(super) fn apply(&mut self, style: &ComputedStyle) {

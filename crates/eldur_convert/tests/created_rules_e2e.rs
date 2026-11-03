@@ -678,3 +678,11 @@ fn rule_badge_in_text() {
 fn rule_child_nodes() {
     page("rule_child_nodes");
 }
+
+/// `counter(list-item)` from the lists' own numbering (an `<ol start>` and a
+/// nested `<ol>` with an unrelated `counter-reset` included), and counters a
+/// `::before` changes itself, as items are added and moved.
+#[test]
+fn rule_counters_own() {
+    page("rule_counters_own");
+}
