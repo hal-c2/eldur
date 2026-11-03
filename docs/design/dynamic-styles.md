@@ -1108,6 +1108,39 @@ At run time:
   other than strings, `attr()` and counters, and `counter(list-item)` in a `reversed` list or after `<li value>` (in Chromium the
   `::before` widths of a three-item reversed list whose last item has
   `value=7` fit 0, −1, −1. That is not yet understood, so it is not copied).
+- **Inline boxes have one path, written or created.** There is no static/run-time
+  split for an inline element on a page with scripts: the converter's runs are
+  where the cascade starts, and a class change, an insertion or a removal runs
+  the whole cascade over the line's inline model and cuts its runs again
+  (`_vRender`). What a rule sets on an inline element (padding, border, margin,
+  radius, background, generated text, pseudo boxes) is drawn the same way
+  whether the element was written or made:
+  - An element the cascade makes inline is a node of the model whatever its tag
+    (an `li` in a menu), and one appended to a line already cut into runs joins
+    the last run's model (`_vLinesTail`) instead of standing beside it as an
+    item. Run `Text`s the runtime makes carry `eldurInline`, so they are DOM runs
+    and structural rules (`:last-child::after`, `a + a::before`, `:nth-child`)
+    match again after each cut.
+  - A run's box (margins, borders, padding of the elements open at its ends) is
+    the room it takes on its line and the `EldurInlineBox`es that paint it
+    (`setRunBox`), in place of the converter's `eldurMarginLeft`/`Right`. The
+    room of generated text is read from its style: the converter's run margin is
+    the sum with the element's own padding. `content: ""` with margin, padding
+    or a border is a box that takes room.
+  - Generated text with a box of its own is a run of its own and takes its own
+    font there, so a 10px badge in a 14px line stays styled text. Whether a run
+    needs rich text is derived again at each cut (the converter's `html: true`
+    describes the content it cut, not what a run holds now): `Text.RichText`
+    lays out no lines, so `EldurLines` would have nothing to place and the line
+    would collapse.
+  - The converter's `::after` run of an element split across runs (marked
+    `under`) records the element it closes (`afterOf`), so a removal before it
+    closes the right element's box.
+  - A control's pseudo boxes are looked for in its label too, where what a
+    script inserts goes, so a made button has its `::before` icon once. A button
+    template holding lines draws its label from the button's `text`.
+  - Lines nested in a box on a line (a button's label) tell the line holding them
+    when their baseline moves, since the box's size need not change with it.
 - **A table a script makes is a live table.** On an open page it takes the
   form `emit/table.rs` gives a written table a script fills, with no rows
   (`_TABLE_MADE_SOURCE`): captions in a column above a box whose grid the
