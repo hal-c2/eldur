@@ -77,7 +77,10 @@ ApplicationWindow {
         }
         // What our cells have past the browser's: its outer border halves.
         const outside = shift(0) - shift(n)
-        return { min: min, max: max, percents: percents, shift: shift, outside: outside }
+        // A column whose content is one word cannot wrap; a word's overhang past its
+        // advance is under a pixel, a space and a letter more.
+        const wraps = max.map((m, c) => m - min[c] > 1)
+        return { min: min, max: max, percents: percents, shift: shift, outside: outside, wraps: wraps }
     }
 
     function tableMaxContentWidth(grid, specs, fixed) {
@@ -102,10 +105,12 @@ ApplicationWindow {
         }
         if (percent > 0 && percent < 100)
             wanted = Math.max(wanted, rest * 100 / (100 - percent))
-        // Columns come out whole pixels, those at max-content rounded up.
+        // Columns come out whole pixels, those at max-content that can wrap rounded up.
         let whole = 0
-        for (let c = 0; c < specs.length; ++c)
-            whole += Math.ceil(extents.max[c] + extents.shift(c) - extents.shift(c + 1) - 1e-6)
+        for (let c = 0; c < specs.length; ++c) {
+            const drawn = extents.max[c] + extents.shift(c) - extents.shift(c + 1)
+            whole += extents.wraps[c] ? Math.ceil(drawn - 1e-6) : drawn
+        }
         return sum + Math.max(Math.max(all, wanted) + extents.outside, whole)
     }
 
@@ -197,7 +202,7 @@ ApplicationWindow {
             let to = Math.round(edge - shift(c + 1))
             // A text wraps in a column a fraction narrower than it: one given its
             // max-content width keeps all of it, rounded up.
-            if (!fixed && widths[c] >= extents.max[c] - 1e-6)
+            if (!fixed && extents.wraps[c] && widths[c] >= extents.max[c] - 1e-6)
                 to = Math.max(to, from + Math.ceil(extents.max[c] + shift(c) - shift(c + 1) - 1e-6))
             widths[c] = to - from
             from = to

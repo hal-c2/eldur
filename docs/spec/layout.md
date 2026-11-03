@@ -1020,7 +1020,7 @@ GridLayout {
 - Width past the last guess goes to auto columns with content, in proportion to their maxima; failing those, to px columns by width; then to percent columns by percentage; then to all columns equally.
 - A table with `width: auto` is the sum of the maxima, or wider where percent columns need it: the other columns' maxima over the percent left over, and each percent column's maximum over its percentage. Its min-content width is the sum of the minima.
 - Collapsed, the table's box holds half of each outer border and a column reaches the middle of the borders beside it. Cells here draw the outer borders whole and split an inner one with the odd pixel on the right, so the grid declares `tableEdges`, how far the browser's column edge lies right of the drawn one at each boundary, and the solver works in the browser's frame.
-- Columns are rounded to whole pixels at cumulative edges. A column given its maximum is rounded up, since a `Text` wraps in a box a fraction narrower than it, and the table's max-content width is at least those whole widths.
+- Columns are rounded to whole pixels at cumulative edges. A column given its maximum is rounded up when its text can wrap (its maximum is over a pixel past its minimum), since a `Text` wraps in a box a fraction narrower than it, and the table's max-content width is at least those whole widths. A single word cannot wrap, so its column rounds to the nearest pixel and may overhang by a fraction, as a browser's pixel-snapped one does.
 - `table-layout: fixed` keeps the specified widths and shares what is left equally among auto columns.
 
 **Pitfalls**
