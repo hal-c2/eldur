@@ -2823,8 +2823,12 @@ function _appendTarget(raw) {
     raw.implicitHeight = Qt.binding(function() {
         return extra + (text.text === "" ? 0 : text.implicitHeight) + flow.implicitHeight;
     });
-    // `textContent = x` replaces every child.
-    text.textChanged.connect(function() { _clearAppended(raw); });
+    // `textContent = x` replaces every child; rendering a model's runs does not.
+    text.textChanged.connect(function() {
+        if (!_vRendering) {
+            _clearAppended(raw);
+        }
+    });
     _meta(flow).hostBox = raw;
     m.flow = flow;
     return flow;
@@ -8368,11 +8372,30 @@ function _buildTemplateKeys(raw) {
 
     var p = _logicalParent(raw);
     var context = "*";
+    // A row a script puts in a table goes in its body, which the page may not
+    // have written; the converter probes it in the table, as it can't tell.
+    var keyed = function(item) {
+        return typeof item.eldurTemplate === "string" && item.eldurTemplate !== ""
+            || typeof item.eldurKey === "string" && item.eldurKey !== "";
+    };
+    if (tag === "tr" && p && typeof p === "object" && !keyed(p) && !_meta(p).createdTag
+        && _TABLE_SECTION[_tablePartTag(p)] !== undefined) {
+        p = _logicalParent(p) || p;
+    }
     if (p && typeof p === "object") {
         if (typeof p.eldurTemplate === "string" && p.eldurTemplate !== "") {
             context = p.eldurTemplate;
         } else if (typeof p.eldurKey === "string" && p.eldurKey !== "") {
             context = p.eldurKey;
+        } else if (_meta(p).createdTag && _root.eldurPartTemplates) {
+            // A made row or section is no template's, but the converter probed
+            // it as one, and keyed the cells made in it by that one's name.
+            var named = _buildTemplateKeys(p).map(function(k) {
+                return _root.eldurPartTemplates[k];
+            }).filter(Boolean);
+            if (named.length > 0) {
+                context = named[0];
+            }
         }
     }
 
@@ -10692,9 +10715,9 @@ function _vSetModel(node, model) {
     node.model = model;
     if (node.kids) {
         for (var i = 0; i < node.kids.length; ++i) {
-            if (!node.kids[i].gen) {
-                _vSetModel(node.kids[i], model);
-            }
+            // Generated text goes with its element: a run it had of its own
+            // before a cut is gone with the cut (`_vPutRuns`).
+            _vSetModel(node.kids[i], model);
         }
     }
 }
@@ -11804,7 +11827,7 @@ function _vOwnBox(pc, c) {
 function _vHoldsOwn(kids, pc) {
     return kids.some(function(k) {
         if (k.gen) {
-            return !k.live && _vHasBox(k.gen.c);
+            return _vGenRun(k, pc);
         }
         if (!k.kids) {
             return false;
@@ -11834,7 +11857,7 @@ function _vCutRuns(roots, base) {
                 k.genOf = owner;
             }
             // Generated text with a box of its own is a run of its own, as an element is.
-            if (k.gen && !k.live && _vHasBox(k.gen.c)) {
+            if (_vGenRun(k, pc)) {
                 flush();
                 put(k);
                 flush();
@@ -12088,7 +12111,26 @@ function _vRunLevels(entries, base) {
 }
 
 function _vOwnGenRun(k) {
-    return Boolean(k.gen) && !k.live && Boolean(_vUp(k)) && _vHasBox(k.gen.c);
+    var up = _vUp(k);
+    return Boolean(up) && _vGenRun(k, _vStyle(up));
+}
+
+// Whether generated text in a box styled `pc` is a run of its own: when it
+// paints or takes room, or when it sits off its owner's baseline. In its
+// owner's run a `$` with `vertical-align: top` would sit on the baseline; a
+// font of its own alone a rich-text span carries, as it did before scripts.
+function _vGenRun(k, pc) {
+    if (!k.gen || k.live) {
+        return false;
+    }
+    var c = k.gen.c;
+    if (_vHasBox(c)) {
+        return true;
+    }
+    if (!c || c.size === undefined || !pc) {
+        return false;
+    }
+    return Boolean(c.va || c.vs !== undefined || c.vp !== undefined || c.rel);
 }
 
 function _vSameRuns(models, runs) {
@@ -12260,6 +12302,10 @@ function _vLineFor(model, base) {
         lines.lineHeight = base.lh;
     }
     _meta(lines).vRunsBuilt = true;
+    // The column is made while the text still shows: what the box takes
+    // besides it is measured then, and a template's empty `Text` still has a
+    // line's height.
+    var target = _appendTarget(raw);
     _vModels.splice(_vModels.indexOf(model), 1);
     var m = _meta(text);
     m.vModel = null;
@@ -12269,7 +12315,7 @@ function _vLineFor(model, base) {
     text.textFormat = 0; // Text.PlainText; a library script has no `Text`
     text.text = "";
     _vRendering = false;
-    _insertInFlow(_appendTarget(raw), [lines], null);
+    _insertInFlow(target, [lines], null);
     _vCarryAfter(raw);
     return lines;
 }

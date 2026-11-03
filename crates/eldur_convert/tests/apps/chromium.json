@@ -88931,10 +88931,10 @@
     "promise after keydown:BODY",
     "microtask after keydown:BODY",
     "focus:b",
+    "timeout after keydown:BODY",
     "keyup:Tab",
     "promise after keyup:b",
     "microtask after keyup:b",
-    "timeout after keydown:BODY",
     "timeout after keyup:b"
    ],
    "state": {
@@ -96117,6 +96117,363 @@
    }
   }
  ],
+ "made_cells": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "table": [
+     {
+      "box": [
+       10,
+       10,
+       420,
+       107
+      ],
+      "shown": true,
+      "text": "shorta much longer piece of text in this cellmid sized cellxyaba rather wide new cell text"
+     }
+    ],
+    "tr": [
+     {
+      "box": [
+       12,
+       12,
+       416,
+       38
+      ],
+      "shown": true,
+      "text": "shorta much longer piece of text in this cellmid sized cell"
+     },
+     {
+      "box": [
+       12,
+       52,
+       416,
+       23
+      ],
+      "shown": true,
+      "text": "xy"
+     },
+     {
+      "box": [
+       12,
+       77,
+       416,
+       38
+      ],
+      "shown": true,
+      "text": "aba rather wide new cell text"
+     }
+    ],
+    "td": [
+     {
+      "box": [
+       12,
+       12,
+       36.91,
+       38
+      ],
+      "shown": true,
+      "text": "short"
+     },
+     {
+      "box": [
+       50.91,
+       12,
+       219.92,
+       38
+      ],
+      "shown": true,
+      "text": "a much longer piece of text in this cell"
+     },
+     {
+      "box": [
+       272.83,
+       12,
+       155.17,
+       38
+      ],
+      "shown": true,
+      "text": "mid sized cell"
+     },
+     {
+      "box": [
+       12,
+       52,
+       36.91,
+       23
+      ],
+      "shown": true,
+      "text": "x"
+     },
+     {
+      "box": [
+       50.91,
+       52,
+       219.92,
+       23
+      ],
+      "shown": true,
+      "text": "y"
+     },
+     {
+      "box": [
+       12,
+       77,
+       36.91,
+       38
+      ],
+      "shown": true,
+      "text": "a"
+     },
+     {
+      "box": [
+       50.91,
+       77,
+       219.92,
+       38
+      ],
+      "shown": true,
+      "text": "b"
+     },
+     {
+      "box": [
+       272.83,
+       77,
+       155.17,
+       38
+      ],
+      "shown": true,
+      "text": "a rather wide new cell text"
+     }
+    ],
+    "#cut": [
+     {
+      "box": [
+       10,
+       117,
+       36.75,
+       21
+      ],
+      "shown": true,
+      "text": "Cut"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "cut",
+   "log": [],
+   "state": {
+    "table": [
+     {
+      "box": [
+       10,
+       10,
+       420,
+       52
+      ],
+      "shown": true,
+      "text": "shortnow shortmid sized cellab"
+     }
+    ],
+    "tr": [
+     {
+      "box": [
+       12,
+       12,
+       416,
+       23
+      ],
+      "shown": true,
+      "text": "shortnow shortmid sized cell"
+     },
+     {
+      "box": [
+       12,
+       37,
+       416,
+       23
+      ],
+      "shown": true,
+      "text": "ab"
+     }
+    ],
+    "td": [
+     {
+      "box": [
+       12,
+       12,
+       81.17,
+       23
+      ],
+      "shown": true,
+      "text": "short"
+     },
+     {
+      "box": [
+       95.17,
+       12,
+       141.59,
+       23
+      ],
+      "shown": true,
+      "text": "now short"
+     },
+     {
+      "box": [
+       238.77,
+       12,
+       189.23,
+       23
+      ],
+      "shown": true,
+      "text": "mid sized cell"
+     },
+     {
+      "box": [
+       12,
+       37,
+       81.17,
+       23
+      ],
+      "shown": true,
+      "text": "a"
+     },
+     {
+      "box": [
+       95.17,
+       37,
+       141.59,
+       23
+      ],
+      "shown": true,
+      "text": "b"
+     }
+    ],
+    "#cut": [
+     {
+      "box": [
+       10,
+       62,
+       36.75,
+       21
+      ],
+      "shown": true,
+      "text": "Cut"
+     }
+    ],
+    "(focus)": "cut"
+   }
+  },
+  {
+   "name": "fill",
+   "log": [],
+   "state": {
+    "table": [
+     {
+      "box": [
+       10,
+       10,
+       420,
+       67
+      ],
+      "shown": true,
+      "text": "the first cell becomes the widest of all of themnow shortmid sized cellab"
+     }
+    ],
+    "tr": [
+     {
+      "box": [
+       12,
+       12,
+       416,
+       38
+      ],
+      "shown": true,
+      "text": "the first cell becomes the widest of all of themnow shortmid sized cell"
+     },
+     {
+      "box": [
+       12,
+       52,
+       416,
+       23
+      ],
+      "shown": true,
+      "text": "ab"
+     }
+    ],
+    "td": [
+     {
+      "box": [
+       12,
+       12,
+       263.89,
+       38
+      ],
+      "shown": true,
+      "text": "the first cell becomes the widest of all of them"
+     },
+     {
+      "box": [
+       277.89,
+       12,
+       63.53,
+       38
+      ],
+      "shown": true,
+      "text": "now short"
+     },
+     {
+      "box": [
+       343.42,
+       12,
+       84.58,
+       38
+      ],
+      "shown": true,
+      "text": "mid sized cell"
+     },
+     {
+      "box": [
+       12,
+       52,
+       263.89,
+       23
+      ],
+      "shown": true,
+      "text": "a"
+     },
+     {
+      "box": [
+       277.89,
+       52,
+       63.53,
+       23
+      ],
+      "shown": true,
+      "text": "b"
+     }
+    ],
+    "#cut": [
+     {
+      "box": [
+       10,
+       77,
+       36.75,
+       21
+      ],
+      "shown": true,
+      "text": "Cut"
+     }
+    ],
+    "(focus)": "fill"
+   }
+  }
+ ],
  "made_inline": [
   {
    "name": "load",
@@ -96663,6 +97020,370 @@
      }
     ],
     "(focus)": "more"
+   }
+  }
+ ],
+ "made_pseudo": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    ".tags span": [
+     {
+      "box": [
+       10,
+       10,
+       45.38,
+       20
+      ],
+      "shown": true,
+      "text": "alpha"
+     },
+     {
+      "box": [
+       60.38,
+       10,
+       39.36,
+       20
+      ],
+      "shown": true,
+      "text": "beta"
+     },
+     {
+      "box": [
+       104.73,
+       9,
+       114.06,
+       22
+      ],
+      "shown": true,
+      "text": "gamma long tag"
+     },
+     {
+      "box": [
+       223.8,
+       10,
+       42.03,
+       20
+      ],
+      "shown": true,
+      "text": "delta"
+     }
+    ],
+    ".crumbs a": [
+     {
+      "box": [
+       10,
+       27,
+       48.69,
+       17
+      ],
+      "shown": true,
+      "text": "Root"
+     },
+     {
+      "box": [
+       58.69,
+       27,
+       51.19,
+       17
+      ],
+      "shown": true,
+      "text": "Docs"
+     },
+     {
+      "box": [
+       109.88,
+       27,
+       40.03,
+       17
+      ],
+      "shown": true,
+      "text": "Guide"
+     }
+    ],
+    "li": [
+     {
+      "box": [
+       10,
+       52,
+       600,
+       23
+      ],
+      "shown": true,
+      "text": "One"
+     },
+     {
+      "box": [
+       10,
+       75,
+       600,
+       23
+      ],
+      "shown": true,
+      "text": "Two"
+     },
+     {
+      "box": [
+       10,
+       98,
+       600,
+       23
+      ],
+      "shown": true,
+      "text": "Three"
+     },
+     {
+      "box": [
+       10,
+       121,
+       600,
+       23
+      ],
+      "shown": true,
+      "text": "Four"
+     }
+    ],
+    "p": [
+     {
+      "box": [
+       10,
+       159,
+       600,
+       34
+      ],
+      "shown": true,
+      "text": "Some emphasised words inside a longer sentence that wraps twice maybe across the box width here."
+     }
+    ],
+    "em": [
+     {
+      "box": [
+       53.36,
+       159,
+       131.06,
+       19
+      ],
+      "shown": true,
+      "text": "emphasised words"
+     },
+     {
+      "box": [
+       428.75,
+       159,
+       40.19,
+       19
+      ],
+      "shown": true,
+      "text": "twice"
+     }
+    ],
+    "#pr": [
+     {
+      "box": [
+       10,
+       208,
+       600,
+       17
+      ],
+      "shown": true,
+      "text": "$4029"
+     }
+    ],
+    ".price span": [
+     {
+      "box": [
+       10,
+       208,
+       25.03,
+       17
+      ],
+      "shown": true,
+      "text": "$40"
+     },
+     {
+      "box": [
+       41.03,
+       208,
+       22.81,
+       17
+      ],
+      "shown": true,
+      "text": "29"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "change",
+   "log": [],
+   "state": {
+    ".tags span": [
+     {
+      "box": [
+       10,
+       9,
+       57.38,
+       22
+      ],
+      "shown": true,
+      "text": "alpha"
+     },
+     {
+      "box": [
+       72.38,
+       10,
+       39.36,
+       20
+      ],
+      "shown": true,
+      "text": "beta"
+     },
+     {
+      "box": [
+       116.73,
+       10,
+       102.06,
+       20
+      ],
+      "shown": true,
+      "text": "gamma long tag"
+     },
+     {
+      "box": [
+       223.8,
+       10,
+       42.03,
+       20
+      ],
+      "shown": true,
+      "text": "delta"
+     }
+    ],
+    ".crumbs a": [
+     {
+      "box": [
+       10,
+       27,
+       48.69,
+       17
+      ],
+      "shown": true,
+      "text": "Root"
+     },
+     {
+      "box": [
+       58.69,
+       27,
+       34.19,
+       17
+      ],
+      "shown": true,
+      "text": "Docs"
+     }
+    ],
+    "li": [
+     {
+      "box": [
+       10,
+       52,
+       600,
+       23
+      ],
+      "shown": true,
+      "text": "Two"
+     },
+     {
+      "box": [
+       10,
+       75,
+       600,
+       23
+      ],
+      "shown": true,
+      "text": "Three"
+     },
+     {
+      "box": [
+       10,
+       98,
+       600,
+       23
+      ],
+      "shown": true,
+      "text": "Four"
+     }
+    ],
+    "p": [
+     {
+      "box": [
+       10,
+       136,
+       600,
+       40
+      ],
+      "shown": true,
+      "text": "Some emphasised words inside a longer sentence that wraps twice maybe across the box width here."
+     }
+    ],
+    "em": [
+     {
+      "box": [
+       53.36,
+       136,
+       184.75,
+       24
+      ],
+      "shown": true,
+      "text": "emphasised words"
+     },
+     {
+      "box": [
+       482.44,
+       140,
+       40.19,
+       19
+      ],
+      "shown": true,
+      "text": "twice"
+     }
+    ],
+    "#pr": [
+     {
+      "box": [
+       10,
+       191,
+       600,
+       17
+      ],
+      "shown": true,
+      "text": "$4029"
+     }
+    ],
+    ".price span": [
+     {
+      "box": [
+       10,
+       191,
+       25.03,
+       17
+      ],
+      "shown": true,
+      "text": "$40"
+     },
+     {
+      "box": [
+       41.03,
+       191,
+       22.81,
+       17
+      ],
+      "shown": true,
+      "text": "29"
+     }
+    ],
+    "(focus)": "change"
    }
   }
  ],

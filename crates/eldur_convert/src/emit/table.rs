@@ -978,7 +978,12 @@ impl<'a> Emitter<'a, '_> {
                     cell_style.transform = moves.iter().cloned().chain(own).collect();
                 }
                 cell_style.background_color = self.cell_background(cell, row, &parts, slot);
-                if let Some(edges) = &edges {
+                // A cell a script makes paints all four of its own borders
+                // wherever it lands, and the runtime shares them with its
+                // neighbours; the sides it won at its probe's place are no
+                // answer for another.
+                let made_cell = cell.node.is_some_and(|n| self.made_tables.contains(&n));
+                if let Some(edges) = edges.as_ref().filter(|_| !made_cell) {
                     let [top, right, bottom, left] = edges.cell_borders(slot);
                     if slot.column + slot.column_span == columns {
                         outer_edge = outer_edge.max(right.width);

@@ -166,11 +166,12 @@ impl Builder<'_> {
 
 /// A created cell joins a row, not the document's one grid, whose slots and
 /// column widths its probe was given: it takes the size its own style says.
+/// A cell probed in a table scripts reach has no slot but still a minimum
+/// measured with the grid's fonts, which are not in the template's scope.
 fn leave_table_grid(obj: &mut Object, style: Option<&eldur_css::ComputedStyle>) {
-    let is_cell = obj
-        .members
-        .iter()
-        .any(|m| matches!(m, Member::PropertyDecl { name, .. } if name == "tableSlot"));
+    let is_cell = obj.members.iter().any(|m| {
+        matches!(m, Member::PropertyDecl { name, .. } if name == "tableSlot" || name == "minContentWidth")
+    });
     if !is_cell {
         return;
     }
@@ -1207,6 +1208,33 @@ pub(crate) fn add(
         .iter()
         .map(|key| format!("{}: {}", eldur_qml::quote_string(key), names[keys[key]]))
         .collect();
+    // The runtime makes a row or a section with no template, so it can't read
+    // which one it was probed as, and its cells are keyed by that name.
+    let parts: Vec<String> = order
+        .iter()
+        .filter(|key| {
+            let tag = key.split(['.', '@']).next().unwrap_or("");
+            matches!(tag, "tr" | "thead" | "tbody" | "tfoot")
+        })
+        .map(|key| {
+            format!(
+                "{}: {}",
+                eldur_qml::quote_string(key),
+                eldur_qml::quote_string(&names[keys[key]])
+            )
+        })
+        .collect();
+    if !parts.is_empty() {
+        root.members.insert(
+            0,
+            decl(
+                "var",
+                "eldurPartTemplates",
+                Value::expr(format!("({{ {} }})", parts.join(", "))),
+                true,
+            ),
+        );
+    }
     if has_out_of_flow {
         super::declare_initial_block(root);
     }

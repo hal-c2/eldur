@@ -300,6 +300,12 @@ impl Emitter<'_, '_> {
                     let Some(mut node) = self.dom_node_shallow(n, gen_boxes) else {
                         continue;
                     };
+                    // Its generated boxes are pieces of the cut, among its
+                    // kids: as `before`/`after` too they would be its twice.
+                    if let Some(o) = node.as_object_mut() {
+                        o.remove("before");
+                        o.remove("after");
+                    }
                     node["kids"] = Json::Array(self.run_nodes(&s.children, gen_boxes));
                     // The boxes cut out of it name it by this.
                     node["key"] = json!(n.index());
