@@ -93,15 +93,6 @@ const KNOWN: &[(&str, &str, &str, &str)] = &[
      226, and the 21.5px head row above it 22",
     ),
     (
-        "rule_child_nodes",
-        "CS g5 54.484375,69,32.34375,23",
-        "CS g5 54.4219,72,19.5469,17",
-        "a created `display: inline` span with padding, border and background that is an \
-     item on a line (its static parent has templates for elements, so it doesn't join \
-     a model) is drawn as bare text: only a model's nodes and the converter's static \
-     inline items have their box painted on the line's fragments",
-    ),
-    (
         "rule_pseudo_boxes",
         "CS b1 8,44,58.25,20",
         "CS b1 8,44,59,20",

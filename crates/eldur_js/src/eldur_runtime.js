@@ -1971,11 +1971,10 @@ function _pseudoTouch() {
     });
 }
 
-// An element in or out changes the numbers after it.
+// An element in or out changes the numbers after it, and which elements a
+// structural selector (`a + a`, `:last-child`) of a pseudo-element matches.
 function _counterTouch() {
-    if (_counterRules.length > 0 || (_pseudoRules && _pseudoRules.some(_counterUsed))) {
-        _pseudoTouch();
-    }
+    _pseudoTouch();
 }
 
 function _counterUsed(rule) {
@@ -2254,6 +2253,79 @@ function _pseudoSetRuns(raw, before, after, baseline, looks) {
     m.pseudo = { before: before, after: after, model: true, look: JSON.stringify(looks) };
 }
 
+// An inline element's generated boxes are nodes at the ends of its own: they
+// go in its runs and boxes as its content does. What the converter wrote is
+// taken over the first time the rules say otherwise, wherever it put it: at
+// the ends of the element (`before`, `after`), among its nodes, or in a run of
+// its own after it (`genRuns`). True when that changed what the element holds.
+function _vPseudoSet(v, before, after, looks) {
+    var m = _meta(v);
+    var mine = function(k) { return Boolean(k.gen) && !k.live; };
+    var lead = [], tail = [];
+    var inside = false;
+    (v.kids || []).forEach(function(k) {
+        if (!mine(k)) {
+            inside = true;
+        } else {
+            (inside ? tail : lead).push(k);
+        }
+    });
+    if (!inside) {
+        tail = lead;
+        lead = [];
+    }
+    var text = function(list) { return list.map(function(k) { return k.gen.text; }).join(""); };
+    if (!m.vPseudo) {
+        var hadBefore = (v.before ? v.before.text : "") + text(lead);
+        var hadAfter = text(tail) + (v.after ? v.after.text : "")
+            + (v.genRuns || []).map(function(g) { return g.gen.text; }).join("");
+        // An element empty but for generated text can't say which side it is on.
+        if (!inside && hadBefore === "" && hadAfter === before + after) {
+            hadBefore = before;
+            hadAfter = after;
+        }
+        m.vPseudo = { before: hadBefore, after: hadAfter, look: null };
+    }
+    var c = _vStyle(v);
+    var base = _vLined(c, c);
+    base.us = c.us;
+    base.kw = c.kw;
+    var made = {
+        before: before === "" ? null : { text: before, c: _pseudoLook(base, looks.before) },
+        after: after === "" ? null : { text: after, c: _pseudoLook(base, looks.after) }
+    };
+    var look = JSON.stringify(made);
+    var was = m.vPseudo;
+    if (was.look === null && was.before === before && was.after === after) {
+        was.look = look;
+        return false;
+    }
+    if (was.look === look) {
+        return false;
+    }
+    m.vPseudo = { before: before, after: after, look: look };
+    v.before = null;
+    v.after = null;
+    (v.genRuns || []).forEach(function(g) {
+        if (g.model && g.model.kids) {
+            g.model.kids = g.model.kids.filter(function(k) { return k !== g; });
+            if (g.model !== v.model && _vModels.indexOf(g.model) !== -1) {
+                _vChanged(g.model);
+            }
+        }
+    });
+    v.genRuns = null;
+    var kids = v.kids.filter(function(k) { return !mine(k); });
+    if (made.before) {
+        kids.unshift({ gen: made.before, pseudo: true, model: v.model, genOf: v });
+    }
+    if (made.after) {
+        kids.push({ gen: made.after, pseudo: true, model: v.model, genOf: v });
+    }
+    v.kids = kids;
+    return true;
+}
+
 // `str` without what generated text the element holds.
 function _pseudoOwn(raw, str) {
     var p = _meta(raw).pseudo;
@@ -2300,7 +2372,7 @@ function _pseudoFlush(baseline) {
         var found = document.querySelectorAll(rule.sel);
         for (var i = 0; i < found.length; ++i) {
             var raw = _unwrap(found[i]);
-            if (!raw || raw.__eldurInline || (!_pseudoHolder(raw) && !_pseudoLines(raw))) {
+            if (!raw || (!raw.__eldurInline && !_pseudoHolder(raw) && !_pseudoLines(raw))) {
                 continue;
             }
             var entry = seen.get(raw) || { before: null, after: null, looks: { before: {}, after: {} } };
@@ -2331,6 +2403,12 @@ function _pseudoFlush(baseline) {
         }
     });
     var next = new Set();
+    var models = [];
+    var inline = function(raw, before, after, looks) {
+        if (_vPseudoSet(raw, before, after, looks) && models.indexOf(raw.model) === -1) {
+            models.push(raw.model);
+        }
+    };
     seen.forEach(function(entry, raw) {
         next.add(raw);
         var look = function(side) {
@@ -2338,15 +2416,28 @@ function _pseudoFlush(baseline) {
             Object.keys(entry.looks[side]).forEach(function(prop) { out[prop] = entry.looks[side][prop].value; });
             return out;
         };
-        _pseudoSet(raw, entry.before ? entry.before.text : "", entry.after ? entry.after.text : "", baseline,
-            { before: entry.before ? look("before") : {}, after: entry.after ? look("after") : {} });
+        var looks = { before: entry.before ? look("before") : {}, after: entry.after ? look("after") : {} };
+        if (raw.__eldurInline) {
+            inline(raw, entry.before ? entry.before.text : "", entry.after ? entry.after.text : "", looks);
+            return;
+        }
+        _pseudoSet(raw, entry.before ? entry.before.text : "", entry.after ? entry.after.text : "", baseline, looks);
     });
     _pseudoShown.forEach(function(raw) {
         if (!next.has(raw)) {
-            _pseudoSet(raw, "", "", false);
+            if (raw.__eldurInline) {
+                inline(raw, "", "", { before: {}, after: {} });
+            } else {
+                _pseudoSet(raw, "", "", false);
+            }
         }
     });
     _pseudoShown = next;
+    models.forEach(function(model) {
+        if (model && _vModels.indexOf(model) !== -1) {
+            _vChanged(model);
+        }
+    });
 }
 var _pseudoShown = new Set();
 
@@ -2366,7 +2457,7 @@ function _pseudoLook(base, decls) {
     if (decls && (decls["font-size"] !== undefined || decls["font-family"] !== undefined) && c.us !== undefined) {
         c.size = c.family !== "monospace" ? c.us : c.kw !== undefined ? _V_MONO_SIZES[c.kw] : c.us * 13 / 16;
     }
-    return c;
+    return _vBoxOwn(c);
 }
 
 // Generated text a `Text` cannot draw in its own font: it goes in a model.
@@ -2469,6 +2560,7 @@ function _pseudoSet(raw, before, after, baseline, looks) {
     }
     if (model) {
         _pseudoInModel(model, raw, before, after, baseline, looks);
+        _pseudoRelayout(baseline);
         return;
     }
     if (baseline) {
@@ -2485,6 +2577,15 @@ function _pseudoSet(raw, before, after, baseline, looks) {
     m.pseudo = { before: before, after: after };
     holder.text = before + own + after;
     _layoutChanged(raw);
+    _pseudoRelayout(false);
+}
+
+// The faces generated text falls back on count in its line (eldur_fonts.js),
+// which the cascade's pass works out.
+function _pseudoRelayout(baseline) {
+    if (!baseline && _gHasCascade()) {
+        _gTouch();
+    }
 }
 
 function _afterClassMutation(raw, m) {
@@ -2494,6 +2595,7 @@ function _afterClassMutation(raw, m) {
             curRaw.attrOrder.push("class");
         }
         _vChanged(curRaw.model);
+        _pseudoTouch();
         // Its pseudo-elements' boxes come and go in a settle pass.
         if (_pseudoBoxRules()) {
             _gTouch();
@@ -6195,6 +6297,14 @@ function getBoundingClientRect(item) {
             // A line of text already starts at its font's top.
             y += _gIsBox(raw) ? (h - inlineH) / 2 : 0;
             h = inlineH;
+            // A run's rect is its border box (`_gRunBox`).
+            var sides = _meta(raw).gRunEdge;
+            if (sides) {
+                x -= sides[3];
+                y -= sides[0];
+                w += sides[1] + sides[3];
+                h += sides[0] + sides[2];
+            }
         }
         if (_meta(raw).gShownInline && typeof raw.text === "string") {
             var fontBox = _vMetrics(raw).height;
@@ -7690,7 +7800,7 @@ function _newLines(owner) {
 // its own is one that is not `normal`'s.
 function _hasOwnLine(text) {
     return text.lineHeightMode === 1 // Text.FixedHeight; a library script has no `Text`
-        && text.lineHeight !== EldurFonts.normalLine(text.font);
+        && text.lineHeight !== EldurFonts.normalLine(text.font, undefined, text.text);
 }
 
 function _naturalLine(text) {
@@ -10256,6 +10366,13 @@ var _vGen = 0;
 var _vSyncing = false;
 var _vVoid = { area: 1, base: 1, br: 1, col: 1, embed: 1, hr: 1, img: 1, input: 1, link: 1, meta: 1, source: 1, track: 1, wbr: 1 };
 var _vProps = ["line-height", "vertical-align", "color", "font-weight", "font-style", "font-size", "font-family", "display", "visibility", "background-color", "text-decoration-line"];
+// What an inline element's own box takes on its line (`docs/spec/layout.md`
+// §1.3): none of it inherits, and it is worked out once the font is known.
+var _vBoxProps = ["margin-left", "margin-right", "padding-top", "padding-right", "padding-bottom", "padding-left",
+    "border-top-width", "border-right-width", "border-bottom-width", "border-left-width",
+    "border-top-style", "border-right-style", "border-bottom-style", "border-left-style",
+    "border-top-color", "border-right-color", "border-bottom-color", "border-left-color",
+    "border-top-left-radius", "border-top-right-radius", "border-bottom-right-radius", "border-bottom-left-radius"];
 var _vDefault = { color: "rgb(0, 0, 0)", weight: 400, italic: false, underline: false, strike: false, size: 16, family: "", bg: "rgba(0, 0, 0, 0)", display: "inline", visible: true };
 
 function _vHasRules() {
@@ -10620,6 +10737,7 @@ function _vSetInnerHTML(c, html) {
         _vEnsureSelected(model);
     }
     _vChanged(model);
+    _pseudoTouch();
 }
 
 function _vEscapeText(s) {
@@ -10824,7 +10942,7 @@ function _vReadRules(text) {
                 ua: table[i].ua,
                 layer: table[i].layer,
                 paintsInline: table[i].sel.indexOf("::") === -1
-                    && decls.some(function(d) { return _vProps.indexOf(d[0]) !== -1; }),
+                    && decls.some(function(d) { return _vProps.indexOf(d[0]) !== -1 || _vBoxProps.indexOf(d[0]) !== -1; }),
                 decls: decls,
                 lastKind: last ? last[1] : null,
                 lastName: last ? last[2] : null,
@@ -10981,6 +11099,16 @@ function _vColor(value, current) {
 }
 
 function _vApply(out, prop, value, pc) {
+    if (_vBoxProps.indexOf(prop) !== -1) {
+        var written = String(value).trim().toLowerCase();
+        out.bx = Object.assign({}, out.bx);
+        if (/^(initial|unset|revert|revert-layer)$/.test(written)) {
+            delete out.bx[prop];
+        } else {
+            out.bx[prop] = written === "inherit" ? (pc.bx || {})[prop] : written;
+        }
+        return;
+    }
     var v = String(value).trim();
     var low = v.toLowerCase();
     var inherits = prop !== "display" && prop !== "background-color" && prop !== "text-decoration-line";
@@ -11090,9 +11218,11 @@ function _vCascade(v, pc) {
         if (prop === "text-decoration") {
             prop = "text-decoration-line";
         }
-        if (_vProps.indexOf(prop) !== -1) {
-            offer(prop, value, (important ? 3.5 : 2) * band);
-        }
+        _gExpand(prop, value).forEach(function(each) {
+            if (_vProps.indexOf(each[0]) !== -1 || _vBoxProps.indexOf(each[0]) !== -1) {
+                offer(each[0], each[1], (important ? 3.5 : 2) * band);
+            }
+        });
     }
     var out = {
         color: pc.color, weight: pc.weight, italic: pc.italic, size: pc.size, family: pc.family,
@@ -11106,13 +11236,77 @@ function _vCascade(v, pc) {
             _vApply(out, _vProps[w], won[_vProps[w]].value, pc);
         }
     }
+    for (var b = 0; b < _vBoxProps.length; ++b) {
+        if (won[_vBoxProps[b]]) {
+            _vApply(out, _vBoxProps[b], won[_vBoxProps[b]].value, pc);
+        }
+    }
     if (out.us !== undefined) {
         out.size = out.family !== "monospace" ? out.us
             : out.kw !== undefined ? _V_MONO_SIZES[out.kw] : out.us * 13 / 16;
     }
+    _vBoxOwn(out);
     _vLineOf(out, won["line-height"], pc);
     _vAlignOf(out, won["vertical-align"]);
     return out;
+}
+
+// The box's sides in px, as the converter writes them for a model (`ml`, `mr`,
+// `edge`, `bw`, `bc`, `rad`): a percentage of the containing block has no width
+// to be of on a line, and counts as nothing.
+function _vBoxOwn(c) {
+    var bx = c.bx;
+    delete c.bx;
+    if (!bx) {
+        return c;
+    }
+    var px = function(prop) {
+        var got = bx[prop] === undefined ? null : _gPx(bx[prop], null, c.size, 16);
+        return got === null ? 0 : got;
+    };
+    var sides = ["top", "right", "bottom", "left"];
+    var widths = { thin: 1, medium: 3, thick: 5 };
+    var bw = sides.map(function(side) {
+        var style = bx["border-" + side + "-style"];
+        if (!style || style === "none" || style === "hidden") {
+            return 0;
+        }
+        var w = bx["border-" + side + "-width"];
+        return w === undefined ? 3 : widths[w] !== undefined ? widths[w] : Math.max(0, px("border-" + side + "-width"));
+    });
+    var pad = sides.map(function(side) { return Math.max(0, px("padding-" + side)); });
+    var ml = px("margin-left");
+    var mr = px("margin-right");
+    if (ml !== 0) {
+        c.ml = ml;
+    }
+    if (mr !== 0) {
+        c.mr = mr;
+    }
+    if (bw.some(function(w) { return w > 0; })) {
+        c.bw = bw;
+        c.bc = sides.map(function(side) {
+            var color = bx["border-" + side + "-color"];
+            return color === undefined ? c.color : _gColor(color, c.color);
+        });
+    }
+    var edge = pad.map(function(p, i) { return p + bw[i]; });
+    if (edge.some(function(e) { return e !== 0; })) {
+        c.edge = edge;
+    }
+    var rad = ["top-left", "top-right", "bottom-right", "bottom-left"].map(function(corner) {
+        return Math.max(0, px("border-" + corner + "-radius"));
+    });
+    if (rad.some(function(r) { return r !== 0; })) {
+        c.rad = rad;
+    }
+    return c;
+}
+
+// Whether `c` has a box of its own on its line: one that takes room or paints.
+function _vHasBox(c) {
+    return Boolean(c) && c.display !== "none" && Boolean(c.ml || c.mr || c.edge || c.bw
+        || (c.bg && c.bg !== "rgba(0, 0, 0, 0)" && c.bg !== "transparent"));
 }
 
 // `line-height`: a number is inherited as the number, anything else as its pixels.
@@ -11166,9 +11360,8 @@ function _vStyle(v) {
     }
     v.cleanNow = clean;
     v.style = clean ? v.c : _vCascade(v, pc);
-    // A cascade works out fonts and colours; these stay what the converter resolved.
+    // `position: relative` stays what the converter resolved.
     if (!clean && v.c) {
-        v.style.edge = v.c.edge;
         v.style.rel = v.c.rel;
     }
     v.styleGen = _vGen;
@@ -11254,7 +11447,7 @@ function _vHex(css) {
 }
 
 // Whether the node needs what only RichText has.
-function _vNeedsHtml(kids, pc, family) {
+function _vNeedsHtml(kids, pc, family, onLine) {
     for (var i = 0; i < kids.length; ++i) {
         var gen = kids[i].gen;
         if (gen && gen.c && gen.c.size !== undefined
@@ -11263,8 +11456,8 @@ function _vNeedsHtml(kids, pc, family) {
         }
         if (kids[i].kids) {
             var c = _vStyle(kids[i]);
-            if ((c.bg !== "rgba(0, 0, 0, 0)" && c.bg !== "transparent")
-                || _vNeedsHtml(kids[i].kids, c, family)) {
+            if ((!onLine && c.bg !== "rgba(0, 0, 0, 0)" && c.bg !== "transparent")
+                || _vNeedsHtml(kids[i].kids, c, family, onLine)) {
                 return true;
             }
         }
@@ -11359,7 +11552,7 @@ function _vWrap(st, c, pc, isLink, href, body) {
     } else if (!st.twin && c.color !== pc.color && !(st.inLink && !st.html)) {
         open("font", " color=\"" + _vHex(c.color) + "\"");
     }
-    if (st.html) {
+    if (st.html && !st.boxed) {
         var css = [];
         if (c.bg !== "rgba(0, 0, 0, 0)" && c.bg !== "transparent") {
             css.push("background-color:" + _vHex(c.bg));
@@ -11398,7 +11591,10 @@ function _vWriteKids(st, kids, pc, owner) {
         if (k.live) {
             _vWriteLive(st, k.live, pc);
         } else if (k.gen) {
-            _vWriteGen(st, k.gen, pc, owner);
+            // Generated text with a box is in a run of its own.
+            if (!(k.genOf && !k.live && _vHasBox(k.gen.c) && k.model !== st.model)) {
+                _vWriteGen(st, k.gen, pc, owner);
+            }
         } else if (k.model !== st.model) {
             continue;
         } else if (k.vtext) {
@@ -11444,6 +11640,8 @@ function _vMarkup(model, twin) {
     var inLine = model.text.parent && typeof model.text.parent.firstBaseline === "number";
     var st = {
         out: "", prevSpace: !inLine, pre: model.pre, html: model.html, twin: twin, model: model,
+        // On a line an element's background is its box's, which `EldurInlineBox` paints.
+        boxed: inLine && typeof model.text.parent.setRunBox === "function",
         owners: [], inLink: false, linkColor: null,
         bareLink: model.bare && model.kids.length === 1 && Boolean(model.kids[0].kids)
             && !_vStyle(model.kids[0]).underline
@@ -11473,7 +11671,8 @@ function _vRender(model) {
         model.hoisted = false;
     }
     // On a line of runs each has its own font; only a background still takes markup.
-    if (!model.html && _vNeedsHtml(model.kids, _vBase(model), model.k.family)) {
+    var onLine = Boolean(text.parent) && typeof text.parent.setRunBox === "function";
+    if (!model.html && _vNeedsHtml(model.kids, _vBase(model), model.k.family, onLine)) {
         model.html = true;
     }
     var st = _vMarkup(model, false);
@@ -11569,11 +11768,14 @@ function _vOwnBox(pc, c) {
 
 function _vHoldsOwn(kids, pc) {
     return kids.some(function(k) {
-        if (!k.kids || k.gen) {
+        if (k.gen) {
+            return !k.live && _vHasBox(k.gen.c);
+        }
+        if (!k.kids) {
             return false;
         }
         var c = _vStyle(k);
-        return c.display !== "none" && (_vOwnBox(pc, c) || _vHoldsOwn(k.kids, c));
+        return c.display !== "none" && (_vOwnBox(pc, c) || _vHasBox(c) || _vHoldsOwn(k.kids, c));
     });
 }
 
@@ -11591,8 +11793,18 @@ function _vCutRuns(roots, base) {
         cur = cur || [];
         cur.push(k);
     }
-    (function walk(kids, pc) {
+    (function walk(kids, pc, owner) {
         kids.forEach(function(k) {
+            if (k.gen && !k.live && owner) {
+                k.genOf = owner;
+            }
+            // Generated text with a box of its own is a run of its own, as an element is.
+            if (k.gen && !k.live && _vHasBox(k.gen.c)) {
+                flush();
+                put(k);
+                flush();
+                return;
+            }
             if (!k.kids || k.gen) {
                 put(k);
                 return;
@@ -11602,12 +11814,12 @@ function _vCutRuns(roots, base) {
                 put(k);
                 return;
             }
-            var own = _vOwnBox(pc, c);
+            var own = _vOwnBox(pc, c) || _vHasBox(c);
             if (_vHoldsOwn(k.kids, c)) {
                 if (own) {
                     flush();
                 }
-                walk(k.kids, c);
+                walk(k.kids, c, k);
                 if (own) {
                     flush();
                 }
@@ -11619,9 +11831,194 @@ function _vCutRuns(roots, base) {
                 put(k);
             }
         });
-    })(roots, base);
+    })(roots, base, null);
     flush();
     return runs;
+}
+
+// The element an entry of a run is in: generated text is in the element it was
+// generated for.
+function _vUp(entry) {
+    return entry.gen ? entry.genOf || null : entry.vparent || null;
+}
+
+// Whether `entry` is in the element `v`.
+function _vWithin(entry, v) {
+    for (var at = _vUp(entry); at; at = at.vparent) {
+        if (at === v) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// The inline boxes a run is in, outermost first, each with its style: they
+// cut runs (`_vCutRuns`), so every entry of a run is in the same ones.
+function _vRunBoxes(entries) {
+    var first = entries[0];
+    var out = [];
+    if (!first) {
+        return out;
+    }
+    for (var at = _vUp(first); at; at = at.vparent) {
+        var c = _vStyle(at);
+        if (_vHasBox(c)) {
+            out.unshift({ node: at, c: c });
+        }
+    }
+    if (entries.length === 1) {
+        if (first.gen && !first.live && _vHasBox(first.gen.c)) {
+            out.push({ node: first, c: first.gen.c });
+        } else if (first.kids && !first.gen && _vHasBox(_vStyle(first))) {
+            out.push({ node: first, c: _vStyle(first) });
+        }
+    }
+    return out;
+}
+
+function _vPaints(c) {
+    return (c.bg && c.bg !== "rgba(0, 0, 0, 0)" && c.bg !== "transparent") || Boolean(c.bw);
+}
+
+// The room each run's boxes take at its ends and what paints them, as the
+// converter writes them (`paint_run_boxes`): a box opens in the first run it is
+// in and closes in the last, and each box reaches over what those inside it take.
+function _vPutBoxes(line, made, runs) {
+    var boxes = runs.map(_vRunBoxes);
+    var firstOf = new Map();
+    var lastOf = new Map();
+    boxes.forEach(function(list, i) {
+        list.forEach(function(b) {
+            if (!firstOf.has(b.node)) {
+                firstOf.set(b.node, i);
+            }
+            lastOf.set(b.node, i);
+        });
+    });
+    made.forEach(function(m, i) {
+        _vSetRunBox(line, m.text, boxes[i], function(b) { return firstOf.get(b.node) === i; },
+            function(b) { return lastOf.get(b.node) === i; });
+    });
+}
+
+// The room `boxes` (outermost first) take at the ends of the run `text`, and
+// their paint on its lines.
+function _vSetRunBox(line, text, boxes, opensIn, closesIn) {
+    var meta = _meta(text);
+    // What the converter painted on this run is for the runs it wrote.
+    Array.from(text.children).forEach(function(child) {
+        if (child.reachLeft !== undefined && child.fragments !== undefined && !_meta(child).vPaint) {
+            child.visible = false;
+        }
+    });
+    (meta.vPaints || []).forEach(function(p) {
+        p.parent = null;
+        p.destroy();
+    });
+    meta.vPaints = [];
+    var reachLeft = 0, reachRight = 0, left = 0, right = 0;
+    var paints = [];
+    var room = [];
+    boxes.slice().reverse().forEach(function(b) {
+        var c = b.c;
+        var opens = opensIn(b);
+        var closes = closesIn(b);
+        var edge = c.edge || [0, 0, 0, 0];
+        if (opens) {
+            reachLeft += edge[3];
+            left += edge[3] + (c.ml || 0);
+        }
+        if (closes) {
+            reachRight += edge[1];
+            right += edge[1] + (c.mr || 0);
+        }
+        room.push({ node: b.node, left: opens ? edge[3] + (c.ml || 0) : 0, right: closes ? edge[1] + (c.mr || 0) : 0 });
+        if (_vPaints(c)) {
+            var bw = c.bw || [0, 0, 0, 0];
+            var paint = Qt.createQmlObject("import QtQuick; import \".\"; EldurInlineBox {}", text,
+                Qt.resolvedUrl("eldur_box"));
+            _meta(paint).vPaint = true;
+            paint.font = Qt.font({ pixelSize: Math.max(1, Math.round(c.size)), family: EldurFonts.family(c.family),
+                weight: c.weight, italic: c.italic });
+            if (c.bg && c.bg !== "rgba(0, 0, 0, 0)") {
+                paint.fill = _gQtColor(c.bg);
+            }
+            if (c.rad) {
+                paint.radii = c.rad.map(Math.round);
+            }
+            if (c.bw) {
+                paint.borderWidths = bw.map(Math.round);
+                paint.borderColors = c.bc.map(_gQtColor);
+            }
+            paint.paddingTop = edge[0] - bw[0];
+            paint.paddingBottom = edge[2] - bw[2];
+            paint.reachLeft = reachLeft;
+            paint.reachRight = reachRight;
+            paint.opens = opens;
+            paint.closes = closes;
+            paints.unshift(paint);
+        }
+        if (opens) {
+            reachLeft += c.ml || 0;
+        }
+        if (closes) {
+            reachRight += c.mr || 0;
+        }
+    });
+    meta.vPaints = paints;
+    meta.vRoom = room;
+    line.setRunBox(text, left, right, paints);
+}
+
+// A created element's `Text` on a line is a run, its box as a written one's.
+function _gRunBox(raw, s, e) {
+    var line = raw.parent;
+    // Its text is in its own font and colour, as a box's `_gPaintText` gives it.
+    var font = _gFontOf(s);
+    var had = raw.font;
+    if (had.pixelSize !== font.pixelSize || had.family !== font.family || had.weight !== font.weight
+        || had.italic !== font.italic) {
+        raw.font = font;
+    }
+    var color = _gQtColor(s["color"]);
+    if (!Qt.colorEqual(raw.color, color)) {
+        raw.color = color;
+    }
+    _gPaintTextLines(raw, raw, s);
+    var told = _meta(raw).gRunBox;
+    var c = {
+        size: s.fontSize, family: _gFamily(s["font-family"]), weight: _gWeightNumber(s["font-weight"]),
+        italic: s["font-style"] === "italic", bg: s["background-color"], display: s.display
+    };
+    if (e.ml) {
+        c.ml = e.ml;
+    }
+    if (e.mr) {
+        c.mr = e.mr;
+    }
+    var bw = [e.bt, e.br, e.bb, e.bl];
+    var edge = [e.pt + e.bt, e.pr + e.br, e.pb + e.bb, e.pl + e.bl];
+    if (bw.some(function(w) { return w > 0; })) {
+        c.bw = bw;
+        c.bc = ["top", "right", "bottom", "left"].map(function(side) { return s["border-" + side + "-color"]; });
+    }
+    if (edge.some(function(w) { return w !== 0; })) {
+        c.edge = edge;
+    }
+    var rad = ["top-left", "top-right", "bottom-right", "bottom-left"].map(function(corner) {
+        return Math.max(0, _gPx(s["border-" + corner + "-radius"], null, s.fontSize, s.rootSize) || 0);
+    });
+    if (rad.some(function(r) { return r !== 0; })) {
+        c.rad = rad;
+    }
+    var key = JSON.stringify(c);
+    if (told === key) {
+        return;
+    }
+    _meta(raw).gRunBox = key;
+    _meta(raw).gRunEdge = c.display === "inline" ? c.edge : undefined;
+    var always = function() { return true; };
+    _vSetRunBox(line, raw, _vHasBox(c) && c.display === "inline" ? [{ node: raw, c: c }] : [], always, always);
 }
 
 // The boxes around a run's text, outermost first: those of the elements it is in
@@ -11629,7 +12026,7 @@ function _vCutRuns(roots, base) {
 function _vRunLevels(entries, base) {
     var first = entries[0];
     var chain = [];
-    for (var at = first ? first.vparent : null; at; at = at.vparent) {
+    for (var at = first ? _vUp(first) : null; at; at = at.vparent) {
         chain.unshift(at);
     }
     if (first && first.kids && !first.gen && entries.length === 1) {
@@ -11779,13 +12176,15 @@ function _vRunsFor(model) {
         m.kids.forEach(function(k) {
             if (!k.live && !k.gen && roots.indexOf(k) === -1) {
                 roots.push(k);
-            } else if (k.gen && !k.live) {
+            } else if (k.gen && !k.live && !k.genOf) {
+                // An element's generated text is reached through the element.
                 roots.push(k);
             }
         });
     });
     var runs = _vCutRuns(roots, base);
-    if (!onLine && runs.length < 2 && (runs.length === 0 || _vRunLevels(runs[0], base).levels.length === 0)) {
+    if (!onLine && runs.length < 2 && (runs.length === 0
+        || (_vRunLevels(runs[0], base).levels.length === 0 && _vRunBoxes(runs[0]).length === 0))) {
         return false;
     }
     _vRunning = true;
@@ -11867,7 +12266,10 @@ function _vCarryAfter(raw) {
 
 function _vRunText(line, like) {
     var made = Qt.createQmlObject(
-        "import QtQuick; Text { wrapMode: Text.Wrap; textFormat: Text.StyledText; renderType: Text.NativeRendering }",
+        // `eldurInline` makes it a run to the DOM, as the converter's are: its
+        // elements are its parent's children. Its model is set here, never parsed.
+        "import QtQuick; Text { property string eldurInline: \"\"; wrapMode: Text.Wrap; "
+        + "textFormat: Text.StyledText; renderType: Text.NativeRendering }",
         _qobjectParent(), "eldur_run");
     made.font = line.font;
     made.color = line.color;
@@ -11888,11 +12290,11 @@ function _vPutRuns(line, models, runs, base, model) {
         var m = models[i];
         if (!m) {
             var text = _vRunText(line, model.text);
-            _insertInFlow(line, [text], next);
-            m = { text: text, k: model.k, hoisted: false, bare: false, html: false, pre: model.pre,
+            m = { text: text, kids: [], k: model.k, hoisted: false, bare: false, html: false, pre: model.pre,
                   underline: Boolean(model.underline), strike: Boolean(model.strike) };
             _meta(text).vModel = m;
             _vModels.push(m);
+            _insertInFlow(line, [text], next);
         }
         m.hoisted = false;
         m.entries = entries;
@@ -11938,10 +12340,14 @@ function _vPutRuns(line, models, runs, base, model) {
         m.text.font = font;
         line.setRunLevels(m.text, boxes.levels);
         m.twinText = null;
+        m.onLine = true;
         // The model of an element a script moved keeps its place; what the
         // converter wrote is right only until a run changes.
         _vRender(m);
     });
+    if (typeof line.setRunBox === "function") {
+        _vPutBoxes(line, made, runs);
+    }
     return same;
 }
 
@@ -12022,8 +12428,11 @@ function _vPieces(v) {
         (node.kids || []).forEach(function(k) {
             if (!k.gen) {
                 walk(k);
+            } else if (k.model && !k.live && out.indexOf(k.model) === -1) {
+                // A `::before` of another font or a box of its own is a run of
+                // its own, and in the box.
+                out.push(k.model);
             } else if (node.model && out.indexOf(node.model) === -1) {
-                // A `::before` of another font is a run of its own, and in the box.
                 out.push(node.model);
             }
         });
@@ -12124,11 +12533,21 @@ function _vFragments(v) {
             // edges, and the element's box reaches over them (measured).
             var after = (v.genRuns || []).some(function(g) { return g.model === model; })
                 ? text.eldurMarginRight || 0 : 0;
+            // What boxes inside `v` take on the run's ends is inside `v`'s box.
+            var lead = 0;
+            (_meta(text).vRoom || []).forEach(function(r) {
+                if (r.node !== v && _vWithin(r.node, v)) {
+                    lead += r.left;
+                    after += r.right;
+                }
+            });
             rows.forEach(function(p, n) {
                 var base2 = (placed.group ? p.hung : p.baseline) + placed.shift;
                 if (fills) {
                     var tail = n === rows.length - 1 ? after : 0;
-                    push(text.x + p.x + (p.lead || 0), Math.max(0, p.width - (p.lead || 0) - (p.trail || 0)) + tail, base2);
+                    var head = n === 0 ? lead : 0;
+                    push(text.x + p.x + (p.lead || 0) - head,
+                        Math.max(0, p.width - (p.lead || 0) - (p.trail || 0)) + head + tail, base2);
                 } else if (scan[n]) {
                     push(text.x + p.x + scan[n].min, scan[n].max - scan[n].min, base2);
                 } else if (!v.kids || v.kids.length === 0) {
@@ -14830,6 +15249,7 @@ function _vRemove(node) {
         }
         _vChanged(model);
     }
+    _pseudoTouch();
 }
 
 function _vAsNode(raw) {
@@ -14876,6 +15296,7 @@ function _vInsert(c, rawNodes, ref) {
         _vEnsureSelected(model);
     }
     _vChanged(model);
+    _pseudoTouch();
 }
 
 function _vClone(node, deep) {
@@ -18050,7 +18471,8 @@ function _gCutTwin(text, twin) {
 // line puts them at its top (eldur_fonts.js).
 function _gLineShift(text, s) {
     var line = _gLineHeight(s);
-    return EldurFonts.shift(text.font.family, s.fontSize, text.font.weight, text.font.italic, line === null ? 0 : line);
+    return EldurFonts.shift(text.font.family, s.fontSize, text.font.weight, text.font.italic, line === null ? 0 : line,
+        text.text);
 }
 
 function _gHide(kid) {
@@ -18398,7 +18820,7 @@ function _gPaintText(text, s, innerW, owner) {
     text.color = _gQtColor(s["color"]);
     _gPaintTextLines(text, owner, s);
     var own = _gLineHeight(s);
-    var line = own !== null ? own : EldurFonts.normalLine(text.font, s.fontSize);
+    var line = own !== null ? own : EldurFonts.normalLine(text.font, s.fontSize, text.text);
     _gSet(text, "lineHeightMode", 1);
     _gSet(text, "lineHeight", line);
     var align = s["text-align"];
@@ -21436,6 +21858,11 @@ function _gLineMargins(raw, e) {
         _gSet(raw, "eldurMb", e.mb || 0);
         _gSet(raw, "eldurMl", e.ml || 0);
         _gSet(raw, "eldurMr", e.mr || 0);
+        return;
+    }
+    // A run's sides are the line's to lay out, with its padding and border.
+    if (typeof raw.text === "string" && raw.lineLaidOut !== undefined && typeof raw.parent.setRunBox === "function") {
+        _gRunBox(raw, _gStyle(raw), e);
         return;
     }
     tool.set(raw, e.mt || 0, e.mb || 0);

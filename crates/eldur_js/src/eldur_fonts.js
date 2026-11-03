@@ -28,6 +28,7 @@ var TABLE = /*TABLE*/{
   "monospace": ["JetBrainsMono Nerd Font", "Liberation Mono", "Cousine", "Noto Sans Mono", "DejaVu Sans Mono"]
 },
 "default": ["Liberation Serif", "Tinos", "Noto Serif", "DejaVu Serif"],
+"covered": [[0, 591], [880, 1279], [8192, 8303], [8352, 8399]],
 "faces": {
   "liberation sans": {"x": 0.5283125, "regular": [0.905273, 0.211914, 0.032715]},
   "liberation serif": {"x": 0.459, "regular": [0.891113, 0.216309, 0.042480]},
@@ -130,6 +131,56 @@ function _cssSize(pixels, size) {
     return size !== undefined && Math.max(1, Math.round(size)) === pixels ? size : pixels;
 }
 
+var _strayPattern = null;
+
+// The characters of `text` a listed face may not have, once each: those every
+// one of them covers (the table's `covered`) are not looked at.
+function _strays(text) {
+    if (_strayPattern === null) {
+        var hex = function(n) { return "\\u{" + n.toString(16) + "}"; };
+        _strayPattern = new RegExp("[^" + TABLE.covered.map(function(r) { return hex(r[0]) + "-" + hex(r[1]); }).join("")
+            + "]", "gu");
+    }
+    var found = String(text || "").match(_strayPattern);
+    if (found === null) {
+        return "";
+    }
+    var out = [];
+    found.forEach(function(ch) {
+        if (out.indexOf(ch) === -1) {
+            out.push(ch);
+        }
+    });
+    return out.sort().join("");
+}
+
+var _fallbacks = {};
+var _probe = null;
+
+// The ascent and descent Qt lays `strays` out with in this font, when a face it
+// falls back on for them reaches further than the font's own: `null` when none
+// does. QML cannot ask a face whether it has a glyph, but the logical box of
+// laid-out text reaches as far as the faces drawn in it.
+function _fallback(name, pixels, weight, italic, strays) {
+    var key = name + "|" + pixels + "|" + weight + "|" + italic + "|" + strays;
+    var known = _fallbacks[key];
+    if (known !== undefined) {
+        return known;
+    }
+    if (_probe === null) {
+        _probe = Qt.createQmlObject("import QtQuick; TextMetrics {}", Qt.application, "eldur_fonts");
+    }
+    _probe.font = Qt.font({ family: name, pixelSize: pixels, weight: weight, italic: italic });
+    _probe.text = strays;
+    var box = _probe.boundingRect;
+    var qt = _qtFont(name, pixels, weight, italic);
+    var found = { ascent: -box.y > qt.ascent + 1 / 128 ? -box.y : null,
+                  descent: box.y + box.height > qt.descent + 1 / 128 ? box.y + box.height : null };
+    known = found.ascent === null && found.descent === null ? null : found;
+    _fallbacks[key] = known;
+    return known;
+}
+
 // Chromium rounds ascent, descent and gap each, at the fractional size.
 function _extents(name, pixels, weight, italic, size) {
     var bold = weight >= 600;
@@ -143,32 +194,65 @@ function _extents(name, pixels, weight, italic, size) {
     return { ascent: Math.round(qt.ascent * scale), descent: Math.round(qt.descent * scale), gap: Math.round(qt.leading * scale) };
 }
 
+// The faces `text` is drawn in, rounded: the font's own, and one it falls back
+// on that reaches further, which counts as a face not in the table does, with
+// Qt's metrics and no gap. `qtAscent` is where Qt puts the baseline of a line
+// of them.
+function _faces(name, pixels, weight, italic, size, text) {
+    var own = _extents(name, pixels, weight, italic, size);
+    var out = { list: [own], qtAscent: _qtFont(name, pixels, weight, italic).ascent };
+    var strays = text ? _strays(text) : "";
+    var other = strays !== "" ? _fallback(name, pixels, weight, italic, strays) : null;
+    if (other !== null) {
+        var scale = _cssSize(pixels, size) / pixels;
+        out.list.push({ ascent: other.ascent === null ? 0 : Math.round(other.ascent * scale),
+                        descent: other.descent === null ? 0 : Math.round(other.descent * scale), gap: 0 });
+        if (other.ascent !== null) {
+            out.qtAscent = other.ascent;
+        }
+    }
+    return out;
+}
+
+// Where a line of `faces` has its baseline below its top, and how far it
+// reaches below that: each face is centred in the line on its own (half-
+// leading), and the line reaches as far as the furthest. `line` 0 is `normal`.
+function _reach(faces, line) {
+    var above = 0, below = 0;
+    faces.list.forEach(function(e) {
+        // In Chromium's 1/64 px units, so that 19.2 - 17 is not just under 2.2.
+        var leading = line > 0 ? Math.round(line * 64) / 64 - e.ascent - e.descent : e.gap;
+        var up = e.ascent + Math.floor(leading / 2 + 1e-4);
+        above = Math.max(above, up);
+        below = Math.max(below, e.ascent + e.descent + leading - up);
+    });
+    return { above: above, below: below };
+}
+
 // A resolved `font`'s rounded ascent, descent and gap.
 function extents(font, size) {
     return _extents(font.family, font.pixelSize, font.weight, font.italic, size);
 }
 
-// `line-height: normal` of a resolved `font`.
-function normalLine(font, size) {
-    var e = extents(font, size);
-    return e.ascent + e.descent + e.gap;
+// `line-height: normal` of a resolved `font`, and of the faces `text`
+// (optional) falls back on.
+function normalLine(font, size, text) {
+    var r = _reach(_faces(font.family, font.pixelSize, font.weight, font.italic, size, text), 0);
+    return r.above + r.below;
 }
 
 // What moves a fixed-height Qt line's glyphs to Chromium's baseline: Qt's baseline
-// is the font's rounded ascent below the line's top. `line` 0 is `normal`.
-function shift(stack, size, weight, italic, line) {
+// is the tallest rounded ascent below the line's top. `line` 0 is `normal`.
+function shift(stack, size, weight, italic, line, text) {
     var name = family(stack);
-    var pixels = Math.max(1, Math.round(size));
-    var e = _extents(name, pixels, weight, italic, size);
-    var leading = line > 0 ? Math.round(line * 64) / 64 - e.ascent - e.descent : e.gap;
-    // In Chromium's 1/64 px units, so that 19.2 - 17 is not just under 2.2.
-    var base = e.ascent + Math.floor(leading / 2 + 1e-4);
-    return base - Math.round(_qtFont(name, pixels, weight, italic).ascent);
+    var faces = _faces(name, Math.max(1, Math.round(size)), weight, italic, size, text);
+    return _reach(faces, line).above - Math.round(faces.qtAscent);
 }
 
 // Qt gives a fixed-height text's last line the font's own height when that is
-// taller; CSS keeps every line box `line` tall. Whole, as Qt rounds a `Text`'s
-// height up and the column carries that (layout.md §1.1).
+// taller (its own face's, whatever else the line falls back on); CSS keeps every
+// line box `line` tall. Whole, as Qt rounds a `Text`'s height up and the column
+// carries that (layout.md §1.1).
 function slack(font, line) {
     return Math.min(0, Math.ceil(line) - Math.ceil(_qtFont(font.family, font.pixelSize, font.weight, font.italic).height));
 }

@@ -7,9 +7,10 @@ use std::collections::HashMap;
 use std::sync::OnceLock;
 
 use eldur_css::{ComputedStyle, FontStyle};
-use eldur_qml::Value;
+use eldur_qml::{Member, Object, Value};
 use serde::Deserialize;
 
+use super::ids::Ids;
 use super::units::fmt_number;
 
 /// A CSS length in a literal, without single precision's noise.
@@ -33,6 +34,7 @@ struct Table {
     families: HashMap<String, Vec<String>>,
     default: Vec<String>,
     faces: HashMap<String, Face>,
+    covered: Vec<[u32; 2]>,
 }
 
 fn table() -> &'static Table {
@@ -179,4 +181,75 @@ pub(super) fn extents(style: &ComputedStyle) -> (f32, f32, f32) {
 pub(super) fn normal_line(style: &ComputedStyle) -> f32 {
     let (a, d, g) = extents(style);
     a + d + g
+}
+
+/// Whether `text` has a character a listed face may not have: another face
+/// draws it, and that face's ascent and descent count in a `normal` line
+/// (layout.md §1.3).
+pub(super) fn has_strays(text: &str) -> bool {
+    let covered = &table().covered;
+    text.chars().any(|c| {
+        let c = u32::from(c);
+        !covered.iter().any(|[from, to]| (*from..=*to).contains(&c))
+    })
+}
+
+/// A `Text` whose static text may fall back on other faces gives its text to
+/// the font module, which finds those faces on the running machine.
+pub(super) fn fallback_lines(obj: &mut Object, ids: &mut Ids) {
+    let strays = obj.type_name == "Text"
+        && matches!(obj.get("text"), Some(Value::String(t)) if has_strays(t));
+    if strays {
+        pass_text(obj, ids);
+    }
+    for m in &mut obj.members {
+        match m {
+            Member::Child(c) => fallback_lines(c, ids),
+            Member::Property {
+                value: Value::Object(o),
+                ..
+            } => fallback_lines(o, ids),
+            _ => {}
+        }
+    }
+}
+
+fn pass_text(text: &mut Object, ids: &mut Ids) {
+    if let Some(Value::Expr(line)) = text.get("lineHeight")
+        && let Some(args) = line
+            .strip_prefix(NORMAL_LINE)
+            .and_then(|rest| rest.strip_suffix(')'))
+    {
+        let size = if args == "font" { ", undefined" } else { "" };
+        let bound = format!("{NORMAL_LINE}{args}{size}, text)");
+        text.set("lineHeight", Value::expr(bound));
+    }
+    let shifted = match text.get("transform") {
+        Some(Value::Object(t)) => {
+            matches!(t.get("y"), Some(Value::Expr(y)) if y.starts_with("EldurFonts.shift("))
+        }
+        _ => false,
+    };
+    if !shifted {
+        return;
+    }
+    // The shift is on a `Translate`, which names the `Text` to read its text.
+    let id = match &text.id {
+        Some(id) => id.clone(),
+        None => ids.claim("text"),
+    };
+    text.id = Some(id.clone());
+    if let Some(Member::Property {
+        value: Value::Object(t),
+        ..
+    }) = text
+        .members
+        .iter_mut()
+        .find(|m| matches!(m, Member::Property { name, .. } if name == "transform"))
+        && let Some(Value::Expr(y)) = t.get("y")
+        && let Some(args) = y.strip_suffix(')')
+    {
+        let bound = format!("{args}, {id}.text)");
+        t.set("y", Value::expr(bound));
+    }
 }

@@ -46,6 +46,29 @@ fn computed(style: &ComputedStyle) -> Json {
     if edges.iter().any(|e| *e != 0.0) {
         out["edge"] = json!(edges);
     }
+    // What the runtime paints and spaces of the box when it lays the runs out
+    // again: the same as `paint_run_boxes` writes.
+    let (margin_left, margin_right) = (
+        super::inline::side_px(&style.margin.left),
+        super::inline::side_px(&style.margin.right),
+    );
+    if margin_left != 0.0 {
+        out["ml"] = json!(margin_left);
+    }
+    if margin_right != 0.0 {
+        out["mr"] = json!(margin_right);
+    }
+    let sides = super::decoration::sides(style);
+    if sides.iter().any(|s| super::decoration::is_visible(s)) {
+        out["bw"] = json!(sides.map(super::decoration::border_width));
+        out["bc"] = json!(sides.map(|s| rgb(s.color)));
+    }
+    let r = &style.border_radius;
+    let radii = [&r.top_left, &r.top_right, &r.bottom_right, &r.bottom_left]
+        .map(|c| c.as_px().unwrap_or(c.px));
+    if radii.iter().any(|r| *r != 0.0) {
+        out["rad"] = json!(radii);
+    }
     let (rel_x, rel_y) = super::inline::relative_offset(style);
     if (rel_x, rel_y) != (0.0, 0.0) {
         out["rel"] = json!([rel_x, rel_y]);

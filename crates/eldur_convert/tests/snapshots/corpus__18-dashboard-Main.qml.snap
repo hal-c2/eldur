@@ -1099,16 +1099,17 @@ ApplicationWindow {
 
                                                 // <p class="stat-delta up">
                                                 Text {
+                                                    id: text9
                                                     text: "▲ 12.4% vs last month"
                                                     textFormat: Text.PlainText
                                                     color: "#059669"
                                                     font.family: EldurFonts.family("sans-serif")
                                                     font.pixelSize: 13
                                                     font.weight: 600
-                                                    lineHeight: EldurFonts.normalLine(font)
+                                                    lineHeight: EldurFonts.normalLine(font, undefined, text)
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: EldurFonts.shift("sans-serif", 13, 600, false, 0)
+                                                        y: EldurFonts.shift("sans-serif", 13, 600, false, 0, text9.text)
                                                     }
                                                     bottomPadding: EldurFonts.slack(font, lineHeight)
                                                     wrapMode: Text.WordWrap
@@ -1184,16 +1185,17 @@ ApplicationWindow {
 
                                                 // <p class="stat-delta down">
                                                 Text {
+                                                    id: text10
                                                     text: "▼ 3.1% vs last month"
                                                     textFormat: Text.PlainText
                                                     color: "#dc2626"
                                                     font.family: EldurFonts.family("sans-serif")
                                                     font.pixelSize: 13
                                                     font.weight: 600
-                                                    lineHeight: EldurFonts.normalLine(font)
+                                                    lineHeight: EldurFonts.normalLine(font, undefined, text)
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: EldurFonts.shift("sans-serif", 13, 600, false, 0)
+                                                        y: EldurFonts.shift("sans-serif", 13, 600, false, 0, text10.text)
                                                     }
                                                     bottomPadding: EldurFonts.slack(font, lineHeight)
                                                     wrapMode: Text.WordWrap
@@ -1269,16 +1271,17 @@ ApplicationWindow {
 
                                                 // <p class="stat-delta up">
                                                 Text {
+                                                    id: text11
                                                     text: "▲ 5.6% vs last month"
                                                     textFormat: Text.PlainText
                                                     color: "#059669"
                                                     font.family: EldurFonts.family("sans-serif")
                                                     font.pixelSize: 13
                                                     font.weight: 600
-                                                    lineHeight: EldurFonts.normalLine(font)
+                                                    lineHeight: EldurFonts.normalLine(font, undefined, text)
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: EldurFonts.shift("sans-serif", 13, 600, false, 0)
+                                                        y: EldurFonts.shift("sans-serif", 13, 600, false, 0, text11.text)
                                                     }
                                                     bottomPadding: EldurFonts.slack(font, lineHeight)
                                                     wrapMode: Text.WordWrap
@@ -1354,16 +1357,17 @@ ApplicationWindow {
 
                                                 // <p class="stat-delta down">
                                                 Text {
+                                                    id: text12
                                                     text: "▲ 0.4 pts vs last month"
                                                     textFormat: Text.PlainText
                                                     color: "#dc2626"
                                                     font.family: EldurFonts.family("sans-serif")
                                                     font.pixelSize: 13
                                                     font.weight: 600
-                                                    lineHeight: EldurFonts.normalLine(font)
+                                                    lineHeight: EldurFonts.normalLine(font, undefined, text)
                                                     lineHeightMode: Text.FixedHeight
                                                     transform: Translate {
-                                                        y: EldurFonts.shift("sans-serif", 13, 600, false, 0)
+                                                        y: EldurFonts.shift("sans-serif", 13, 600, false, 0, text12.text)
                                                     }
                                                     bottomPadding: EldurFonts.slack(font, lineHeight)
                                                     wrapMode: Text.WordWrap

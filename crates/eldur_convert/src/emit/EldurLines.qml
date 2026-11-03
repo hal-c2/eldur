@@ -32,6 +32,7 @@ Item {
 
     property var _runs: new Map()
     property var _levels: new Map()
+    property var _boxes: new Map()
     property var _watched: new Set()
     // The fractional CSS size, where the font's own is rounded to a whole one.
     property real cssSize: 0
@@ -102,6 +103,15 @@ Item {
     // What a script's changes make of a run's boxes; see `_runLevels`.
     function setRunLevels(item, levels) {
         _levels.set(item, levels);
+        schedule();
+    }
+
+    // What the runtime makes of a run's inline boxes when it lays the runs out
+    // again: the room they take at the run's ends, in place of the converter's
+    // `eldurMarginLeft`/`eldurMarginRight`, and the `EldurInlineBox`es that
+    // paint them on the run's lines.
+    function setRunBox(item, left, right, paints) {
+        _boxes.set(item, { left: left, right: right, paints: paints });
         schedule();
     }
 
@@ -431,8 +441,9 @@ Item {
                 continue;
             }
             const plain = _plain(item);
-            const marginLeft = item.eldurMarginLeft || 0;
-            const marginRight = item.eldurMarginRight || 0;
+            const told = _boxes.get(item);
+            const marginLeft = told ? told.left : item.eldurMarginLeft || 0;
+            const marginRight = told ? told.right : item.eldurMarginRight || 0;
             natural += marginLeft + marginRight;
             if (plain === "") {
                 item.width = 0;
@@ -764,6 +775,10 @@ Item {
             // An inline element's own box is painted on these.
             if (item.eldurFragments !== undefined) {
                 item.eldurFragments = place;
+            }
+            const box = _boxes.get(item);
+            if (box) {
+                box.paints.forEach(function(paint) { paint.fragments = place; });
             }
         });
         implicitHeight = top;
