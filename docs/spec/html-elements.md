@@ -199,6 +199,8 @@ Inline runs become one `Text`. See "Inline formatting" for when they split.
 - The element is `ruby`.
 - Two adjacent runs need different `line-height`.
 
+**Horizontal margins are the run's.** A `Text` cannot put space inside itself, so an inline element with a horizontal margin (a `.sep{margin:0 8px}`, a breadcrumb's `li::after{margin:0 6px}`) is a run of its own. The run carries `eldurMarginLeft`/`eldurMarginRight`, which the lines leave free beside it. These sum the margins of every span that starts or ends the run, down to a nested `::after`. Padding and borders of a box on the run push its neighbours out (`reachLeft`/`reachRight`). Margins are counted once, from the run's edges. A span with margins or padding but nothing to draw gets no `EldurInlineBox`. A run that holds only an element's `::after` makes the element's box reach over that pseudo-element's right margin, as `getBoundingClientRect` does in Chromium.
+
 ## Accessibility
 
 Set `Accessible.role` (an attached property) on the item that represents the element. Only QAccessible role names are used. Roles marked **(verify)** should be checked against Qt 6.11.

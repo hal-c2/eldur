@@ -783,3 +783,12 @@ fn rule_pseudo_class_closed() {
 fn rule_floats_escape() {
     page("rule_floats_escape");
 }
+
+/// Space beside inline content: a span's margins and a separator's `::after`
+/// margins move what follows, a button's `::before` icon sits in its label,
+/// and an absolute box that may not wrap keeps its text on one line however
+/// narrow what holds it.
+#[test]
+fn rule_inline_space() {
+    page("rule_inline_space");
+}

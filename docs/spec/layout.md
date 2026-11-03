@@ -627,7 +627,7 @@ Rectangle {                              // .card, plain Item, not a Layout
 |---|---|---|
 | Offsets with explicit size | Full | Anchors or `x`/`y`. |
 | Auto size with `left` + `right` | Full | Anchors. |
-| Auto size with only `left` or `top` | Approx | Size from `implicitWidth`/`implicitHeight` (CSS shrink-to-fit). |
+| Auto size with only `left` or `top` | Approx | Size from `implicitWidth`/`implicitHeight` (CSS shrink-to-fit). At run time the width is min(max-content, max(min-content, available)): a `white-space: nowrap` tooltip in a narrow positioned span stays on one line past the span's width. |
 | Nearest positioned ancestor is a Layout | Emulated | Wrap that Layout in a plain `Item` and overlay the absolute child. |
 | `z-index` | Approx | `z`, see §5.1. |
 | `position: static` | Full | No change. |

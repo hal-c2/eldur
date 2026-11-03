@@ -2390,3 +2390,21 @@ fn a_script_reading_the_text_selection_is_warned() {
     )));
     assert!(!says(warnings("<!doctype html><p>getSelection</p>")));
 }
+
+#[test]
+fn a_button_with_a_drawn_icon_wraps_only_a_text_label() {
+    // An icon from `::before` makes the label lines that hold a box; Item has
+    // no `wrapMode` or `lineCount`, and Qt refuses the whole file for one.
+    let (qml, _) = convert(&page(
+        ".ib::before{content:\"\";display:inline-block;width:10px;height:10px;background:#369}",
+        "<button class=ib>Save</button>",
+    ));
+    let button = object_after(&qml, "<button class=\"ib\">");
+    let content = button
+        .split("contentItem: Item {")
+        .nth(1)
+        .unwrap_or_else(|| panic!("no drawn label in {button}"));
+    let own = content.split("EldurLines {").next().unwrap_or_default();
+    assert!(!own.contains("wrapMode"), "{button}");
+    assert!(!button.contains("contentItem.lineCount"), "{button}");
+}

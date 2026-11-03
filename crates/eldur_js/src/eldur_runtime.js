@@ -4207,7 +4207,11 @@ function _polishDown(item) {
     for (var i = 0; i < kids.length; ++i) {
         _polishDown(kids[i]);
     }
-    // A line below may have just found its height from the width given here.
+    // A line below may have just found its height from the width given here,
+    // and a box on these lines its width from the lines it holds.
+    if (typeof item.settleLines === "function") {
+        item.settleLines();
+    }
     if (typeof item.ensurePolished === "function") {
         item.ensurePolished();
     }
@@ -12116,10 +12120,15 @@ function _vFragments(v) {
             var rows = line.runLines(text);
             var fills = _vFills(v, model);
             var scan = fills ? null : _vRows(v, model);
+            // An `::after` on a run of its own takes its margins on the run's
+            // edges, and the element's box reaches over them (measured).
+            var after = (v.genRuns || []).some(function(g) { return g.model === model; })
+                ? text.eldurMarginRight || 0 : 0;
             rows.forEach(function(p, n) {
                 var base2 = (placed.group ? p.hung : p.baseline) + placed.shift;
                 if (fills) {
-                    push(text.x + p.x + (p.lead || 0), Math.max(0, p.width - (p.lead || 0) - (p.trail || 0)), base2);
+                    var tail = n === rows.length - 1 ? after : 0;
+                    push(text.x + p.x + (p.lead || 0), Math.max(0, p.width - (p.lead || 0) - (p.trail || 0)) + tail, base2);
                 } else if (scan[n]) {
                     push(text.x + p.x + scan[n].min, scan[n].max - scan[n].min, base2);
                 } else if (!v.kids || v.kids.length === 0) {
@@ -17384,6 +17393,10 @@ function _gPlace(raw, avail, opts, heightBasis) {
             used = _gIntrinsic(raw, s);
         } else if (_gLabelled(raw, s)) {
             used = Math.max(used, _gMinContent(raw, s));
+        } else if (opts.shrink && box) {
+            // Shrink-to-fit is never narrower than the longest piece that cannot
+            // wrap: with `nowrap`, the whole text past its containing block.
+            used = Math.max(used, _gNarrowest(raw, s));
         }
     } else {
         used = Math.max(avail - (e.ml || 0) - (e.mr || 0), frameW);
