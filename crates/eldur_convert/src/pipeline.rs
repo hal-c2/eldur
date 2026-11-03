@@ -532,6 +532,7 @@ fn selectors_outrun_templates(
         names_written_id(selector, analysis)
             || names_written_attribute(selector, analysis)
             || class_takes_out_of_flow(rule, analysis)
+            || class_gives_pseudo_box(rule, analysis)
             || (changes_form(rule) && form_depends_on_page(doc, scripts, selector))
     })
 }
@@ -553,6 +554,24 @@ fn class_takes_out_of_flow(rule: &eldur_css::RuntimeRule, analysis: &eldur_js::A
         .iter()
         .any(|(p, v, _)| p == "position" && (v == "absolute" || v == "fixed"))
         && names_after(&rule.selector, '.').any(|name| {
+            analysis
+                .class_writes
+                .iter()
+                .any(|w| w.names.iter().any(|n| n == name))
+        })
+}
+
+/// A box a class gives `::before` or `::after` is laid out by the runtime, which
+/// does that only on an open page; a template has no place to put it.
+fn class_gives_pseudo_box(rule: &eldur_css::RuntimeRule, analysis: &eldur_js::Analysis) -> bool {
+    let selector = rule.selector.trim_end();
+    let pseudo = [":before", ":after"].iter().any(|s| selector.ends_with(s));
+    pseudo
+        && rule
+            .declarations
+            .iter()
+            .any(|(p, _, _)| matches!(p.as_str(), "display" | "position" | "float"))
+        && names_after(selector, '.').any(|name| {
             analysis
                 .class_writes
                 .iter()

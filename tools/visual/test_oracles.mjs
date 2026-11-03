@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 /**
- * Checks `run`/`after` support in computed.mjs and geometry.mjs against
- * Chromium. Run: node tools/visual/test_oracles.mjs   (exit 1 on failure)
+ * Checks `run`/`after` support in computed.mjs and geometry.mjs, and the
+ * recorders' waiting in record.mjs, against Chromium.
+ * Run: node tools/visual/test_oracles.mjs   (exit 1 on failure)
  */
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { loadPlaywright } from "./playwright.mjs";
+import { catchUp, isMark, requireLogged, settle, trackPending } from "./record.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const node = (script, args, input) => {
@@ -88,5 +92,68 @@ const geoAll = node("geometry.mjs", [
 check("geometry --elements: boxes that are not inline, described", geoAll.map((r) => [r.describe, r.y, r.height]), [
   ["<html>", 0, 15.5], ["<body>", 0, 15.5], ['<p id="a" class="x y">', 0, 10.5], ["<div>", 10.5, 5],
 ]);
+
+// record.mjs: what a recorder waits for, and what it refuses.
+const throws = async (f) => {
+  try {
+    await f();
+    return null;
+  } catch (e) {
+    return e.message;
+  }
+};
+const { chromium } = await loadPlaywright();
+const browser = await chromium.launch();
+try {
+  // A page per case: a document `setContent` replaces keeps its window, and
+  // with it the last case's timers.
+  let page;
+  let log = [];
+  const open = async (html) => {
+    await page?.close();
+    page = await browser.newPage();
+    await trackPending(page, { current: true });
+    log = [];
+    page.on("console", (m) => {
+      if (!isMark(m.text())) log.push(m.text());
+    });
+    await page.setContent(html);
+  };
+  const record = async (html, opts) => {
+    await open(html);
+    const left = await settle(page, opts);
+    return { log, left };
+  };
+
+  const late = "<script>setTimeout(()=>{console.log('CS late');console.log('CS done')},500)</script>";
+  check("settle: a page that only logs from a 500ms timer", await record(late), { log: ["CS late", "CS done"], left: 0 });
+  check("requireLogged: its log is accepted", await throws(() => requireLogged("late", late, ["CS late", "CS done"], "CS ")), null);
+  const chain = "<script>setTimeout(()=>{console.log('CS a');requestAnimationFrame(()=>setTimeout(()=>console.log('CS done'),200))},100)</script>";
+  check("settle: timers a timer and a frame start", (await record(chain)).log, ["CS a", "CS done"]);
+  const cleared = "<script>const t=setTimeout(()=>console.log('CS never'),5000);clearTimeout(t);console.log('CS now')</script>";
+  check("settle: a cleared timer is not waited for", (await record(cleared)).log, ["CS now"]);
+
+  const silent = "<script>if(false)console.log('CS '+1)</script>";
+  check("requireLogged: a page that logs nothing is refused", await throws(() => requireLogged("silent", silent, [], "CS ")),
+    'silent: the page logs "CS " lines but none were recorded');
+  check("requireLogged: a timed page without its end marker is refused",
+    await throws(() => requireLogged("late", late, ["CS late"], "CS ")), 'late: logs from timers but its end marker "CS done" was not recorded');
+  check("requireLogged: a page that does not log is not checked", await throws(() => requireLogged("plain", "<p>x</p>", [], "CS ")), null);
+
+  // A frame loop and an interval never finish: refused, or with `running`
+  // reported after the cap rather than waited for.
+  const loop = "<script>(function f(){requestAnimationFrame(f)})();setInterval(()=>{},30)</script>";
+  check("settle: a page that never stops is refused", await throws(() => record(loop, { cap: 300 })),
+    "page never finished: 2 timers or frames still pending 300ms on");
+  check("settle: with running, a page that never stops is left running", (await record(loop, { cap: 300, running: true })).left, 2);
+
+  // catchUp: a busy page runs a timer late; what was due by the call is read.
+  await open("<script>setTimeout(()=>{const s=performance.now();while(performance.now()-s<400);},0);setTimeout(()=>console.log('CS t50'),50);setTimeout(()=>console.log('CS t5000'),5000)</script>");
+  await page.waitForTimeout(100);
+  await catchUp(page);
+  check("catchUp: a timer due by now has run, a later one is not waited for", log, ["CS t50"]);
+} finally {
+  await browser.close();
+}
 
 process.exit(failed ? 1 : 0);

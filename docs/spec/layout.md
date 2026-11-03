@@ -81,6 +81,8 @@ ScrollView {
 
 **Margin collapsing rule:** the collapsed gap (`max(prev.bottom, next.top)`) goes on the following item as `Layout.topMargin`. `spacing` stays 0 and the previous item gets no bottom margin, so gaps are not doubled. Layout margins add to spacing, so this is the only way to get exact CSS gaps. Collapse only applies in block flow, not between flex or grid items.
 
+**Empty blocks a script may fill.** An empty block collapses through (CSS 2.2 §8.3.1) and is not emitted. On a script page one a script can reach is kept as a `Text` with no line box (`Layout.preferredHeight: text === "" ? 0 : -1`); margins still collapse through it, so the next item's top margin is what the empty block would hand it until the block has text or a child: `(host.text !== "" || host.children.length > 0) ? 14 : 0`.
+
 **Centering (`margin: 0 auto`)**: inside a `ColumnLayout`, use `Layout.alignment: Qt.AlignHCenter` with `Layout.preferredWidth` set to the fixed border-box width (no `fillWidth`). For `max-width` with auto width, use `Layout.fillWidth: true` plus `Layout.maximumWidth`. Use the `x` binding above when the parent is a plain `Item`.
 
 | Feature | Support | Notes |
@@ -625,7 +627,7 @@ Rectangle {                              // .card, plain Item, not a Layout
 |---|---|---|
 | Offsets with explicit size | Full | Anchors or `x`/`y`. |
 | Auto size with `left` + `right` | Full | Anchors. |
-| Auto size with only `left` or `top` | Approx | Size from `implicitWidth`/`implicitHeight` (CSS shrink-to-fit). |
+| Auto size with only `left` or `top` | Approx | Size from `implicitWidth`/`implicitHeight` (CSS shrink-to-fit). At run time the width is min(max-content, max(min-content, available)): a `white-space: nowrap` tooltip in a narrow positioned span stays on one line past the span's width. |
 | Nearest positioned ancestor is a Layout | Emulated | Wrap that Layout in a plain `Item` and overlay the absolute child. |
 | `z-index` | Approx | `z`, see §5.1. |
 | `position: static` | Full | No change. |

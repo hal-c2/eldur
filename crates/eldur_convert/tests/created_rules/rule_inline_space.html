@@ -1,0 +1,27 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+.ib{padding:4px 8px;border:1px solid #888;background:#fff;font:13px Arial}
+.ib::before{content:"";display:inline-block;width:10px;height:10px;margin-right:5px;background:#369;vertical-align:middle}
+ul.bc{list-style:none;padding:0;margin:6px 0}
+ul.bc li{display:inline}
+ul.bc li::after{content:"\203A";margin:0 6px;color:#888}
+.sep{margin:0 8px;color:#888}
+.tag{margin:0 4px;background:#def}
+.tipped{position:relative;display:inline-block;padding:2px 4px;background:#eee}
+.tipped.show::after{content:attr(data-tip);position:absolute;left:0;top:100%;padding:3px 6px;background:#222;color:#fff;font-size:11px;white-space:nowrap}
+</style></head><body>
+<div id="tb"><button class="ib" id="b1">Save</button> <button class="ib" id="b2">Delete</button></div>
+<ul class="bc" id="bc"><li id="l1">Home</li><li id="l2">Docs</li><li id="l3">Guide</li></ul>
+<p id="p1">Left<span class="sep" id="s1">|</span><span id="m1">Middle</span><span class="sep">|</span><span id="r1">Right</span></p>
+<p id="p2">Tags:<span class="tag" id="t1">one</span><span class="tag" id="t2">two</span><span id="e1">end</span></p>
+<p id="tp"><span class="tipped" id="tt" data-tip="Copied to clipboard">Copy</span> link</p>
+<div id="end" style="height:4px;background:#000"></div>
+<script>
+const $=id=>document.getElementById(id);
+const log=n=>{const q=$(n).getBoundingClientRect();console.log('CS '+n+' '+[q.x,q.y,q.width,q.height].join(','))};
+for(const n of ['b1','b2','l2','l3','m1','r1','t1','t2','e1','tt','end'])log(n);
+$('tt').classList.add('show');
+const tip=document.createElement('div');tip.id='probe';tip.textContent='Copied to clipboard';
+tip.style.cssText='position:absolute;left:0;top:100%;padding:3px 6px;font-size:11px;white-space:nowrap';
+$('tt').appendChild(tip);log('probe');log('tt');
+</script></body></html>

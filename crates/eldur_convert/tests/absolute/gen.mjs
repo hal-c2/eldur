@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../../..");
 const { loadPlaywright } = await import(path.join(root, "tools/visual/playwright.mjs"));
-const { writeRecording, drainConsole } = await import(path.join(root, "tools/visual/record.mjs"));
+const { writeRecording, trackPending, settle, requireLogged } = await import(path.join(root, "tools/visual/record.mjs"));
 
 // How far each page is scrolled before measuring.
 const SCROLL = { scrolled: 300, dyn_created_rel_scrolled: 300 };
@@ -26,6 +26,7 @@ const page = await browser.newPage({
   viewport: { width: 1280, height: 800 },
   deviceScaleFactor: 1,
 });
+await trackPending(page);
 const out = {};
 let log = [];
 page.on("console", (m) => {
@@ -56,7 +57,9 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
       return boxes;
     });
   }
-  await drainConsole(page);
+  // The log is all the page says, however late its timers run.
+  await settle(page);
+  requireLogged(file, fs.readFileSync(path.join(here, file), "utf8"), log, "LC ");
   out[name].log = log;
   if (name.startsWith("paint_")) {
     out[name].hits = await page.evaluate(() => {

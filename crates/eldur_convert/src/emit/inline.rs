@@ -125,6 +125,14 @@ fn paints_on_line(style: &ComputedStyle) -> bool {
         || !style.background_color.is_transparent()
         || super::text::inline_space(style, super::text::Side::Left) > 0.0
         || super::text::inline_space(style, super::text::Side::Right) > 0.0
+        || has_side_margin(style)
+}
+
+/// Whether an inline element's margins push its neighbours apart. A `Text` has
+/// no room for space between its runs, so the element is a run of its own and
+/// its margins are that run's (`run_margins`).
+fn has_side_margin(style: &ComputedStyle) -> bool {
+    side_px(&style.margin.left) != 0.0 || side_px(&style.margin.right) != 0.0
 }
 
 /// Whether an inline element paints a box RichText cannot: RichText has a background
@@ -148,6 +156,10 @@ pub(crate) fn paints_box(style: &ComputedStyle) -> bool {
     !style.background_color.is_transparent() && rounded
 }
 
+fn draws_box(style: &ComputedStyle) -> bool {
+    !style.background_color.is_transparent() || paints_box(style)
+}
+
 /// The innermost element that paints a box and holds all of `items`.
 fn sole_box<'a>(items: &[Inline<'a>]) -> Option<&'a ComputedStyle> {
     let [Inline::Span(span)] = items else {
@@ -164,6 +176,7 @@ fn holds_box(items: &[Inline<'_>]) -> bool {
             paints_box(span.style)
                 || super::text::inline_space(span.style, super::text::Side::Left) > 0.0
                 || super::text::inline_space(span.style, super::text::Side::Right) > 0.0
+                || has_side_margin(span.style)
                 || holds_box(&span.children)
         }
         Inline::Text(_) | Inline::Atomic(_) | Inline::LineBreak => false,
@@ -202,23 +215,34 @@ fn has_words(items: &[Inline<'_>]) -> bool {
 }
 
 /// The horizontal margins a run's spans take on the line. One `Text` cannot put
-/// space inside itself, so only those at the run's edges can be honoured.
+/// space inside itself, so only those at the run's edges can be honoured: each
+/// span that starts or ends it, a separator's `::after` within its item as much
+/// as the item.
 fn run_margins(items: &[Inline<'_>]) -> [f32; 2] {
-    let side = |m: &LengthAuto| match m {
-        LengthAuto::Length(l) => l.as_px().unwrap_or(0.0),
-        LengthAuto::Auto => 0.0,
-    };
-    let is_space = |i: &&Inline<'_>| matches!(i, Inline::Text(t) if t.trim().is_empty());
-    let first = items.iter().find(|i| !is_space(i));
-    let last = items.iter().rev().find(|i| !is_space(i));
-    let left = match first {
-        Some(Inline::Span(s)) => side(&s.style.margin.left),
-        _ => 0.0,
-    };
-    let right = match last {
-        Some(Inline::Span(s)) => side(&s.style.margin.right),
-        _ => 0.0,
-    };
+    fn edge<'a, 'b>(items: &'b [Inline<'a>], last: bool) -> Option<&'b Span<'a>> {
+        let is_space = |i: &&Inline<'_>| matches!(i, Inline::Text(t) if t.trim().is_empty());
+        let item = if last {
+            items.iter().rev().find(|i| !is_space(i))
+        } else {
+            items.iter().find(|i| !is_space(i))
+        };
+        match item {
+            Some(Inline::Span(s)) => Some(s),
+            _ => None,
+        }
+    }
+    let mut left = 0.0;
+    let mut at = items;
+    while let Some(span) = edge(at, false) {
+        left += side_px(&span.style.margin.left);
+        at = &span.children;
+    }
+    let mut right = 0.0;
+    let mut at = items;
+    while let Some(span) = edge(at, true) {
+        right += side_px(&span.style.margin.right);
+        at = &span.children;
+    }
     [left, right]
 }
 
@@ -638,6 +662,12 @@ impl Emitter<'_, '_> {
         // the elements only runs cut.
         let mut seen = std::collections::HashSet::new();
         for piece in &list {
+            // A generated box is not a child `all_inline` sees, but the element
+            // around it reaches across it all the same: the runtime finds the
+            // box by the element's key.
+            if let Piece::Atomic(_, Some(owner)) = piece {
+                self.cut_nodes.insert(*owner);
+            }
             if let Piece::Run(items) = piece {
                 let mut spans = Vec::new();
                 each_span(items, &mut spans);
@@ -768,11 +798,22 @@ impl Emitter<'_, '_> {
                             },
                         );
                     }
+                    // The item a line holds is the one the runtime shows, hides
+                    // and keeps at its element's end.
+                    let pseudo = obj
+                        .members
+                        .iter()
+                        .position(|m| matches!(m, Member::PropertyDecl { name, .. } if name == "eldurPseudo"))
+                        .filter(|_| !part.own)
+                        .map(|at| obj.members.remove(at));
                     let mut placed = if part.own {
                         obj
                     } else {
                         self.place_atomic(obj, &part.hint, part.margins, 0.0)
                     };
+                    if let Some(pseudo) = pseudo {
+                        placed.members.insert(0, pseudo);
+                    }
                     vertical_align(&mut placed, &a.style);
                     if self.options.source_comments
                         && let Some(node) = a.node
@@ -819,38 +860,24 @@ impl Emitter<'_, '_> {
         boxes: &[(&Span<'_>, bool, bool)],
         line: Option<u32>,
     ) -> [f32; 2] {
-        let mut margins = run_margins(items);
+        // Margins are the run's edges' (`run_margins`); those of the boxes are
+        // counted below only for how far each box's outer neighbours reach.
+        let margins = run_margins(items);
         if boxes.is_empty() {
             return margins;
         }
-        // The outermost span's margin, when it paints, is counted below with the rest.
-        if let Some(Inline::Span(outer)) = items
-            .iter()
-            .find(|i| !matches!(i, Inline::Text(t) if t.trim().is_empty()))
-            && paints_box(outer.style)
-        {
-            margins = [0.0, 0.0];
-        }
         let id = match &text.id {
             Some(id) => id.clone(),
-            None => {
+            None if boxes.iter().any(|(span, _, _)| draws_box(span.style)) => {
                 let id = self.ids.claim("inline run");
                 text.id = Some(id.clone());
                 id
             }
+            None => String::new(),
         };
-        text.members.insert(
-            0,
-            Member::PropertyDecl {
-                ty: "var".to_owned(),
-                name: "eldurFragments".to_owned(),
-                value: Some(Value::expr("[]")),
-                readonly: false,
-                required: false,
-            },
-        );
         // Inner boxes first: what each takes pushes every box around it outwards.
         let (mut reach_left, mut reach_right) = (0.0, 0.0);
+        let (mut margin_left, mut margin_right) = (0.0, 0.0);
         let mut painted = Vec::new();
         for (span, opens, closes) in boxes.iter().rev() {
             let st = span.style;
@@ -861,6 +888,18 @@ impl Emitter<'_, '_> {
             }
             if closes {
                 reach_right += pad(&st.padding.right) + border_width(&st.border.right);
+            }
+            // Space alone takes room on the line but has nothing to draw.
+            if !draws_box(st) {
+                if opens {
+                    reach_left += side_px(&st.margin.left);
+                    margin_left += side_px(&st.margin.left);
+                }
+                if closes {
+                    reach_right += side_px(&st.margin.right);
+                    margin_right += side_px(&st.margin.right);
+                }
+                continue;
             }
             let mut paint = Object::new("EldurInlineBox");
             paint.set("fragments", Value::expr(format!("{id}.eldurFragments")));
@@ -921,16 +960,33 @@ impl Emitter<'_, '_> {
             painted.push(paint);
             if opens {
                 reach_left += side_px(&st.margin.left);
+                margin_left += side_px(&st.margin.left);
             }
             if closes {
                 reach_right += side_px(&st.margin.right);
+                margin_right += side_px(&st.margin.right);
             }
+        }
+        if !painted.is_empty() {
+            text.members.insert(
+                0,
+                Member::PropertyDecl {
+                    ty: "var".to_owned(),
+                    name: "eldurFragments".to_owned(),
+                    value: Some(Value::expr("[]")),
+                    readonly: false,
+                    required: false,
+                },
+            );
         }
         // The outermost is painted first.
         for paint in painted.into_iter().rev() {
             text.push_child(paint);
         }
-        [margins[0] + reach_left, margins[1] + reach_right]
+        [
+            margins[0] + reach_left - margin_left,
+            margins[1] + reach_right - margin_right,
+        ]
     }
 
     fn atomic(&mut self, a: &LayoutBox<'_>, decoration: TextDecorationLine, flow_id: &str) -> Part {
@@ -1073,6 +1129,8 @@ impl Emitter<'_, '_> {
                 value: Value::Object(label),
             } = m
                 && name == "contentItem"
+                // A label drawn as lines (an icon from `::before`) wraps itself.
+                && label.type_name == "Text"
             {
                 label.set("wrapMode", Value::expr("Text.WordWrap"));
                 stretch = Some(());

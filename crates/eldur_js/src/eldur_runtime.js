@@ -2494,6 +2494,10 @@ function _afterClassMutation(raw, m) {
             curRaw.attrOrder.push("class");
         }
         _vChanged(curRaw.model);
+        // Its pseudo-elements' boxes come and go in a settle pass.
+        if (_pseudoBoxRules()) {
+            _gTouch();
+        }
         return;
     }
     _vChanged(null);
@@ -4203,7 +4207,11 @@ function _polishDown(item) {
     for (var i = 0; i < kids.length; ++i) {
         _polishDown(kids[i]);
     }
-    // A line below may have just found its height from the width given here.
+    // A line below may have just found its height from the width given here,
+    // and a box on these lines its width from the lines it holds.
+    if (typeof item.settleLines === "function") {
+        item.settleLines();
+    }
     if (typeof item.ensurePolished === "function") {
         item.ensurePolished();
     }
@@ -4519,7 +4527,7 @@ function _tableCaptions(raw) {
     return out;
 }
 
-function _rawKids(raw, withText) {
+function _rawKids(raw, withText, withPseudo) {
     var container = _childContainer(raw);
     if (!container || !container.children) {
         return [];
@@ -4554,19 +4562,22 @@ function _rawKids(raw, withText) {
         if (child.eldurChrome || _meta(child).gPaint) {
             continue;
         }
+        if (!withPseudo && _pseudoBoxSide(child)) {
+            continue;
+        }
         // A layer's source and effect are made beside the item it belongs to.
         if (child.sourceItem !== undefined || child.fragmentShader !== undefined || child.blurMax !== undefined) {
             continue;
         }
         if (_isAnonLines(child)) {
-            var inLines = _rawKids(child, withText);
+            var inLines = _rawKids(child, withText, withPseudo);
             for (var al = 0; al < inLines.length; ++al) {
                 out.push(inLines[al]);
             }
             continue;
         }
         if (child.eldurBox !== undefined) {
-            if (child.eldurBox) {
+            if (child.eldurBox && (withPseudo || !_pseudoBoxSide(child.eldurBox))) {
                 out.push(child.eldurBox);
             }
             continue;
@@ -7607,7 +7618,8 @@ function _joinsLine(node) {
     if (!node || node.eldurSlot !== undefined || _blockOf(node) !== undefined) {
         return false;
     }
-    var tag = String(_meta(node).createdTag || "");
+    // A pseudo-element's box is the runtime's own, with no tag a script gave.
+    var tag = String(_meta(node).createdTag || (_pseudoBoxSide(node) ? "div" : ""));
     if (tag === "#text") {
         return true;
     }
@@ -7630,6 +7642,10 @@ function _holdsLines(raw) {
         return true;
     }
     var container = _childContainer(raw);
+    // A line has a spacing: it is the container a template's element holds.
+    if (container && container !== raw && _isLines(container) && _isAnonLines(container)) {
+        return true;
+    }
     var kids = container ? container.children : null;
     for (var i = 0; kids && i < kids.length; ++i) {
         if (_isLines(kids[i]) && _isAnonLines(kids[i])) {
@@ -7924,6 +7940,8 @@ function _inlineBecomesLines(raw) {
     var font = raw.font;
     var color = raw.color;
     var name = raw.objectName;
+    // The swap would carry the text over before the line has its font.
+    m.explicitText = "";
     var next = _swapRawItem(raw, null, source);
     next.objectName = name;
     next.font = font;
@@ -8003,10 +8021,16 @@ function _insertInFlow(container, rawNodes, rawRef) {
     _layoutChanged(container);
     _gTouch();
     _counterTouch();
-    if (!rawRef && container.children
-        && (typeof container.spacing === "number" || typeof container.columnSpacing === "number")) {
-        for (var s = container.children.length - 1; s >= 0 && _isLayoutSpacer(container.children[s]); --s) {
-            rawRef = container.children[s];
+    if (!rawRef && container.children) {
+        var isLayout = typeof container.spacing === "number" || typeof container.columnSpacing === "number";
+        // The end of an element is before its `::after` box.
+        for (var s = container.children.length - 1; s >= 0; --s) {
+            var last = container.children[s];
+            if (!(isLayout && _isLayoutSpacer(last))
+                && !(_pseudoBoxSide(last) === "after" && rawNodes.indexOf(last) === -1)) {
+                break;
+            }
+            rawRef = last;
         }
     }
     if (!rawRef || !container.children) {
@@ -8367,6 +8391,7 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
         m.explicitChecked = oldRaw.checked;
     }
     var childElements = _rawElementChildren(oldRaw);
+    var pseudoBoxes = _rawKids(oldRaw, true, true).filter(_pseudoBoxSide);
     // A line's text runs are nodes among its elements, in their order.
     if (_isLines(oldRaw) && !_isAnonLines(oldRaw) && m.createdTag) {
         childElements = _rawChildNodes(oldRaw);
@@ -8482,6 +8507,10 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
         delete m.tableGrid;
         _tableAdoptMade(next);
     }
+    // A pseudo-element's box that goes out of flow, or back, is another item.
+    if (_pseudoBoxItems && _pseudoBoxItems.delete(oldRaw)) {
+        _pseudoBoxItems.add(next);
+    }
     if (_gActive()) {
         _gReplaced.set(oldRaw, next);
         _aSwapped(oldRaw, next);
@@ -8534,6 +8563,13 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
         // Before the template's trailing spacers, renumbered.
         _insertChildren(next, childElements, null);
     }
+    // A pseudo-element's box goes with the element, unless its new form has one.
+    pseudoBoxes.forEach(function(box) {
+        var side = _pseudoBoxSide(box);
+        if (!_rawKids(next, true, true).some(function(k) { return _pseudoBoxSide(k) === side; })) {
+            _insertChildren(next, [box], side === "before" ? _rawKids(next, true)[0] || null : null);
+        }
+    });
 
     var attrNames = Object.keys(m.attrs);
     for (var a = 0; a < attrNames.length; ++a) {
@@ -8623,6 +8659,13 @@ function _materializeTextRun(raw) {
     var container = raw.parent;
     var m = _meta(raw);
     var component = container && container.eldurTextRun;
+    // A line with no form for a script's text, as a template's element's own
+    // is, still draws it in the line's font and colour.
+    if (!component && container && _isLines(container) && m.createdTag === "#text" && _isPlainTextItem(raw)) {
+        raw.font = container.font;
+        raw.color = container.color;
+        return raw;
+    }
     if (!component || typeof component.createObject !== "function"
         || m.textRunComponent === component) {
         return raw;
@@ -12077,10 +12120,15 @@ function _vFragments(v) {
             var rows = line.runLines(text);
             var fills = _vFills(v, model);
             var scan = fills ? null : _vRows(v, model);
+            // An `::after` on a run of its own takes its margins on the run's
+            // edges, and the element's box reaches over them (measured).
+            var after = (v.genRuns || []).some(function(g) { return g.model === model; })
+                ? text.eldurMarginRight || 0 : 0;
             rows.forEach(function(p, n) {
                 var base2 = (placed.group ? p.hung : p.baseline) + placed.shift;
                 if (fills) {
-                    push(text.x + p.x + (p.lead || 0), Math.max(0, p.width - (p.lead || 0) - (p.trail || 0)), base2);
+                    var tail = n === rows.length - 1 ? after : 0;
+                    push(text.x + p.x + (p.lead || 0), Math.max(0, p.width - (p.lead || 0) - (p.trail || 0)) + tail, base2);
                 } else if (scan[n]) {
                     push(text.x + p.x + scan[n].min, scan[n].max - scan[n].min, base2);
                 } else if (!v.kids || v.kids.length === 0) {
@@ -15078,7 +15126,7 @@ function _vStaysInline(node, into, ref) {
     // A span the page's CSS makes a box is a box.
     // A span the page's CSS makes a box is a box.
     if (!node.__eldurInline && tag !== "#text" && _gHasCascade()) {
-        return _gStyleInto(node, into, ref).display === "inline";
+        return _gStyleInto(node, into, ref).display === "inline" && !_pseudoBoxInto(node, into, ref);
     }
     return true;
 }
@@ -16515,12 +16563,18 @@ function _gMatched(raw) {
         return m.gMatched;
     }
     var rules = _gRules();
-    var tag = _nodeTag(raw);
-    var id = _elementIdOf(raw, m);
     var out = [];
-    for (var i = 0; i < rules.length; ++i) {
-        if (rules[i].sel.indexOf("::") === -1 && _vRuleMatchesFor(rules[i], raw, m, tag, id)) {
-            out.push(i);
+    var side = _pseudoBoxSide(raw);
+    if (side) {
+        var owner = _pseudoOwner(raw);
+        out = owner ? _pseudoMatched(owner, side) : [];
+    } else {
+        var tag = _nodeTag(raw);
+        var id = _elementIdOf(raw, m);
+        for (var i = 0; i < rules.length; ++i) {
+            if (rules[i].sel.indexOf("::") === -1 && _vRuleMatchesFor(rules[i], raw, m, tag, id)) {
+                out.push(i);
+            }
         }
     }
     m.gMatched = out;
@@ -17068,6 +17122,9 @@ function _gStyle(raw) {
     if (s.float !== "none" && _gInlineLevel(s)) {
         s.display = s.display === "inline" || s.display === "inline-block" ? "block" : s.display.slice(7);
     }
+    if (m.pseudoHidden) {
+        s.display = "none";
+    }
     m.gStyle = s;
     m.gStyleGen = _gGen;
     return s;
@@ -17174,9 +17231,9 @@ function _gEdges(raw, s, basis) {
 }
 
 function _gKids(raw) {
-    return _rawKids(raw, false).filter(function(kid) {
+    return _gPseudoEnds(_rawKids(raw, false, true).filter(function(kid) {
         return !kid.__eldurInline;
-    });
+    }));
 }
 
 function _gOutOfFlow(s) {
@@ -17336,6 +17393,10 @@ function _gPlace(raw, avail, opts, heightBasis) {
             used = _gIntrinsic(raw, s);
         } else if (_gLabelled(raw, s)) {
             used = Math.max(used, _gMinContent(raw, s));
+        } else if (opts.shrink && box) {
+            // Shrink-to-fit is never narrower than the longest piece that cannot
+            // wrap: with `nowrap`, the whole text past its containing block.
+            used = Math.max(used, _gNarrowest(raw, s));
         }
     } else {
         used = Math.max(avail - (e.ml || 0) - (e.mr || 0), frameW);
@@ -17392,6 +17453,7 @@ function _gPlace(raw, avail, opts, heightBasis) {
     margins.mt = _gMerge(margins.mt, content.top);
     margins.mb = _gMerge(margins.mb, content.bottom);
     margins.empty = content.through && usedH === 0;
+    margins.floats = content.floats || null;
     _gPaintBox(raw, s, e);
     return margins;
 }
@@ -17435,9 +17497,24 @@ function _gFollowOwnHeight(raw) {
 
 // What flows in a box, text nodes too: not its own `Text`, not virtual nodes.
 function _gBoxKids(raw) {
-    return _rawKids(raw, true).filter(function(kid) {
+    return _gPseudoEnds(_rawKids(raw, true, true).filter(function(kid) {
         return !kid.__eldurInline && (kid.objectName || _meta(kid).createdTag || !_isPlainTextItem(kid));
-    });
+    }));
+}
+
+// A pseudo-element's box is laid out first or last, wherever a script's
+// insertion left it.
+function _gPseudoEnds(kids) {
+    if (!kids.some(_pseudoBoxSide)) {
+        return kids;
+    }
+    var side = function(k) {
+        var at = _pseudoBoxSide(k);
+        return at === "before" ? 0 : at === "after" ? 2 : 1;
+    };
+    return kids.map(function(k, i) { return [side(k), i, k]; })
+        .sort(function(a, b) { return a[0] - b[0] || a[1] - b[1]; })
+        .map(function(e) { return e[2]; });
 }
 
 // A box's kids in order: a run of what shares lines, or one block.
@@ -17667,6 +17744,10 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
     // line in the formatting context is cut by them (CSS 2 §9.5), not only the
     // parent's own.
     var around = open ? _meta(raw).gAround || null : null;
+    // Nor do floats stop at a block in the same formatting context: they go on
+    // cutting the lines and placing the floats after it (CSS 2 §9.5), when the
+    // box around it is a pass's to lay out too.
+    var escape = open && _gTakesAround(raw, s) && Boolean(holder) && _gIsBox(holder);
     var text = _gTextOf(raw);
     if (text && text.text !== "") {
         _gPaintText(text, s, innerW, raw);
@@ -17688,8 +17769,22 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
     var beside = null;
     var floated = false;
     var cleared = null;
+    var prior = null;
+    var besideUntil = function(from, side) {
+        var last = from;
+        while (last + 1 < groups.length && !_gFloatSide(groups[last + 1]) && !_gClears(groups[last + 1], side)) {
+            ++last;
+        }
+        return last;
+    };
     for (var i = 0; i < groups.length; ++i) {
         var group = groups[i];
+        prior = null;
+        // A float goes beside those before it on its side, where it fits.
+        if (beside && i > beside.last && _gFloatSide(group) === (beside.left ? "left" : "right")) {
+            prior = beside;
+            beside = null;
+        }
         if (beside && i > beside.last) {
             var clearing = !_gFloatSide(group) && group.kid ? group.kid : null;
             var cs = clearing && _gStyle(clearing);
@@ -17712,17 +17807,18 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
             for (; i < groups.length && _gFloatSide(groups[i]) === side; ++i) {
                 floats.push(groups[i].kid);
             }
-            var last = i - 1;
-            while (last + 1 < groups.length && !_gFloatSide(groups[last + 1]) && !_gClears(groups[last + 1], side)) {
-                ++last;
-            }
+            var last = besideUntil(i - 1, side);
             --i;
+            var at = first && collapseTop ? y : y + pending;
+            if (!prior && around && around.left === (side === "left") && at < around.bottom) {
+                prior = around;
+            }
             // A float is placed past the margins so far, which go on to collapse
             // with the next block's: a float is not between them (CSS 2 §8.3.1).
             // Margins escaping through the box's top move it, and the floats
             // with it.
             floated = true;
-            beside = _gPlaceFloats(floats, side, innerW, innerH, x, first && collapseTop ? y : y + pending);
+            beside = _gPlaceFloats(floats, side, innerW, innerH, x, at, prior);
             beside.last = last;
             continue;
         }
@@ -17780,14 +17876,18 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
             if (String(_meta(kid).gAroundKey || null) !== String(inKid)) {
                 _meta(kid).gAroundKey = inKid;
                 _meta(kid).gAround = inKid && { left: inKid[0], from: inKid[1], to: inKid[2], top: inKid[3], bottom: inKid[4] };
-                _gPlace(kid, innerW, null, innerH);
+                got = _gPlace(kid, innerW, null, innerH);
+            }
+            if (got.floats) {
+                beside = _gJoinFloats(beside, got.floats, kid.x, kid.y);
+                beside.last = besideUntil(i, beside.left ? "left" : "right");
             }
         }
         y = kid.y + kid.height;
         pending = got.mb;
         first = false;
     }
-    if (beside) {
+    if (beside && !escape) {
         y = Math.max(y, beside.bottom);
     }
     // The floats' room is the box's: it has a height its margins can't pass.
@@ -17800,7 +17900,20 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
     } else if (collapseTop && collapseBottom) {
         through = pending;
     }
-    return { height: y - top, top: through, bottom: bottom, through: first && collapseTop && collapseBottom };
+    return { height: y - top, top: through, bottom: bottom, through: first && collapseTop && collapseBottom,
+        floats: escape ? beside : null };
+}
+
+// Floats a block let through, in its parent's terms, with those already beside
+// them on the same side. Floats on both sides are more than one rectangle says:
+// the later side's are kept.
+function _gJoinFloats(beside, floats, dx, dy) {
+    var out = { left: floats.left, from: floats.from + dx, to: floats.to + dx, top: floats.top + dy, bottom: floats.bottom + dy };
+    if (beside && beside.left === out.left) {
+        out = { left: out.left, from: Math.min(beside.from, out.from), to: Math.max(beside.to, out.to),
+            top: Math.min(beside.top, out.top), bottom: Math.max(beside.bottom, out.bottom) };
+    }
+    return out;
 }
 
 function _gFloatSide(group) {
@@ -17827,13 +17940,22 @@ function _gClears(group, side) {
 // A run of floats to one side as the converter lays out a static one
 // (layout.md §5.5): each takes its margin box along a line from its side, and
 // one that does not fit starts a line below. Returns the run's rectangle.
-function _gPlaceFloats(floats, side, innerW, innerH, x, top) {
+function _gPlaceFloats(floats, side, innerW, innerH, x, top, prior) {
     var left = side === "left";
     var along = 0;
     var lineTop = 0;
     var lineHeight = 0;
     var from = Infinity;
     var to = -Infinity;
+    var first = top;
+    // Earlier floats on this side still beside `top`: these start where they end.
+    if (prior && top < prior.bottom) {
+        along = Math.max(0, left ? prior.to - x : x + innerW - prior.from);
+        lineHeight = prior.bottom - top;
+        from = prior.from;
+        to = prior.to;
+        first = Math.min(top, prior.top);
+    }
     floats.forEach(function(kid) {
         var ks = _gStyle(kid);
         kid.visible = true;
@@ -17862,7 +17984,7 @@ function _gPlaceFloats(floats, side, innerW, innerH, x, top) {
         along += outer;
         lineHeight = Math.max(lineHeight, mt + kid.height + mb);
     });
-    return { left: left, from: from, to: to, top: top, bottom: top + lineTop + lineHeight };
+    return { left: left, from: from, to: to, top: first, bottom: top + lineTop + lineHeight };
 }
 
 // A text block's lines beside floats are shortened by them, as the converter's
@@ -21565,6 +21687,7 @@ function _gSettle() {
         _gRunning = true;
         _gDirty = false;
         ++_gGen;
+        _pseudoBoxes();
         _gMarginPass();
         // Templates paint the states, but what a script reads comes from the rules.
         _gWatchStates();
@@ -21583,6 +21706,7 @@ function _gSettle() {
     _gClosedHiddenBoxes();
     _gStaticChanges();
     _vBoxesLeaveModels();
+    _pseudoBoxes();
     var snapshot = _gLive.slice();
     for (var i = 0; i < snapshot.length; ++i) {
         if (_isConnected(snapshot[i])) {
@@ -21615,7 +21739,7 @@ function _vBoxesLeaveModels() {
             return false;
         }
         var shown = _vStyle(k).display;
-        return shown !== "inline" && shown !== "none" || k.kids.some(isBox);
+        return shown !== "inline" && shown !== "none" || _pseudoBoxWanted(k) || k.kids.some(isBox);
     };
     _vModels.slice().forEach(function(model) {
         if (!model.text || model.select || !model.kids.some(isBox)) {
@@ -21643,12 +21767,16 @@ function _gFillsLine(raw) {
         return;
     }
     var parent = _gParent(raw);
-    if (!parent || _gIsBox(parent) || _meta(parent).createdTag || /^(body|html)$/.test(_nodeTag(parent))) {
+    if (!parent || _gIsBox(parent) || /^(body|html)$/.test(_nodeTag(parent))) {
         return;
     }
     var parentStyle = _gStyle(parent);
     var all = _rawElementChildren(parent);
     var items = _gIsFlex(parentStyle) || _gIsGrid(parentStyle);
+    // A created element a template paints is a column all the same.
+    if (_meta(parent).createdTag && !items && !all.some(_gFloats)) {
+        return;
+    }
     var scripted = function(k) { return _meta(k).createdTag || _meta(k).vCreated; };
     var written = function(n) {
         var text = n.vtext ? n.data : _isPlainTextItem(n) && !n.objectName ? n.text : "";
@@ -21667,10 +21795,7 @@ function _gFillsLine(raw) {
         return;
     }
     // A column only stacks: what flows beside a float is placed by a pass.
-    var floats = all.some(function(k) {
-        var ks = _gStyle(k);
-        return ks.float !== "none" && ks.display !== "none";
-    });
+    var floats = all.some(_gFloats);
     for (var i = 0; i < all.length; ++i) {
         if (!scripted(all[i]) && !items && !floats) {
             return;
@@ -21684,6 +21809,11 @@ function _gFillsLine(raw) {
         }
     }
     _gAdopt(parent);
+}
+
+function _gFloats(raw) {
+    var s = _gStyle(raw);
+    return s.float !== "none" && s.display !== "none";
 }
 
 function _gReposition() {
@@ -22311,6 +22441,301 @@ function _gLayoutCell(raw, cell) {
 
 function _rawHasNoFlowParent(raw) {
     return !raw.parent;
+}
+
+// --- Pseudo-element boxes ---------------------------------------------------
+
+// A `::before` or `::after` laid out as a box (block-level, atomic inline,
+// floated or positioned) is a box of its element's, at that end of its
+// children, but no node a script sees (`_rawKids`). The converter marks its own
+// (`eldurPseudo`); one a class change or an insertion gives an element is made
+// here, and one the rules stop giving is hidden. Generated text on a line is
+// `_pseudoFlush`'s.
+var _pseudoBoxKnown = null;
+var _pseudoBoxItems = null;
+
+function _pseudoBoxSide(item) {
+    if (!item || item.__eldurInline) {
+        return null;
+    }
+    if (typeof item.eldurPseudo === "string") {
+        return item.eldurPseudo;
+    }
+    return _meta(item).pseudoSide || null;
+}
+
+// Where the box is says whose it is: an element the runtime adopts is a new
+// item, and its boxes move with its children.
+function _pseudoOwner(box) {
+    // A static page's says whose it is (`eldurInlineOwner`), on the box an item
+    // placing it on its line holds.
+    var inner = box.eldurInlineOwner === undefined && box.children && box.children.length === 1
+        && box.children[0].eldurInlineOwner !== undefined ? box.children[0] : box;
+    // One the runtime made knows, wherever being out of flow has put it.
+    return _meta(box).pseudoOf || _logicalParent(inner) || null;
+}
+
+// The selector a `::before`/`::after` rule asks of the element, read once.
+function _pseudoBase(rule) {
+    if (rule.pseudoBase === undefined) {
+        rule.pseudoBase = null;
+        var at = /::?(before|after)$/.exec(rule.sel);
+        if (at && rule.sel.slice(0, at.index).indexOf("::") === -1) {
+            var base = rule.sel.slice(0, at.index);
+            if (base === "" || /[\s>+~]$/.test(base)) {
+                base += "*";
+            }
+            var last = /([.#]?)([\w-]+)$/.exec(base);
+            if (last && base[last.index - 1] === ":") {
+                last = null;
+            }
+            rule.pseudoSide = at[1];
+            rule.pseudoBase = { sel: base, lastKind: last ? last[1] : null, lastName: last ? last[2] : null, list: undefined };
+            rule.pseudoBoxy = rule.decls.some(function(d) {
+                return d[0] === "display" || d[0] === "float" || d[0] === "position";
+            });
+        }
+    }
+    return rule.pseudoBase;
+}
+
+// The rules on the element's `side` pseudo-element, by index.
+function _pseudoMatched(owner, side) {
+    var rules = _gRules();
+    var m = _meta(owner);
+    var inline = Boolean(owner.__eldurInline);
+    var tag = inline ? owner.eldurTag : _nodeTag(owner);
+    var id = inline ? String(owner.objectName || "") : _elementIdOf(owner, m);
+    var out = [];
+    for (var i = 0; i < rules.length; ++i) {
+        var base = _pseudoBase(rules[i]);
+        if (base && rules[i].pseudoSide === side && _vRuleMatchesFor(base, owner, m, tag, id)) {
+            out.push(i);
+        }
+    }
+    return out;
+}
+
+// What those rules declare.
+function _pseudoWon(owner, side) {
+    var rules = _gRules();
+    var won = {};
+    _pseudoMatched(owner, side).forEach(function(i) {
+        for (var d = 0; d < rules[i].decls.length; ++d) {
+            var decl = rules[i].decls[d];
+            _gOffer(won, decl[0], decl[1], _gWeight(rules[i], decl[2]));
+        }
+    });
+    return won;
+}
+
+// The converter's box for `v`'s `side` on its line, shown or not.
+function _vPseudoCut(v, side) {
+    var line = v.model && v.model.text ? v.model.text.parent : null;
+    if (v.eldurKey === undefined || !line || typeof line.firstBaseline !== "number") {
+        return null;
+    }
+    for (var i = 0; i < line.children.length; ++i) {
+        var kid = line.children[i];
+        var box = kid.eldurInlineOwner !== undefined ? kid : kid.children && kid.children[0];
+        if (box && box.eldurInlineOwner === v.eldurKey && _pseudoBoxSide(kid) === side) {
+            return kid;
+        }
+    }
+    return null;
+}
+
+// An inline element whose pseudo-element is a box the converter did not draw
+// becomes an item: a model has nowhere to put the box.
+function _pseudoBoxWanted(v) {
+    if (!_pseudoBoxRules()) {
+        return false;
+    }
+    var m = _meta(v);
+    if (m.pseudoWantGen !== _gGen) {
+        m.pseudoWantGen = _gGen;
+        m.pseudoWant = ["before", "after"].some(function(side) {
+            return _pseudoBoxText(v, _pseudoWon(v, side)) !== null && !_vPseudoCut(v, side);
+        });
+    }
+    return m.pseudoWant;
+}
+
+// The box's text, or null when the rules give it no box.
+function _pseudoBoxText(owner, won) {
+    var value = function(prop, initial) {
+        return won[prop] ? String(won[prop].value).trim() : initial;
+    };
+    var display = value("display", "inline");
+    var position = value("position", "static");
+    var boxed = display !== "inline" && display !== "contents" || value("float", "none") !== "none"
+        || position === "absolute" || position === "fixed";
+    var content = value("content", "normal");
+    if (!boxed || display === "none" || /^(none|normal|initial|unset|inherit|revert)$/.test(content)) {
+        return null;
+    }
+    var text = "";
+    var re = /"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)'|attr\(\s*([\w-]+)\s*\)/g;
+    var part;
+    while ((part = re.exec(content)) !== null) {
+        if (part[3] !== undefined) {
+            text += owner.__eldurInline ? "" : getAttribute(owner, part[3]) || "";
+        } else {
+            text += (part[1] !== undefined ? part[1] : part[2]).replace(/\\([0-9a-fA-F]{1,6})\s?|\\(.)/g, function(all, hex, ch) {
+                return hex ? String.fromCodePoint(parseInt(hex, 16)) : ch;
+            });
+        }
+    }
+    return text;
+}
+
+// Whether `node`, once in `into` before `ref`, has a pseudo-element laid out as
+// a box: then it is no node of a model, which has nowhere to put one.
+function _pseudoBoxInto(node, into, ref) {
+    if (!_pseudoBoxRules()) {
+        return false;
+    }
+    _gGoingInto = into && into !== _logicalParent(node) ? { node: node, parent: into, ref: ref || null } : null;
+    var boxed = _pseudoBoxText(node, _pseudoWon(node, "before")) !== null
+        || _pseudoBoxText(node, _pseudoWon(node, "after")) !== null;
+    _gGoingInto = null;
+    return boxed;
+}
+
+function _pseudoBoxRules() {
+    if (_pseudoBoxKnown === null) {
+        _pseudoBoxKnown = _gHasCascade() && _gRules().some(function(rule) {
+            return _pseudoBase(rule) && rule.pseudoBoxy;
+        });
+    }
+    return _pseudoBoxKnown;
+}
+
+// The converter's boxes, found once: a template's are found by their element.
+function _pseudoBoxScan() {
+    if (_pseudoBoxItems) {
+        return;
+    }
+    _pseudoBoxItems = new Set();
+    var walk = function(item) {
+        var kids = item.children || [];
+        for (var i = 0; i < kids.length; ++i) {
+            if (typeof kids[i].eldurPseudo === "string") {
+                _pseudoBoxItems.add(kids[i]);
+            }
+            walk(kids[i]);
+        }
+    };
+    walk(_root);
+}
+
+function _pseudoBoxesNear(owner) {
+    var look = function(container) {
+        var kids = container && container.children ? container.children : [];
+        for (var i = 0; i < kids.length; ++i) {
+            if (_pseudoBoxSide(kids[i])) {
+                _pseudoBoxItems.add(kids[i]);
+            } else if (_isAnonLines(kids[i])) {
+                look(kids[i]);
+            }
+        }
+    };
+    look(owner);
+    var container = _childContainer(owner);
+    if (container && container !== owner) {
+        look(container);
+    }
+}
+
+// Each element some rule may give a pseudo-element box, and each that has one,
+// gets the box the rules say now.
+function _pseudoBoxes() {
+    if (!_pseudoBoxRules()) {
+        return;
+    }
+    _pseudoBoxScan();
+    var owners = new Set();
+    _gRules().forEach(function(rule) {
+        var base = _pseudoBase(rule);
+        if (!base || !rule.pseudoBoxy) {
+            return;
+        }
+        var found = [];
+        try {
+            found = document.querySelectorAll(base.sel);
+        } catch (e) {
+            found = [];
+        }
+        for (var i = 0; i < found.length; ++i) {
+            var owner = _unwrap(found[i]);
+            if (owner) {
+                owners.add(owner);
+            }
+        }
+    });
+    owners.forEach(function(owner) {
+        if (!owner.__eldurInline) {
+            _pseudoBoxesNear(owner);
+        }
+    });
+    var have = new Map();
+    _pseudoBoxItems.forEach(function(box) {
+        if (!box.parent) {
+            _pseudoBoxItems.delete(box);
+            return;
+        }
+        var owner = _pseudoOwner(box);
+        if (!owner) {
+            return;
+        }
+        owners.add(owner);
+        var sides = have.get(owner) || {};
+        sides[_pseudoBoxSide(box)] = box;
+        have.set(owner, sides);
+    });
+    owners.forEach(function(owner) {
+        ["before", "after"].forEach(function(side) {
+            var box = (have.get(owner) || {})[side] || null;
+            _pseudoBoxFor(owner, side, box);
+        });
+    });
+}
+
+function _pseudoBoxFor(owner, side, box) {
+    var text = _pseudoBoxText(owner, _pseudoWon(owner, side));
+    if (box) {
+        var m = _meta(box);
+        var hidden = text === null;
+        if (m.pseudoOf && !hidden) {
+            var shown = _findTextChild(box);
+            if (shown && shown.text !== text) {
+                shown.text = text;
+                _layoutChanged(box);
+            }
+        }
+        if (Boolean(m.pseudoHidden) !== hidden) {
+            m.pseudoHidden = hidden;
+            box.visible = !hidden;
+            _layoutChanged(box.parent || owner);
+            _gDirty = true;
+        }
+        return;
+    }
+    // An inline element leaves its model first (`_vBoxesLeaveModels`).
+    if (text === null || owner.__eldurInline || !_gActive() || !_isConnected(owner)) {
+        return;
+    }
+    var made = Qt.createQmlObject(_gBoxSource("div", false), _qobjectParent(), "eldur_pseudo_" + side);
+    var mm = _meta(made);
+    mm.pseudoOf = owner;
+    mm.pseudoSide = side;
+    _findTextChild(made).text = text;
+    made.parent = null;
+    _pseudoBoxItems.add(made);
+    _gLive.push(made);
+    var first = side === "before" ? _rawKids(owner, true)[0] || null : null;
+    _insertChildren(owner, [made], first);
+    _gDirty = true;
 }
 
 // --- Reading it back --------------------------------------------------------

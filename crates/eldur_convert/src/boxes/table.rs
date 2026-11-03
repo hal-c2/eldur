@@ -59,6 +59,7 @@ fn anonymous<'a>(parent: &ComputedStyle, display: Display, content: Content<'a>)
         kind: BoxKind::Table,
         content,
         marker: None,
+        pseudo: None,
     }
 }
 

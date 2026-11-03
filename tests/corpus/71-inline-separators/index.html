@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Icon buttons and separators</title>
+<style>
+  body { margin: 8px; font: 14px Arial, sans-serif; color: #222; }
+  .ib { padding: 4px 8px; border: 1px solid #888; background: #fff; font: 13px Arial, sans-serif; }
+  .ib::before { content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 5px; background: #369; vertical-align: middle; }
+  .ib.del::before { background: #c33; }
+  ul.bc { list-style: none; padding: 0; margin: 10px 0; }
+  ul.bc li { display: inline; }
+  ul.bc li::after { content: "\203A"; margin: 0 6px; color: #888; }
+  ul.bc li:last-child::after { content: none; }
+  .sep { margin: 0 8px; color: #888; }
+  .tag { margin: 0 4px; background: #def; }
+  label { display: block; margin: 4px 0; }
+  label.req::after { content: " *"; color: #c00; }
+</style>
+</head>
+<body>
+  <div><button class="ib">Save</button> <button class="ib del">Delete</button></div>
+  <ul class="bc"><li>Home</li><li>Docs</li><li>Guide</li></ul>
+  <p>Left<span class="sep">|</span>Middle<span class="sep">|</span>Right</p>
+  <p>Tags:<span class="tag">one</span><span class="tag">two</span>end</p>
+  <label class="req">Name</label>
+  <label>Email</label>
+</body>
+</html>

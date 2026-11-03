@@ -1,0 +1,28 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+.ico::before{content:"";display:inline-block;width:12px;height:12px;margin-right:6px;background:#c33;vertical-align:middle}
+.hdr::before{content:"Section";display:block;font-size:18px;font-weight:bold}
+.tip{position:relative;display:inline-block;padding:2px 6px;background:#eee}
+.tip.on::after{content:"hint";position:absolute;left:0;top:100%;padding:2px 4px;background:#222;color:#fff;font-size:11px}
+.box{padding:4px;border:1px solid #999;margin-top:6px}
+.req::after{content:"*";display:inline-block;color:#c00;margin-left:2px}
+</style></head><body>
+<p id="p1"><span class="ico" id="i1">Static icon</span> text</p>
+<div id="host"></div>
+<p id="p2"><span class="tip" id="t1">Hover</span> after tip</p>
+<div class="box" id="bx">plain</div>
+<div class="field" id="fd"><label id="l1">Name</label> <input id="in1" size="8"></div>
+<div id="end" style="height:4px;background:#000"></div>
+<script>
+const L=n=>{const q=document.getElementById(n).getBoundingClientRect();console.log('CS '+n+' '+[q.x,q.y,q.width,q.height].join(','))};
+const h=document.getElementById('host');
+const a=document.createElement('span');a.id='i2';a.textContent='Created icon';a.className='ico';h.appendChild(a);
+setTimeout(()=>{
+ ['p1','i1','host','i2','bx','l1','end'].forEach(L);
+ document.getElementById('bx').classList.add('hdr');document.getElementById('i1').classList.remove('ico');
+ document.getElementById('t1').classList.add('on');document.getElementById('l1').className='req';
+ setTimeout(()=>{['i1','bx','t1','l1','in1','end'].forEach(n=>L(n));
+  document.getElementById('bx').classList.remove('hdr');
+  setTimeout(()=>{L('bx');L('end');document.body.appendChild(document.createElement('div')).id='csdone'},50)},100);
+},100);
+</script></body></html>
