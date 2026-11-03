@@ -403,7 +403,9 @@ fn blank(obj: &mut Object) {
 }
 
 fn blank_in(obj: &mut Object, button: Option<&str>) {
-    let own = (obj.type_name == "Button").then(|| obj.id.clone()).flatten();
+    let own = (obj.type_name == "Button")
+        .then(|| obj.id.clone())
+        .flatten();
     let button = own.as_deref().or(button);
     let is_button = obj.type_name == "Button";
     for m in &mut obj.members {
