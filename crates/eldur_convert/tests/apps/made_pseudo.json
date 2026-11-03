@@ -1,0 +1,1 @@
+{"steps":[{"name":"change","click":"#change"}],"watch":[{"sel":".tags span"},{"sel":".crumbs a"},{"sel":"li"},{"sel":"p"},{"sel":"em"},{"sel":"#pr"},{"sel":".price span"}]}

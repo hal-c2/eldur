@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Auto table column widths</title>
+<style>
+body { margin: 0; font: 16px sans-serif; }
+table { margin: 0 0 6px; border-spacing: 0; }
+td { padding: 0; }
+.s td { border: 0; }
+.sp { border-spacing: 2px; }
+.c { border-collapse: collapse; }
+.c td { border: 1px solid #000; }
+.c2 td { border-width: 2px; }
+.c3 td { border-width: 3px; }
+.t5 { border-collapse: collapse; border: 5px solid #c00; }
+.p td { padding: 4px 8px; }
+</style>
+</head>
+<body>
+<table id="c2-320" class="c c2" style="width: 320px"><tr class="m"><td>Name of the thing</td><td>Qty</td></tr></table>
+<table id="c2-words" class="c c2" style="width: 320px"><tr class="m"><td>Alpha beta</td><td>Gamma delta epsilon</td></tr></table>
+<table id="sp-320" class="sp" style="width: 320px"><tr class="m"><td>Alpha beta</td><td>Gamma delta epsilon</td></tr></table>
+<table id="s-320" style="width: 320px"><tr class="m"><td>Alpha beta</td><td>Gamma delta epsilon</td></tr></table>
+<table id="s-600" style="width: 600px"><tr class="m"><td>Alpha beta</td><td>Gamma delta epsilon</td></tr></table>
+<table id="s-150" style="width: 150px"><tr class="m"><td>Alpha beta</td><td>Gamma delta epsilon</td></tr></table>
+<table id="s-100" style="width: 100px"><tr class="m"><td>Alpha beta</td><td>Gamma delta epsilon</td></tr></table>
+<table id="s-40" style="width: 40px"><tr class="m"><td>Alpha beta</td><td>Gamma delta epsilon</td></tr></table>
+<table id="s-auto"><tr class="m"><td>Alpha beta</td><td>Gamma delta epsilon</td></tr></table>
+<table id="s-long" style="width: 250px"><tr class="m"><td>Alpha beta</td><td>Gamma delta epsilon is a long sentence here</td></tr></table>
+<table id="s-pct" style="width: 50%"><tr class="m"><td>Alpha beta</td><td>Gamma delta epsilon</td></tr></table>
+<table id="px-auto" style="width: 400px"><tr class="m"><td style="width: 50px">A</td><td>Gamma delta</td><td>x</td></tr></table>
+<table id="pct-auto" style="width: 400px"><tr class="m"><td style="width: 20%">A</td><td>Gamma delta</td><td>x</td></tr></table>
+<table id="px-short" style="width: 150px"><tr class="m"><td style="width: 100px">Alpha</td><td>Gamma delta</td><td>x</td></tr></table>
+<table id="pct-short" style="width: 150px"><tr class="m"><td style="width: 50%">Alpha</td><td>Gamma delta</td><td>x</td></tr></table>
+<table id="pct-auto-width"><tr class="m"><td style="width: 50%">Alpha</td><td>Gamma delta</td><td>x</td></tr></table>
+<table id="px-auto-width"><tr class="m"><td style="width: 100px">Alpha</td><td>Gamma delta</td><td>x</td></tr></table>
+<table id="px-below-min"><tr class="m"><td style="width: 20px">Alpha</td><td>Gamma delta</td></tr></table>
+<table id="px-px" style="width: 400px"><tr class="m"><td style="width: 100px">A</td><td style="width: 50px">B</td></tr></table>
+<table id="pct-pct" style="width: 400px"><tr class="m"><td style="width: 30%">A</td><td style="width: 20%">B</td></tr></table>
+<table id="pct-px" style="width: 400px"><tr class="m"><td style="width: 30%">A</td><td style="width: 100px">B</td></tr></table>
+<table id="pct-over" style="width: 400px"><tr class="m"><td style="width: 70%">Alpha</td><td style="width: 60%">Beta</td><td>Gamma</td></tr></table>
+<table id="px-over" style="width: 300px"><tr class="m"><td style="width: 200px">Alpha</td><td style="width: 200px">Beta</td><td>Gamma</td></tr></table>
+<table id="pcts-auto-width"><tr class="m"><td style="width: 30%">Alpha</td><td style="width: 20%">Beta</td><td>Gamma delta</td></tr></table>
+<table id="pct-long-auto-width"><tr class="m"><td style="width: 30%">Alpha beta gamma delta epsilon</td><td>Beta</td></tr></table>
+<table id="c1-320" class="c" style="width: 320px"><tr class="m"><td>Alpha beta</td><td>Gamma delta epsilon</td></tr></table>
+<table id="c3-320" class="c c3" style="width: 320px"><tr class="m"><td>Alpha beta</td><td>Gamma delta epsilon</td></tr></table>
+<table id="t5-320" class="t5" style="width: 320px"><tr class="m"><td>Alpha beta</td><td>Gamma delta epsilon</td></tr></table>
+<table id="c1-px" class="c" style="width: 320px"><tr class="m"><td style="width: 100px">Alpha beta</td><td>Gamma delta epsilon</td></tr></table>
+<table id="c1-pad" class="c p" style="width: 320px"><tr class="m"><td>Alpha beta</td><td>Gamma delta epsilon</td></tr></table>
+<table id="c1-pad-auto" class="c p"><tr class="m"><td>Alpha beta</td><td>Gamma delta epsilon</td></tr></table>
+<table id="c1-pad-120" class="c p" style="width: 120px"><tr class="m"><td>Alpha beta</td><td>Gamma delta epsilon</td></tr></table>
+<table id="sp10" style="width: 400px; border-spacing: 10px"><tr class="m"><td>Alpha beta</td><td>Gamma delta epsilon</td></tr></table>
+<table id="sp10-border" class="p" style="width: 400px; border-spacing: 10px 3px; border: 4px solid; padding: 6px"><tr class="m"><td>Alpha beta</td><td>Gamma delta epsilon</td></tr></table>
+<table id="sp10-border-auto" class="p" style="border-spacing: 10px 3px; border: 4px solid; padding: 6px"><tr class="m"><td>Alpha beta</td><td>Gamma delta epsilon</td></tr></table>
+<table id="span-500" style="width: 500px"><tr><td colspan="2">A very long spanning cell with many words in them</td><td>x</td></tr><tr class="m"><td>Alpha</td><td>Be</td><td>Gamma delta</td></tr></table>
+<table id="span-auto"><tr><td colspan="2">A very long spanning cell with many words in them</td><td>x</td></tr><tr class="m"><td>Alpha</td><td>Be</td><td>Gamma delta</td></tr></table>
+<table id="span-100" style="width: 100px"><tr><td colspan="2">Supercalifragilistic word</td><td>x</td></tr><tr class="m"><td>Alpha</td><td>Be</td><td>Gamma delta</td></tr></table>
+<table id="five-700" style="width: 700px"><tr class="m"><td>One</td><td>Two words</td><td>Three little words</td><td>Four words in here</td><td>Five words in this cell</td></tr></table>
+<table id="five-auto"><tr class="m"><td>One</td><td>Two words</td><td>Three little words</td><td>Four words in here</td><td>Five words in this cell</td></tr></table>
+<table id="five-300" style="width: 300px"><tr class="m"><td>One</td><td>Two words</td><td>Three little words</td><td>Four words in here</td><td>Five words in this cell</td></tr></table>
+<table id="empties" style="width: 400px"><tr class="m"><td></td><td></td><td>x</td></tr></table>
+<table id="empty-px" style="width: 400px"><tr class="m"><td style="width: 10px"></td><td style="width: 30px"></td></tr></table>
+</body>
+</html>

@@ -170,13 +170,20 @@ TestCase {
         Backspace: Qt.Key_Backspace, Delete: Qt.Key_Delete, Home: Qt.Key_Home, PageDown: Qt.Key_PageDown,
         PageUp: Qt.Key_PageUp, Space: Qt.Key_Space, Shift: Qt.Key_Shift, Control: Qt.Key_Control, Alt: Qt.Key_Alt,
         KeyA: Qt.Key_A, KeyB: Qt.Key_B, KeyS: Qt.Key_S, Digit1: Qt.Key_1 })
+    // A key is down for a while, as the recorder holds it: what the page set to
+    // run at once on keydown runs before keyup.
+    function tap(key, mod) {
+        keyPress(key, mod)
+        wait(10)
+        keyRelease(key, mod)
+    }
     function press(name) {
-        const parts = name.split("+")
+        const parts = name.length > 1 ? name.split("+") : [name]
         let mod = mods
         for (const m of parts.slice(0, -1)) mod |= modOf[m]
         const last = parts[parts.length - 1]
         // Shift+Tab is what Qt calls Backtab.
-        keyClick(last === "Tab" && (mod & Qt.ShiftModifier) ? Qt.Key_Backtab : (keyOf[last] || last), mod)
+        tap(last === "Tab" && (mod & Qt.ShiftModifier) ? Qt.Key_Backtab : (keyOf[last] || last), mod)
     }
     function moveTo(x, y) {
         at = Qt.point(x, y)
@@ -202,11 +209,11 @@ TestCase {
             const p = center(s.type[0])
             mouseMove(page, p.x, p.y)
             mouseClick(page, p.x, p.y)
-            keyClick(Qt.Key_End)
-            for (const c of s.type[1]) keyClick(c)
+            tap(Qt.Key_End, mods)
+            for (const c of s.type[1]) tap(c, mods)
         }
         if (s.key) press(s.key)
-        if (s.keys) { for (const c of s.keys) keyClick(c) }
+        if (s.keys) { for (const c of s.keys) tap(c, mods) }
         if (s.wheel) {
             const p = s.wheel[0] === "page" ? { x: 1200, y: 400 } : center(s.wheel[0])
             mouseMove(page, p.x, p.y)
@@ -886,4 +893,14 @@ fn own_tabs() {
 #[test]
 fn own_counters() {
     page("own_counters");
+}
+
+#[test]
+fn made_pseudo() {
+    page("made_pseudo");
+}
+
+#[test]
+fn made_cells() {
+    page("made_cells");
 }

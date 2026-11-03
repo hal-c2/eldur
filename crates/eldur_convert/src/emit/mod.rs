@@ -485,6 +485,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         }
         self.finish_resets(&mut root);
         self.report_inline_labels();
+        fonts::fallback_lines(&mut root, &mut self.ids);
         carry::strip_hints(&mut root);
         keyframes::bind_layout_motion(&mut root);
         paint::snap_rounded_boxes(&mut root, false);

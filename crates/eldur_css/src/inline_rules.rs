@@ -96,6 +96,41 @@ fn property(longhand: Longhand) -> Option<&'static str> {
     })
 }
 
+/// What an inline element's own box takes from the cascade besides its text's
+/// paint: it is laid out and painted on its line as a written one is
+/// (`docs/spec/layout.md` §1.3, a run's own box). Vertical margins do nothing
+/// on an inline box.
+fn inline_box_property(longhand: Longhand) -> Option<&'static str> {
+    use Longhand as L;
+    Some(match longhand {
+        L::LineHeight => "line-height",
+        L::VerticalAlign => "vertical-align",
+        L::MarginRight => "margin-right",
+        L::MarginLeft => "margin-left",
+        L::PaddingTop => "padding-top",
+        L::PaddingRight => "padding-right",
+        L::PaddingBottom => "padding-bottom",
+        L::PaddingLeft => "padding-left",
+        L::BorderTopWidth => "border-top-width",
+        L::BorderRightWidth => "border-right-width",
+        L::BorderBottomWidth => "border-bottom-width",
+        L::BorderLeftWidth => "border-left-width",
+        L::BorderTopStyle => "border-top-style",
+        L::BorderRightStyle => "border-right-style",
+        L::BorderBottomStyle => "border-bottom-style",
+        L::BorderLeftStyle => "border-left-style",
+        L::BorderTopColor => "border-top-color",
+        L::BorderRightColor => "border-right-color",
+        L::BorderBottomColor => "border-bottom-color",
+        L::BorderLeftColor => "border-left-color",
+        L::BorderTopLeftRadius => "border-top-left-radius",
+        L::BorderTopRightRadius => "border-top-right-radius",
+        L::BorderBottomRightRadius => "border-bottom-right-radius",
+        L::BorderBottomLeftRadius => "border-bottom-left-radius",
+        _ => return None,
+    })
+}
+
 fn box_property(longhand: Longhand) -> Option<&'static str> {
     use Longhand as L;
     Some(match longhand {
@@ -411,7 +446,8 @@ fn paint_declarations(declarations: &[crate::parse::ParsedDecl]) -> Vec<(String,
                 DeclValue::Wide(l, w) => (*l, wide(w).to_owned()),
                 _ => return None,
             };
-            Some((property(longhand)?.to_owned(), value, d.important))
+            let name = property(longhand).or_else(|| inline_box_property(longhand))?;
+            Some((name.to_owned(), value, d.important))
         })
         .collect()
 }

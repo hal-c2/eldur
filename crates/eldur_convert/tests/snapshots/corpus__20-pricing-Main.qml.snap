@@ -480,6 +480,7 @@ ApplicationWindow {
 
                                             // <span class="check">
                                             Text {
+                                                id: text
                                                 text: "✓"
                                                 textFormat: Text.PlainText
                                                 color: "#16a34a"
@@ -489,7 +490,7 @@ ApplicationWindow {
                                                 lineHeight: 24.32
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32)
+                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32, text.text)
                                                 }
                                                 bottomPadding: EldurFonts.slack(font, lineHeight)
                                                 wrapMode: Text.WordWrap
@@ -541,6 +542,7 @@ ApplicationWindow {
 
                                             // <span class="check">
                                             Text {
+                                                id: text2
                                                 text: "✓"
                                                 textFormat: Text.PlainText
                                                 color: "#16a34a"
@@ -550,7 +552,7 @@ ApplicationWindow {
                                                 lineHeight: 24.32
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32)
+                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32, text2.text)
                                                 }
                                                 bottomPadding: EldurFonts.slack(font, lineHeight)
                                                 wrapMode: Text.WordWrap
@@ -602,6 +604,7 @@ ApplicationWindow {
 
                                             // <span class="check">
                                             Text {
+                                                id: text3
                                                 text: "✓"
                                                 textFormat: Text.PlainText
                                                 color: "#16a34a"
@@ -611,7 +614,7 @@ ApplicationWindow {
                                                 lineHeight: 24.32
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32)
+                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32, text3.text)
                                                 }
                                                 bottomPadding: EldurFonts.slack(font, lineHeight)
                                                 wrapMode: Text.WordWrap
@@ -663,6 +666,7 @@ ApplicationWindow {
 
                                             // <span class="check">
                                             Text {
+                                                id: text4
                                                 text: "✓"
                                                 textFormat: Text.PlainText
                                                 color: "#16a34a"
@@ -672,7 +676,7 @@ ApplicationWindow {
                                                 lineHeight: 24.32
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32)
+                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32, text4.text)
                                                 }
                                                 bottomPadding: EldurFonts.slack(font, lineHeight)
                                                 wrapMode: Text.WordWrap
@@ -927,6 +931,7 @@ ApplicationWindow {
 
                                             // <span class="check">
                                             Text {
+                                                id: text5
                                                 text: "✓"
                                                 textFormat: Text.PlainText
                                                 color: "#16a34a"
@@ -936,7 +941,7 @@ ApplicationWindow {
                                                 lineHeight: 24.32
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32)
+                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32, text5.text)
                                                 }
                                                 bottomPadding: EldurFonts.slack(font, lineHeight)
                                                 wrapMode: Text.WordWrap
@@ -986,6 +991,7 @@ ApplicationWindow {
 
                                             // <span class="check">
                                             Text {
+                                                id: text6
                                                 text: "✓"
                                                 textFormat: Text.PlainText
                                                 color: "#16a34a"
@@ -995,7 +1001,7 @@ ApplicationWindow {
                                                 lineHeight: 24.32
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32)
+                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32, text6.text)
                                                 }
                                                 bottomPadding: EldurFonts.slack(font, lineHeight)
                                                 wrapMode: Text.WordWrap
@@ -1045,6 +1051,7 @@ ApplicationWindow {
 
                                             // <span class="check">
                                             Text {
+                                                id: text7
                                                 text: "✓"
                                                 textFormat: Text.PlainText
                                                 color: "#16a34a"
@@ -1054,7 +1061,7 @@ ApplicationWindow {
                                                 lineHeight: 24.32
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32)
+                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32, text7.text)
                                                 }
                                                 bottomPadding: EldurFonts.slack(font, lineHeight)
                                                 wrapMode: Text.WordWrap
@@ -1104,6 +1111,7 @@ ApplicationWindow {
 
                                             // <span class="check">
                                             Text {
+                                                id: text8
                                                 text: "✓"
                                                 textFormat: Text.PlainText
                                                 color: "#16a34a"
@@ -1113,7 +1121,7 @@ ApplicationWindow {
                                                 lineHeight: 24.32
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32)
+                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32, text8.text)
                                                 }
                                                 bottomPadding: EldurFonts.slack(font, lineHeight)
                                                 wrapMode: Text.WordWrap
@@ -1163,6 +1171,7 @@ ApplicationWindow {
 
                                             // <span class="check">
                                             Text {
+                                                id: text9
                                                 text: "✓"
                                                 textFormat: Text.PlainText
                                                 color: "#16a34a"
@@ -1172,7 +1181,7 @@ ApplicationWindow {
                                                 lineHeight: 24.32
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32)
+                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32, text9.text)
                                                 }
                                                 bottomPadding: EldurFonts.slack(font, lineHeight)
                                                 wrapMode: Text.WordWrap
@@ -1442,6 +1451,7 @@ ApplicationWindow {
 
                                             // <span class="check">
                                             Text {
+                                                id: text10
                                                 text: "✓"
                                                 textFormat: Text.PlainText
                                                 color: "#16a34a"
@@ -1451,7 +1461,7 @@ ApplicationWindow {
                                                 lineHeight: 24.32
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32)
+                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32, text10.text)
                                                 }
                                                 bottomPadding: EldurFonts.slack(font, lineHeight)
                                                 wrapMode: Text.WordWrap
@@ -1503,6 +1513,7 @@ ApplicationWindow {
 
                                             // <span class="check">
                                             Text {
+                                                id: text11
                                                 text: "✓"
                                                 textFormat: Text.PlainText
                                                 color: "#16a34a"
@@ -1512,7 +1523,7 @@ ApplicationWindow {
                                                 lineHeight: 24.32
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32)
+                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32, text11.text)
                                                 }
                                                 bottomPadding: EldurFonts.slack(font, lineHeight)
                                                 wrapMode: Text.WordWrap
@@ -1564,6 +1575,7 @@ ApplicationWindow {
 
                                             // <span class="check">
                                             Text {
+                                                id: text12
                                                 text: "✓"
                                                 textFormat: Text.PlainText
                                                 color: "#16a34a"
@@ -1573,7 +1585,7 @@ ApplicationWindow {
                                                 lineHeight: 24.32
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32)
+                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32, text12.text)
                                                 }
                                                 bottomPadding: EldurFonts.slack(font, lineHeight)
                                                 wrapMode: Text.WordWrap
@@ -1625,6 +1637,7 @@ ApplicationWindow {
 
                                             // <span class="check">
                                             Text {
+                                                id: text13
                                                 text: "✓"
                                                 textFormat: Text.PlainText
                                                 color: "#16a34a"
@@ -1634,7 +1647,7 @@ ApplicationWindow {
                                                 lineHeight: 24.32
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32)
+                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32, text13.text)
                                                 }
                                                 bottomPadding: EldurFonts.slack(font, lineHeight)
                                                 wrapMode: Text.WordWrap
@@ -1686,6 +1699,7 @@ ApplicationWindow {
 
                                             // <span class="check">
                                             Text {
+                                                id: text14
                                                 text: "✓"
                                                 textFormat: Text.PlainText
                                                 color: "#16a34a"
@@ -1695,7 +1709,7 @@ ApplicationWindow {
                                                 lineHeight: 24.32
                                                 lineHeightMode: Text.FixedHeight
                                                 transform: Translate {
-                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32)
+                                                    y: EldurFonts.shift("sans-serif", 15.2, 700, false, 24.32, text14.text)
                                                 }
                                                 bottomPadding: EldurFonts.slack(font, lineHeight)
                                                 wrapMode: Text.WordWrap

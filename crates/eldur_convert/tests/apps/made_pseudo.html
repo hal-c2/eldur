@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Generated boxes on lines a script leaves alone</title>
+<style>
+body { margin: 10px; font: 15px Verdana, sans-serif; width: 600px; }
+.tags span { display: inline; padding: 2px 7px; margin-right: 5px; border: 1px solid #79a; border-radius: 9px; background: #eaf2ff; font-size: 12px; }
+.tags span.hot { padding: 2px 12px; border-width: 2px; background: #fdd; }
+.crumbs a { color: #333; }
+.crumbs a:not(:last-child)::after { content: "›"; margin: 0 6px; color: #aaa; }
+ul.st { list-style: none; padding: 0; margin: 8px 0; }
+ul.st li { padding: 3px 6px; }
+ul.st li:nth-child(odd) { background: #f3f3f3; }
+ul.st li:last-child::after { content: " (last)"; color: #999; font-size: 11px; }
+p.t em { border-bottom: 2px solid orange; padding: 0 3px; }
+p.t em.big { font-size: 20px; padding: 0 9px; }
+.price .old { text-decoration: line-through; margin-right: 6px; color: #888; }
+.price .cur::before { content: "$"; font-size: 11px; vertical-align: top; }
+</style></head>
+<body>
+<div class="tags" id="tags"><span id="t0">alpha</span></div>
+<div class="crumbs" id="cr"><a href="#" id="c0">Root</a><a href="#" id="c1">Docs</a></div>
+<ul class="st" id="ul"><li id="l0">One</li><li id="l1">Two</li></ul>
+<p class="t" id="p">Some <em id="e1">emphasised words</em> inside a longer sentence that wraps <em id="e2">twice</em> maybe across the box width here.</p>
+<div class="price" id="pr"><span class="old" id="o">$40</span><span class="cur" id="cu">29</span></div>
+<button id="change">Change</button>
+<script>
+var tags = document.getElementById("tags");
+["beta", "gamma long tag", "delta"].forEach(function (t, i) {
+  var s = document.createElement("span");
+  s.id = "t" + (i + 1);
+  s.textContent = t;
+  if (i === 1) s.className = "hot";
+  tags.appendChild(s);
+});
+var cr = document.getElementById("cr");
+var a = document.createElement("a");
+a.href = "#";
+a.id = "c2";
+a.textContent = "Guide";
+cr.appendChild(a);
+var ul = document.getElementById("ul");
+["Three", "Four"].forEach(function (t, i) {
+  var l = document.createElement("li");
+  l.id = "l" + (i + 2);
+  l.textContent = t;
+  ul.appendChild(l);
+});
+document.getElementById("change").addEventListener("click", function () {
+  document.getElementById("t2").classList.remove("hot");
+  document.getElementById("t0").classList.add("hot");
+  cr.removeChild(document.getElementById("c2"));
+  ul.removeChild(document.getElementById("l0"));
+  document.getElementById("e1").classList.add("big");
+});
+</script>
+</body>
+</html>

@@ -32,6 +32,8 @@ ApplicationWindow {
 
     function tableExtents(grid, specs) {
         const n = specs.length
+        const edges = grid.tableEdges || []
+        const shift = b => edges[b] || 0
         const min = new Array(n).fill(0)
         const max = new Array(n).fill(0)
         const spanning = []
@@ -42,18 +44,20 @@ ApplicationWindow {
             const slot = cell.tableSlot
             if (!slot || cell.visible === false)
                 continue
+            const more = shift(slot[1] + slot[3]) - shift(slot[1])
+            const need = { slot: slot, min: cell.minContentWidth + more, max: cell.implicitWidth + more }
             if (slot[3] > 1) {
-                spanning.push(cell)
+                spanning.push(need)
                 continue
             }
-            min[slot[1]] = Math.max(min[slot[1]], cell.minContentWidth)
-            max[slot[1]] = Math.max(max[slot[1]], cell.implicitWidth)
+            min[slot[1]] = Math.max(min[slot[1]], need.min)
+            max[slot[1]] = Math.max(max[slot[1]], need.max)
         }
         for (const cell of spanning) {
-            const first = cell.tableSlot[1]
-            const last = first + cell.tableSlot[3]
-            const gaps = grid.columnSpacing * (cell.tableSlot[3] - 1)
-            for (const [widths, wanted] of [[min, cell.minContentWidth], [max, cell.implicitWidth]]) {
+            const first = cell.slot[1]
+            const last = first + cell.slot[3]
+            const gaps = grid.columnSpacing * (cell.slot[3] - 1)
+            for (const [widths, wanted] of [[min, cell.min], [max, cell.max]]) {
                 let have = 0
                 let weight = 0
                 for (let c = first; c < last; ++c) {
@@ -65,93 +69,155 @@ ApplicationWindow {
                     continue
                 const add = []
                 for (let c = first; c < last; ++c)
-                    add.push(weight > 0 ? missing * max[c] / weight : missing / cell.tableSlot[3])
+                    add.push(weight > 0 ? missing * max[c] / weight : missing / cell.slot[3])
                 for (let c = first; c < last; ++c)
                     widths[c] += add[c - first]
             }
         }
-        for (let c = 0; c < n; ++c)
+        for (let c = 0; c < n; ++c) {
             max[c] = Math.max(max[c], min[c])
-        return { min: min, max: max }
+            if (typeof specs[c] === "number")
+                max[c] = Math.max(max[c], specs[c])
+        }
+        // Percentages count up to 100% in all, in column order.
+        const percents = []
+        let total = 0
+        for (let c = 0; c < n; ++c) {
+            const p = typeof specs[c] === "string" ? Math.max(0, Math.min(parseFloat(specs[c]), 100 - total)) : 0
+            percents.push(p)
+            total += p
+        }
+        // What our cells have past the browser's: its outer border halves.
+        const outside = shift(0) - shift(n)
+        // A column whose content is one word cannot wrap; a word's overhang past its
+        // advance is under a pixel, a space and a letter more.
+        const wraps = max.map((m, c) => m - min[c] > 1)
+        return { min: min, max: max, percents: percents, shift: shift, outside: outside, wraps: wraps }
     }
 
     function tableMaxContentWidth(grid, specs, fixed) {
-        const extents = root.tableExtents(grid, specs)
         let sum = grid.columnSpacing * (specs.length - 1)
-        for (let c = 0; c < specs.length; ++c) {
-            if (typeof specs[c] === "number")
-                sum += fixed ? specs[c] : Math.max(specs[c], extents.min[c])
-            else
-                sum += fixed ? 0 : extents.max[c]
+        if (fixed) {
+            for (let c = 0; c < specs.length; ++c)
+                sum += typeof specs[c] === "number" ? specs[c] : 0
+            return sum
         }
-        return sum
+        const extents = root.tableExtents(grid, specs)
+        let all = 0
+        let rest = 0
+        let percent = 0
+        let wanted = 0
+        for (let c = 0; c < specs.length; ++c) {
+            all += extents.max[c]
+            if (typeof specs[c] !== "string")
+                rest += extents.max[c]
+            else if (extents.percents[c] > 0)
+                wanted = Math.max(wanted, extents.max[c] * 100 / extents.percents[c])
+            percent += extents.percents[c]
+        }
+        if (percent > 0 && percent < 100)
+            wanted = Math.max(wanted, rest * 100 / (100 - percent))
+        // Columns come out whole pixels, those at max-content that can wrap rounded up.
+        let whole = 0
+        for (let c = 0; c < specs.length; ++c) {
+            const drawn = extents.max[c] + extents.shift(c) - extents.shift(c + 1)
+            whole += extents.wraps[c] ? Math.ceil(drawn - 1e-6) : drawn
+        }
+        return sum + Math.max(Math.max(all, wanted) + extents.outside, whole)
     }
 
     function tableMinContentWidth(grid, specs, fixed) {
-        const extents = root.tableExtents(grid, specs)
         let sum = grid.columnSpacing * (specs.length - 1)
-        for (let c = 0; c < specs.length; ++c) {
-            if (typeof specs[c] === "number")
-                sum += fixed ? specs[c] : Math.max(specs[c], extents.min[c])
-            else
-                sum += fixed ? 0 : extents.min[c]
+        if (fixed) {
+            for (let c = 0; c < specs.length; ++c)
+                sum += typeof specs[c] === "number" ? specs[c] : 0
+            return sum
         }
-        return sum
+        const extents = root.tableExtents(grid, specs)
+        for (let c = 0; c < specs.length; ++c)
+            sum += extents.min[c]
+        return sum + extents.outside
     }
 
     function tableColumnWidths(grid, specs, fixed) {
         const n = specs.length
-        const space = Math.max(0, grid.width - grid.columnSpacing * (n - 1))
-        const extents = fixed ? { min: new Array(n).fill(0), max: new Array(n).fill(0) } : root.tableExtents(grid, specs)
-        const percent = s => parseFloat(s) * space / 100
-        const widths = []
-        const kinds = []
-        for (let c = 0; c < n; ++c) {
-            const s = specs[c]
-            if (typeof s === "number") {
-                widths.push(Math.max(s, extents.min[c]))
-                kinds.push(1)
-            } else if (typeof s === "string") {
-                widths.push(Math.max(percent(s), extents.min[c]))
-                kinds.push(2)
-            } else {
-                widths.push(extents.max[c])
-                kinds.push(0)
-            }
-        }
-        let left = space - widths.reduce((a, b) => a + b, 0)
-        const share = (kind, amount, weights) => {
-            const total = weights.reduce((a, w, c) => a + (kinds[c] === kind ? w : 0), 0)
-            const count = kinds.filter(k => k === kind).length
-            if (count === 0)
-                return false
-            for (let c = 0; c < n; ++c) {
-                if (kinds[c] === kind)
-                    widths[c] += total > 0 ? amount * weights[c] / total : amount / count
-            }
-            return true
-        }
-        if (left > 0) {
-            // Equal shares in fixed layout: there are no content widths to weigh.
-            share(0, left, fixed ? widths.map(() => 1) : extents.max)
-                || share(1, left, widths) || share(2, left, widths)
-        } else if (left < 0 && !fixed) {
-            for (const kind of [0, 1, 2]) {
-                const room = widths.map((w, c) => kinds[c] === kind ? w - extents.min[c] : 0)
-                const total = room.reduce((a, b) => a + b, 0)
-                if (total <= 0)
+        if (n === 0)
+            return []
+        const extents = fixed ? null : root.tableExtents(grid, specs)
+        const shift = fixed ? (b => 0) : extents.shift
+        const space = Math.max(0, grid.width - grid.columnSpacing * (n - 1) - (fixed ? 0 : extents.outside))
+        const px = c => typeof specs[c] === "number"
+        const pc = c => typeof specs[c] === "string"
+        let widths
+        if (fixed) {
+            // Specified widths stand; the rest is shared equally, there being no
+            // content widths to weigh.
+            widths = specs.map((s, c) => px(c) ? s : pc(c) ? parseFloat(s) * space / 100 : 0)
+            const left = space - widths.reduce((a, b) => a + b, 0)
+            const auto = specs.map((s, c) => !px(c) && !pc(c))
+            for (const takes of [auto, specs.map((s, c) => px(c)), specs.map((s, c) => pc(c))]) {
+                const sum = widths.reduce((a, w, c) => a + (takes[c] ? w : 0), 0)
+                const count = takes.filter(t => t).length
+                if (left <= 0 || count === 0)
                     continue
-                share(kind, -Math.min(-left, total), room)
-                left += Math.min(-left, total)
-                if (left >= 0)
+                const equal = takes === auto || sum <= 0
+                widths = widths.map((w, c) => takes[c] ? w + left * (equal ? 1 / count : w / sum) : w)
+                break
+            }
+        } else {
+            const min = extents.min
+            const share = c => Math.max(min[c], extents.percents[c] * space / 100)
+            const guesses = [
+                min.slice(),
+                min.map((m, c) => pc(c) ? share(c) : m),
+                min.map((m, c) => pc(c) ? share(c) : px(c) ? extents.max[c] : m),
+                min.map((m, c) => pc(c) ? share(c) : extents.max[c])
+            ]
+            const sums = guesses.map(g => g.reduce((a, b) => a + b, 0))
+            widths = guesses[0]
+            for (let g = 1; g < guesses.length; ++g) {
+                if (space >= sums[g]) {
+                    widths = guesses[g]
+                    continue
+                }
+                if (space > sums[g - 1]) {
+                    const t = (space - sums[g - 1]) / (sums[g] - sums[g - 1])
+                    widths = guesses[g].map((w, c) => guesses[g - 1][c] + (w - guesses[g - 1][c]) * t)
+                }
+                break
+            }
+            const excess = space - sums[guesses.length - 1]
+            if (excess > 0) {
+                widths = widths.slice()
+                const auto = c => !px(c) && !pc(c)
+                const takers = [
+                    c => auto(c) && extents.max[c] > 0 ? extents.max[c] : 0,
+                    c => px(c) ? Math.max(widths[c], 1e-9) : 0,
+                    c => pc(c) && extents.percents[c] > 0 ? extents.percents[c] : 0,
+                    c => 1
+                ]
+                for (const weigh of takers) {
+                    const weights = widths.map((w, c) => weigh(c))
+                    const total = weights.reduce((a, b) => a + b, 0)
+                    if (total <= 0)
+                        continue
+                    for (let c = 0; c < n; ++c)
+                        widths[c] += excess * weights[c] / total
                     break
+                }
             }
         }
-        let edge = 0
+        let edge = shift(0)
+        let from = 0
         for (let c = 0; c < n; ++c) {
-            const next = edge + widths[c]
-            widths[c] = Math.round(next) - Math.round(edge)
-            edge = next
+            edge += widths[c]
+            let to = Math.round(edge - shift(c + 1))
+            // A text wraps in a column a fraction narrower than it: one given its
+            // max-content width keeps all of it, rounded up.
+            if (!fixed && extents.wraps[c] && widths[c] >= extents.max[c] - 1e-6)
+                to = Math.max(to, from + Math.ceil(extents.max[c] + shift(c) - shift(c + 1) - 1e-6))
+            widths[c] = to - from
+            from = to
         }
         return widths
     }

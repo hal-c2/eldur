@@ -44,6 +44,21 @@ async function center(selector) {
   }, selector);
 }
 
+// A key is down for a while, as a person's is: what the page set to run at once
+// on keydown runs before keyup, however busy the machine. `press` sends the two
+// back to back, and a timer may or may not fall between them. The Qt side holds
+// its keys the same way.
+async function tap(key) {
+  const parts = key.length > 1 ? key.split("+") : [key];
+  const mods = parts.slice(0, -1);
+  const last = parts[parts.length - 1];
+  for (const m of mods) await page.keyboard.down(m);
+  await page.keyboard.down(last);
+  await catchUp(page);
+  await page.keyboard.up(last);
+  for (const m of mods.reverse()) await page.keyboard.up(m);
+}
+
 async function act(step) {
   if (step.viewport) await page.setViewportSize({ width: step.viewport[0], height: step.viewport[1] });
   if (step.click) {
@@ -64,11 +79,11 @@ async function act(step) {
   if (step.type) {
     const { x, y } = await center(step.type[0]);
     await page.mouse.click(x, y);
-    await page.keyboard.press("End");
-    await page.keyboard.type(step.type[1]);
+    await tap("End");
+    for (const c of step.type[1]) await tap(c);
   }
-  if (step.key) await page.keyboard.press(step.key);
-  if (step.keys) await page.keyboard.type(step.keys);
+  if (step.key) await tap(step.key);
+  if (step.keys) for (const c of step.keys) await tap(c);
   if (step.wheel) {
     const { x, y } = step.wheel[0] === "page" ? { x: 1200, y: 400 } : await center(step.wheel[0]);
     await page.mouse.move(x, y);

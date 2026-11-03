@@ -460,7 +460,12 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
             contents: crate::emit::ELDUR_TEXT_SHADOW_QML.as_bytes().to_vec(),
         });
     }
-    if main.contains("EldurInlineBox {") {
+    // The runtime paints the boxes of inline elements it lays out again.
+    if main.contains("EldurInlineBox {")
+        || files
+            .iter()
+            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
+    {
         files.push(OutputFile {
             path: PathBuf::from("EldurInlineBox.qml"),
             contents: crate::emit::ELDUR_INLINE_BOX_QML.as_bytes().to_vec(),

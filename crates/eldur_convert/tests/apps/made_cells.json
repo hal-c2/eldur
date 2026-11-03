@@ -1,0 +1,1 @@
+{"steps":[{"name":"cut","click":"#cut"},{"name":"fill","click":"#fill"}],"watch":[{"sel":"table"},{"sel":"tr"},{"sel":"td"},{"sel":"#cut"}]}

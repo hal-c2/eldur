@@ -124,6 +124,9 @@ pub(crate) fn analyze(scripts: &[ScriptInput]) -> Analysis {
             listener_mentions: 0,
         };
         visitor.visit_program(&parsed.program);
+        for query in facts.derived.take() {
+            visitor.record_query(query);
+        }
         // Held or bound rather than called: no telling what it goes on to hear.
         if visitor.listener_mentions > visitor.listener_calls {
             visitor.analysis.hears_unnamed_events = true;
@@ -1506,7 +1509,90 @@ enum ElemExpr {
     Ref(ElementRef),
     Sym(SymbolId),
     CallOf(SymbolId),
+    /// A table part a table, section or row holds (`rows[i]`, `tHead`).
+    Part(Box<ElemExpr>, TablePart),
     Unknown,
+}
+
+/// The table collections and parts HTML gives `<table>`, its sections and rows.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TablePart {
+    Rows,
+    Cells,
+    Bodies,
+    Head,
+    Foot,
+}
+
+impl TablePart {
+    fn collection(name: &str) -> Option<Self> {
+        Some(match name {
+            "rows" => Self::Rows,
+            "cells" => Self::Cells,
+            "tBodies" => Self::Bodies,
+            _ => return None,
+        })
+    }
+
+    /// The children of `owner` this part is among. A table's rows are its own
+    /// and its sections'; a section's rows are its own, which is the same
+    /// selector, since a section holds no section.
+    fn selector(self, owner: &str) -> String {
+        let steps: &[&str] = match self {
+            Self::Rows => &["tr", "thead > tr", "tbody > tr", "tfoot > tr"],
+            Self::Cells => &["td", "th"],
+            Self::Bodies => &["tbody"],
+            Self::Head => &["thead"],
+            Self::Foot => &["tfoot"],
+        };
+        let owners = split_selector_list(owner);
+        owners
+            .iter()
+            .flat_map(|o| steps.iter().map(move |step| format!("{o} > {step}")))
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+}
+
+/// A selector list's selectors, split at commas outside brackets and strings.
+fn split_selector_list(list: &str) -> Vec<&str> {
+    let mut out = Vec::new();
+    let mut depth = 0_u32;
+    let mut quote: Option<char> = None;
+    let mut start = 0;
+    for (at, c) in list.char_indices() {
+        match (quote, c) {
+            (Some(q), _) if c == q => quote = None,
+            (Some(_), _) => {}
+            (None, '"' | '\'') => quote = Some(c),
+            (None, '(' | '[') => depth += 1,
+            (None, ')' | ']') => depth = depth.saturating_sub(1),
+            (None, ',') if depth == 0 => {
+                out.push(list[start..at].trim());
+                start = at + 1;
+            }
+            _ => {}
+        }
+    }
+    out.push(list[start..].trim());
+    out
+}
+
+/// The selector a query is, when it can be written as one.
+fn query_selector(query: &DomQuery) -> Option<String> {
+    match query {
+        DomQuery::ById(id) => {
+            let plain = id
+                .chars()
+                .next()
+                .is_some_and(|c| c.is_ascii_alphabetic() || c == '_')
+                && id
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
+            plain.then(|| format!("#{id}"))
+        }
+        DomQuery::Selector(s) | DomQuery::SelectorAll(s) => Some(s.clone()),
+    }
 }
 
 /// One possible class set: its literal names and whether some part is not literal.
@@ -1590,6 +1676,11 @@ impl Eval<'_, '_> {
                 {
                     return ElemExpr::CallOf(sym);
                 }
+                if let Expression::StaticMemberExpression(m) = unwrap_parens(&call.callee)
+                    && m.property.name == "item"
+                {
+                    return self.collection_item(&m.object);
+                }
                 ElemExpr::Unknown
             }
             Expression::Identifier(ident) => self
@@ -1607,8 +1698,24 @@ impl Eval<'_, '_> {
                 };
                 ElemExpr::Ref(ElementRef::Query(DomQuery::Selector(selector.to_string())))
             }
+            Expression::StaticMemberExpression(m) => match m.property.name.as_str() {
+                "tHead" => ElemExpr::Part(Box::new(self.elem(&m.object)), TablePart::Head),
+                "tFoot" => ElemExpr::Part(Box::new(self.elem(&m.object)), TablePart::Foot),
+                _ => ElemExpr::Unknown,
+            },
+            // `table.rows[0]`: which one is not followed, only that it is one of them.
+            Expression::ComputedMemberExpression(m) => self.collection_item(&m.object),
             _ => ElemExpr::Unknown,
         }
+    }
+
+    fn collection_item(&self, collection: &Expression<'_>) -> ElemExpr {
+        if let Expression::StaticMemberExpression(m) = unwrap_parens(collection)
+            && let Some(part) = TablePart::collection(&m.property.name)
+        {
+            return ElemExpr::Part(Box::new(self.elem(&m.object)), part);
+        }
+        ElemExpr::Unknown
     }
 
     fn strings(&self, expr: &Expression<'_>) -> Alts {
@@ -1656,6 +1763,9 @@ impl Eval<'_, '_> {
 #[derive(Default)]
 struct Facts {
     sym_elem: HashMap<SymbolId, ElemExpr>,
+    /// Queries a table part was resolved to: no script says them, but what
+    /// they find is where its elements go.
+    derived: std::cell::RefCell<Vec<DomQuery>>,
     sym_str: HashMap<SymbolId, Alts>,
     fn_returns: HashMap<SymbolId, Vec<ElemExpr>>,
 }
@@ -1668,6 +1778,18 @@ impl Facts {
         match value {
             ElemExpr::Ref(r) => r.clone(),
             ElemExpr::Unknown => ElementRef::Unknown,
+            ElemExpr::Part(owner, part) => {
+                let ElementRef::Query(owner) = self.resolve_elem(owner, allow_call, depth + 1)
+                else {
+                    return ElementRef::Unknown;
+                };
+                let Some(owner) = query_selector(&owner) else {
+                    return ElementRef::Unknown;
+                };
+                let query = DomQuery::SelectorAll(part.selector(&owner));
+                self.derived.borrow_mut().push(query.clone());
+                ElementRef::Query(query)
+            }
             ElemExpr::Sym(s) => self.sym_elem.get(s).map_or(ElementRef::Unknown, |v| {
                 self.resolve_elem(v, allow_call, depth + 1)
             }),

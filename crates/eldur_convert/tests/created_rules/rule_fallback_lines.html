@@ -1,0 +1,17 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+.d::before{content:"✓ ";color:green}
+.big{font-size:20px}
+.lh{line-height:24px}
+.ser{font-family:serif;font-size:17px}
+</style></head><body>
+<div id="a">Plain line</div>
+<div id="b">Done ✓ here</div>
+<div id="c" class="d">Generated</div>
+<div id="e" class="big">Big ✗ mark</div>
+<div id="f" class="lh">Own line ✓</div>
+<div id="g" class="ser">Serif ✓ text</div>
+<div id="end" style="height:4px;background:#000"></div>
+<script>
+setTimeout(()=>{for(const n of ['a','b','c','e','f','g','end']){const q=document.getElementById(n).getBoundingClientRect();console.log('CS '+n+' '+[q.x,q.y,q.width,q.height].join(','))}document.body.appendChild(document.createElement('div')).id='csdone';},100);
+</script></body></html>

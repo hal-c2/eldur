@@ -241,6 +241,8 @@ baseline, own lh = A + floor((lh - A - D) / 2 + 1e-4)  lh in 1/64 px
 | Noto Sans, Noto Serif, Noto Sans Mono | 1.069 | 0.293 | 0 |
 | JetBrainsMono Nerd Font | 1.02 | 0.3 | 0 |
 
+**Fallback faces.** A character outside the ranges every listed face covers (the table's `covered`: Latin, Greek, Cyrillic, general punctuation, currency) may be drawn by another face, and in Chromium that face's ascent and descent, rounded and with its own half-leading, count in a `normal` line. So a `Text` whose text has such characters (`emit/fonts.rs has_strays`) passes its text to `EldurFonts.normalLine` and `shift`, which lay the strays out once in a `TextMetrics` and take its logical box: QML cannot ask a face whether it has a glyph, but the box reaches as far as the faces drawn in it. Generated text and runs on lines (`EldurLines`) do the same. A face that is not in the table has only Qt's metrics, so a row can still be a pixel off (a serif `✓`).
+
 Arial, Times New Roman, Arimo, Tinos, Cousine and DejaVu are not installed where this was measured (Arimo is an alias reaching Liberation Sans), so they have no row.
 
 **Why Nimbus Sans at 16 px is 19 in one and 22 in the other.** Chromium: `round(11.66) + round(4.34) + round(3.2)` = 12 + 4 + 3 = 19, box 16, baseline 13. Qt's natural height uses the win metrics, 17.19 + 4.78 = 21.97, so 22. The same split explains Liberation Sans at 24 px: Chromium's 22 + 5 + 1 = 28, Qt's 26.8 → 27, without the gap, which is the 1 px on an `h1`.
@@ -311,7 +313,7 @@ Qt's document layout has no per-line box of this kind and no fractional heights,
 
 **Lines with boxes.** `EldurLines.qml` is one line layouter for static and script pages, written beside `Main.qml` when the page uses it or has a runtime. Its children are the content in order. Text is cut only at boxes: each run between two boxes stays one `Text`, shaped whole, so no ligature or kerning is lost at a word boundary, and `lineLaidOut` places that `Text`'s lines. The tradeoff is that a scriptless page with such a line now has JavaScript functions in QML, though not `eldur_runtime.js`. Heights follow CSS 2.2 §10.8 with Chromium's rounding: the strut is `round(ascent) + floor(leading / 2)` above and `round(descent) + ceil(leading / 2)` below, and `normal` is the rule in §1.3 (`EldurLines` reads it from `EldurFonts`). A box's baseline is its text's (rounded ascent), the bottom border edge for a check box, radio or slider, the bottom margin edge for a textarea or a box with no line. A line with nothing on it has no strut. The layouter runs a frame after a width change, because a table reads implicit sizes while working out that width; a script's read settles it first.
 
-A run's edge space is the space CSS has there: Qt draws a trailing space in rich text and before a closing tag in styled text but drops a leading one, and `EldurLines` takes off only what Qt drew, then counts each collapsed space between runs once itself (`inline_code_e2e`). A run's natural width is no more than its measured lines end to end, since once a narrower room has broken a word Qt's implicit width stays past the text's.
+A run's edge space is the space CSS has there: Qt draws a trailing space in rich text and before a closing tag in styled text but drops a leading one, and `EldurLines` takes off only what Qt drew, then counts each collapsed space between runs once itself (`inline_code_e2e`). A one-line run in styled text whose markup only colours, links or decorates (`<font color>`, `<a href>`, `<u>`, `<s>`, no entities) is measured as its plain text in its own font, as a plain run is, plus the space Qt draws before a closing tag: Qt's laid-out width of such a run also carries the last glyph's ink overhang. A run's natural width is no more than its measured lines end to end, since once a narrower room has broken a word Qt's implicit width stays past the text's.
 
 A justified line with boxes shares what it has left across its spaces, those between items and those in its text: a Text's one line by word spacing, the lines of a longer Text by Qt's own justification. **Not done:** the last line of a longer Text keeps its words' spacing when a box follows it on a justified line; the box itself is still placed as CSS says.
 
@@ -997,7 +999,7 @@ GridLayout {
 |---|---|---|
 | Anonymous table boxes (CSS 2.1 §17.2.1) | Full | Stray cells and rows get their missing parents; whitespace between parts makes nothing. |
 | `colspan` / `rowspan` | Full | HTML forming algorithm; a rowspan stops at its row group's end, `rowspan=0` runs to it. |
-| Auto column widths | Approx | Specified or max-content, at least min-content; extra space in proportion to max-content, as measured in Chromium. Min-content is the longest word, measured with `FontMetrics`. |
+| Auto column widths | Approx | Chromium's auto layout, measured (see *Auto column widths* below); columns land within a pixel of Chromium's. Min-content is the widest word, measured with `FontMetrics` over the few words an em estimate puts near the widest. Spanning cells are checked for one span only, and a `Text`'s implicit width counts a last glyph's overhang, which a browser does not. |
 | `table-layout: fixed` | Emulated | `<col>` widths and the first row; the rest shared equally. |
 | `<col>` / `<colgroup>` widths | Full | `span` and the `width` attribute included. A `width` on a spanning cell is ignored, with a diagnostic. |
 | `border-collapse: collapse` | Approx | CSS 2.1 §17.6.2.1 picks each edge; a cell draws its half. A spanning cell's side uses the widest segment along it, so differing segments are not reproduced. Border styles other than solid draw solid. |
@@ -1011,6 +1013,17 @@ GridLayout {
 | `visibility: collapse`, row `opacity` | Unsupported | Reported. |
 | `empty-cells`, presentational attributes (`cellspacing`, `bgcolor`, …) | Unsupported | Not read. |
 | Sticky `th` | Approx | See §5.4. |
+
+**Auto column widths**, as measured in Chromium (`crates/eldur_convert/tests/table_widths/`), and as `tableColumnWidths` solves them:
+
+- A column's minimum is its cells' min-content border-box width; a width in px or % does not raise it, so a table narrower than its px columns shrinks them. Its maximum is max-content, at least the minimum, and at least a px width. A content-box width adds padding and borders; a border-box width is the column width. A spanning cell's shortfall is shared over its columns in proportion to their maxima.
+- Percentages add up to at most 100% in column order; a column past the cap is auto.
+- Four guesses: every column at its minimum; then percent columns at their share of the width (at least their minimum); then px columns at their maximum; then auto columns at their maximum. A width between two guesses moves the columns that differ linearly, in proportion to how much they differ.
+- Width past the last guess goes to auto columns with content, in proportion to their maxima; failing those, to px columns by width; then to percent columns by percentage; then to all columns equally.
+- A table with `width: auto` is the sum of the maxima, or wider where percent columns need it: the other columns' maxima over the percent left over, and each percent column's maximum over its percentage. Its min-content width is the sum of the minima.
+- Collapsed, the table's box holds half of each outer border and a column reaches the middle of the borders beside it. Cells here draw the outer borders whole and split an inner one with the odd pixel on the right, so the grid declares `tableEdges`, how far the browser's column edge lies right of the drawn one at each boundary, and the solver works in the browser's frame.
+- Columns are rounded to whole pixels at cumulative edges. A column given its maximum is rounded up when its text can wrap (its maximum is over a pixel past its minimum), since a `Text` wraps in a box a fraction narrower than it, and the table's max-content width is at least those whole widths. A single word cannot wrap, so its column rounds to the nearest pixel and may overhang by a fraction, as a browser's pixel-snapped one does.
+- `table-layout: fixed` keeps the specified widths and shares what is left equally among auto columns.
 
 **Pitfalls**
 - Cells with wrapped `Text` have a minimum width of 0 in a `GridLayout`, so they can be squeezed to nothing. Set `Layout.minimumWidth` to the longest-word width or the implicit width of unwrapped single-line cells.

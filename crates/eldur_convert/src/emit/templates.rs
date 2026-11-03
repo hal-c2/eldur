@@ -166,11 +166,12 @@ impl Builder<'_> {
 
 /// A created cell joins a row, not the document's one grid, whose slots and
 /// column widths its probe was given: it takes the size its own style says.
+/// A cell probed in a table scripts reach has no slot but still a minimum
+/// measured with the grid's fonts, which are not in the template's scope.
 fn leave_table_grid(obj: &mut Object, style: Option<&eldur_css::ComputedStyle>) {
-    let is_cell = obj
-        .members
-        .iter()
-        .any(|m| matches!(m, Member::PropertyDecl { name, .. } if name == "tableSlot"));
+    let is_cell = obj.members.iter().any(|m| {
+        matches!(m, Member::PropertyDecl { name, .. } if name == "tableSlot" || name == "minContentWidth")
+    });
     if !is_cell {
         return;
     }
@@ -395,19 +396,38 @@ fn prune_children(obj: &mut Object, probes: &HashSet<usize>) {
     }
 }
 
-/// Empties the probe's placeholder text.
+/// Empties the probe's placeholder text. A button that holds lines (an icon
+/// beside its label) draws its label in a `Text` of its own, which follows the
+/// button's `text`: that is what a script's `textContent` sets.
 fn blank(obj: &mut Object) {
+    blank_in(obj, None);
+}
+
+fn blank_in(obj: &mut Object, button: Option<&str>) {
+    let own = (obj.type_name == "Button")
+        .then(|| obj.id.clone())
+        .flatten();
+    let button = own.as_deref().or(button);
+    let is_button = obj.type_name == "Button";
     for m in &mut obj.members {
         match m {
             Member::Property {
                 name,
                 value: Value::String(s),
-            } if name == "text" && s.eq_ignore_ascii_case(PLACEHOLDER) => s.clear(),
-            Member::Child(c) => blank(c),
+            } if name == "text" && s.eq_ignore_ascii_case(PLACEHOLDER) => match button {
+                Some(id) if !is_button => {
+                    *m = Member::Property {
+                        name: "text".to_owned(),
+                        value: Value::expr(format!("{id}.text")),
+                    };
+                }
+                _ => s.clear(),
+            },
+            Member::Child(c) => blank_in(c, button),
             Member::Property {
                 value: Value::Object(o),
                 ..
-            } => blank(o),
+            } => blank_in(o, button),
             _ => {}
         }
     }
@@ -1188,6 +1208,33 @@ pub(crate) fn add(
         .iter()
         .map(|key| format!("{}: {}", eldur_qml::quote_string(key), names[keys[key]]))
         .collect();
+    // The runtime makes a row or a section with no template, so it can't read
+    // which one it was probed as, and its cells are keyed by that name.
+    let parts: Vec<String> = order
+        .iter()
+        .filter(|key| {
+            let tag = key.split(['.', '@']).next().unwrap_or("");
+            matches!(tag, "tr" | "thead" | "tbody" | "tfoot")
+        })
+        .map(|key| {
+            format!(
+                "{}: {}",
+                eldur_qml::quote_string(key),
+                eldur_qml::quote_string(&names[keys[key]])
+            )
+        })
+        .collect();
+    if !parts.is_empty() {
+        root.members.insert(
+            0,
+            decl(
+                "var",
+                "eldurPartTemplates",
+                Value::expr(format!("({{ {} }})", parts.join(", "))),
+                true,
+            ),
+        );
+    }
     if has_out_of_flow {
         super::declare_initial_block(root);
     }

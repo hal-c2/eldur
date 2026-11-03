@@ -246,7 +246,7 @@ fn run_margins(items: &[Inline<'_>]) -> [f32; 2] {
     [left, right]
 }
 
-fn side_px(m: &LengthAuto) -> f32 {
+pub(super) fn side_px(m: &LengthAuto) -> f32 {
     match m {
         LengthAuto::Length(l) => l.as_px().unwrap_or(0.0),
         LengthAuto::Auto => 0.0,

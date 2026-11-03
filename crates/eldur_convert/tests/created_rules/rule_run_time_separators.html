@@ -1,0 +1,35 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+.nav a{color:#06c;text-decoration:none}
+.nav a+a::before{content:"·";margin:0 8px;color:#999}
+.chk{display:block;margin:4px 0}
+.chk.done{text-decoration:line-through;color:#888}
+.chk.done::before{content:"✓ ";color:green}
+.warn{position:relative;padding:6px 6px 6px 28px;background:#fee;margin:6px 0}
+.warn::before{content:"!";position:absolute;left:8px;top:6px;width:14px;height:14px;background:#c00;color:#fff;text-align:center;line-height:14px;font-weight:bold}
+.row::after{content:"";display:table;clear:both}
+.row .c{float:left;width:30%;padding:5px;box-sizing:border-box;background:#eef;margin-right:2%}
+.lbl.req::after{content:" *";color:red}
+</style></head><body>
+<div class="nav" id="nav"><a href="#" id="a1">Home</a></div>
+<div id="list"></div>
+<div id="wh"></div>
+<div class="row" id="row"></div>
+<label class="lbl" id="lb">Name</label>
+<div id="end" style="height:4px;background:#000"></div>
+<script>
+const nav=document.getElementById('nav');
+['Docs','About'].forEach((t,i)=>{const a=document.createElement('a');a.href='#';a.id='a'+(i+2);a.textContent=t;nav.appendChild(a)});
+const list=document.getElementById('list');
+['Buy milk','Walk dog','Write code'].forEach((t,i)=>{const d=document.createElement('label');d.className='chk'+(i===1?' done':'');d.id='k'+i;d.textContent=t;list.appendChild(d)});
+const w=document.createElement('div');w.className='warn';w.id='w';w.textContent='Disk almost full';document.getElementById('wh').appendChild(w);
+const row=document.getElementById('row');
+for(let i=0;i<3;i++){const c=document.createElement('div');c.className='c';c.id='rc'+i;c.textContent='Cell '+i+(i==1?' with more text to wrap across lines here':'');row.appendChild(c)}
+setTimeout(()=>{
+ for(const n of ['nav','a1','a2','a3','list','k0','k1','k2','wh','w','row','rc0','rc1','rc2','lb','end']){const q=document.getElementById(n).getBoundingClientRect();console.log('CS '+n+' '+[q.x,q.y,q.width,q.height].join(','))}
+ document.getElementById('k1').classList.remove('done');document.getElementById('k2').classList.add('done');
+ document.getElementById('lb').classList.add('req');
+ nav.removeChild(document.getElementById('a2'));
+ setTimeout(()=>{for(const n of ['a1','a3','k1','k2','lb','end']){const q=document.getElementById(n).getBoundingClientRect();console.log('CS H2'+n+' '+[q.x,q.y,q.width,q.height].join(','))}document.body.appendChild(document.createElement('div')).id='csdone';},100);
+},100);
+</script></body></html>

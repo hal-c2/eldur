@@ -557,6 +557,7 @@ ApplicationWindow {
 
                                 // <span class="stars">
                                 Text {
+                                    id: text
                                     text: "★★★★☆"
                                     textFormat: Text.PlainText
                                     color: "#e0a100"
@@ -566,7 +567,7 @@ ApplicationWindow {
                                     lineHeight: 27
                                     lineHeightMode: Text.FixedHeight
                                     transform: Translate {
-                                        y: EldurFonts.shift("sans-serif", 18, 400, false, 27)
+                                        y: EldurFonts.shift("sans-serif", 18, 400, false, 27, text.text)
                                     }
                                     bottomPadding: EldurFonts.slack(font, lineHeight)
                                     wrapMode: Text.WordWrap

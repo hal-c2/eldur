@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Cells and rows a script adds, removes and fills</title>
+<style>
+body { margin: 10px; font: 15px Verdana, sans-serif; width: 600px; }
+table.g { border-collapse: separate; border-spacing: 2px; width: 420px; font-size: 13px; }
+table.g td { border: 1px solid #ccc; padding: 3px; }
+</style></head>
+<body>
+<table class="g" id="tb"><tr><td id="d0">short</td><td id="d1">a much longer piece of text in this cell</td></tr><tr><td id="e0">x</td><td id="e1">y</td></tr></table>
+<button id="cut">Cut</button>
+<button id="fill">Fill</button>
+<script>
+var tb = document.getElementById("tb");
+var td = tb.rows[0].insertCell(-1);
+td.id = "d2";
+td.textContent = "mid sized cell";
+var r = tb.insertRow(-1);
+["a", "b", "a rather wide new cell text"].forEach(function (t, i) {
+  var c = r.insertCell(-1);
+  c.id = "n" + i;
+  c.textContent = t;
+});
+document.getElementById("cut").addEventListener("click", function () {
+  document.getElementById("d1").textContent = "now short";
+  tb.rows[1].remove();
+  r.deleteCell(2);
+});
+document.getElementById("fill").addEventListener("click", function () {
+  document.getElementById("d0").textContent = "the first cell becomes the widest of all of them";
+});
+</script>
+</body>
+</html>

@@ -93,13 +93,19 @@ const KNOWN: &[(&str, &str, &str, &str)] = &[
      226, and the 21.5px head row above it 22",
     ),
     (
-        "rule_child_nodes",
-        "CS g5 54.484375,69,32.34375,23",
-        "CS g5 54.4219,72,19.5469,17",
-        "a created `display: inline` span with padding, border and background that is an \
-     item on a line (its static parent has templates for elements, so it doesn't join \
-     a model) is drawn as bare text: only a model's nodes and the converter's static \
-     inline items have their box painted on the line's fragments",
+        "rule_fallback_lines",
+        "CS g 8,110,1264,22",
+        "CS g 8,110,1264,25",
+        "fontconfig gives Qt and Chromium different faces for a serif line's tick: \
+     Qt draws it from a Noto CJK face (ascent 1.16em), Chromium from a monospace \
+     one (1.02em); the line is as tall as the face Qt draws, and QML can't name \
+     the fallback (no `font.families`)",
+    ),
+    (
+        "rule_fallback_lines",
+        "CS end 8,132,1264,4",
+        "CS end 8,135,1264,4",
+        "below the serif line above, which is 3px taller",
     ),
     (
         "rule_pseudo_boxes",
@@ -116,49 +122,49 @@ const KNOWN: &[(&str, &str, &str, &str)] = &[
     ),
     (
         "rule_table_row_added",
-        "CS hn 8.5,8.5,199,23",
-        "CS hn 8,8,200,23",
-        "a written collapsed table keeps its columns and rows on whole pixels so its \
-     borders are drawn sharp: its first column holds the table's outer half border \
-     as well, and a cell measures from its border's first pixel, not its middle",
+        "CS hq 207.5,8.5,120,23",
+        "CS hq 207,8,121,23",
+        "a written collapsed table's second-column cell holds the whole inner border it \
+     draws, on the pixel a browser paints it, and the table's whole outer border: a \
+     browser's cell box runs from the middle of each, half a pixel in on both sides",
     ),
     (
         "rule_table_row_added",
-        "CS r0a 8.5,31.5,199,23",
-        "CS r0a 8,31,200,23",
-        "a written collapsed table keeps its columns and rows on whole pixels so its \
-     borders are drawn sharp: its first column holds the table's outer half border \
-     as well, and a cell measures from its border's first pixel, not its middle",
+        "CS r0b 207.5,31.5,120,23",
+        "CS r0b 207,31,121,23",
+        "a written collapsed table's second-column cell holds the whole inner border it \
+     draws, on the pixel a browser paints it, and the table's whole outer border: a \
+     browser's cell box runs from the middle of each, half a pixel in on both sides",
     ),
     (
         "rule_table_row_added",
-        "CS r1a 8.5,54.5,199,23",
-        "CS r1a 8,54,200,23",
-        "a written collapsed table keeps its columns and rows on whole pixels so its \
-     borders are drawn sharp: its first column holds the table's outer half border \
-     as well, and a cell measures from its border's first pixel, not its middle",
+        "CS r1b 207.5,54.5,120,23",
+        "CS r1b 207,54,121,23",
+        "a written collapsed table's second-column cell holds the whole inner border it \
+     draws, on the pixel a browser paints it, and the table's whole outer border: a \
+     browser's cell box runs from the middle of each, half a pixel in on both sides",
+    ),
+    (
+        "rule_table_row_added",
+        "CS r2b 207.5,77.5,120,23",
+        "CS r2b 207,77,121,23",
+        "a written collapsed table's second-column cell holds the whole inner border it \
+     draws, on the pixel a browser paints it, and the table's whole outer border: a \
+     browser's cell box runs from the middle of each, half a pixel in on both sides",
     ),
     (
         "rule_table_row_added",
         "CS tot 207.5,77.5,120,23",
-        "CS tot 208,77,120,24",
-        "a written collapsed table keeps its rows on whole pixels: its last row holds the \
-     table's outer half border as well, and measures from its border's first pixel",
-    ),
-    (
-        "rule_table_row_added",
-        "CS r2a 8.5,77.5,199,23",
-        "CS r2a 8,77,200,23",
-        "a written collapsed table keeps its columns and rows on whole pixels so its \
-     borders are drawn sharp: its first column holds the table's outer half border \
-     as well, and a cell measures from its border's first pixel, not its middle",
+        "CS tot 207,77,121,24",
+        "as the second-column cells above, and a written collapsed table keeps its rows on \
+     whole pixels: its last row holds the table's outer half border as well",
     ),
     (
         "rule_table_row_added",
         "CS tot 207.5,100.5,120,23",
-        "CS tot 208,100,120,24",
-        "a written collapsed table keeps its rows on whole pixels: its last row holds the \
-     table's outer half border as well, and measures from its border's first pixel",
+        "CS tot 207,100,121,24",
+        "as the second-column cells above, and a written collapsed table keeps its rows on \
+     whole pixels: its last row holds the table's outer half border as well",
     ),
 ];
 
@@ -791,4 +797,45 @@ fn rule_floats_escape() {
 #[test]
 fn rule_inline_space() {
     page("rule_inline_space");
+}
+
+/// Separators a structural selector gives created links (`a+a::before`) keep
+/// their margins as links come and go, a checklist's `::before` tick moves
+/// between created labels, and a written label gains a required mark.
+#[test]
+fn rule_run_time_separators() {
+    page("rule_run_time_separators");
+}
+
+/// A line whose text, written or generated, falls back on another face for a
+/// tick or a cross is as tall as that face makes it under `line-height: normal`.
+#[test]
+fn rule_fallback_lines() {
+    page("rule_fallback_lines");
+}
+
+/// Created inline content gets the whole cascade: pills with padding, border
+/// and radius, `.j span` padding, `display: inline` list items whose
+/// `:last-child::after` and `:nth-child` follow appends and removals, a button
+/// whose `::before` icon sits beside its label, and empty `::after` boxes whose
+/// margins take room.
+#[test]
+fn rule_inline_lists_buttons() {
+    page("rule_inline_lists_buttons");
+}
+
+/// `content: ""` with margins, or padding and a background, makes a box on the
+/// line, on written spans and on spans a script appends to a line of runs.
+#[test]
+fn rule_empty_generated_boxes() {
+    page("rule_empty_generated_boxes");
+}
+
+/// Class changes, removals and appends on inline elements in lines of runs: a
+/// separator `::after` leaves with its link, a required mark with its class, a
+/// `::before` badge moves to the span that gains it, structural rules re-match
+/// a list's new last item, and a created button gets its pseudo box once.
+#[test]
+fn rule_inline_class_changes() {
+    page("rule_inline_class_changes");
 }

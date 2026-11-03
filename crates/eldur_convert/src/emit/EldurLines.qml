@@ -32,6 +32,7 @@ Item {
 
     property var _runs: new Map()
     property var _levels: new Map()
+    property var _boxes: new Map()
     property var _watched: new Set()
     // The fractional CSS size, where the font's own is rounded to a whole one.
     property real cssSize: 0
@@ -102,6 +103,15 @@ Item {
     // What a script's changes make of a run's boxes; see `_runLevels`.
     function setRunLevels(item, levels) {
         _levels.set(item, levels);
+        schedule();
+    }
+
+    // What the runtime makes of a run's inline boxes when it lays the runs out
+    // again: the room they take at the run's ends, in place of the converter's
+    // `eldurMarginLeft`/`eldurMarginRight`, and the `EldurInlineBox`es that
+    // paint them on the run's lines.
+    function setRunBox(item, left, right, paints) {
+        _boxes.set(item, { left: left, right: right, paints: paints });
         schedule();
     }
 
@@ -203,16 +213,25 @@ Item {
         run.place = null;
         item.forceLayout();
         // Qt's width of a line reaches past the last glyph's advance to its ink;
-        // CSS puts what follows at the advance. One line in one font is known.
+        // CSS puts what follows at the advance. One line in one font is known:
+        // markup that only colours, links or decorates keeps the run's font.
         const plain = _plain(item);
+        const styled = item.textFormat === Text.StyledText && !preserveSpace && _oneFont(item.text);
         if (run.measured.length === 1 && !/\n/.test(plain)
-            && (item.textFormat === Text.PlainText || item.text.indexOf("<") === -1)) {
+            && (item.textFormat === Text.PlainText || item.text.indexOf("<") === -1 || styled)) {
             const keeps = item.textFormat === Text.PlainText || preserveSpace
                 || item.textFormat === Text.AutoText;
             runMetrics.font = item.font;
+            // Styled text drops a leading space and draws one a tag closes after.
+            const drawn = styled && /\s(<[^>]*>)+$/.test(item.text) ? runMetrics.advanceWidth(" ") : 0;
             run.measured[0].width = runMetrics.advanceWidth(
-                keeps ? plain : plain.trim().replace(/\s+/g, " "));
+                keeps ? plain : plain.trim().replace(/\s+/g, " ")) + drawn;
         }
+    }
+
+    // Markup with entities in it measures other characters than it draws.
+    function _oneFont(text) {
+        return text.indexOf("&") === -1 && text.replace(/<\/?(?:font(?: color="[^"]*")?|a(?: href="[^"]*")?|u|s)>/g, "").indexOf("<") === -1;
     }
 
     function _plain(item) {
@@ -431,8 +450,9 @@ Item {
                 continue;
             }
             const plain = _plain(item);
-            const marginLeft = item.eldurMarginLeft || 0;
-            const marginRight = item.eldurMarginRight || 0;
+            const told = _boxes.get(item);
+            const marginLeft = told ? told.left : item.eldurMarginLeft || 0;
+            const marginRight = told ? told.right : item.eldurMarginRight || 0;
             natural += marginLeft + marginRight;
             if (plain === "") {
                 item.width = 0;
@@ -765,12 +785,29 @@ Item {
             if (item.eldurFragments !== undefined) {
                 item.eldurFragments = place;
             }
+            const box = _boxes.get(item);
+            if (box) {
+                box.paints.forEach(function(paint) { paint.fragments = place; });
+            }
         });
         implicitHeight = top;
         implicitWidth = natural;
         _running = false;
     }
 
+    // A box holding these lines sits on its own line by their baseline, which
+    // its size need not change with: that line has to be told.
+    function _baselineMoved() {
+        for (let at = parent; at; at = at.parent) {
+            if (typeof at.firstBaseline === "number" && typeof at.schedule === "function") {
+                at.schedule();
+                return;
+            }
+        }
+    }
+
+    onFirstBaselineChanged: _baselineMoved()
+    onLastBaselineChanged: _baselineMoved()
     onChildrenChanged: schedule()
     // Not at once: a table reads implicit sizes while working out this width.
     onWidthChanged: schedule()
