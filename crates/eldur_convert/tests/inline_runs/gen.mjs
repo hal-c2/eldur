@@ -14,7 +14,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { loadPlaywright } from "../../../../tools/visual/playwright.mjs";
-import { writeRecording, waitForLine } from "../../../../tools/visual/record.mjs";
+import { writeRecording, waitForLine, requireLogged } from "../../../../tools/visual/record.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -199,6 +199,7 @@ const collect = async (file) => {
   await page.goto("file://" + path.join(here, file), { waitUntil: "load" });
   await done;
   page.off("console", listen);
+  requireLogged(file, fs.readFileSync(path.join(here, file), "utf8"), log, "LC ", null);
   return log;
 };
 const openLog = await collect("open.html");

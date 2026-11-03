@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../../..");
 const { loadPlaywright } = await import(path.join(root, "tools/visual/playwright.mjs"));
-const { writeRecording, drainConsole } = await import(path.join(root, "tools/visual/record.mjs"));
+const { writeRecording, trackPending, catchUp, settle, requireLogged } = await import(path.join(root, "tools/visual/record.mjs"));
 
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();
@@ -22,6 +22,7 @@ const page = await browser.newPage({
   viewport: { width: 1280, height: 800 },
   deviceScaleFactor: 1,
 });
+await trackPending(page);
 let log = [];
 page.on("console", (m) => {
   if (m.text().startsWith("CS ")) log.push(m.text());
@@ -42,10 +43,12 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
     }, name);
     await page.mouse.click(point.x, point.y);
     clicks.push({ name, x: point.x, y: point.y });
-    // Console events arrive asynchronously; the next page must not steal these.
     await page.waitForTimeout(30);
+    // What the click set off and is due by now has run, however loaded the machine.
+    await catchUp(page);
   }
   await page.waitForTimeout(30);
+  await catchUp(page);
   // What shows at each `data-probe="dx,dy"`: the first opaque background going
   // up the tree, or the border's colour with `data-border`.
   const probes = await page.evaluate(() =>
@@ -64,7 +67,9 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
         .map((v) => Math.round(Number(v) * alpha + 255 * (1 - alpha)).toString(16).padStart(2, "0")).join("");
       return { id: e.id, x: r.left + dx, y: r.top + dy, color: "#" + hex };
     }));
-  await drainConsole(page);
+  // The log is all the page says, however late its timers run.
+  await settle(page);
+  requireLogged(file, fs.readFileSync(path.join(here, file), "utf8"), log, "CS ");
   out[file.slice(0, -5)] = { log, clicks, probes };
 }
 await browser.close();
