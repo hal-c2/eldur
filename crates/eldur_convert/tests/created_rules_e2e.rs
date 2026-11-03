@@ -101,6 +101,19 @@ const KNOWN: &[(&str, &str, &str, &str)] = &[
      a model) is drawn as bare text: only a model's nodes and the converter's static \
      inline items have their box painted on the line's fragments",
     ),
+    (
+        "rule_pseudo_boxes",
+        "CS b1 8,44,58.25,20",
+        "CS b1 8,44,59,20",
+        "a text box is as wide as `Math.ceil` of its implicit width, so a wrapping Text \
+     keeps its last word on the line: the inline-block's 34.25px text is 35",
+    ),
+    (
+        "rule_pseudo_boxes",
+        "CS b3 70.140625,46,23.359375,16",
+        "CS b3 70.875,45.999999,23.267578125,16",
+        "follows the inline-block before it on the line, 0.75px wider (above)",
+    ),
 ];
 
 /// Pixels a logged number may be off: glyph widths differ a little between the two
@@ -685,4 +698,12 @@ fn rule_child_nodes() {
 #[test]
 fn rule_counters_own() {
     page("rule_counters_own");
+}
+
+/// `::before` and `::after` that are boxes: an inline-block icon on the line, an
+/// absolutely positioned badge (which gives its line no baseline), a block
+/// heading and a clearfix table.
+#[test]
+fn rule_pseudo_boxes() {
+    page("rule_pseudo_boxes");
 }

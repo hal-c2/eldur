@@ -1083,9 +1083,12 @@ At run time:
   is reused, and a box the runtime lays out gets one (`_pseudoNewRun`) that
   `_gFlowGroups` keeps first or last on its lines. The converter's own
   generated text is adopted as the rules' until they say otherwise.
-  Not followed: a pseudo-element laid out as a box (`display`, `position`,
-  `float`), `content` other than strings, `attr()` and counters, and
-  `counter(list-item)` in a `reversed` list or after `<li value>` (in Chromium the
+  A pseudo-element laid out as a box (block-level, atomic inline, floated or
+  absolutely positioned) is a box of the converted tree like an element of
+  that style; an absolutely positioned one leaves its line's baseline to the
+  rest (CSS 2.2 §10.8.1). Not followed: such a box that a class change adds or
+  removes (the runtime's generated text is only ever on a line), `content`
+  other than strings, `attr()` and counters, and `counter(list-item)` in a `reversed` list or after `<li value>` (in Chromium the
   `::before` widths of a three-item reversed list whose last item has
   `value=7` fit 0, −1, −1. That is not yet understood, so it is not copied).
 - **A table a script makes is a live table.** On an open page it takes the
