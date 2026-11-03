@@ -213,16 +213,25 @@ Item {
         run.place = null;
         item.forceLayout();
         // Qt's width of a line reaches past the last glyph's advance to its ink;
-        // CSS puts what follows at the advance. One line in one font is known.
+        // CSS puts what follows at the advance. One line in one font is known:
+        // markup that only colours, links or decorates keeps the run's font.
         const plain = _plain(item);
+        const styled = item.textFormat === Text.StyledText && !preserveSpace && _oneFont(item.text);
         if (run.measured.length === 1 && !/\n/.test(plain)
-            && (item.textFormat === Text.PlainText || item.text.indexOf("<") === -1)) {
+            && (item.textFormat === Text.PlainText || item.text.indexOf("<") === -1 || styled)) {
             const keeps = item.textFormat === Text.PlainText || preserveSpace
                 || item.textFormat === Text.AutoText;
             runMetrics.font = item.font;
+            // Styled text drops a leading space and draws one a tag closes after.
+            const drawn = styled && /\s(<[^>]*>)+$/.test(item.text) ? runMetrics.advanceWidth(" ") : 0;
             run.measured[0].width = runMetrics.advanceWidth(
-                keeps ? plain : plain.trim().replace(/\s+/g, " "));
+                keeps ? plain : plain.trim().replace(/\s+/g, " ")) + drawn;
         }
+    }
+
+    // Markup with entities in it measures other characters than it draws.
+    function _oneFont(text) {
+        return text.indexOf("&") === -1 && text.replace(/<\/?(?:font(?: color="[^"]*")?|a(?: href="[^"]*")?|u|s)>/g, "").indexOf("<") === -1;
     }
 
     function _plain(item) {
@@ -786,6 +795,19 @@ Item {
         _running = false;
     }
 
+    // A box holding these lines sits on its own line by their baseline, which
+    // its size need not change with: that line has to be told.
+    function _baselineMoved() {
+        for (let at = parent; at; at = at.parent) {
+            if (typeof at.firstBaseline === "number" && typeof at.schedule === "function") {
+                at.schedule();
+                return;
+            }
+        }
+    }
+
+    onFirstBaselineChanged: _baselineMoved()
+    onLastBaselineChanged: _baselineMoved()
     onChildrenChanged: schedule()
     // Not at once: a table reads implicit sizes while working out this width.
     onWidthChanged: schedule()

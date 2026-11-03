@@ -1,0 +1,31 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+.menu a{color:#036;text-decoration:none;padding:2px 6px}
+.menu a:not(:last-child)::after{content:"|";margin-left:12px;color:#bbb}
+.req::after{content:" *";color:#c00;margin-left:2px}
+.st li{padding:3px 6px}
+.st li:nth-child(even){background:#f3f3f3}
+.st li:last-child{border-bottom:2px solid #333}
+.tag.new::before{content:"NEW";font-size:10px;background:#e33;color:#fff;padding:1px 3px;margin-right:4px;border-radius:3px}
+.ic{font:13px Arial;padding:3px 6px;border:1px solid #aaa;background:#fafafa}
+.ic::before{content:"";display:inline-block;width:12px;height:12px;background:#393;margin-right:4px;vertical-align:-2px}
+</style></head><body>
+<div class="menu" id="menu"><a id="m1" href="#">Home</a><a id="m2" href="#">Products</a><a id="m3" href="#">Contact</a></div>
+<p id="f"><label id="r1" class="req">Email</label> and <label id="r2" class="req">Password</label></p>
+<ul class="st" id="st"><li id="s1">First</li><li id="s2">Second <b id="sb">bold</b></li></ul>
+<div id="tg"><span id="t1" class="tag new">Alpha</span> <span id="t2" class="tag">Beta</span></div>
+<div id="bt"><button class="ic" id="i1">Static</button></div>
+<div id="end" style="height:4px;background:#000"></div>
+<script>
+function dump(p,ids){for(const n of ids){const q=document.getElementById(n).getBoundingClientRect();console.log('CS '+p+n+' '+[q.x,q.y,q.width,q.height].join(','))}}
+setTimeout(()=>{
+ dump('',['menu','m1','m2','m3','f','r1','r2','st','s1','s2','sb','tg','t1','t2','bt','i1','end']);
+ document.getElementById('menu').removeChild(document.getElementById('m3'));
+ document.getElementById('r2').classList.remove('req');
+ document.getElementById('sb').textContent='much bolder text';
+ const li=document.createElement('li');li.id='s3';li.textContent='Third';document.getElementById('st').appendChild(li);
+ document.getElementById('t1').classList.remove('new');document.getElementById('t2').classList.add('new');
+ const b=document.createElement('button');b.className='ic';b.id='i2';b.textContent='Made';document.getElementById('bt').appendChild(b);
+ setTimeout(()=>{dump('2',['menu','m1','m2','r1','r2','st','s2','sb','s3','tg','t1','t2','i1','i2','end']);document.body.appendChild(document.createElement('div')).id='csdone';},100);
+},100);
+</script></body></html>

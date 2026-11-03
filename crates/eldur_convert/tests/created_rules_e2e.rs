@@ -830,3 +830,12 @@ fn rule_inline_lists_buttons() {
 fn rule_empty_generated_boxes() {
     page("rule_empty_generated_boxes");
 }
+
+/// Class changes, removals and appends on inline elements in lines of runs: a
+/// separator `::after` leaves with its link, a required mark with its class, a
+/// `::before` badge moves to the span that gains it, structural rules re-match
+/// a list's new last item, and a created button gets its pseudo box once.
+#[test]
+fn rule_inline_class_changes() {
+    page("rule_inline_class_changes");
+}

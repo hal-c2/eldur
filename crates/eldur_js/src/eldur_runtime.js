@@ -10487,6 +10487,8 @@ function _vBuild(json, parent, model) {
         var owner = json.under !== undefined ? _vKeyed[json.under] : null;
         if (owner) {
             owner.genRuns = (owner.genRuns || []).concat([made]);
+            // It is a root of its own run, not among the element's nodes.
+            made.afterOf = owner;
         }
         return made;
     }
@@ -11477,7 +11479,7 @@ function _vHex(css) {
 function _vNeedsHtml(kids, pc, family, onLine) {
     for (var i = 0; i < kids.length; ++i) {
         var gen = kids[i].gen;
-        if (gen && gen.c && gen.c.size !== undefined
+        if (gen && gen.c && gen.c.size !== undefined && !(onLine && _vOwnGenRun(kids[i]))
             && (gen.c.size !== pc.size || EldurFonts.family(gen.c.family) !== EldurFonts.family(pc.family))) {
             return true;
         }
@@ -11619,8 +11621,12 @@ function _vWriteKids(st, kids, pc, owner) {
             _vWriteLive(st, k.live, pc);
         } else if (k.gen) {
             // Generated text with a box is in a run of its own.
-            if (!(k.genOf && !k.live && _vHasBox(k.gen.c) && k.model !== st.model)) {
+            if (!_vOwnGenRun(k)) {
                 _vWriteGen(st, k.gen, pc, owner);
+            } else if (k.model === st.model) {
+                // Its run's font is its own.
+                var own = Object.assign({}, pc, { size: k.gen.c.size, family: k.gen.c.family });
+                _vWriteGen(st, k.gen, st.boxed ? own : pc, owner);
             }
         } else if (k.model !== st.model) {
             continue;
@@ -11699,8 +11705,10 @@ function _vRender(model) {
     }
     // On a line of runs each has its own font; only a background still takes markup.
     var onLine = Boolean(text.parent) && typeof text.parent.setRunBox === "function";
-    if (!model.html && _vNeedsHtml(model.kids, _vBase(model), model.k.family, onLine)) {
-        model.html = true;
+    // A run's content is cut afresh, so what the converter needed markup for may
+    // be in another run now; RichText would leave the line nothing to place.
+    if (onLine || !model.html) {
+        model.html = _vNeedsHtml(model.kids, _vBase(model), model.k.family, onLine);
     }
     var st = _vMarkup(model, false);
     var markup = st.out;
@@ -11866,7 +11874,7 @@ function _vCutRuns(roots, base) {
 // The element an entry of a run is in: generated text is in the element it was
 // generated for.
 function _vUp(entry) {
-    return entry.gen ? entry.genOf || null : entry.vparent || null;
+    return entry.gen ? entry.genOf || entry.afterOf || null : entry.vparent || null;
 }
 
 // Whether `entry` is in the element `v`.
@@ -12070,7 +12078,17 @@ function _vRunLevels(entries, base) {
         }
         pc = c;
     });
+    // Generated text with a box is a run of its own, so its font is the run's.
+    if (first && entries.length === 1 && _vOwnGenRun(first) && first.gen.c.size !== undefined
+        && _vOwnBox(pc, first.gen.c)) {
+        levels.push(_vBoxOf(first.gen.c, null));
+        leaf = first.gen.c;
+    }
     return { levels: levels, leaf: leaf };
+}
+
+function _vOwnGenRun(k) {
+    return Boolean(k.gen) && !k.live && Boolean(_vUp(k)) && _vHasBox(k.gen.c);
 }
 
 function _vSameRuns(models, runs) {
@@ -12483,6 +12501,27 @@ function _vLeaves2(node, out) {
     return out;
 }
 
+// The styles of `v`'s generated text in the run `model`, when that is all of
+// `v` there is in it.
+function _vOnlyGen(v, model) {
+    var gen = (v.genRuns || []).filter(function(g) { return g.model === model; }).map(function(g) { return g.gen.c || {}; });
+    var text = false;
+    (function walk(node) {
+        (node.kids || []).forEach(function(k) {
+            if (k.gen && !k.live) {
+                if (k.model === model && node === v) {
+                    gen.push(k.gen.c || {});
+                }
+            } else if (k.vtext) {
+                text = text || k.model === model;
+            } else {
+                walk(k.live || k);
+            }
+        });
+    })(v);
+    return text ? [] : gen;
+}
+
 // Whether all there is to draw in `model` is in `v`.
 function _vFills(v, model) {
     return _vLeaves2(model, []).every(function(k) {
@@ -12556,13 +12595,20 @@ function _vFragments(v) {
             var rows = line.runLines(text);
             var fills = _vFills(v, model);
             var scan = fills ? null : _vRows(v, model);
-            // An `::after` on a run of its own takes its margins on the run's
-            // edges, and the element's box reaches over them (measured).
-            var after = (v.genRuns || []).some(function(g) { return g.model === model; })
-                ? text.eldurMarginRight || 0 : 0;
-            // What boxes inside `v` take on the run's ends is inside `v`'s box.
+            // Generated text on a run of its own takes its box on the run's
+            // edges, and the element's box reaches over it (measured). The
+            // runtime's room is in `vRoom`; the converter's run says only the
+            // sum with the element's own, so it is read off the style.
+            var room = _meta(text).vRoom;
             var lead = 0;
-            (_meta(text).vRoom || []).forEach(function(r) {
+            var after = 0;
+            (room ? [] : _vOnlyGen(v, model)).forEach(function(c) {
+                var edge = c.edge || [0, 0, 0, 0];
+                lead += edge[3] + (c.ml || 0);
+                after += edge[1] + (c.mr || 0);
+            });
+            // What boxes inside `v` take on the run's ends is inside `v`'s box.
+            (room || []).forEach(function(r) {
                 if (r.node !== v && _vWithin(r.node, v)) {
                     lead += r.left;
                     after += r.right;
@@ -23103,10 +23149,12 @@ function _pseudoBoxesNear(owner) {
         }
     };
     look(owner);
-    var container = _childContainer(owner);
-    if (container && container !== owner) {
-        look(container);
-    }
+    // A control's are in its label, where what a script inserts goes.
+    [_childContainer(owner), _appendTarget(owner)].forEach(function(container, i, all) {
+        if (container && container !== owner && all.indexOf(container) === i) {
+            look(container);
+        }
+    });
 }
 
 // Each element some rule may give a pseudo-element box, and each that has one,
