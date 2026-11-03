@@ -454,7 +454,8 @@ container filled with inline-level children (`_gFillsLine`).
 - On a page without a cascade `getBoundingClientRect` of a `Text` counts its baseline translate, about 1 px low.
 - An inline element's rect is its font's ascent + descent around its run's baseline, as Chromium's (`tests/inline_runs_e2e.rs`). `getClientRects` follows Chromium's culled inline boxes: a span with no box of its own gives one rect per child unless a child differs in font. Generated content of the element's own font, as `<q>`'s quotes, is a child here: one rect for each quote and one for the text. Padding, border and generated text of another font give it a box.
 - A `querySelectorAll` matching any element inside a single `Text` goes to the runtime, so those are found; a partial static list would have dropped them.
-- A created row in a collapsed table reports a top half a border off; columns of a static collapsed table do not share created borders.
+- A cell of a written collapsed table measures from its borders' first pixel, not their middle, and its first column and last row hold the table's outer half border too (whole pixels keep the borders sharp); a row made into it measures as its written rows. Columns of a static collapsed table do not share created borders.
+- A written auto-layout table shares its spare width by its columns' max-content widths; Chromium weighs them otherwise (with 2px collapsed borders a 320px table's columns are 190 and 130 here, about 186 and 133 there): not yet understood.
 - A closed page's template keeps the converter's picture, except its margins:
   after a script changes the tree, the runtime works out each changed column's
   gaps, collapse through parents included, and holds each by a binding that keeps

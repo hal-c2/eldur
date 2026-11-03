@@ -3316,6 +3316,7 @@ function _tablePlaceAll(host, live) {
         }
         var over = shared(c);
         c.item.y = -over;
+        _meta(c.item).tableShareUp = over;
         if (_gIsBox(c.item)) {
             _tableBoxFill(c.item, sum + over);
         } else {
@@ -6153,6 +6154,11 @@ function getBoundingClientRect(item) {
     if (half > 0) {
         w = raw.width;
         inset = [half, half, half, half];
+    } else if (_meta(raw).tableShareUp > 0) {
+        // In a written table the rows below keep to its whole-pixel grid: a made
+        // cell drawn up over the border it shares measures from its row's top,
+        // as the written cells beside it do.
+        inset = [inset[0], inset[1], inset[2] + _meta(raw).tableShareUp, inset[3]];
     }
     w -= inset[0] + inset[1];
     h -= inset[2] + inset[3];

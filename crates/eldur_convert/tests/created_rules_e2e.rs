@@ -114,6 +114,52 @@ const KNOWN: &[(&str, &str, &str, &str)] = &[
         "CS b3 70.875,45.999999,23.267578125,16",
         "follows the inline-block before it on the line, 0.75px wider (above)",
     ),
+    (
+        "rule_table_row_added",
+        "CS hn 8.5,8.5,199,23",
+        "CS hn 8,8,200,23",
+        "a written collapsed table keeps its columns and rows on whole pixels so its \
+     borders are drawn sharp: its first column holds the table's outer half border \
+     as well, and a cell measures from its border's first pixel, not its middle",
+    ),
+    (
+        "rule_table_row_added",
+        "CS r0a 8.5,31.5,199,23",
+        "CS r0a 8,31,200,23",
+        "a written collapsed table keeps its columns and rows on whole pixels so its \
+     borders are drawn sharp: its first column holds the table's outer half border \
+     as well, and a cell measures from its border's first pixel, not its middle",
+    ),
+    (
+        "rule_table_row_added",
+        "CS r1a 8.5,54.5,199,23",
+        "CS r1a 8,54,200,23",
+        "a written collapsed table keeps its columns and rows on whole pixels so its \
+     borders are drawn sharp: its first column holds the table's outer half border \
+     as well, and a cell measures from its border's first pixel, not its middle",
+    ),
+    (
+        "rule_table_row_added",
+        "CS tot 207.5,77.5,120,23",
+        "CS tot 208,77,120,24",
+        "a written collapsed table keeps its rows on whole pixels: its last row holds the \
+     table's outer half border as well, and measures from its border's first pixel",
+    ),
+    (
+        "rule_table_row_added",
+        "CS r2a 8.5,77.5,199,23",
+        "CS r2a 8,77,200,23",
+        "a written collapsed table keeps its columns and rows on whole pixels so its \
+     borders are drawn sharp: its first column holds the table's outer half border \
+     as well, and a cell measures from its border's first pixel, not its middle",
+    ),
+    (
+        "rule_table_row_added",
+        "CS tot 207.5,100.5,120,23",
+        "CS tot 208,100,120,24",
+        "a written collapsed table keeps its rows on whole pixels: its last row holds the \
+     table's outer half border as well, and measures from its border's first pixel",
+    ),
 ];
 
 /// Pixels a logged number may be off: glyph widths differ a little between the two
@@ -706,4 +752,11 @@ fn rule_counters_own() {
 #[test]
 fn rule_pseudo_boxes() {
     page("rule_pseudo_boxes");
+}
+
+/// A form adds a row to a written collapsed table and the rows are sorted: the
+/// made row's cells, which draw all four borders, measure as the written ones.
+#[test]
+fn rule_table_row_added() {
+    page("rule_table_row_added");
 }
