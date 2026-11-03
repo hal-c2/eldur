@@ -194,12 +194,28 @@ impl Edges {
         }
     }
 
-    /// The borders a cell at `slot` draws: an inner edge is split between
-    /// its two cells, larger half on the right/below (measured in Chromium:
-    /// a 1px edge belongs to the cell after it); an outer edge is drawn whole
-    /// inside the table box. Rows and columns start the same way in any
-    /// column, so an edge's widest segment stands for a spanning cell's side.
-    pub(crate) fn cell_borders(&self, slot: Slot) -> [BorderSide; 4] {
+    /// How far each column edge of the browser lies to the right of ours,
+    /// from the first row (CSS 2.1 §17.6.2: the table's outer border width
+    /// is half its first row's). Chromium's cells reach to the middle of
+    /// their borders, in fractions of a pixel; ours draw an outer edge whole
+    /// and an inner one's larger half in the cell after it (`cell_borders`).
+    pub(crate) fn column_offsets(&self) -> Vec<f32> {
+        let Some(row) = self.vertical.first() else {
+            return vec![0.0; self.columns + 1];
+        };
+        let half = |c: usize| border_width(&row[c].0) / 2.0;
+        (0..=self.columns)
+            .map(|c| match c {
+                0 => half(0),
+                c if c == self.columns => -half(c),
+                c => half(c) - half(c).floor(),
+            })
+            .collect()
+    }
+
+    /// The edges a cell at `slot` lies on, whole: a spanning cell's side is
+    /// its widest segment.
+    pub(crate) fn whole_sides(&self, slot: Slot) -> [BorderSide; 4] {
         let widest = |segments: Vec<&(BorderSide, BorderOwner)>| {
             let mut best = no_border();
             for (side, _) in segments {
@@ -211,26 +227,36 @@ impl Edges {
         };
         let columns = slot.column..slot.column + slot.column_span;
         let rows = slot.row..slot.row + slot.row_span;
-        let mut top = widest(
+        let top = widest(
             columns
                 .clone()
                 .map(|c| &self.horizontal[slot.row][c])
                 .collect(),
         );
-        let mut bottom = widest(
+        let bottom = widest(
             columns
                 .map(|c| &self.horizontal[slot.row + slot.row_span][c])
                 .collect(),
         );
-        let mut left = widest(
+        let left = widest(
             rows.clone()
                 .map(|r| &self.vertical[r][slot.column])
                 .collect(),
         );
-        let mut right = widest(
+        let right = widest(
             rows.map(|r| &self.vertical[r][slot.column + slot.column_span])
                 .collect(),
         );
+        [top, right, bottom, left]
+    }
+
+    /// The borders a cell at `slot` draws: an inner edge is split between
+    /// its two cells, larger half on the right/below (measured in Chromium:
+    /// a 1px edge belongs to the cell after it); an outer edge is drawn whole
+    /// inside the table box. Rows and columns start the same way in any
+    /// column, so an edge's widest segment stands for a spanning cell's side.
+    pub(crate) fn cell_borders(&self, slot: Slot) -> [BorderSide; 4] {
+        let [mut top, mut right, mut bottom, mut left] = self.whole_sides(slot);
         let halve = |side: &mut BorderSide, large: bool| {
             side.width = if large {
                 (side.width / 2.0).ceil()
@@ -298,19 +324,39 @@ impl ColumnSpec {
 /// Column widths and row heights. The extents are read from the cells inside
 /// a binding, so they follow text and font changes.
 ///
-/// Auto layout follows the informative algorithm of CSS 2.1 §17.5.2.2 as far
-/// as Chromium agrees with it (measured on the corpus): every column gets its
-/// specified width or its max-content width, not below its min-content width;
-/// space left over goes to auto columns in proportion to their max-content
-/// width, or failing those to the fixed ones; a deficit comes from auto
-/// columns first. Results are snapped by cumulative rounding so column edges
-/// land on the pixels the browser's do, and so `GridLayout` has no fraction
-/// to round up.
+/// Auto layout is the distribution of css-tables-3 §3.9, as Chromium does it
+/// (measured: `tests/table_widths/`). A column's minimum is its min-content
+/// width, a width in px or % notwithstanding; its maximum is its max-content
+/// width, or its px width if larger. The column widths step through four
+/// guesses: all at their minimum; percent columns at their share of the
+/// table; px columns at their maximum too; auto columns too. A width between
+/// two guesses grows the columns that differ in proportion to how much they
+/// differ. Width past the last goes to auto columns with content in
+/// proportion to their maximum, failing those to px columns, then to percent
+/// columns, then to all alike. Percentages past 100% in total are cut.
+///
+/// A table with percent columns and `width: auto` is wide enough for each to
+/// have its share: the rest at max-content over what they leave, or one at
+/// max-content over its percentage.
+///
+/// In the collapsing model a cell draws its outer border whole, where in the
+/// browser half of it is the table's, and an inner one's larger half, where
+/// the browser's cells reach to its middle. `tableEdges` on the grid says how
+/// far each column edge of the browser's lies right of ours: the columns
+/// share width as the browser's do, and their edges move back to ours.
+///
+/// Results are snapped by cumulative rounding so column edges land on the
+/// pixels the browser's do, and so `GridLayout` has no fraction to round up;
+/// but a column at its max-content width is rounded up, since a text wraps
+/// in a fraction less than it needs, and a table at max-content is as wide
+/// as those columns.
 const SOLVER: &[(&str, &[&str], &str)] = &[
     (
         "tableExtents",
         &["grid", "specs"],
         r#"const n = specs.length
+const edges = grid.tableEdges || []
+const shift = b => edges[b] || 0
 const min = new Array(n).fill(0)
 const max = new Array(n).fill(0)
 const spanning = []
@@ -321,18 +367,20 @@ for (let i = 0; i < cells.length; ++i) {
     const slot = cell.tableSlot
     if (!slot || cell.visible === false)
         continue
+    const more = shift(slot[1] + slot[3]) - shift(slot[1])
+    const need = { slot: slot, min: cell.minContentWidth + more, max: cell.implicitWidth + more }
     if (slot[3] > 1) {
-        spanning.push(cell)
+        spanning.push(need)
         continue
     }
-    min[slot[1]] = Math.max(min[slot[1]], cell.minContentWidth)
-    max[slot[1]] = Math.max(max[slot[1]], cell.implicitWidth)
+    min[slot[1]] = Math.max(min[slot[1]], need.min)
+    max[slot[1]] = Math.max(max[slot[1]], need.max)
 }
 for (const cell of spanning) {
-    const first = cell.tableSlot[1]
-    const last = first + cell.tableSlot[3]
-    const gaps = grid.columnSpacing * (cell.tableSlot[3] - 1)
-    for (const [widths, wanted] of [[min, cell.minContentWidth], [max, cell.implicitWidth]]) {
+    const first = cell.slot[1]
+    const last = first + cell.slot[3]
+    const gaps = grid.columnSpacing * (cell.slot[3] - 1)
+    for (const [widths, wanted] of [[min, cell.min], [max, cell.max]]) {
         let have = 0
         let weight = 0
         for (let c = first; c < last; ++c) {
@@ -344,96 +392,153 @@ for (const cell of spanning) {
             continue
         const add = []
         for (let c = first; c < last; ++c)
-            add.push(weight > 0 ? missing * max[c] / weight : missing / cell.tableSlot[3])
+            add.push(weight > 0 ? missing * max[c] / weight : missing / cell.slot[3])
         for (let c = first; c < last; ++c)
             widths[c] += add[c - first]
     }
 }
-for (let c = 0; c < n; ++c)
+for (let c = 0; c < n; ++c) {
     max[c] = Math.max(max[c], min[c])
-return { min: min, max: max }"#,
+    if (typeof specs[c] === "number")
+        max[c] = Math.max(max[c], specs[c])
+}
+// Percentages count up to 100% in all, in column order.
+const percents = []
+let total = 0
+for (let c = 0; c < n; ++c) {
+    const p = typeof specs[c] === "string" ? Math.max(0, Math.min(parseFloat(specs[c]), 100 - total)) : 0
+    percents.push(p)
+    total += p
+}
+// What our cells have past the browser's: its outer border halves.
+const outside = shift(0) - shift(n)
+return { min: min, max: max, percents: percents, shift: shift, outside: outside }"#,
     ),
     (
         "tableMaxContentWidth",
         &["grid", "specs", "fixed"],
-        r#"const extents = root.tableExtents(grid, specs)
-let sum = grid.columnSpacing * (specs.length - 1)
-for (let c = 0; c < specs.length; ++c) {
-    if (typeof specs[c] === "number")
-        sum += fixed ? specs[c] : Math.max(specs[c], extents.min[c])
-    else
-        sum += fixed ? 0 : extents.max[c]
+        r#"let sum = grid.columnSpacing * (specs.length - 1)
+if (fixed) {
+    for (let c = 0; c < specs.length; ++c)
+        sum += typeof specs[c] === "number" ? specs[c] : 0
+    return sum
 }
-return sum"#,
+const extents = root.tableExtents(grid, specs)
+let all = 0
+let rest = 0
+let percent = 0
+let wanted = 0
+for (let c = 0; c < specs.length; ++c) {
+    all += extents.max[c]
+    if (typeof specs[c] !== "string")
+        rest += extents.max[c]
+    else if (extents.percents[c] > 0)
+        wanted = Math.max(wanted, extents.max[c] * 100 / extents.percents[c])
+    percent += extents.percents[c]
+}
+if (percent > 0 && percent < 100)
+    wanted = Math.max(wanted, rest * 100 / (100 - percent))
+// Columns come out whole pixels, those at max-content rounded up.
+let whole = 0
+for (let c = 0; c < specs.length; ++c)
+    whole += Math.ceil(extents.max[c] + extents.shift(c) - extents.shift(c + 1) - 1e-6)
+return sum + Math.max(Math.max(all, wanted) + extents.outside, whole)"#,
     ),
     (
         "tableMinContentWidth",
         &["grid", "specs", "fixed"],
-        r#"const extents = root.tableExtents(grid, specs)
-let sum = grid.columnSpacing * (specs.length - 1)
-for (let c = 0; c < specs.length; ++c) {
-    if (typeof specs[c] === "number")
-        sum += fixed ? specs[c] : Math.max(specs[c], extents.min[c])
-    else
-        sum += fixed ? 0 : extents.min[c]
+        r#"let sum = grid.columnSpacing * (specs.length - 1)
+if (fixed) {
+    for (let c = 0; c < specs.length; ++c)
+        sum += typeof specs[c] === "number" ? specs[c] : 0
+    return sum
 }
-return sum"#,
+const extents = root.tableExtents(grid, specs)
+for (let c = 0; c < specs.length; ++c)
+    sum += extents.min[c]
+return sum + extents.outside"#,
     ),
     (
         "tableColumnWidths",
         &["grid", "specs", "fixed"],
         r#"const n = specs.length
-const space = Math.max(0, grid.width - grid.columnSpacing * (n - 1))
-const extents = fixed ? { min: new Array(n).fill(0), max: new Array(n).fill(0) } : root.tableExtents(grid, specs)
-const percent = s => parseFloat(s) * space / 100
-const widths = []
-const kinds = []
-for (let c = 0; c < n; ++c) {
-    const s = specs[c]
-    if (typeof s === "number") {
-        widths.push(Math.max(s, extents.min[c]))
-        kinds.push(1)
-    } else if (typeof s === "string") {
-        widths.push(Math.max(percent(s), extents.min[c]))
-        kinds.push(2)
-    } else {
-        widths.push(extents.max[c])
-        kinds.push(0)
-    }
-}
-let left = space - widths.reduce((a, b) => a + b, 0)
-const share = (kind, amount, weights) => {
-    const total = weights.reduce((a, w, c) => a + (kinds[c] === kind ? w : 0), 0)
-    const count = kinds.filter(k => k === kind).length
-    if (count === 0)
-        return false
-    for (let c = 0; c < n; ++c) {
-        if (kinds[c] === kind)
-            widths[c] += total > 0 ? amount * weights[c] / total : amount / count
-    }
-    return true
-}
-if (left > 0) {
-    // Equal shares in fixed layout: there are no content widths to weigh.
-    share(0, left, fixed ? widths.map(() => 1) : extents.max)
-        || share(1, left, widths) || share(2, left, widths)
-} else if (left < 0 && !fixed) {
-    for (const kind of [0, 1, 2]) {
-        const room = widths.map((w, c) => kinds[c] === kind ? w - extents.min[c] : 0)
-        const total = room.reduce((a, b) => a + b, 0)
-        if (total <= 0)
+if (n === 0)
+    return []
+const extents = fixed ? null : root.tableExtents(grid, specs)
+const shift = fixed ? (b => 0) : extents.shift
+const space = Math.max(0, grid.width - grid.columnSpacing * (n - 1) - (fixed ? 0 : extents.outside))
+const px = c => typeof specs[c] === "number"
+const pc = c => typeof specs[c] === "string"
+let widths
+if (fixed) {
+    // Specified widths stand; the rest is shared equally, there being no
+    // content widths to weigh.
+    widths = specs.map((s, c) => px(c) ? s : pc(c) ? parseFloat(s) * space / 100 : 0)
+    const left = space - widths.reduce((a, b) => a + b, 0)
+    const auto = specs.map((s, c) => !px(c) && !pc(c))
+    for (const takes of [auto, specs.map((s, c) => px(c)), specs.map((s, c) => pc(c))]) {
+        const sum = widths.reduce((a, w, c) => a + (takes[c] ? w : 0), 0)
+        const count = takes.filter(t => t).length
+        if (left <= 0 || count === 0)
             continue
-        share(kind, -Math.min(-left, total), room)
-        left += Math.min(-left, total)
-        if (left >= 0)
+        const equal = takes === auto || sum <= 0
+        widths = widths.map((w, c) => takes[c] ? w + left * (equal ? 1 / count : w / sum) : w)
+        break
+    }
+} else {
+    const min = extents.min
+    const share = c => Math.max(min[c], extents.percents[c] * space / 100)
+    const guesses = [
+        min.slice(),
+        min.map((m, c) => pc(c) ? share(c) : m),
+        min.map((m, c) => pc(c) ? share(c) : px(c) ? extents.max[c] : m),
+        min.map((m, c) => pc(c) ? share(c) : extents.max[c])
+    ]
+    const sums = guesses.map(g => g.reduce((a, b) => a + b, 0))
+    widths = guesses[0]
+    for (let g = 1; g < guesses.length; ++g) {
+        if (space >= sums[g]) {
+            widths = guesses[g]
+            continue
+        }
+        if (space > sums[g - 1]) {
+            const t = (space - sums[g - 1]) / (sums[g] - sums[g - 1])
+            widths = guesses[g].map((w, c) => guesses[g - 1][c] + (w - guesses[g - 1][c]) * t)
+        }
+        break
+    }
+    const excess = space - sums[guesses.length - 1]
+    if (excess > 0) {
+        widths = widths.slice()
+        const auto = c => !px(c) && !pc(c)
+        const takers = [
+            c => auto(c) && extents.max[c] > 0 ? extents.max[c] : 0,
+            c => px(c) ? Math.max(widths[c], 1e-9) : 0,
+            c => pc(c) && extents.percents[c] > 0 ? extents.percents[c] : 0,
+            c => 1
+        ]
+        for (const weigh of takers) {
+            const weights = widths.map((w, c) => weigh(c))
+            const total = weights.reduce((a, b) => a + b, 0)
+            if (total <= 0)
+                continue
+            for (let c = 0; c < n; ++c)
+                widths[c] += excess * weights[c] / total
             break
+        }
     }
 }
-let edge = 0
+let edge = shift(0)
+let from = 0
 for (let c = 0; c < n; ++c) {
-    const next = edge + widths[c]
-    widths[c] = Math.round(next) - Math.round(edge)
-    edge = next
+    edge += widths[c]
+    let to = Math.round(edge - shift(c + 1))
+    // A text wraps in a column a fraction narrower than it: one given its
+    // max-content width keeps all of it, rounded up.
+    if (!fixed && widths[c] >= extents.max[c] - 1e-6)
+        to = Math.max(to, from + Math.ceil(extents.max[c] + shift(c) - shift(c + 1) - 1e-6))
+    widths[c] = to - from
+    from = to
 }
 return widths"#,
     ),
@@ -713,7 +818,17 @@ impl<'a> Emitter<'a, '_> {
 
         let edges = collapse.then(|| self.collapsed_edges(b, &parts, &slots, columns));
         let made = b.node.is_some_and(|n| self.made_tables.contains(&n));
-        let specs = self.column_specs(&parts, &slots, columns, fixed, made, line);
+        let specs = {
+            // Fixed layout reads the first row alone (CSS 2.1 §17.5.2.1). A made
+            // table's probe rows stand for any row: its cells' widths are counted
+            // by the runtime from the cells a script makes.
+            let read_rows = match (made, fixed) {
+                (true, _) => 0,
+                (false, true) => 1,
+                (false, false) => usize::MAX,
+            };
+            self.column_specs(&parts, &slots, columns, read_rows, edges.as_ref(), line)
+        };
 
         let live = self.is_live_table(b);
         let grid_id = self.ids.claim(&format!("{} grid", hint(self.doc, b)));
@@ -801,6 +916,18 @@ impl<'a> Emitter<'a, '_> {
                 "columnWidths",
                 format!("{ROOT_ID}.tableColumnWidths(this, columnSpecs, {fixed})"),
             );
+        }
+        if let Some(edges) = edges.as_ref() {
+            let offsets = edges.column_offsets();
+            if offsets.iter().any(|&o| o != 0.0) {
+                let list: Vec<String> = offsets.iter().map(|&o| fmt_number(f64::from(o))).collect();
+                declare(
+                    &mut grid,
+                    "var",
+                    "tableEdges",
+                    format!("[{}]", list.join(", ")),
+                );
+            }
         }
         if !live {
             let row_minimums = parts
@@ -1416,8 +1543,8 @@ impl<'a> Emitter<'a, '_> {
         parts: &Parts<'_, '_>,
         slots: &[Vec<Slot>],
         columns: usize,
-        fixed: bool,
-        made: bool,
+        read_rows: usize,
+        edges: Option<&Edges>,
         line: Option<u32>,
     ) -> Vec<ColumnSpec> {
         let mut specs = vec![ColumnSpec::Auto; columns];
@@ -1439,14 +1566,9 @@ impl<'a> Emitter<'a, '_> {
             }
         }
         // A `<col>` width is the column's; cells only speak for columns that
-        // have none. Fixed layout reads the first row alone (CSS 2.1 §17.5.2.1).
+        // have none, in the first `read_rows` rows.
         let declared: Vec<bool> = specs.iter().map(|s| *s != ColumnSpec::Auto).collect();
-        for (r, row) in parts.rows.iter().enumerate() {
-            // A made table's probe rows stand for any row: its cells' widths
-            // are counted by the runtime from the cells a script makes.
-            if fixed && r > 0 || made {
-                break;
-            }
+        for (r, row) in parts.rows.iter().enumerate().take(read_rows) {
             for (cell, &slot) in boxes(row.row).iter().zip(&slots[r]) {
                 let Size::Length(w) = &cell.style.width else {
                     continue;
@@ -1463,8 +1585,23 @@ impl<'a> Emitter<'a, '_> {
                     continue;
                 }
                 let insets = self.insets(&cell.style, line);
+                // Collapsed, a cell's border box holds half of each edge it
+                // lies on, whoever's border won it (CSS 2.1 §17.6.2).
+                let borders = match edges {
+                    Some(edges) => {
+                        let [_, right, _, left] = edges.whole_sides(slot);
+                        (border_width(&left) + border_width(&right)) / 2.0
+                    }
+                    None => {
+                        border_width(&cell.style.border.left)
+                            + border_width(&cell.style.border.right)
+                    }
+                };
+                let padding = insets.horizontal()
+                    - border_width(&cell.style.border.left)
+                    - border_width(&cell.style.border.right);
                 let extra = match cell.style.box_sizing {
-                    eldur_css::BoxSizing::ContentBox => insets.horizontal(),
+                    eldur_css::BoxSizing::ContentBox => padding + borders,
                     eldur_css::BoxSizing::BorderBox => 0.0,
                 };
                 specs[slot.column] = specs[slot.column].merge(ColumnSpec::of(w, extra));
@@ -1562,7 +1699,7 @@ impl<'a> Emitter<'a, '_> {
         });
     }
 
-    /// The width a cell cannot go below: its longest word, measured when the
+    /// The width a cell cannot go below: its widest word, measured when the
     /// page runs since only Qt knows the font. Content that does not wrap has
     /// its full width as minimum.
     fn cell_min_content(
@@ -1575,17 +1712,25 @@ impl<'a> Emitter<'a, '_> {
         match self.longest_word(cell, line) {
             Some(MinContent::Nothing(insets)) => fmt_number(round(insets)),
             Some(MinContent::Word {
-                word,
+                words,
                 style,
                 insets,
             }) => {
                 let metrics = self.font_metrics(&style, grid, fonts);
-                let word = eldur_qml::quote_string(&word);
+                let widths: Vec<String> = words
+                    .iter()
+                    .map(|w| format!("{metrics}.advanceWidth({})", eldur_qml::quote_string(w)))
+                    .collect();
+                let widest = if widths.len() == 1 {
+                    widths[0].clone()
+                } else {
+                    format!("Math.max({})", widths.join(", "))
+                };
                 let insets = round(insets);
                 if insets == 0.0 {
-                    format!("{metrics}.advanceWidth({word})")
+                    widest
                 } else {
-                    format!("{metrics}.advanceWidth({word}) + {}", fmt_number(insets))
+                    format!("{widest} + {}", fmt_number(insets))
                 }
             }
             None => "implicitWidth".to_owned(),
@@ -1615,13 +1760,8 @@ impl<'a> Emitter<'a, '_> {
                 }
                 let mut plain = String::new();
                 plain_text(items, &mut plain);
-                let word = plain
-                    .split(|c: char| c.is_whitespace() || c == '-')
-                    .max_by_key(|w| w.chars().count())
-                    .unwrap_or("")
-                    .to_owned();
                 Some(MinContent::Word {
-                    word,
+                    words: widest_words(&plain),
                     style: Box::new(b.style.clone().into_owned()),
                     insets,
                 })
@@ -1716,7 +1856,8 @@ enum MinContent {
     /// No text; only the insets take room.
     Nothing(f32),
     Word {
-        word: String,
+        /// The words that may be widest: which one is, only Qt can say.
+        words: Vec<String>,
         style: Box<ComputedStyle>,
         insets: f32,
     },
@@ -1728,10 +1869,10 @@ impl MinContent {
         match self {
             Self::Nothing(insets) => *insets,
             Self::Word {
-                word,
+                words,
                 style,
                 insets,
-            } => word.chars().count() as f32 * style.font_size * 0.5 + insets,
+            } => words.first().map_or(0.0, |w| em_estimate(w)) * style.font_size + insets,
         }
     }
 
@@ -1739,16 +1880,54 @@ impl MinContent {
         match self {
             Self::Nothing(insets) => Self::Nothing(insets + extra),
             Self::Word {
-                word,
+                words,
                 style,
                 insets,
             } => Self::Word {
-                word,
+                words,
                 style,
                 insets: insets + extra,
             },
         }
     }
+}
+
+/// A word's width in ems, roughly: enough to tell which words may be the
+/// widest (a capital or an `m` is twice an `i`).
+fn em_estimate(word: &str) -> f32 {
+    word.chars()
+        .map(|c| match c {
+            'i' | 'l' | 'j' | 'I' | '.' | ',' | ':' | ';' | '\'' | '!' | '|' => 0.28,
+            'f' | 't' | 'r' | '(' | ')' | '[' | ']' | ' ' => 0.38,
+            'm' | 'w' | 'M' | 'W' => 0.85,
+            c if c.is_uppercase() => 0.68,
+            c if c.is_ascii_digit() => 0.56,
+            _ => 0.55,
+        })
+        .sum()
+}
+
+/// The text's words that may be its widest, widest first by estimate: those
+/// within a fifth of the widest estimate, at most four. Lines break at spaces
+/// and after hyphens.
+fn widest_words(text: &str) -> Vec<String> {
+    let mut words: Vec<&str> = text
+        .split(|c: char| c.is_whitespace() || c == '-')
+        .filter(|w| !w.is_empty())
+        .collect();
+    words.sort_by(|a, b| em_estimate(b).total_cmp(&em_estimate(a)).then(a.cmp(b)));
+    words.dedup();
+    let widest = words.first().map_or(0.0, |w| em_estimate(w));
+    let mut out: Vec<String> = words
+        .into_iter()
+        .take_while(|w| em_estimate(w) >= widest * 0.8)
+        .take(4)
+        .map(str::to_owned)
+        .collect();
+    if out.is_empty() {
+        out.push(String::new());
+    }
+    out
 }
 
 fn plain_text(items: &[Inline<'_>], out: &mut String) {

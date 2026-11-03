@@ -2926,7 +2926,7 @@ function _tableMinContent(cell, text) {
     for (var i = 0; i < words.length; ++i) {
         longest = Math.max(longest, _tableMetrics.advanceWidth(words[i]));
     }
-    return Math.ceil(longest) + cell.implicitWidth - text.implicitWidth;
+    return longest + cell.implicitWidth - text.implicitWidth;
 }
 
 // The HTML forming algorithm's slots, for what a script made: rows are indexes
@@ -3181,8 +3181,8 @@ function _tablePlaceAll(host, live) {
             var text = _findTextChild(c.item);
             return {
                 tableSlot: [c.row, c.column, c.rowSpan, c.columnSpan],
-                // Columns come out whole pixels; a text must not wrap by a fraction.
-                implicitWidth: _tableCellWidth(c.item),
+                // Exact: the solver rounds a column up where its text must not wrap.
+                implicitWidth: _tableCellWidth(c.item, true),
                 implicitHeight: c.item.implicitHeight,
                 minContentWidth: _tableCellMinimum(c.item, text)
             };
@@ -3236,15 +3236,13 @@ function _tablePlaceAll(host, live) {
             // cells this function is about to resize.
             host.maxContentWidth = _root.tableMaxContentWidth(host, specsNow, host.eldurFixed);
             host.minContentWidth = _root.tableMinContentWidth(host, specsNow, host.eldurFixed);
-            // Spare width is shared by content width, on the text's exact width and
-            // without the outer collapsed border; whole pixels only keep a table with
-            // none to spare from wrapping.
+            // Spare width is shared by content width, without the right border a
+            // made cell paints whole; the solver takes the outer collapsed border
+            // out by the grid's tableEdges.
             if (host.width > host.maxContentWidth) {
                 host.eldurCreatedCells = placed.cells.map(function(c, i) {
                     var exact = Object.assign({}, adapters[i]);
-                    var last = c.column + c.columnSpan === host.columnSpecs.length;
-                    exact.implicitWidth = _tableCellWidth(c.item, true)
-                        - (sharedRight(c) || (last ? host.eldurOuterEdge : 0));
+                    exact.implicitWidth = _tableCellWidth(c.item, true) - sharedRight(c);
                     exact.minContentWidth = Math.min(exact.minContentWidth, exact.implicitWidth);
                     return exact;
                 });

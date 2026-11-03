@@ -116,49 +116,49 @@ const KNOWN: &[(&str, &str, &str, &str)] = &[
     ),
     (
         "rule_table_row_added",
-        "CS hn 8.5,8.5,199,23",
-        "CS hn 8,8,200,23",
-        "a written collapsed table keeps its columns and rows on whole pixels so its \
-     borders are drawn sharp: its first column holds the table's outer half border \
-     as well, and a cell measures from its border's first pixel, not its middle",
+        "CS hq 207.5,8.5,120,23",
+        "CS hq 207,8,121,23",
+        "a written collapsed table's second-column cell holds the whole inner border it \
+     draws, on the pixel a browser paints it, and the table's whole outer border: a \
+     browser's cell box runs from the middle of each, half a pixel in on both sides",
     ),
     (
         "rule_table_row_added",
-        "CS r0a 8.5,31.5,199,23",
-        "CS r0a 8,31,200,23",
-        "a written collapsed table keeps its columns and rows on whole pixels so its \
-     borders are drawn sharp: its first column holds the table's outer half border \
-     as well, and a cell measures from its border's first pixel, not its middle",
+        "CS r0b 207.5,31.5,120,23",
+        "CS r0b 207,31,121,23",
+        "a written collapsed table's second-column cell holds the whole inner border it \
+     draws, on the pixel a browser paints it, and the table's whole outer border: a \
+     browser's cell box runs from the middle of each, half a pixel in on both sides",
     ),
     (
         "rule_table_row_added",
-        "CS r1a 8.5,54.5,199,23",
-        "CS r1a 8,54,200,23",
-        "a written collapsed table keeps its columns and rows on whole pixels so its \
-     borders are drawn sharp: its first column holds the table's outer half border \
-     as well, and a cell measures from its border's first pixel, not its middle",
+        "CS r1b 207.5,54.5,120,23",
+        "CS r1b 207,54,121,23",
+        "a written collapsed table's second-column cell holds the whole inner border it \
+     draws, on the pixel a browser paints it, and the table's whole outer border: a \
+     browser's cell box runs from the middle of each, half a pixel in on both sides",
+    ),
+    (
+        "rule_table_row_added",
+        "CS r2b 207.5,77.5,120,23",
+        "CS r2b 207,77,121,23",
+        "a written collapsed table's second-column cell holds the whole inner border it \
+     draws, on the pixel a browser paints it, and the table's whole outer border: a \
+     browser's cell box runs from the middle of each, half a pixel in on both sides",
     ),
     (
         "rule_table_row_added",
         "CS tot 207.5,77.5,120,23",
-        "CS tot 208,77,120,24",
-        "a written collapsed table keeps its rows on whole pixels: its last row holds the \
-     table's outer half border as well, and measures from its border's first pixel",
-    ),
-    (
-        "rule_table_row_added",
-        "CS r2a 8.5,77.5,199,23",
-        "CS r2a 8,77,200,23",
-        "a written collapsed table keeps its columns and rows on whole pixels so its \
-     borders are drawn sharp: its first column holds the table's outer half border \
-     as well, and a cell measures from its border's first pixel, not its middle",
+        "CS tot 207,77,121,24",
+        "as the second-column cells above, and a written collapsed table keeps its rows on \
+     whole pixels: its last row holds the table's outer half border as well",
     ),
     (
         "rule_table_row_added",
         "CS tot 207.5,100.5,120,23",
-        "CS tot 208,100,120,24",
-        "a written collapsed table keeps its rows on whole pixels: its last row holds the \
-     table's outer half border as well, and measures from its border's first pixel",
+        "CS tot 207,100,121,24",
+        "as the second-column cells above, and a written collapsed table keeps its rows on \
+     whole pixels: its last row holds the table's outer half border as well",
     ),
 ];
 
