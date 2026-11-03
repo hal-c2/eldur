@@ -93,6 +93,21 @@ const KNOWN: &[(&str, &str, &str, &str)] = &[
      226, and the 21.5px head row above it 22",
     ),
     (
+        "rule_fallback_lines",
+        "CS g 8,110,1264,22",
+        "CS g 8,110,1264,25",
+        "fontconfig gives Qt and Chromium different faces for a serif line's tick: \
+     Qt draws it from a Noto CJK face (ascent 1.16em), Chromium from a monospace \
+     one (1.02em); the line is as tall as the face Qt draws, and QML can't name \
+     the fallback (no `font.families`)",
+    ),
+    (
+        "rule_fallback_lines",
+        "CS end 8,132,1264,4",
+        "CS end 8,135,1264,4",
+        "below the serif line above, which is 3px taller",
+    ),
+    (
         "rule_pseudo_boxes",
         "CS b1 8,44,58.25,20",
         "CS b1 8,44,59,20",
@@ -782,4 +797,19 @@ fn rule_floats_escape() {
 #[test]
 fn rule_inline_space() {
     page("rule_inline_space");
+}
+
+/// Separators a structural selector gives created links (`a+a::before`) keep
+/// their margins as links come and go, a checklist's `::before` tick moves
+/// between created labels, and a written label gains a required mark.
+#[test]
+fn rule_run_time_separators() {
+    page("rule_run_time_separators");
+}
+
+/// A line whose text, written or generated, falls back on another face for a
+/// tick or a cross is as tall as that face makes it under `line-height: normal`.
+#[test]
+fn rule_fallback_lines() {
+    page("rule_fallback_lines");
 }
