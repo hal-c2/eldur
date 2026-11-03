@@ -1,0 +1,17 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+.r::after{content:"*";color:red}
+.e::after{content:"";margin:0 10px}
+.q::after{content:"";padding:0 6px;background:#fc0}
+</style></head><body>
+<div id="h1">A<span id="w1" class="r">B</span>C</div>
+<div id="h2">A<span id="w2" class="e">B</span>C</div>
+<div id="h3">A<span id="w3" class="q">B</span>C</div>
+<div id="end" style="height:4px;background:#000"></div>
+<script>
+const mk=(h,c,id,t)=>{const s=document.createElement('span');s.className=c;s.id=id;s.textContent=t;document.getElementById(h).appendChild(s);return s};
+mk('h1','r','c1','D');mk('h2','e','c2','D');mk('h3','q','c3','D');
+const t=document.createTextNode('E');document.getElementById('h2').appendChild(t);
+function dump(p,ids){for(const n of ids){const q=document.getElementById(n).getBoundingClientRect();console.log('CS '+p.trim()+n+' '+[q.x,q.y,q.width,q.height].join(','))}}
+setTimeout(()=>{dump('H ',['w1','c1','w2','c2','w3','c3','end']);document.body.appendChild(document.createElement('div')).id='csdone';},100);
+</script></body></html>

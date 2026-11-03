@@ -1,0 +1,37 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+.pill{padding:2px 8px;border:1px solid #39c;background:#def;border-radius:9px;margin-right:4px}
+.j span{padding:0 4px}
+ul.l{list-style:none;padding:0;margin:4px 0}
+ul.l li{display:inline}
+ul.l li:last-child::after{content:" (last)";color:#888}
+ul.l li:nth-child(odd){background:#eee}
+.ib{font:13px Arial;padding:4px 8px;border:1px solid #999;background:#f4f4f4}
+.ib::before{content:"";display:inline-block;width:10px;height:10px;background:#c33;margin-right:6px}
+.e::after{content:"";margin:0 10px}
+</style></head><body>
+<div id="pills"></div>
+<div class="j" id="j">Tags: <span id="j1">alpha</span><span id="j2">beta</span> end</div>
+<ul class="l" id="ul"><li id="l1">one</li></ul>
+<div id="bh"></div>
+<div id="eh">A<span class="e" id="e1">B</span>C</div>
+<div id="end" style="height:4px;background:#000"></div>
+<script>
+const P=document.getElementById('pills');
+['red','green','blue'].forEach((t,i)=>{const s=document.createElement('span');s.className='pill';s.id='p'+i;s.textContent=t;P.appendChild(s)});
+const j=document.getElementById('j');
+const j3=document.createElement('span');j3.id='j3';j3.textContent='gamma';j.appendChild(j3);
+const ul=document.getElementById('ul');
+const l2=document.createElement('li');l2.id='l2';l2.textContent='two';ul.appendChild(l2);
+const b=document.createElement('button');b.className='ib';b.id='b1';b.textContent='Save';document.getElementById('bh').appendChild(b);
+const e2=document.createElement('span');e2.className='e';e2.id='e2';e2.textContent='D';document.getElementById('eh').appendChild(e2);
+function dump(p,ids){for(const n of ids){const q=document.getElementById(n).getBoundingClientRect();console.log('CS '+p.trim()+n+' '+[q.x,q.y,q.width,q.height].join(','))}}
+setTimeout(()=>{
+ dump('H ',['pills','p0','p1','p2','j','j1','j2','j3','ul','l1','l2','bh','b1','eh','e1','e2','end']);
+ const l3=document.createElement('li');l3.id='l3';l3.textContent='three';ul.appendChild(l3);
+ setTimeout(()=>{dump('H2',['l1','l2','l3','end']);
+  ul.removeChild(l3); ul.removeChild(document.getElementById('l1'));
+  setTimeout(()=>{dump('H3',['l2','ul','end']);document.body.appendChild(document.createElement('div')).id='csdone';},100);
+ },100);
+},100);
+</script></body></html>

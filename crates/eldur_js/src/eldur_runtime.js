@@ -2290,13 +2290,16 @@ function _vPseudoSet(v, before, after, looks) {
     var base = _vLined(c, c);
     base.us = c.us;
     base.kw = c.kw;
-    var made = {
-        before: before === "" ? null : { text: before, c: _pseudoLook(base, looks.before) },
-        after: after === "" ? null : { text: after, c: _pseudoLook(base, looks.after) }
+    var box = function(str, decls) {
+        var c = _pseudoLook(base, decls);
+        return _pseudoBoxed(str, c) ? { text: str, c: c } : null;
     };
+    var made = { before: box(before, looks.before), after: box(after, looks.after) };
     var look = JSON.stringify(made);
     var was = m.vPseudo;
-    if (was.look === null && was.before === before && was.after === after) {
+    // The converter writes no empty box, so one the rules make is new.
+    var empty = (made.before && made.before.text === "") || (made.after && made.after.text === "");
+    if (was.look === null && was.before === before && was.after === after && !empty) {
         was.look = look;
         return false;
     }
@@ -2460,6 +2463,12 @@ function _pseudoLook(base, decls) {
     return _vBoxOwn(c);
 }
 
+// Whether a `::before` or `::after` makes a box: `content: ""` makes one, which
+// is there only when it takes room or paints, as text that isn't empty is.
+function _pseudoBoxed(text, c) {
+    return text !== "" || _vHasBox(c);
+}
+
 // Generated text a `Text` cannot draw in its own font: it goes in a model.
 function _pseudoOwnFont(base, c) {
     return c.size !== base.size || EldurFonts.family(c.family) !== EldurFonts.family(base.family);
@@ -2515,11 +2524,16 @@ function _pseudoInModel(model, raw, before, after, baseline, looks) {
     }
     var kids = model.kids.filter(function(k) { return !k.pseudo; });
     looks = looks || { before: {}, after: {} };
-    if (before) {
-        kids.unshift({ gen: { text: before, c: _pseudoLook(_vBase(model), looks.before) }, pseudo: true });
+    var made = function(text, decls) {
+        var c = _pseudoLook(_vBase(model), decls);
+        return _pseudoBoxed(text, c) ? { gen: { text: text, c: c }, pseudo: true } : null;
+    };
+    var first = made(before, looks.before), last = made(after, looks.after);
+    if (first) {
+        kids.unshift(first);
     }
-    if (after) {
-        kids.push({ gen: { text: after, c: _pseudoLook(_vBase(model), looks.after) }, pseudo: true });
+    if (last) {
+        kids.push(last);
     }
     model.kids = kids;
     m.pseudo = { before: before, after: after, model: true, look: JSON.stringify(looks) };
@@ -2534,8 +2548,11 @@ function _pseudoSet(raw, before, after, baseline, looks) {
     looks = looks || { before: {}, after: {} };
     var look = JSON.stringify(looks);
     var holder = _pseudoHolder(raw);
+    // Rules that give `content: ""` may make a box that takes room, so they are
+    // a change from no rules even when the text is the same.
+    var given = Object.keys(looks.before).length > 0 || Object.keys(looks.after).length > 0;
     if (was.before === before && was.after === after && (was.look || look) === look
-        && (holder || !m.pseudo || m.pseudo.model)) {
+        && (holder || !m.pseudo || m.pseudo.model) && (m.pseudo || !given || before + after !== "")) {
         return;
     }
     if (!holder) {
@@ -2549,7 +2566,7 @@ function _pseudoSet(raw, before, after, baseline, looks) {
         var plainLook = JSON.stringify(_pseudoLook(live, {}));
         var differs = function(text, decls) {
             var c = _pseudoLook(live, decls);
-            return text !== "" && (_pseudoOwnFont(live, c) || JSON.stringify(c) !== plainLook);
+            return _pseudoBoxed(text, c) && (_pseudoOwnFont(live, c) || JSON.stringify(c) !== plainLook);
         };
         if (differs(before, looks.before) || differs(after, looks.after)) {
             var own = _pseudoOwn(raw, holder.text);
@@ -7748,21 +7765,33 @@ function _joinsLine(node) {
 
 // A block whose inline content is on lines: new text goes on them too.
 function _holdsLines(raw) {
-    if (_isLines(raw)) {
-        return true;
-    }
+    return _isLines(raw) || _anonLinesOf(raw) !== null;
+}
+
+// The line of runs and items the runtime made for `raw`'s inline content.
+function _anonLinesOf(raw) {
     var container = _childContainer(raw);
     // A line has a spacing: it is the container a template's element holds.
     if (container && container !== raw && _isLines(container) && _isAnonLines(container)) {
-        return true;
+        return container;
     }
     var kids = container ? container.children : null;
     for (var i = 0; kids && i < kids.length; ++i) {
         if (_isLines(kids[i]) && _isAnonLines(kids[i])) {
-            return true;
+            return kids[i];
         }
     }
-    return false;
+    return null;
+}
+
+// The model of the run a line of `raw`'s ends with: what is appended to `raw`
+// joins it, as it would have joined the model the runs were cut from.
+function _vLinesTail(raw) {
+    var lines = _anonLinesOf(raw);
+    var kids = lines ? lines.children : [];
+    var last = kids.length > 0 ? kids[kids.length - 1] : null;
+    var model = _vAnonText(last) ? _vModelOf(last) : null;
+    return model && !model.select ? model : null;
 }
 
 function _isTextNode(node) {
@@ -15531,6 +15560,10 @@ function _vExisting(raw) {
     return text ? _vModelOf(text) : null;
 }
 
+function _vReplacedTag(tag) {
+    return /^(audio|button|canvas|embed|iframe|img|input|meter|object|progress|select|svg|textarea|video)$/.test(tag);
+}
+
 function _vInlineTag(tag) {
     return /^(#text|a|abbr|b|bdi|bdo|br|cite|code|data|del|dfn|em|font|i|ins|kbd|label|mark|q|s|samp|small|span|strike|strong|sub|sup|time|tt|u|var|wbr)$/.test(tag);
 }
@@ -15541,12 +15574,14 @@ function _vStaysInline(node, into, ref) {
         return false;
     }
     var tag = node.__eldurInline ? node.eldurTag : String(_meta(node).createdTag || "");
-    if (!_vInlineTag(tag)) {
+    // An element the page's CSS makes inline is a node whatever its tag (`li`
+    // in a menu); a replaced element or a control is a box of its own.
+    var cascaded = !node.__eldurInline && tag !== "" && tag !== "#text" && _gHasCascade();
+    if (!_vInlineTag(tag) && !(cascaded && !_vReplacedTag(tag))) {
         return false;
     }
     // A span the page's CSS makes a box is a box.
-    // A span the page's CSS makes a box is a box.
-    if (!node.__eldurInline && tag !== "#text" && _gHasCascade()) {
+    if (cascaded) {
         return _gStyleInto(node, into, ref).display === "inline" && !_pseudoBoxInto(node, into, ref);
     }
     return true;
@@ -15600,7 +15635,9 @@ function _vHostOf(raw, nodes, ref) {
         return raw;
     }
     if (_holdsLines(raw)) {
-        return null;
+        var tail = !ref ? _vLinesTail(raw) : null;
+        return tail && nodes.every(function(n) { return n.__eldurInline || _vStaysInline(n, raw, ref); })
+            ? tail : null;
     }
     // A block breaks out of a line of text; what is a node of a model has no box
     // to break out with.

@@ -813,3 +813,20 @@ fn rule_run_time_separators() {
 fn rule_fallback_lines() {
     page("rule_fallback_lines");
 }
+
+/// Created inline content gets the whole cascade: pills with padding, border
+/// and radius, `.j span` padding, `display: inline` list items whose
+/// `:last-child::after` and `:nth-child` follow appends and removals, a button
+/// whose `::before` icon sits beside its label, and empty `::after` boxes whose
+/// margins take room.
+#[test]
+fn rule_inline_lists_buttons() {
+    page("rule_inline_lists_buttons");
+}
+
+/// `content: ""` with margins, or padding and a background, makes a box on the
+/// line, on written spans and on spans a script appends to a line of runs.
+#[test]
+fn rule_empty_generated_boxes() {
+    page("rule_empty_generated_boxes");
+}

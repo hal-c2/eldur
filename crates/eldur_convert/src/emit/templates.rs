@@ -395,19 +395,36 @@ fn prune_children(obj: &mut Object, probes: &HashSet<usize>) {
     }
 }
 
-/// Empties the probe's placeholder text.
+/// Empties the probe's placeholder text. A button that holds lines (an icon
+/// beside its label) draws its label in a `Text` of its own, which follows the
+/// button's `text`: that is what a script's `textContent` sets.
 fn blank(obj: &mut Object) {
+    blank_in(obj, None);
+}
+
+fn blank_in(obj: &mut Object, button: Option<&str>) {
+    let own = (obj.type_name == "Button").then(|| obj.id.clone()).flatten();
+    let button = own.as_deref().or(button);
+    let is_button = obj.type_name == "Button";
     for m in &mut obj.members {
         match m {
             Member::Property {
                 name,
                 value: Value::String(s),
-            } if name == "text" && s.eq_ignore_ascii_case(PLACEHOLDER) => s.clear(),
-            Member::Child(c) => blank(c),
+            } if name == "text" && s.eq_ignore_ascii_case(PLACEHOLDER) => match button {
+                Some(id) if !is_button => {
+                    *m = Member::Property {
+                        name: "text".to_owned(),
+                        value: Value::expr(format!("{id}.text")),
+                    };
+                }
+                _ => s.clear(),
+            },
+            Member::Child(c) => blank_in(c, button),
             Member::Property {
                 value: Value::Object(o),
                 ..
-            } => blank(o),
+            } => blank_in(o, button),
             _ => {}
         }
     }
