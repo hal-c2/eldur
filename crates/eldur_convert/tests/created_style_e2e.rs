@@ -70,7 +70,8 @@ const ROW_TOPS: &str = "a collapsed table starts half its border in, on Chromium
     rows 0.5px higher than ours, so every other row's top rounds 1px apart";
 
 const COLLAPSED_COLUMNS: &str = "a collapsed table's cells start on whole pixels where Chromium's \
-    start half a border in, and a column's spare width rounds differently: one column is 1px over";
+    start half a border in, and the last column's cell holds the table's whole outer border: it \
+    is 1px wider than Chromium's, whose box ends in the border's middle";
 
 /// `(page, Chromium's line, ours, why)`: what is known to differ, in full, so a
 /// changed difference and one that went away both fail.
@@ -102,7 +103,7 @@ const KNOWN: &[(&str, &str, &str, &str)] = &[
     (
         "created_rows",
         "CS cells h:1,115 h2:115,92 h3:207,92 a0:1,115 b0:115,92 c0:207,92 a3:1,115 b3:115,92 c3:207,92",
-        "CS cells h:0,115 h2:115,93 h3:208,92 a0:0,115 b0:115,93 c0:208,92 a3:0,115 b3:115,93 c3:208,92",
+        "CS cells h:0,115 h2:115,92 h3:207,93 a0:0,115 b0:115,92 c0:207,93 a3:0,115 b3:115,92 c3:207,93",
         COLLAPSED_COLUMNS,
     ),
 ];

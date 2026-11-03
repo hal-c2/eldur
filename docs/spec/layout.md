@@ -997,7 +997,7 @@ GridLayout {
 |---|---|---|
 | Anonymous table boxes (CSS 2.1 §17.2.1) | Full | Stray cells and rows get their missing parents; whitespace between parts makes nothing. |
 | `colspan` / `rowspan` | Full | HTML forming algorithm; a rowspan stops at its row group's end, `rowspan=0` runs to it. |
-| Auto column widths | Approx | Specified or max-content, at least min-content; extra space in proportion to max-content, as measured in Chromium. Min-content is the longest word, measured with `FontMetrics`. |
+| Auto column widths | Approx | Chromium's auto layout, measured (see *Auto column widths* below); columns land within a pixel of Chromium's. Min-content is the widest word, measured with `FontMetrics` over the few words an em estimate puts near the widest. Spanning cells are checked for one span only, and a `Text`'s implicit width counts a last glyph's overhang, which a browser does not. |
 | `table-layout: fixed` | Emulated | `<col>` widths and the first row; the rest shared equally. |
 | `<col>` / `<colgroup>` widths | Full | `span` and the `width` attribute included. A `width` on a spanning cell is ignored, with a diagnostic. |
 | `border-collapse: collapse` | Approx | CSS 2.1 §17.6.2.1 picks each edge; a cell draws its half. A spanning cell's side uses the widest segment along it, so differing segments are not reproduced. Border styles other than solid draw solid. |
@@ -1011,6 +1011,17 @@ GridLayout {
 | `visibility: collapse`, row `opacity` | Unsupported | Reported. |
 | `empty-cells`, presentational attributes (`cellspacing`, `bgcolor`, …) | Unsupported | Not read. |
 | Sticky `th` | Approx | See §5.4. |
+
+**Auto column widths**, as measured in Chromium (`crates/eldur_convert/tests/table_widths/`), and as `tableColumnWidths` solves them:
+
+- A column's minimum is its cells' min-content border-box width; a width in px or % does not raise it, so a table narrower than its px columns shrinks them. Its maximum is max-content, at least the minimum, and at least a px width. A content-box width adds padding and borders; a border-box width is the column width. A spanning cell's shortfall is shared over its columns in proportion to their maxima.
+- Percentages add up to at most 100% in column order; a column past the cap is auto.
+- Four guesses: every column at its minimum; then percent columns at their share of the width (at least their minimum); then px columns at their maximum; then auto columns at their maximum. A width between two guesses moves the columns that differ linearly, in proportion to how much they differ.
+- Width past the last guess goes to auto columns with content, in proportion to their maxima; failing those, to px columns by width; then to percent columns by percentage; then to all columns equally.
+- A table with `width: auto` is the sum of the maxima, or wider where percent columns need it: the other columns' maxima over the percent left over, and each percent column's maximum over its percentage. Its min-content width is the sum of the minima.
+- Collapsed, the table's box holds half of each outer border and a column reaches the middle of the borders beside it. Cells here draw the outer borders whole and split an inner one with the odd pixel on the right, so the grid declares `tableEdges`, how far the browser's column edge lies right of the drawn one at each boundary, and the solver works in the browser's frame.
+- Columns are rounded to whole pixels at cumulative edges. A column given its maximum is rounded up when its text can wrap (its maximum is over a pixel past its minimum), since a `Text` wraps in a box a fraction narrower than it, and the table's max-content width is at least those whole widths. A single word cannot wrap, so its column rounds to the nearest pixel and may overhang by a fraction, as a browser's pixel-snapped one does.
+- `table-layout: fixed` keeps the specified widths and shares what is left equally among auto columns.
 
 **Pitfalls**
 - Cells with wrapped `Text` have a minimum width of 0 in a `GridLayout`, so they can be squeezed to nothing. Set `Layout.minimumWidth` to the longest-word width or the implicit width of unwrapped single-line cells.

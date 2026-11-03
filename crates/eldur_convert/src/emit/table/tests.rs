@@ -146,3 +146,33 @@ fn column_specs_merge_and_print() {
     assert_eq!(Px(30.0).qml(), "30");
     assert_eq!(Percent(25.0).qml(), "\"25%\"");
 }
+
+#[test]
+fn widest_word_candidates_weigh_letters() {
+    // Chromium: "Gamma" (56.9px at 16px sans) is wider than "epsilon".
+    let words = widest_words("Gamma delta epsilon");
+    assert!(words.contains(&"Gamma".to_owned()), "{words:?}");
+    assert!(words.contains(&"epsilon".to_owned()), "{words:?}");
+    assert_eq!(widest_words("a well-known it"), ["known"]);
+    assert_eq!(widest_words("same same"), ["same"]);
+    assert_eq!(widest_words(""), [""]);
+    assert!(widest_words("one two three four five six seven eight nine ten").len() <= 4);
+}
+
+#[test]
+fn collapsed_column_edges_lie_mid_border_in_chromium() {
+    let mut edges = Edges::new(1, 3);
+    let mut table = ComputedStyle::default();
+    table.border.left = side(5.0, BorderStyle::Solid, 1);
+    table.border.right = side(3.0, BorderStyle::Solid, 1);
+    edges.offer(at(0, 0, 1, 3), &table, BorderOwner::Table);
+    let mut cell = ComputedStyle::default();
+    cell.border.right = side(1.0, BorderStyle::Solid, 2);
+    edges.offer(at(0, 0, 1, 1), &cell, BorderOwner::Cell);
+    cell.border.right = side(2.0, BorderStyle::Solid, 2);
+    edges.offer(at(0, 1, 1, 1), &cell, BorderOwner::Cell);
+    // The outer halves are the table's; a 1px inner edge's middle is half a
+    // pixel into the cell after it, which holds the whole of it here.
+    assert_eq!(edges.column_offsets(), [2.5, 0.5, 0.0, -1.5]);
+    assert_eq!(Edges::new(0, 2).column_offsets(), [0.0, 0.0, 0.0]);
+}
