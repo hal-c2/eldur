@@ -541,6 +541,34 @@
   "clicks": [],
   "probes": []
  },
+ "rule_child_nodes": {
+  "log": [
+   "CS s1 1 3:1 [1] 0",
+   "CS s2 1 3:2 [2] 0",
+   "CS s3 1 3:3 [3] 0",
+   "CS s1h 1 3:1 [1] 0",
+   "CS s5 1 3:five [five] 0",
+   "CS s5b 1 3:six [six] 0",
+   "CS d7 2 3:seven [sevenB] 1",
+   "CS s8 1 3:8 [8] 0",
+   "CS s8e 0 - [] 0",
+   "CS a 2 3:Alpha [Alpha1] 1",
+   "CS b 2 3:Beta [Beta2] 1",
+   "CS host 4 3:host [host3six] 3",
+   "CS g1 90.375,21,16.125,12",
+   "CS g2 82.859375,42,16.125,12",
+   "CS g3 38.359375,76,16.125,12",
+   "CS g5 54.484375,69,32.34375,23",
+   "CS g7 10,89,1260,23",
+   "CS gh 10,72,1260,17",
+   "CS s1t 1 3:1 [1] 0",
+   "CS s2t 1 3:2 [2] 0",
+   "CS s3t 1 3:3 [3] 0",
+   "CS at 2 3:Alpha [Alpha1] 1"
+  ],
+  "clicks": [],
+  "probes": []
+ },
  "rule_computed_mixed": {
   "log": [
    "CS 0 8,14,1264,16",

@@ -4555,6 +4555,14 @@ function _rawKids(raw, withText) {
             continue;
         }
         if (!isLayout && _isPlainTextItem(child) && !child.objectName && !_meta(child).createdTag) {
+            // What a script put in a box's own Text are nodes of its model.
+            var boxModel = _vModelOf(child);
+            if (boxModel && !boxModel.select) {
+                boxModel.kids.filter(withText ? _vIsRendered : _vIsElement).forEach(function(k) {
+                    out.push(k);
+                });
+                continue;
+            }
             // A box's own Text, while it holds nothing, is no text node.
             if (withText && _vHasRules() && !_meta(child).vSplit && child.text !== "") {
                 out.push(child);
@@ -7733,7 +7741,11 @@ function _lineToJoin(raw, nodes, ref) {
     if (after && _isLines(after) && _isAnonLines(after)) {
         return { lines: after, ref: after.children.length > 0 ? after.children[0] : null };
     }
-    if (!boxes || !_linesAvailable()) {
+    // Items following the page's own text, inline ones too, continue its line.
+    var ownText = kids.length === 0 && !_meta(raw).createdTag ? _findTextChild(raw) : null;
+    var continues = Boolean(ownText && ownText.text !== "" && ownText.visible)
+        && nodes.every(function(n) { return _gInlineInto(n, raw, ref); });
+    if ((!boxes && !continues) || !_linesAvailable()) {
         return null;
     }
     if (before && _vAnonText(before)) {
@@ -15026,6 +15038,7 @@ function _vStaysInline(node, into, ref) {
         return false;
     }
     // A span the page's CSS makes a box is a box.
+    // A span the page's CSS makes a box is a box.
     if (!node.__eldurInline && tag !== "#text" && _gHasCascade()) {
         return _gStyleInto(node, into, ref).display === "inline";
     }
@@ -15045,6 +15058,27 @@ function _gStyleInto(node, into, ref) {
     _gGoingInto = null;
     m.gStyle = null;
     return style;
+}
+
+// Whether `node` is inline once in `into`, matched afresh: the rules it
+// matched before it had a parent, kept in `gMatched`, miss those reaching
+// through the parent (`.j span`). `_vStaysInline` still reads the kept ones;
+// the older line paths are tuned to that.
+function _gInlineInto(node, into, ref) {
+    if (!_vStaysInline(node, into, ref)) {
+        return false;
+    }
+    if (_isTextNode(node) || node.__eldurInline || !_gHasCascade()) {
+        return true;
+    }
+    var m = _meta(node);
+    var kept = m.gMatched;
+    var keptGen = m.gMatchGen;
+    m.gMatched = null;
+    var display = _gStyleInto(node, into, ref).display;
+    m.gMatched = kept;
+    m.gMatchGen = keptGen;
+    return display === "inline";
 }
 
 // Where `nodes` go, if a line of text takes them; else they are real items.
@@ -15112,13 +15146,28 @@ function _vTryInsert(raw, nodes, ref) {
     return true;
 }
 
+// A created element that is its own Text holds its text as a node, as the
+// page's do: asked for its children, the text becomes the model's one leaf.
+function _vCreatedTextModel(raw) {
+    var m = _meta(raw);
+    if (!_vHasRules() || !_isPlainTextItem(raw) || !m.createdTag || m.createdTag === "#text"
+        || m.vSplit || m.runText !== undefined || m.pseudo) {
+        return null;
+    }
+    if (_vModelOf(raw)) {
+        return _vModelOf(raw);
+    }
+    var text = m.explicitText !== undefined ? String(m.explicitText) : String(raw.text);
+    return text === "" ? null : _vEnsureModel(raw);
+}
+
 // The children and, with text, the child nodes of `raw`; shared since both
 // must agree where a model's nodes stand among a box's items.
 function _rawChildNodes(raw) {
     if (raw.__eldurInline) {
         return raw.kids ? raw.kids.filter(_vIsRendered) : [];
     }
-    var own = _vOwnModel(raw);
+    var own = _vOwnModel(raw) || _vCreatedTextModel(raw);
     if (own && !_meta(raw).flow) {
         return own.kids.filter(_vIsRendered);
     }
