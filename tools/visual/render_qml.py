@@ -112,8 +112,14 @@ class HeadlessSway:
                 "--backend gl (the default) needs sway, a headless Wayland compositor, "
                 "on PATH; install sway or pass --backend software"
             )
-        # mkdtemp creates the directory mode 0700, which Wayland requires.
-        self.runtime_dir = Path(tempfile.mkdtemp(prefix="eldur-visual-sway-"))
+        # mkdtemp creates the directory mode 0700, which Wayland requires. The
+        # session's runtime directory is made for sockets and has a short path:
+        # under a long TMPDIR the socket path passes the 108-byte sun_path
+        # limit and sway cannot open its socket.
+        parent = os.environ.get("XDG_RUNTIME_DIR")
+        if not parent or not os.path.isdir(parent):
+            parent = "/tmp"
+        self.runtime_dir = Path(tempfile.mkdtemp(prefix="eldur-sway-", dir=parent))
         config = self.runtime_dir / "sway.cfg"
         config.write_text(
             SWAY_CONFIG_TEMPLATE.format(
@@ -297,6 +303,9 @@ def render_qml(
         env["QSG_RHI_BACKEND"] = "opengl"
         # Client-side decorations would take part of the window for a title bar.
         env["QT_WAYLAND_DISABLE_WINDOWDECORATION"] = "1"
+        # Qt 6.12's text-input-v3 client warns on teardown when headless sway
+        # has no keyboard focus; a screenshot needs no input method at all.
+        env["QT_IM_MODULE"] = "none"
         env.pop("QML_DISABLE_DISTANCEFIELD", None)
     else:
         env["QT_QPA_PLATFORM"] = "offscreen"
