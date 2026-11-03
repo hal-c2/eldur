@@ -138,6 +138,10 @@ fn box_property(longhand: Longhand) -> Option<&'static str> {
         L::TextDecorationStyle => "text-decoration-style",
         L::TextDecorationColor => "text-decoration-color",
         L::TextAlign => "text-align",
+        // Where a created inline box sits on its line, and where its text breaks.
+        L::VerticalAlign => "vertical-align",
+        L::OverflowWrap => "overflow-wrap",
+        L::WordBreak => "word-break",
         L::Opacity => "opacity",
         L::Position => "position",
         L::Top => "top",

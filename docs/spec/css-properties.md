@@ -56,7 +56,7 @@ Target: Qt 6.11. Modules: QtQuick, QtQuick.Controls (Basic style), QtQuick.Layou
 | Property | Values handled | QML target | Unit conversion | Support | Notes |
 |---|---|---|---|---|---|
 | display: block | — | `Item` for the box; block children stacked in a `ColumnLayout { spacing: 0 }` with `Layout.fillWidth: true` on each | — | Approx | Margin collapsing is not modelled |
-| display: inline, inline-block | — | Runs of inline content become one `Text` with `textFormat: Text.StyledText` (or `RichText` for `sub`/`sup`/`text-indent`); inline-block boxes use `Flow`, or a `Row` sized by `implicitWidth` | — | Approx | Inline text flow across elements is not exact |
+| display: inline, inline-block | — | Runs of inline content become one `Text` with `textFormat: Text.StyledText` (or `RichText` for `sub`/`sup`/`text-indent`); a run with inline-block boxes is laid out by `EldurLines`, the boxes on CSS line boxes | — | Approx | Inline text flow across elements is not exact |
 | display: flex | row, column | `FlexboxLayout` | — | Full | Fallback: `RowLayout` / `ColumnLayout` |
 | display: inline-flex | row, column | `FlexboxLayout` sized by `implicitWidth` instead of filling the parent | — | Approx | |
 | display: grid, inline-grid | — | `GridLayout` (see Grid) | — | Approx | |

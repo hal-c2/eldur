@@ -409,6 +409,27 @@ fn blank_in(obj: &mut Object, button: Option<&str>) {
         .flatten();
     let button = own.as_deref().or(button);
     let is_button = obj.type_name == "Button";
+    // A box sized by the Text it holds was emitted for the placeholder: empty,
+    // it has no line, as a written empty box's Text has none.
+    if button.is_none() {
+        let emptied: Vec<String> = obj
+            .members
+            .iter()
+            .filter_map(|m| match m {
+                Member::Child(c) if c.type_name == "Text" && is_placeholder(c) => c.id.clone(),
+                _ => None,
+            })
+            .collect();
+        for id in emptied {
+            if let Some(Value::Expr(e)) = obj.get("implicitHeight") {
+                let line = format!("{id}.implicitHeight");
+                if e.starts_with(&line) {
+                    let guarded = format!("({id}.text === \"\" ? 0 : {line}){}", &e[line.len()..]);
+                    obj.set("implicitHeight", Value::expr(guarded));
+                }
+            }
+        }
+    }
     for m in &mut obj.members {
         match m {
             Member::Property {
@@ -431,6 +452,10 @@ fn blank_in(obj: &mut Object, button: Option<&str>) {
             _ => {}
         }
     }
+}
+
+fn is_placeholder(text: &Object) -> bool {
+    matches!(text.get("text"), Some(Value::String(s)) if s.eq_ignore_ascii_case(PLACEHOLDER))
 }
 
 fn child_at<'o>(root: &'o Object, path: &[usize]) -> Option<&'o Object> {

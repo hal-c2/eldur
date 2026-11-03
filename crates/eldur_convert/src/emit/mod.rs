@@ -807,7 +807,11 @@ impl<'a, 'd> Emitter<'a, 'd> {
         }
         if inner.is_none() && (wanted || gains || b.marker.is_some()) {
             // Scripts write text into it; a marker still has its line.
-            inner = Some((self.text(style, decoration, &[], line), "Text"));
+            let mut text = self.text(style, decoration, &[], line);
+            if self.runtime_dom {
+                inline_model::declare_pre(&mut text, style);
+            }
+            inner = Some((text, "Text"));
         }
         if let Some(marker) = b.marker.as_ref().filter(|m| m.in_line)
             && let Some((obj, _)) = &mut inner

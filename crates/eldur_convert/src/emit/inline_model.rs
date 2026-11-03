@@ -356,6 +356,7 @@ impl Emitter<'_, '_> {
                 .any(|i| matches!(i, Inline::Span(_) | Inline::LineBreak)),
         };
         if !has_element {
+            declare_pre(text, style);
             return;
         }
         let mut gen_boxes = std::collections::BTreeMap::new();
@@ -424,6 +425,24 @@ impl Emitter<'_, '_> {
             .collect();
         declare(combo, &json!({ "select": true, "kids": kids }));
     }
+}
+
+/// On a `Text` with no model: a script's text and elements become its first
+/// nodes, and keep their spaces as the page's own would.
+pub(super) fn declare_pre(text: &mut Object, style: &eldur_css::ComputedStyle) {
+    if matches!(style.white_space, WhiteSpace::Normal | WhiteSpace::NoWrap) {
+        return;
+    }
+    text.members.insert(
+        0,
+        Member::PropertyDecl {
+            ty: "bool".to_owned(),
+            name: "eldurPre".to_owned(),
+            value: Some(Value::Bool(true)),
+            readonly: true,
+            required: false,
+        },
+    );
 }
 
 /// A string, as `qmllint` has no complaint about a string however long.

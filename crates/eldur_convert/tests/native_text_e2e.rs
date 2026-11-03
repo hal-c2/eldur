@@ -65,7 +65,10 @@ TestCase {
             verify(under.some(i => typeof i.eldurTemplate === "string" && i.eldurTemplate !== ""),
                    name + ": no item from a template")
             const texts = under.filter(i => typeof i.text === "string" && typeof i.renderType === "number")
-            compare(texts.map(t => t.text.replace(/ /g, " ").trim()).filter(t => t !== "").sort().join(), "by,one,two", name)
+            // A made element's words are in its line's run, as markup.
+            const words = texts.map(t => t.text.replace(/<[^>]*>/g, " ").replace(/&nbsp;|\u00a0/g, " "))
+                .join(" ").split(/\s+/).filter(t => t !== "")
+            compare(words.sort().join(), "by,one,two", name)
             for (const t of texts)
                 compare(t.renderType, wanted, name + ": " + t.text)
         }

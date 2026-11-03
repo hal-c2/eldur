@@ -50,6 +50,12 @@ Item {
         id: runMetrics
     }
 
+    // Not a child: nothing on the lines.
+    property Text inkProbe: Text {
+        visible: false
+        textFormat: Text.PlainText
+    }
+
     function schedule() {
         if (_running || _scheduled) {
             return;
@@ -217,16 +223,30 @@ Item {
         // markup that only colours, links or decorates keeps the run's font.
         const plain = _plain(item);
         const styled = item.textFormat === Text.StyledText && !preserveSpace && _oneFont(item.text);
-        if (run.measured.length === 1 && !/\n/.test(plain)
-            && (item.textFormat === Text.PlainText || item.text.indexOf("<") === -1 || styled)) {
-            const keeps = item.textFormat === Text.PlainText || preserveSpace
-                || item.textFormat === Text.AutoText;
-            runMetrics.font = item.font;
-            // Styled text drops a leading space and draws one a tag closes after.
-            const drawn = styled && /\s(<[^>]*>)+$/.test(item.text) ? runMetrics.advanceWidth(" ") : 0;
+        if (run.measured.length === 0 || /\n/.test(plain)
+            || !(item.textFormat === Text.PlainText || item.text.indexOf("<") === -1 || styled)) {
+            return;
+        }
+        const keeps = item.textFormat === Text.PlainText || preserveSpace
+            || item.textFormat === Text.AutoText;
+        runMetrics.font = item.font;
+        // Styled text drops a leading space and draws one a tag closes after.
+        const drawn = styled && /\s(<[^>]*>)+$/.test(item.text) ? runMetrics.advanceWidth(" ") : 0;
+        if (run.measured.length === 1) {
             run.measured[0].width = runMetrics.advanceWidth(
                 keeps ? plain : plain.trim().replace(/\s+/g, " ")) + drawn;
+            return;
         }
+        if (keeps || drawn > 0) {
+            return;
+        }
+        // What follows a run Qt wrapped starts at its last line's advance; the
+        // line's width reaches past it by its last glyph's ink, as one line's does.
+        const last = plain.trim().slice(-1);
+        inkProbe.font = item.font;
+        inkProbe.text = last;
+        const end = run.measured[run.measured.length - 1];
+        end.width -= Math.max(0, inkProbe.implicitWidth - runMetrics.advanceWidth(last));
     }
 
     // Markup with entities in it measures other characters than it draws.
@@ -234,9 +254,15 @@ Item {
         return text.indexOf("&") === -1 && text.replace(/<\/?(?:font(?: color="[^"]*")?|a(?: href="[^"]*")?|u|s)>/g, "").indexOf("<") === -1;
     }
 
+    // What markup draws, as characters: an entity is the one it stands for.
     function _plain(item) {
         const text = item.text;
-        return item.textFormat === Text.PlainText ? text : text.replace(/<[^>]*>/g, "");
+        if (item.textFormat === Text.PlainText) {
+            return text;
+        }
+        return text.replace(/<[^>]*>/g, "").replace(/&(lt|gt|quot|apos|nbsp|amp);/g, function(all, name) {
+            return { lt: "<", gt: ">", quot: "\"", apos: "'", nbsp: "\u00a0", amp: "&" }[name];
+        });
     }
 
     // The spaces inside each measured line of a run. Qt says nothing about
@@ -485,6 +511,9 @@ Item {
             const trailWidth = trail && keepsTrail ? space : 0;
             const before = (pending || lead) && !line.empty ? space : 0;
             let start = line.end + before + marginLeft;
+            // The gap is this run's own space when the last thing on the line
+            // ended with none to collapse it into: its element's box covers it.
+            let ownLead = lead && !pending ? before : 0;
 
             const justified = textAlign === Text.AlignJustify && !noWrap;
             if (justified && item.font.wordSpacing !== 0) {
@@ -507,6 +536,7 @@ Item {
                 built.push(line);
                 line = _newLine();
                 start = marginLeft;
+                ownLead = 0;
                 run.firstLine = built.length;
                 run.room = roomAt(built.length) + leadWidth - marginLeft;
                 _measure(item, run);
@@ -545,7 +575,8 @@ Item {
                 line.texts.push({ item: item, run: run, number: n, x: x, width: width,
                                   height: m.height, ascent: ascent, lead: n === 0 ? leadWidth : 0,
                                   gap: n === 0 && before > 0, inner: inner[n] || 0,
-                                  trail: last ? trailWidth : 0 });
+                                  trail: last ? trailWidth : 0, ownLead: n === 0 ? ownLead : 0,
+                                  ownTrail: last && trail && trailWidth === 0 ? space : 0 });
                 line.end = x + width + (last ? marginRight : 0);
                 line.empty = false;
                 if (!last) {
@@ -725,13 +756,16 @@ Item {
                     t.run.place = [];
                 }
                 // A trailing space hangs at the line's end; before more it is in the box.
-                const followed = t.trail > 0 && l.boxes.concat(l.texts).some(function(o) { return o.x > t.x; });
+                const more = l.boxes.concat(l.texts).some(function(o) { return o.x > t.x; });
+                const followed = t.trail > 0 && more;
                 // Qt draws a line on its own whole pixel, adding the ascent rounded to
                 // the row its Text starts on, so the row must come from the same sum.
                 const runBase = hung(t.placed) + t.placed.shift;
                 t.run.place[t.number] = { x: t.x + shift - t.lead, y: runBase - round(t.ascent), height: t.height,
                                           baseline: baseline, hung: hung(t.placed),
                                           lead: t.lead, trail: t.trail || 0,
+                                          // Edge spaces of its own the line put beside it, not in it.
+                                          ownLead: t.ownLead || 0, ownTrail: more ? t.ownTrail || 0 : 0,
                                           ascent: round(t.ascent),
                                           // The box of its inline element, as far under this row.
                                           boxTop: round(t.ascent) - (t.placed.box || strutBox).ascent,

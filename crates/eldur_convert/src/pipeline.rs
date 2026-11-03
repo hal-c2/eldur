@@ -179,9 +179,16 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         // The page's links and spans may be an event's target, named or not.
         let delegated = scripts.analysis.dispatch_by_path && has_inline_model(&root);
         let open_elements = scripts.analysis.open_elements;
+        // A script's inline elements are nodes of a line, as the page's are.
+        let makes_inline = scripts
+            .analysis
+            .created
+            .iter()
+            .any(|e| crate::emit::templates::stays_inline(&e.tag));
         let inline_rules = runtime_dom
             && (delegated
                 || !inline_covered.is_empty()
+                || makes_inline
                 || (scripts.analysis.mutates_dom && holds_text));
         if let Some(added) = crate::emit::templates::add(
             &inputs,

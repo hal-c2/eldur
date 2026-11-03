@@ -1,0 +1,14 @@
+<!doctype html><!-- Text and inline elements a script sets straight into a centred block, not a paragraph, break into lines as written ones would. -->
+<html><head><style>
+body { margin: 0; padding: 16px; font: 14px Arial, sans-serif; color: #222; }
+#card { width: 320px; text-align: center; overflow-wrap: anywhere; margin-bottom: 12px; }
+.badge { display: inline-block; padding: 1px 6px; border-radius: 9px; background: #c33; color: #fff; font-size: 11px; }
+.tail { color: #036; }
+</style></head><body>
+<div id="card"></div>
+<script>
+function dump(pfx){var all=document.querySelectorAll("#card *, #card");for(var i=0;i<all.length;i++){var e=all[i];var q=e.getBoundingClientRect();console.log('CS '+pfx+' '+e.tagName.toLowerCase()+i+' '+[q.x,q.y,q.width,q.height].join(','))}}
+document.getElementById('card').innerHTML =
+  'New <span class="badge">3</span> messages from <em>support</em>: averyveryverylongwordwithoutanyspacesatallinthisone <span class="tail">end</span>';
+setTimeout(function(){dump('H');document.body.appendChild(document.createElement('div')).id='csdone'},100);
+</script></body></html>
