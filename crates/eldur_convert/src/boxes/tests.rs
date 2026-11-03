@@ -396,3 +396,26 @@ fn counters_number_generated_content() {
         assert!(tree.contains(line), "{line} in\n{tree}");
     }
 }
+
+/// Chromium (created_rules/rule_counters_own.html): an `<ol start>` resets
+/// `list-item` to one below it, and a nested `<ol>` restarts it though its own
+/// `counter-reset` names another counter.
+#[test]
+fn lists_reset_list_item() {
+    let tree = outline(concat!(
+        "<style>ol{list-style:none}li::before{content:counter(list-item, upper-roman) '. '}",
+        ".own{counter-reset:n}</style>",
+        "<ol start=5><li>a</li><li>b</li></ol>",
+        "<ol><li>c<ol class=own><li>d</li><li>e</li></ol></li><li>f</li></ol>"
+    ));
+    for line in [
+        r#"[pseudo["V. "]"a"]"#,
+        r#"[pseudo["VI. "]"b"]"#,
+        r#"[pseudo["I. "]"c"]"#,
+        r#"[pseudo["I. "]"d"]"#,
+        r#"[pseudo["II. "]"e"]"#,
+        r#"[pseudo["II. "]"f"]"#,
+    ] {
+        assert!(tree.contains(line), "{line} in\n{tree}");
+    }
+}

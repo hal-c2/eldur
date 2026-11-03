@@ -454,7 +454,11 @@ get `property string eldurKey: "<qmlId>"`. The runtime cannot read QML ids.
    - swap the item behind the stable wrapper and destroy the old one.
 
    This generalises today's `set type` swap. Children come after their
-   parent, because their key depends on the parent's template.
+   parent, because their key depends on the parent's template. Children
+   that are all text nodes go in as `appendChild` would put them: into the
+   template's own Text (its inline model), not into a column below it.
+   Element children stay items, since one may be a box that something is
+   placed in (a relative span holding an absolute dot).
 3. **Class changes after connection** (`className =` or `classList.*`) set
    `cls_*` as today. If the new key resolves to a *different* Component (a
    form change), the element is rematerialised in place. A class set
@@ -483,6 +487,9 @@ up in this order, and the first hit wins:
 
 A miss at step 1 logs once per key:
 `console.warn("eldur: no style template for li.foo@todoList; using <step>")`.
+An element of a line's model that a box splits into items (`_vToReal`) does
+not log. The model showed only its font and colour, which the item is given,
+unless the model also painted a background or edges.
 At conversion time, `Unknown` parents and `open` class values produce
 diagnostic `dynamic-context` (§12). `@*` templates are not exact for
 inherited properties, since they inherit from `<body>`, and the diagnostic
@@ -881,10 +888,10 @@ line.
 | Code | When | Effect |
 |---|---|---|
 | `dynamic-opaque-class` | `ClassWrite` with no literal names and no open candidates (`el.className = x`) | Classes are tracked at run time (selectors work) but not styled. |
-| `dynamic-context` | `CreatedElement` with an `Unknown` parent or open classes | `@*` templates are used. Inherited values come from `<body>`. |
+| `dynamic-context` | `CreatedElement` with an `Unknown` parent or open classes, on a closed page (an open page's cascade styles it where it lands), other than a table's rows and sections | `@*` templates are used. Inherited values come from `<body>`. |
 | `dynamic-form` | A combination changes layout kind (`display` flex/block/grid, `position`, `float`) | The base form is kept. Bound properties still apply. |
 | `dynamic-combinations` | More than 6 conditions on one element | Conditions are applied independently, in cascade order. |
-| `dynamic-templates` | More than 16 keys for one created element | Extra keys use the fallback chain. |
+| `dynamic-templates` | More than 16 keys for one created element; or, on a closed page, a probe with no item of its own other than a table's row or section | Extra keys use the fallback chain. |
 | `dynamic-markup` (`warning[js]`) | Markup given to `innerHTML`/`insertAdjacentHTML` is not literal (§6.7) | Its elements are not predicted and use the fallback chain. |
 | `dynamic-unsupported-selector` | The condition is inside `:has()`, or on a later sibling or a descendant | Not converted. |
 | `dynamic-structural` (`warning[css]`) | A container scripts change has more than 32 element children | Its children keep the document's `:first-child`/`:nth-child()` results. |
@@ -1062,7 +1069,13 @@ At run time:
   importance, specificity and order, and works counters out over the whole tree
   (`_counterValues`: a reset nests a counter, an increment or a set goes to the
   innermost one) before each flush; an insert or a removal asks for one
-  (`_counterTouch`). Text drawn other than the element's own font or colour is a
+  (`_counterTouch`). A list item increments `list-item`. An `<ol>`, `<ul>` or
+  `<menu>` resets it to `start` − 1, or 0, unless its own `counter-reset`
+  names `list-item`; another counter's reset does not stop it (measured). A
+  rule on `::before`/`::after` carries its side (`after`). Where the element
+  has that generated box, its changes apply inside the element's scope, after
+  its own and before or after its children. The static numbering in
+  `boxes/counters.rs` applies the same list reset. Text drawn other than the element's own font or colour is a
   `gen` node of the element's inline model (in its own `<span>` font when its
   size or family differs); a plain `Text` takes a model only then. An element
   whose content is on lines holds it as a run at that side of the lines whose
@@ -1070,9 +1083,28 @@ At run time:
   is reused, and a box the runtime lays out gets one (`_pseudoNewRun`) that
   `_gFlowGroups` keeps first or last on its lines. The converter's own
   generated text is adopted as the rules' until they say otherwise.
-  Not followed: a pseudo-element laid out as a box (`display`, `position`,
-  `float`), `content` other than strings, `attr()` and counters, the
-  `list-item` counter, and counters on the pseudo-element itself.
+  A pseudo-element laid out as a box (block-level, atomic inline, floated or
+  absolutely positioned) is a box of the converted tree like an element of
+  that style; an absolutely positioned one leaves its line's baseline to the
+  rest (CSS 2.2 §10.8.1). Not followed: such a box that a class change adds or
+  removes (the runtime's generated text is only ever on a line), `content`
+  other than strings, `attr()` and counters, and `counter(list-item)` in a `reversed` list or after `<li value>` (in Chromium the
+  `::before` widths of a three-item reversed list whose last item has
+  `value=7` fit 0, −1, −1. That is not yet understood, so it is not copied).
+- **A table a script makes is a live table.** On an open page it takes the
+  form `emit/table.rs` gives a written table a script fills, with no rows
+  (`_TABLE_MADE_SOURCE`): captions in a column above a box whose grid the
+  runtime lays out with the static tables' solver. `_tableStyleMade` writes
+  what the cascade says each settle pass: `width`, `min-width`, `max-width`
+  (percentages of the box it is in), `border-spacing`, `table-layout: fixed`
+  (first-row cell widths), the background and the border. Collapsed, the
+  table's border wins where it is wider than its cells' (CSS 2.1 §17.6.2.1):
+  it is painted over them, and each outer cell gets half the difference as
+  padding (`_tableOuterPads`). A template for a table is used only on a
+  closed page, where nothing else would style it, since its spacing is fixed
+  in it; its probe gets no placeholder text, which would make it a static
+  grid. Row heights and column widths are whole pixels, as the static
+  tables' are, so borders stay sharp.
 - **An inline model first built after a write has no baseline.** It can't tell which
   matches changed, so it runs the cascade rather than trusting the converter's values.
 

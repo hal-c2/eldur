@@ -524,6 +524,14 @@ impl<'a> Builder<'a, '_> {
         let Some(style) = style else {
             return;
         };
+        if let Some(e) = self.doc.element(node)
+            && matches!(e.local_name(), "ol" | "ul" | "menu")
+        {
+            let start = (e.local_name() == "ol")
+                .then(|| e.attr("start").and_then(|s| s.trim().parse::<i64>().ok()))
+                .flatten();
+            self.counters.reset_list(style, start.map_or(0, |s| s - 1));
+        }
         self.counters.apply(style);
         match self.level(node, style) {
             Level::None => {}
@@ -627,15 +635,27 @@ impl<'a> Builder<'a, '_> {
                 white_space: style.white_space,
             }]
         };
-        if is_block_level(style.display) || style.float != Float::None {
+        // Laid out as an element with the same style would be (`level`).
+        let out_of_flow = style.float != Float::None
+            || matches!(style.position, Position::Absolute | Position::Fixed);
+        let atomic = matches!(
+            style.display,
+            Display::InlineBlock | Display::InlineFlex | Display::InlineGrid | Display::InlineTable
+        );
+        if is_block_level(style.display) || out_of_flow || atomic {
             let content = group(children.into_iter().map(Child::Inline).collect(), style);
-            out.push(Child::Block(Box::new(LayoutBox {
+            let built = Box::new(LayoutBox {
                 node: None,
                 style: Cow::Borrowed(style),
                 kind: kind_of(style.display),
                 content,
                 marker: None,
-            })));
+            });
+            out.push(if atomic && !out_of_flow {
+                Child::Inline(whitespace::Raw::Atomic(built))
+            } else {
+                Child::Block(built)
+            });
         } else {
             out.push(Child::Inline(whitespace::Raw::Span {
                 node: None,

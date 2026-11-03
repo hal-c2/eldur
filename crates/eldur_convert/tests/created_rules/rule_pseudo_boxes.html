@@ -1,0 +1,18 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+.ic::before{content:"";display:inline-block;width:10px;height:10px;margin-right:4px;background:#c33}
+.bdg{position:relative;display:inline-block;padding:2px 20px 2px 4px;background:#eee}
+.bdg::after{content:attr(data-n);position:absolute;top:-4px;right:2px;font-size:10px;background:#36c;color:#fff;padding:0 3px}
+.cf::after{content:"";display:table;clear:both}
+.fl{float:left;width:60px;height:30px;background:#9c9}
+.hd::before{content:"Note";display:block;font-weight:bold;height:18px}
+.box{border:1px solid #999;margin:4px 0}
+</style></head><body>
+<p id="p1" class="ic"><span id="a1">static icon</span></p>
+<p><span id="b1" class="bdg" data-n="3">Inbox</span> <span id="b3">end</span></p>
+<div id="h1" class="hd"><span id="h1s">static head</span></div>
+<div id="c1" class="box cf"><div class="fl"></div></div><div id="c1n">after1</div>
+<script>
+const R=n=>{const q=document.getElementById(n).getBoundingClientRect();console.log('CS '+n+' '+[q.x,q.y,q.width,q.height].join(','))};
+['p1','a1','b1','b3','h1','h1s','c1','c1n'].forEach(R);
+</script></body></html>

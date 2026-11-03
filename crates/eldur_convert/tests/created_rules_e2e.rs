@@ -75,14 +75,92 @@ TestCase {
 
 /// `(page, Chromium's line, ours, why)`: what is known to differ, in full, so a
 /// changed difference and one that went away both fail.
-const KNOWN: &[(&str, &str, &str, &str)] = &[(
-    "rule_probe_crt2",
-    "CS a2 143.328125,8,129.328125,56",
-    "CS a2 143,8,130,56",
-    "a static grid no script fills is a GridLayout, which gives its 1fr tracks whole \
+const KNOWN: &[(&str, &str, &str, &str)] = &[
+    (
+        "rule_probe_crt2",
+        "CS a2 143.328125,8,129.328125,56",
+        "CS a2 143,8,130,56",
+        "a static grid no script fills is a GridLayout, which gives its 1fr tracks whole \
      pixels (129, 129, 130 of 388); it was so before created elements were laid out \
      by the runtime, and a page with no script keeps its converted QML",
-)];
+    ),
+    (
+        "rule_table_widths",
+        "CS t6c00 9,324.5,225.078125,21",
+        "CS t6c00 9,325,226,21",
+        "the table solver (`tableColumnWidths`, `tableRowHeights`) gives columns and rows \
+     whole pixels so cell borders are drawn sharp: Chromium's 225.08px column becomes \
+     226, and the 21.5px head row above it 22",
+    ),
+    (
+        "rule_child_nodes",
+        "CS g5 54.484375,69,32.34375,23",
+        "CS g5 54.4219,72,19.5469,17",
+        "a created `display: inline` span with padding, border and background that is an \
+     item on a line (its static parent has templates for elements, so it doesn't join \
+     a model) is drawn as bare text: only a model's nodes and the converter's static \
+     inline items have their box painted on the line's fragments",
+    ),
+    (
+        "rule_pseudo_boxes",
+        "CS b1 8,44,58.25,20",
+        "CS b1 8,44,59,20",
+        "a text box is as wide as `Math.ceil` of its implicit width, so a wrapping Text \
+     keeps its last word on the line: the inline-block's 34.25px text is 35",
+    ),
+    (
+        "rule_pseudo_boxes",
+        "CS b3 70.140625,46,23.359375,16",
+        "CS b3 70.875,45.999999,23.267578125,16",
+        "follows the inline-block before it on the line, 0.75px wider (above)",
+    ),
+    (
+        "rule_table_row_added",
+        "CS hn 8.5,8.5,199,23",
+        "CS hn 8,8,200,23",
+        "a written collapsed table keeps its columns and rows on whole pixels so its \
+     borders are drawn sharp: its first column holds the table's outer half border \
+     as well, and a cell measures from its border's first pixel, not its middle",
+    ),
+    (
+        "rule_table_row_added",
+        "CS r0a 8.5,31.5,199,23",
+        "CS r0a 8,31,200,23",
+        "a written collapsed table keeps its columns and rows on whole pixels so its \
+     borders are drawn sharp: its first column holds the table's outer half border \
+     as well, and a cell measures from its border's first pixel, not its middle",
+    ),
+    (
+        "rule_table_row_added",
+        "CS r1a 8.5,54.5,199,23",
+        "CS r1a 8,54,200,23",
+        "a written collapsed table keeps its columns and rows on whole pixels so its \
+     borders are drawn sharp: its first column holds the table's outer half border \
+     as well, and a cell measures from its border's first pixel, not its middle",
+    ),
+    (
+        "rule_table_row_added",
+        "CS tot 207.5,77.5,120,23",
+        "CS tot 208,77,120,24",
+        "a written collapsed table keeps its rows on whole pixels: its last row holds the \
+     table's outer half border as well, and measures from its border's first pixel",
+    ),
+    (
+        "rule_table_row_added",
+        "CS r2a 8.5,77.5,199,23",
+        "CS r2a 8,77,200,23",
+        "a written collapsed table keeps its columns and rows on whole pixels so its \
+     borders are drawn sharp: its first column holds the table's outer half border \
+     as well, and a cell measures from its border's first pixel, not its middle",
+    ),
+    (
+        "rule_table_row_added",
+        "CS tot 207.5,100.5,120,23",
+        "CS tot 208,100,120,24",
+        "a written collapsed table keeps its rows on whole pixels: its last row holds the \
+     table's outer half border as well, and measures from its border's first pixel",
+    ),
+];
 
 /// Pixels a logged number may be off: glyph widths differ a little between the two
 /// text engines. Whole numbers rounded by a page's helper are held exactly.
@@ -633,4 +711,52 @@ fn rule_float_margins_created() {
 #[test]
 fn rule_float_margins_static() {
     page("rule_float_margins_static");
+}
+
+#[test]
+fn rule_probe_crt4() {
+    page("rule_probe_crt4");
+}
+
+#[test]
+fn rule_table_widths() {
+    page("rule_table_widths");
+}
+
+#[test]
+fn rule_css_text() {
+    page("rule_css_text");
+}
+
+#[test]
+fn rule_badge_in_text() {
+    page("rule_badge_in_text");
+}
+
+#[test]
+fn rule_child_nodes() {
+    page("rule_child_nodes");
+}
+
+/// `counter(list-item)` from the lists' own numbering (an `<ol start>` and a
+/// nested `<ol>` with an unrelated `counter-reset` included), and counters a
+/// `::before` changes itself, as items are added and moved.
+#[test]
+fn rule_counters_own() {
+    page("rule_counters_own");
+}
+
+/// `::before` and `::after` that are boxes: an inline-block icon on the line, an
+/// absolutely positioned badge (which gives its line no baseline), a block
+/// heading and a clearfix table.
+#[test]
+fn rule_pseudo_boxes() {
+    page("rule_pseudo_boxes");
+}
+
+/// A form adds a row to a written collapsed table and the rows are sorted: the
+/// made row's cells, which draw all four borders, measure as the written ones.
+#[test]
+fn rule_table_row_added() {
+    page("rule_table_row_added");
 }

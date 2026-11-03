@@ -138,7 +138,7 @@ ApplicationWindow {
                             }
                             objectName: "compact"
                             Layout.fillWidth: true
-                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                            Layout.maximumWidth: implicitWidth
                             Layout.fillHeight: true
 
                             onClicked: {
@@ -178,7 +178,7 @@ ApplicationWindow {
                             }
                             objectName: "ok"
                             Layout.fillWidth: true
-                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                            Layout.maximumWidth: implicitWidth
                             Layout.fillHeight: true
                             Layout.leftMargin: 8
 
@@ -219,7 +219,7 @@ ApplicationWindow {
                             }
                             objectName: "warn"
                             Layout.fillWidth: true
-                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                            Layout.maximumWidth: implicitWidth
                             Layout.fillHeight: true
                             Layout.leftMargin: 8
 
@@ -260,7 +260,7 @@ ApplicationWindow {
                             }
                             objectName: "more"
                             Layout.fillWidth: true
-                            Layout.maximumWidth: Math.ceil(implicitWidth)
+                            Layout.maximumWidth: implicitWidth
                             Layout.fillHeight: true
                             Layout.leftMargin: 8
 

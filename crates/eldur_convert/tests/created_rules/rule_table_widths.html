@@ -1,0 +1,38 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial,sans-serif}
+table{margin:6px 0}
+td,th{padding:2px 5px;border:1px solid #999}
+.w500{width:500px;border-spacing:4px}
+.mw{min-width:320px}
+.xw{max-width:220px}
+.pct{width:50%}
+.fixed{table-layout:fixed;width:400px}
+.fixed td.a{width:60px}
+.cap{border-collapse:collapse;border:2px solid #333;width:300px}
+.cap caption{padding:3px;background:#eee}
+.cap tfoot td{font-weight:bold}
+.bold td{font-weight:bold}
+</style></head><body>
+<div id="top">top</div>
+<div id="mid">mid</div>
+<div id="end">end</div>
+<script>
+const mk=(cls,rows,id)=>{const t=document.createElement('table');t.className=cls;t.id=id;const b=t.createTBody();rows.forEach((r,i)=>{const tr=b.insertRow();tr.id=id+'r'+i;r.forEach((v,j)=>{const c=tr.insertCell();c.textContent=v;c.id=id+'c'+i+j})});return t};
+const tp=document.getElementById('top'),mid=document.getElementById('mid'),end=document.getElementById('end');
+tp.after(mk('w500',[['Apples','3'],['Pears','10']],'t1'));
+mid.before(mk('mw',[['a','b']],'t2'));
+document.body.insertBefore(mk('xw',[['A rather long text that has to wrap somewhere','x']],'t3'),end);
+document.body.insertBefore(mk('pct',[['half','width']],'t4'),end);
+const f=mk('fixed',[['one','two','three']],'t5');f.rows[0].cells[0].className='a';document.body.append(f);
+const c=mk('cap',[['body cell','2']],'t6');
+c.createCaption().textContent='The caption';c.caption.id='cap';
+const fr=c.createTFoot().insertRow();fr.id='foot';['Total','2'].forEach(v=>{fr.insertCell().textContent=v});
+const hr=c.createTHead().insertRow();hr.id='head';['Name','N'].forEach(v=>{const th=document.createElement('th');th.textContent=v;hr.appendChild(th)});
+document.body.append(c);
+const R=n=>{const q=document.getElementById(n).getBoundingClientRect();console.log('CS '+n+' '+[q.x,q.y,q.width,q.height].join(','))};
+const ids=['top','t1','t1r0','t1c00','t1c01','mid','t2','t2c00','t3','t3c00','t4','t4c00','end','t5','t5c00','t5c01','t5c02','t6','cap','head','t6r0','t6c00','foot'];
+setTimeout(()=>{ids.forEach(R);
+ document.getElementById('t1').classList.add('bold');document.getElementById('t2').classList.add('bold');
+ setTimeout(()=>{['t1','t1c00','t2'].forEach(R);document.body.appendChild(document.createElement('div')).id='csdone'},50);
+},50);
+</script></body></html>

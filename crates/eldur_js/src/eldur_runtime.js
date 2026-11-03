@@ -1973,7 +1973,7 @@ function _pseudoTouch() {
 
 // An element in or out changes the numbers after it.
 function _counterTouch() {
-    if (_counterRules.length > 0) {
+    if (_counterRules.length > 0 || (_pseudoRules && _pseudoRules.some(_counterUsed))) {
         _pseudoTouch();
     }
 }
@@ -2031,15 +2031,18 @@ function _counterDisplayed(raw) {
 
 // The counters each of `wanted` sees at its `::before` and its `::after`: the
 // document walked in order, each element's reset, then increment, then set
-// (CSS Lists 3 §4), a counter reaching its element's following siblings.
-function _counterValues(wanted) {
+// (CSS Lists 3 §4), a counter reaching its element's following siblings. A
+// generated box counts inside its element, before or after its children.
+function _counterValues(wanted, generated) {
     var changes = new Map();
     _counterRules.forEach(function(rule, order) {
         var rank = rule.spec[0] * 1e6 + rule.spec[1] * 1e3 + rule.spec[2];
+        var side = rule.after === undefined ? "own" : rule.after ? "after" : "before";
         var found = document.querySelectorAll(rule.sel);
         for (var i = 0; i < found.length; ++i) {
             var raw = _unwrap(found[i]);
-            var entry = changes.get(raw) || {};
+            var sides = changes.get(raw) || { own: {}, before: {}, after: {} };
+            var entry = sides[side];
             rule.changes.forEach(function(change) {
                 var weight = (change[2] ? 1e9 : 0) + rank;
                 var had = entry[change[0]];
@@ -2047,7 +2050,7 @@ function _counterValues(wanted) {
                     entry[change[0]] = { list: change[1], weight: weight, order: order };
                 }
             });
-            changes.set(raw, entry);
+            changes.set(raw, sides);
         }
     });
     var frames = [[]];
@@ -2063,6 +2066,38 @@ function _counterValues(wanted) {
         frames[frames.length - 1].push(made);
         return made;
     };
+    var reset = function(name, value) {
+        var frame = frames[frames.length - 1];
+        var at = frame.filter(function(x) { return x.name === name; })[0];
+        if (at) {
+            at.value = value;
+        } else {
+            frame.push({ name: name, value: value });
+        }
+    };
+    var names = function(own, prop, name) {
+        return Boolean(own[prop]) && own[prop].list.some(function(c) { return c[0] === name; });
+    };
+    var apply = function(own, raw) {
+        (own["counter-reset"] ? own["counter-reset"].list : []).forEach(function(c) { reset(c[0], c[1]); });
+        // HTML's lists number their items whatever counters the page resets
+        // on them (measured: an `<ol>` with `counter-reset: n` restarts at i).
+        var tag = raw ? _nodeTag(raw) : "";
+        if ((tag === "ol" || tag === "ul" || tag === "menu") && !names(own, "counter-reset", "list-item")) {
+            var start = tag === "ol" ? parseInt(getAttribute(raw, "start"), 10) : NaN;
+            reset("list-item", isNaN(start) ? 0 : start - 1);
+        }
+        if (raw && !names(own, "counter-increment", "list-item")
+            && (_gHasCascade() ? _gStyle(raw).display === "list-item" : tag === "li")) {
+            innermost("list-item").value += 1;
+        }
+        (own["counter-increment"] ? own["counter-increment"].list : []).forEach(function(c) {
+            innermost(c[0]).value += c[1];
+        });
+        (own["counter-set"] ? own["counter-set"].list : []).forEach(function(c) {
+            innermost(c[0]).value = c[1];
+        });
+    };
     var snapshot = function() {
         var all = [];
         frames.forEach(function(frame) {
@@ -2075,32 +2110,23 @@ function _counterValues(wanted) {
         if (!_counterDisplayed(raw)) {
             return;
         }
-        var own = changes.get(raw);
-        if (own) {
-            var frame = frames[frames.length - 1];
-            (own["counter-reset"] ? own["counter-reset"].list : []).forEach(function(c) {
-                var at = frame.filter(function(x) { return x.name === c[0]; })[0];
-                if (at) {
-                    at.value = c[1];
-                } else {
-                    frame.push({ name: c[0], value: c[1] });
-                }
-            });
-            (own["counter-increment"] ? own["counter-increment"].list : []).forEach(function(c) {
-                innermost(c[0]).value += c[1];
-            });
-            (own["counter-set"] ? own["counter-set"].list : []).forEach(function(c) {
-                innermost(c[0]).value = c[1];
-            });
+        var sides = changes.get(raw) || { own: {}, before: {}, after: {} };
+        var made = generated.get(raw) || {};
+        apply(sides.own, raw);
+        frames.push([]);
+        if (made.before) {
+            apply(sides.before, null);
         }
         var seen = wanted.has(raw) ? { before: snapshot() } : null;
-        frames.push([]);
         _rawElementChildren(raw).forEach(visit);
-        frames.pop();
+        if (made.after) {
+            apply(sides.after, null);
+        }
         if (seen) {
             seen.after = snapshot();
             out.set(raw, seen);
         }
+        frames.pop();
     };
     var top = _unwrap(document.documentElement);
     if (top) {
@@ -2254,15 +2280,21 @@ function _pseudoFlush(baseline) {
     var numbered = null;
     if (_counterRules.length > 0 || _pseudoRules.some(_counterUsed)) {
         var wanted = new Set();
+        // Which elements have a generated box, whose own counters count.
+        var generated = new Map();
         _pseudoRules.forEach(function(rule) {
-            if (_counterUsed(rule)) {
-                var at = document.querySelectorAll(rule.sel);
-                for (var w = 0; w < at.length; ++w) {
-                    wanted.add(_unwrap(at[w]));
+            var at = rule.drawOnly ? [] : document.querySelectorAll(rule.sel);
+            for (var w = 0; w < at.length; ++w) {
+                var holder = _unwrap(at[w]);
+                var made = generated.get(holder) || {};
+                made[rule.after ? "after" : "before"] = true;
+                generated.set(holder, made);
+                if (_counterUsed(rule)) {
+                    wanted.add(holder);
                 }
             }
         });
-        numbered = wanted.size > 0 ? _counterValues(wanted) : null;
+        numbered = wanted.size > 0 ? _counterValues(wanted, generated) : null;
     }
     _pseudoRules.forEach(function(rule, order) {
         var found = document.querySelectorAll(rule.sel);
@@ -2625,15 +2657,16 @@ function dataset(item) {
 // An empty box has only the `Text` for its `textContent`, and the column
 // made here takes its place in the box's height.
 function _appendTarget(raw) {
+    // A table styled as a box still lays its rows out in its grid.
+    if (_meta(raw).tableGrid) {
+        return _meta(raw).tableGrid;
+    }
     if (_gIsBox(raw)) {
         return raw;
     }
     // What a scroller holds moves with it, so children belong in its content.
     if (raw.eldurScroller) {
         return _childContainer(raw);
-    }
-    if (_meta(raw).tableGrid) {
-        return _meta(raw).tableGrid;
     }
     if (raw.contentItem) {
         return raw.contentItem;
@@ -3057,6 +3090,7 @@ function _tableLayout(host) {
             return;
         }
         lm.tablePlacing = true;
+        _tableLiftCaptions(host);
         _tableOrderSections(host);
         _tablePlaceAll(host, live);
         lm.tablePlacing = false;
@@ -3175,6 +3209,7 @@ function _tablePlaceAll(host, live) {
     var sharedRight = function(c) {
         return collapsed && paintsRight(c) ? c.item.border.width : 0;
     };
+    _tableOuterPads(host, placed, rows.length);
     var adapters = measure().map(function(a, i) {
         var over = sharedAcross(placed.cells[i]);
         return Object.assign({}, a, {
@@ -3186,7 +3221,11 @@ function _tablePlaceAll(host, live) {
     if (isStatic) {
         host.eldurCreatedCells = adapters;
         if (live) {
-            _tableLiveSpecs(host, placed.columns);
+            if (_meta(host).tableMade) {
+                _tableMadeSpecs(host, placed);
+            } else {
+                _tableLiveSpecs(host, placed.columns);
+            }
             _tableWatchHost(host);
             var specsNow = host.columnSpecs;
             // Written, not bound: the width follows from these, and these from
@@ -3246,7 +3285,8 @@ function _tablePlaceAll(host, live) {
         _meta(c.item).tableBorderOver = last ? 0 : sharedRight(c);
         // A collapsed cell reaches to the middle of its borders. A written table's
         // columns start on whole pixels, so a cell made into it keeps to that grid.
-        _meta(c.item).tableCellInset = collapsed && !isStatic && (_tableOwnBorders(c.item) || paintsRight(c))
+        _meta(c.item).tableCellInset = collapsed && (!isStatic || _meta(host).tableMade)
+            && (_tableOwnBorders(c.item) || paintsRight(c))
             ? c.item.border.width / 2 : 0;
         c.item.width = acrossFrom(c) + _meta(c.item).tableBorderOver;
         if (_gIsBox(c.item)) {
@@ -3276,6 +3316,7 @@ function _tablePlaceAll(host, live) {
         }
         var over = shared(c);
         c.item.y = -over;
+        _meta(c.item).tableShareUp = over;
         if (_gIsBox(c.item)) {
             _tableBoxFill(c.item, sum + over);
         } else {
@@ -3457,20 +3498,213 @@ function _tableLiveHosts() {
 // under the box with its border, and beside the captions.
 function _tableSetUp() {
     _tableHosts = _tableLiveHosts();
-    _tableHosts.forEach(function(host) {
-        for (var cur = host; cur; cur = cur.parent) {
-            if (cur.eldurTag === "table") {
-                if (cur !== host) {
-                    _meta(cur).tableGrid = host;
-                    _meta(host).hostBox = cur;
-                }
-                break;
-            }
-        }
-        _tableBaseline(host);
-        _layoutChanged(host);
-    });
+    _tableHosts.forEach(_tableJoin);
     _tableHosts.forEach(function(host) { _tableLayout(host); });
+}
+
+function _tableJoin(host) {
+    for (var cur = host; cur; cur = cur.parent) {
+        if (cur.eldurTag === "table") {
+            if (cur !== host) {
+                _meta(cur).tableGrid = host;
+                _meta(host).hostBox = cur;
+            }
+            break;
+        }
+    }
+    _tableBaseline(host);
+    _layoutChanged(host);
+}
+
+// A table whose classes only a script knows has no template, but takes the form
+// `emit/table.rs` gives a written one a script fills: its captions in a column
+// above the box that paints it, and its grid in that box. `_tableStyleMade`
+// writes what its style says, from the cascade.
+var _TABLE_MADE_SOURCE = "import QtQuick; import QtQuick.Layouts; ColumnLayout { id: table; spacing: 0; "
+    + "property string eldurTag: \"table\"; property bool eldurMadeTable: true; "
+    + "property real eldurInL: 2; property real eldurInR: 2; property real eldurInT: 2; property real eldurInB: 2; "
+    + "property real eldurGivenW: -1; property real eldurRoom: Number.POSITIVE_INFINITY; "
+    + "property real eldurMinW: 0; property real eldurMaxW: Number.POSITIVE_INFINITY; "
+    + "Layout.fillWidth: false; "
+    + "Rectangle { id: body; color: \"transparent\"; border.width: 0; Layout.fillWidth: true; "
+    // Over the cells: collapsed, the table's wider border is the one shown.
+    + "Rectangle { anchors.fill: parent; z: 1; color: \"transparent\"; border.width: 0 } "
+    // CSS 2.1 §17.5.2: a table is never narrower than its content's narrowest,
+    // and min-width wins over max-width.
+    + "implicitWidth: Math.max(grid.minContentWidth + table.eldurInL + table.eldurInR, table.eldurMinW, "
+    + "Math.min(table.eldurMaxW, table.eldurGivenW >= 0 ? table.eldurGivenW "
+    + ": Math.min(grid.maxContentWidth + table.eldurInL + table.eldurInR, table.eldurRoom))); "
+    + "implicitHeight: grid.implicitHeight + table.eldurInT + table.eldurInB; "
+    + "Layout.maximumHeight: grid.eldurEmpty ? 0 : Number.POSITIVE_INFINITY; "
+    + "ColumnLayout { id: grid; property real columnSpacing: 2; property real rowSpacing: 2; "
+    + "property var columnSpecs: [null]; property var eldurCreatedCells: []; property var columnWidths: []; "
+    + "property bool eldurEmpty: false; property real maxContentWidth: 0; property real minContentWidth: 0; "
+    + "property bool eldurFixed: false; property real eldurOuterEdge: 0; spacing: 0; "
+    + "anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; "
+    + "anchors.leftMargin: table.eldurInL; anchors.rightMargin: table.eldurInR; anchors.topMargin: table.eldurInT } } }";
+
+// What the cascade says of a made table's box, written where its form reads it.
+function _tableStyleMade(table, grid) {
+    var s = _gStyle(table);
+    var avail = table.parent ? table.parent.width : 0;
+    var e = _gEdges(table, s, avail);
+    var px = function(prop) {
+        return _gPx(s[prop], avail, s.fontSize, s.rootSize);
+    };
+    var collapse = String(s["border-collapse"]).trim() === "collapse";
+    var before = [grid.eldurFixed, grid.columnSpacing, grid.rowSpacing].join();
+    var spacing = String(s["border-spacing"] || "").split(/\s+/).map(parseFloat)
+        .filter(function(v) { return !isNaN(v); });
+    var across = collapse ? 0 : spacing.length > 0 ? spacing[0] : 0;
+    var down = collapse ? 0 : spacing.length > 1 ? spacing[1] : across;
+    _gSet(grid, "columnSpacing", across);
+    _gSet(grid, "rowSpacing", down);
+    // Collapsed, padding does not apply and the outer border lies half inside
+    // the cells (CSS 2.1 §17.6.2). A made cell paints its own border whole: the
+    // table's wider one takes the difference, and is painted over it.
+    var cellBorder = 0;
+    _walkItems(grid, function(kid) {
+        if (/^t[dh]$/.test(_tablePartTag(kid)) && _tableOwnBorders(kid)) {
+            cellBorder = Math.max(cellBorder, kid.border.width);
+        }
+        return false;
+    });
+    var outer = function(side) {
+        return Math.max(side - cellBorder, 0) / 2;
+    };
+    _gSet(table, "eldurInL", collapse ? outer(e.bl) : e.bl + e.pl + across);
+    _gSet(table, "eldurInR", collapse ? outer(e.br) : e.br + e.pr + across);
+    _gSet(table, "eldurInT", collapse ? outer(e.bt) : e.bt + e.pt + down);
+    _gSet(table, "eldurInB", collapse ? outer(e.bb) : e.bb + e.pb + down);
+    var width = px("width");
+    var minW = px("min-width");
+    var maxW = px("max-width");
+    _gSet(table, "eldurGivenW", width === null ? -1 : _gOuterWidth(s, e, width));
+    _gSet(table, "eldurMinW", minW === null ? 0 : _gOuterWidth(s, e, minW));
+    _gSet(table, "eldurMaxW", maxW === null ? Number.POSITIVE_INFINITY : _gOuterWidth(s, e, maxW));
+    _gSet(table, "eldurRoom", Math.max(avail - (e.ml || 0) - (e.mr || 0), 0));
+    // Fixed layout needs a width to share out (CSS 2.1 §17.5.2.1).
+    _gSet(grid, "eldurFixed", s["table-layout"] === "fixed" && width !== null);
+    var body = grid.parent;
+    body.color = _gQtColor(s["background-color"]);
+    var edge = body.children[0];
+    var uniform = e.bt === e.br && e.bt === e.bb && e.bt === e.bl;
+    _gSet(edge.border, "width", uniform ? e.bt : 0);
+    if (uniform && e.bt > 0) {
+        edge.border.color = _gQtColor(s["border-top-color"]);
+    }
+    if ([grid.eldurFixed, grid.columnSpacing, grid.rowSpacing].join() !== before) {
+        _layoutChanged(grid);
+    }
+}
+
+// A made table's captions sit above the box with its border, at the table's
+// whole width, whichever way a script put them in.
+function _tableLiftCaptions(grid) {
+    var table = _meta(grid).hostBox;
+    if (!table || table.eldurMadeTable !== true) {
+        return;
+    }
+    var body = grid.parent;
+    var kids = [];
+    for (var i = 0; i < grid.children.length; ++i) {
+        kids.push(grid.children[i]);
+    }
+    var lifted = false;
+    kids.forEach(function(kid) {
+        if (_tablePartTag(kid) === "caption") {
+            kid.parent = null;
+            kid.parent = table;
+            lifted = true;
+        }
+    });
+    if (lifted) {
+        body.parent = null;
+        body.parent = table;
+    }
+}
+
+// A table made from a template is the converter's table with no rows yet, as a
+// written one a script fills: its grid takes the rows the script puts in.
+function _tableAdoptMade(item) {
+    var host = null;
+    _walkItems(item, function(kid) {
+        if (!host && kid.columnSpecs !== undefined && _tableIsLive(kid)) {
+            host = kid;
+        }
+        return Boolean(host);
+    });
+    if (!host || _tableHosts.indexOf(host) >= 0) {
+        return;
+    }
+    _meta(host).tableMade = true;
+    _tableHosts.push(host);
+    _tableJoin(host);
+    // The box that paints a table with no template is no element of its own,
+    // and what goes in it goes in the grid.
+    var table = _meta(host).hostBox;
+    if (table && host.parent !== table) {
+        _meta(host.parent).hostBox = table;
+        _meta(host.parent).tableGrid = host;
+    }
+}
+
+// Collapsed, a made table's outer border wins over its cells' where it is wider
+// (CSS 2.1 §17.6.2.1): half of it lies inside the cells along that edge. The
+// table paints it over theirs, and they make room for the rest.
+function _tableOuterPads(host, placed, rowCount) {
+    var table = _meta(host).hostBox;
+    if (!table || table.eldurMadeTable !== true || !_tableCollapses(host)) {
+        return;
+    }
+    var ts = _gStyle(table);
+    var columns = placed.columns;
+    placed.cells.forEach(function(c) {
+        if (!_gIsBox(c.item)) {
+            return;
+        }
+        var cs = _gStyle(c.item);
+        var extra = function(onEdge, side) {
+            return onEdge ? Math.max(ts["border-" + side + "-px"] - cs["border-" + side + "-px"], 0) / 2 : 0;
+        };
+        var pads = [
+            extra(c.row === 0, "top"),
+            extra(c.column + c.columnSpan >= columns, "right"),
+            extra(c.row + c.rowSpan >= rowCount, "bottom"),
+            extra(c.column === 0, "left")
+        ];
+        var m = _meta(c.item);
+        var had = m.tableOuterPad;
+        if (pads.some(function(v) { return v > 0; })) {
+            m.tableOuterPad = pads;
+        } else if (had) {
+            delete m.tableOuterPad;
+        }
+    });
+}
+
+// A made table's columns: in fixed layout its first row's cell widths
+// (CSS 2.1 §17.5.2.1), otherwise only what its cells hold.
+function _tableMadeSpecs(host, placed) {
+    var specs = [];
+    for (var c = 0; c < Math.max(placed.columns, 1); ++c) {
+        specs.push(null);
+    }
+    if (host.eldurFixed && _gHasCascade()) {
+        placed.cells.forEach(function(cell) {
+            if (cell.row !== 0 || cell.columnSpan !== 1) {
+                return;
+            }
+            var s = _gStyle(cell.item);
+            var px = _gPx(s.width, host.width, s.fontSize, s.rootSize);
+            if (px !== null) {
+                specs[cell.column] = _gOuterWidth(s, _gEdges(cell.item, s, host.width), px);
+            }
+        });
+    }
+    if (JSON.stringify(specs) !== JSON.stringify(host.columnSpecs)) {
+        host.columnSpecs = specs;
+    }
 }
 
 // What a cell's own rule, its row's, its section's and its column's add up to,
@@ -3618,6 +3852,10 @@ function _tableBaseline(host) {
 
 function _tableRepaintAll() {
     _tableHosts.forEach(function(host) {
+        var made = _meta(host).hostBox;
+        if (made && made.eldurMadeTable === true && _isConnected(made)) {
+            _tableStyleMade(made, host);
+        }
         if (_isConnected(host)) {
             _tableRepaint(host, false);
         }
@@ -4350,6 +4588,14 @@ function _rawKids(raw, withText) {
             continue;
         }
         if (!isLayout && _isPlainTextItem(child) && !child.objectName && !_meta(child).createdTag) {
+            // What a script put in a box's own Text are nodes of its model.
+            var boxModel = _vModelOf(child);
+            if (boxModel && !boxModel.select) {
+                boxModel.kids.filter(withText ? _vIsRendered : _vIsElement).forEach(function(k) {
+                    out.push(k);
+                });
+                continue;
+            }
             // A box's own Text, while it holds nothing, is no text node.
             if (withText && _vHasRules() && !_meta(child).vSplit && child.text !== "") {
                 out.push(child);
@@ -5087,22 +5333,24 @@ function setStyle(item, prop, value) {
     var str = value === null || value === undefined ? "" : String(value);
     var m = _meta(raw);
     if (rawName === "cssText") {
+        // The text replaces the whole declaration, the style attribute's
+        // part too: what it no longer names goes back to the cascade.
+        // The attribute's properties stay cleared after a later replacement.
+        var before = _styleDecls(raw, m).concat(
+            typeof raw.eldurStyle === "string" ? _parseDecls(raw.eldurStyle) : []);
+        var after = _parseDecls(str);
+        var named = {};
+        for (var a = 0; a < after.length; ++a) {
+            named[after[a][0]] = true;
+        }
         m.styles = {};
-        var decls = str.split(";");
-        for (var i = 0; i < decls.length; ++i) {
-            var d = decls[i].trim();
-            if (!d) {
-                continue;
+        for (var b = 0; b < before.length; ++b) {
+            if (!named[before[b][0]]) {
+                setStyle(raw, before[b][0], "");
             }
-            var colon = d.indexOf(":");
-            if (colon === -1) {
-                continue;
-            }
-            var k = d.slice(0, colon).trim();
-            var v = d.slice(colon + 1).trim();
-            if (k) {
-                setStyle(raw, k, v);
-            }
+        }
+        for (var i = 0; i < after.length; ++i) {
+            setStyle(raw, after[i][0], after[i][1]);
         }
         return;
     }
@@ -5293,6 +5541,51 @@ function _camelToKebab(propName) {
     });
 }
 
+// `name: value` pairs of a declaration text, names in kebab case.
+function _parseDecls(text) {
+    var out = [];
+    var decls = String(text).split(";");
+    for (var i = 0; i < decls.length; ++i) {
+        var colon = decls[i].indexOf(":");
+        if (colon <= 0) {
+            continue;
+        }
+        var k = decls[i].slice(0, colon).trim();
+        var v = decls[i].slice(colon + 1).trim();
+        if (k && v) {
+            out.push([k.indexOf("--") === 0 ? k : k.toLowerCase(), v]);
+        }
+    }
+    return out;
+}
+
+// The element's style declaration as el.style holds it: the style
+// attribute's properties where they were, as scripts have since set them,
+// then what scripts added, in the order they added it.
+function _styleDecls(raw, m) {
+    var out = [];
+    var seen = {};
+    var attr = raw && typeof raw.eldurStyle === "string" ? _parseDecls(raw.eldurStyle) : [];
+    for (var i = 0; i < attr.length; ++i) {
+        var k = attr[i][0];
+        var camel = k.indexOf("--") === 0 ? k : _kebabToCamel(k);
+        var v = Object.prototype.hasOwnProperty.call(m.styles, camel) ? m.styles[camel] : attr[i][1];
+        seen[k] = true;
+        if (v !== "") {
+            out.push([k, v]);
+        }
+    }
+    var keys = Object.keys(m.styles);
+    for (var j = 0; j < keys.length; ++j) {
+        var kebab = keys[j].indexOf("--") === 0 ? keys[j] : _camelToKebab(keys[j]);
+        if (!seen[kebab] && m.styles[keys[j]] !== "") {
+            seen[kebab] = true;
+            out.push([kebab, m.styles[keys[j]]]);
+        }
+    }
+    return out;
+}
+
 function getStyle(item, prop) {
     var vRaw = _unwrap(item);
     if (vRaw && vRaw.__eldurInline) {
@@ -5301,18 +5594,9 @@ function getStyle(item, prop) {
     var m = _meta(item);
     var rawName = String(prop);
     if (rawName === "cssText") {
-        var keys = Object.keys(m.styles);
-        var parts = [];
-        var seen = {};
-        for (var i = 0; i < keys.length; ++i) {
-            var k = keys[i];
-            var kebab = k.indexOf("--") === 0 ? k : _camelToKebab(k);
-            if (!seen[kebab] && m.styles[k] !== "") {
-                seen[kebab] = true;
-                parts.push(kebab + ": " + m.styles[k]);
-            }
-        }
-        return parts.join("; ");
+        return _styleDecls(_unwrap(item), m).map(function(d) {
+            return d[0] + ": " + d[1] + ";";
+        }).join(" ");
     }
     if (Object.prototype.hasOwnProperty.call(m.styles, rawName)) {
         return m.styles[rawName];
@@ -5870,6 +6154,11 @@ function getBoundingClientRect(item) {
     if (half > 0) {
         w = raw.width;
         inset = [half, half, half, half];
+    } else if (_meta(raw).tableShareUp > 0) {
+        // In a written table the rows below keep to its whole-pixel grid: a made
+        // cell drawn up over the border it shares measures from its row's top,
+        // as the written cells beside it do.
+        inset = [inset[0], inset[1], inset[2] + _meta(raw).tableShareUp, inset[3]];
     }
     w -= inset[0] + inset[1];
     h -= inset[2] + inset[3];
@@ -7415,6 +7704,14 @@ function _textStartsLine(raw, column, lines) {
     var model = _vModelOf(text);
     var top = text.y;
     var extra = raw.implicitHeight - text.implicitHeight - column.implicitHeight;
+    // A flow under the text took the text's width; on the line the text is
+    // only as wide as its words, so the flow keeps the box's content width.
+    if (column === _meta(raw).flow) {
+        var left = text.x;
+        var right = raw.width - text.x - text.width;
+        column.x = left;
+        column.width = Qt.binding(function() { return Math.max(0, raw.width - left - right); });
+    }
     text.anchors.left = undefined;
     text.anchors.right = undefined;
     text.anchors.top = undefined;
@@ -7482,7 +7779,11 @@ function _lineToJoin(raw, nodes, ref) {
     if (after && _isLines(after) && _isAnonLines(after)) {
         return { lines: after, ref: after.children.length > 0 ? after.children[0] : null };
     }
-    if (!boxes || !_linesAvailable()) {
+    // Items following the page's own text, inline ones too, continue its line.
+    var ownText = kids.length === 0 && !_meta(raw).createdTag ? _findTextChild(raw) : null;
+    var continues = Boolean(ownText && ownText.text !== "" && ownText.visible)
+        && nodes.every(function(n) { return _gInlineInto(n, raw, ref); });
+    if ((!boxes && !continues) || !_linesAvailable()) {
         return null;
     }
     if (before && _vAnonText(before)) {
@@ -7788,7 +8089,8 @@ function _genericElementSource(tag, inputType) {
         return "import QtQuick; import QtQuick.Layouts; Item { Layout.fillWidth: true; Layout.preferredHeight: implicitHeight; property real eldurSide: 0; property real eldurTop: 0; property real eldurBottom: 0; Layout.leftMargin: eldurSide; Layout.rightMargin: eldurSide; Layout.topMargin: eldurTop; Layout.bottomMargin: eldurBottom; }";
     }
     if (tag === "table") {
-        return "import QtQuick; import QtQuick.Layouts; ColumnLayout { Layout.fillWidth: false; spacing: 0 }";
+        return _gActive() ? _TABLE_MADE_SOURCE
+            : "import QtQuick; import QtQuick.Layouts; ColumnLayout { Layout.fillWidth: false; spacing: 0 }";
     }
     if (tag === "thead" || tag === "tbody" || tag === "tfoot") {
         return "import QtQuick; import QtQuick.Layouts; ColumnLayout { Layout.fillWidth: true; spacing: 0; property real eldurSide: 0; property real eldurTop: 0; property real eldurBottom: 0; Layout.leftMargin: eldurSide; Layout.rightMargin: eldurSide; Layout.topMargin: eldurTop; Layout.bottomMargin: eldurBottom; }";
@@ -7925,9 +8227,12 @@ function _lookupTemplate(raw) {
     if (!_root || !_root.eldurTemplates || typeof _root.eldurTemplates !== "object") {
         return null;
     }
-    // A row has no form of its own for a template to describe, nor has a table
-    // whose rows are not there yet.
-    if (_TABLE_PARTS[_meta(raw).createdTag]) {
+    // A row or a section has no form of its own for a template to describe; a
+    // table's is the converter's with no rows, which `_tableAdoptMade` fills.
+    // An open page's cascade sizes the made form from every rule and its own
+    // style, where a template's spacing is fixed.
+    var tag = _meta(raw).createdTag;
+    if (_TABLE_PARTS[tag] && (tag !== "table" || _gActive())) {
         return null;
     }
     var templates = _root.eldurTemplates;
@@ -7948,7 +8253,7 @@ function _lookupTemplate(raw) {
     for (var i = 1; i < keys.length; ++i) {
         var cand = keys[i];
         if (templates[cand]) {
-            if (!_warnedMissingTemplates[exact]) {
+            if (!_meta(raw).lookCarried && !_warnedMissingTemplates[exact]) {
                 _warnedMissingTemplates[exact] = true;
                 console.warn("eldur: no style template for " + exact + "; using " + cand);
             }
@@ -7960,7 +8265,7 @@ function _lookupTemplate(raw) {
     var classed = exact.split("@")[0] + ".";
     var classless = exact.indexOf(".") < 0
         && Object.keys(templates).some(function(k) { return k.indexOf(classed) === 0; });
-    if (!classless && !_warnedMissingTemplates[exact]) {
+    if (!classless && !_meta(raw).lookCarried && !_warnedMissingTemplates[exact]) {
         _warnedMissingTemplates[exact] = true;
         console.warn("eldur: no style template for " + exact + "; using generic");
     }
@@ -8165,9 +8470,18 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
     if (oldRaw.objectName && !next.objectName) {
         next.objectName = oldRaw.objectName;
     }
+    var oldGrid = _tableHosts.indexOf(m.tableGrid);
     _itemMeta.delete(oldRaw);
     _itemMeta.set(next, m);
     m.raw = next;
+    // Before its rows come back: they go in the grid it holds.
+    if (m.createdTag === "table") {
+        if (oldGrid >= 0) {
+            _tableHosts.splice(oldGrid, 1);
+        }
+        delete m.tableGrid;
+        _tableAdoptMade(next);
+    }
     if (_gActive()) {
         _gReplaced.set(oldRaw, next);
         _aSwapped(oldRaw, next);
@@ -8210,7 +8524,13 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
         }
     }
 
-    if (childElements.length > 0 && !(carried && _vCarryModel(next, carried, childElements))) {
+    // Text nodes join the template's own Text rather than a column below it.
+    // Elements stay items: one may be a box something is placed in.
+    var onlyText = childElements.length > 0 && childElements.every(function(n) {
+        return _meta(n).createdTag === "#text";
+    });
+    if (childElements.length > 0 && !(carried && _vCarryModel(next, carried, childElements))
+        && !(onlyText && _vTryInsert(next, childElements, null))) {
         // Before the template's trailing spacers, renumbered.
         _insertChildren(next, childElements, null);
     }
@@ -14392,6 +14712,9 @@ function _vToReal(v) {
     m.raw = made;
     m.createdTag = v.eldurTag;
     m.connected = {};
+    // What the model painted, font and colour alone, the item is given below:
+    // it lacks nothing a template would add.
+    m.lookCarried = _vCullable(look);
     if (m._setRaw) {
         m._setRaw(made);
     }
@@ -14409,6 +14732,9 @@ function _vToReal(v) {
         made.font.underline = look.underline;
         made.font.strikeout = look.strike;
         made.font.pixelSize = look.size;
+        if (look.family) {
+            made.font.family = EldurFonts.family(look.family);
+        }
     }
     // The element is an item now, as its children are: a created element taking
     // a model's nodes would itself go back into a model it is no longer in.
@@ -14750,6 +15076,7 @@ function _vStaysInline(node, into, ref) {
         return false;
     }
     // A span the page's CSS makes a box is a box.
+    // A span the page's CSS makes a box is a box.
     if (!node.__eldurInline && tag !== "#text" && _gHasCascade()) {
         return _gStyleInto(node, into, ref).display === "inline";
     }
@@ -14769,6 +15096,27 @@ function _gStyleInto(node, into, ref) {
     _gGoingInto = null;
     m.gStyle = null;
     return style;
+}
+
+// Whether `node` is inline once in `into`, matched afresh: the rules it
+// matched before it had a parent, kept in `gMatched`, miss those reaching
+// through the parent (`.j span`). `_vStaysInline` still reads the kept ones;
+// the older line paths are tuned to that.
+function _gInlineInto(node, into, ref) {
+    if (!_vStaysInline(node, into, ref)) {
+        return false;
+    }
+    if (_isTextNode(node) || node.__eldurInline || !_gHasCascade()) {
+        return true;
+    }
+    var m = _meta(node);
+    var kept = m.gMatched;
+    var keptGen = m.gMatchGen;
+    m.gMatched = null;
+    var display = _gStyleInto(node, into, ref).display;
+    m.gMatched = kept;
+    m.gMatchGen = keptGen;
+    return display === "inline";
 }
 
 // Where `nodes` go, if a line of text takes them; else they are real items.
@@ -14836,13 +15184,28 @@ function _vTryInsert(raw, nodes, ref) {
     return true;
 }
 
+// A created element that is its own Text holds its text as a node, as the
+// page's do: asked for its children, the text becomes the model's one leaf.
+function _vCreatedTextModel(raw) {
+    var m = _meta(raw);
+    if (!_vHasRules() || !_isPlainTextItem(raw) || !m.createdTag || m.createdTag === "#text"
+        || m.vSplit || m.runText !== undefined || m.pseudo) {
+        return null;
+    }
+    if (_vModelOf(raw)) {
+        return _vModelOf(raw);
+    }
+    var text = m.explicitText !== undefined ? String(m.explicitText) : String(raw.text);
+    return text === "" ? null : _vEnsureModel(raw);
+}
+
 // The children and, with text, the child nodes of `raw`; shared since both
 // must agree where a model's nodes stand among a box's items.
 function _rawChildNodes(raw) {
     if (raw.__eldurInline) {
         return raw.kids ? raw.kids.filter(_vIsRendered) : [];
     }
-    var own = _vOwnModel(raw);
+    var own = _vOwnModel(raw) || _vCreatedTextModel(raw);
     if (own && !_meta(raw).flow) {
         return own.kids.filter(_vIsRendered);
     }
@@ -15808,6 +16171,9 @@ var document = {
         var qmlSrc = _genericElementSource(tag, "text");
         var created = Qt.createQmlObject(qmlSrc, _qobjectParent(), "eldur_el_" + tag);
         _meta(created).createdTag = tag;
+        if (tag === "table") {
+            _tableAdoptMade(created);
+        }
         if (_gActive()) {
             _gLive.push(created);
         }
@@ -16023,7 +16389,7 @@ var _G_INITIAL = {
     "background-position-x": "0%", "background-position-y": "0%", "background-repeat": "repeat",
     "text-shadow": "none", "outline-style": "none", "outline-width": "medium",
     "outline-color": "currentcolor", "outline-offset": "0px", "object-fit": "fill", "object-position": "50% 50%", "background-origin": "padding-box", "background-clip": "border-box", "background-attachment": "scroll",
-    "float": "none", "clear": "none", "vertical-align": "baseline"
+    "float": "none", "clear": "none", "vertical-align": "baseline", "table-layout": "auto"
 };
 // The controls whose box the UA sheet in the rule table describes: padding and
 // border are the control's insets.
@@ -16093,7 +16459,7 @@ function _gBoxSource(tag, outOfFlow) {
 // A cell is a box too: what it holds flows as in any block, and `_tableLayout`
 // gives it its width and its row's height.
 function _gWantsBox(tag) {
-    return (!_G_CONTROL.test(tag) || /^t[dh]$/.test(tag))
+    return (!_G_CONTROL.test(tag) || /^(t[dh]|caption)$/.test(tag))
         && !/^(#text|option|optgroup|script|style|template)$/.test(tag);
 }
 
@@ -16790,11 +17156,21 @@ function _gEdges(raw, s, basis) {
     var at = function(prop) {
         return _gPx(s[prop], basis, s.fontSize, s.rootSize);
     };
-    return {
+    var e = {
         mt: at("margin-top"), mr: at("margin-right"), mb: at("margin-bottom"), ml: at("margin-left"),
         pt: at("padding-top") || 0, pr: at("padding-right") || 0, pb: at("padding-bottom") || 0, pl: at("padding-left") || 0,
         bt: s["border-top-px"], br: s["border-right-px"], bb: s["border-bottom-px"], bl: s["border-left-px"]
     };
+    // A collapsed table's wider outer border takes room in the cells along it,
+    // which paint only their own: see `_tableOuterPads`.
+    var pads = (s.tag === "td" || s.tag === "th") ? _meta(raw).tableOuterPad : undefined;
+    if (pads) {
+        e.pt += pads[0];
+        e.pr += pads[1];
+        e.pb += pads[2];
+        e.pl += pads[3];
+    }
+    return e;
 }
 
 function _gKids(raw) {

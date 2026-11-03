@@ -1,0 +1,35 @@
+<!doctype html><html><head><style>
+body{margin:10px;font:15px Arial,sans-serif}
+.badge{display:inline-block;padding:0 5px;border-radius:8px;background:#c00;color:#fff;font-size:11px}
+.badge.hot{background:#f80}
+.pill{padding:2px 6px;background:#eef;border:1px solid #99c}
+#list li{padding:2px}
+</style></head><body>
+<ul id="list"><li id="a">Alpha</li><li id="b">Beta</li></ul>
+<div id="host">host</div>
+<script>
+const N=(n,e)=>console.log('CS '+n+' '+e.childNodes.length+' '+(e.firstChild?e.firstChild.nodeType+':'+e.firstChild.nodeValue:'-')+' ['+e.textContent+'] '+e.children.length);
+const a=document.getElementById('a'),b=document.getElementById('b'),host=document.getElementById('host');
+// 1 class + text before insert
+const s1=document.createElement('span');s1.className='badge';s1.textContent='1';a.appendChild(s1);N('s1',s1);
+// 2 text after insert
+const s2=document.createElement('span');s2.className='badge';b.appendChild(s2);s2.textContent='2';N('s2',s2);
+// 3 class after insert
+const s3=document.createElement('span');s3.textContent='3';host.appendChild(s3);s3.className='badge';N('s3',s3);
+// 4 class change to another template
+s1.classList.add('hot');N('s1h',s1);
+// 5 innerHTML
+const s5=document.createElement('span');s5.className='pill';s5.innerHTML='five';host.appendChild(s5);N('s5',s5);
+// 6 textContent then replaced
+s5.textContent='six';N('s5b',s5);
+// 7 div with text, then append element
+const d7=document.createElement('div');d7.className='pill';d7.textContent='seven';host.after(d7);d7.appendChild(document.createElement('b')).textContent='B';N('d7',d7);
+// 8 innerText
+const s8=document.createElement('span');s8.className='badge';host.appendChild(s8);s8.innerText='8';N('s8',s8);
+// 9 textContent '' 
+s8.textContent='';N('s8e',s8);
+// 10 li parent count
+N('a',a);N('b',b);N('host',host);
+const L=(n,e)=>{const r=e.getBoundingClientRect();console.log('CS '+n+' '+[r.x,r.y,r.width,r.height].join(','))};
+setTimeout(()=>{L('g1',s1);L('g2',s2);L('g3',s3);L('g5',s5);L('g7',d7);L('gh',host);N('s1t',s1);N('s2t',s2);N('s3t',s3);N('at',a);document.body.appendChild(document.createElement('div')).id='csdone';},50);
+</script></body></html>

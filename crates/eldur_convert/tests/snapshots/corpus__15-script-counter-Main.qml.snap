@@ -229,7 +229,7 @@ ApplicationWindow {
                                     }
                                     objectName: "dec"
                                     Layout.fillWidth: true
-                                    Layout.maximumWidth: Math.max(Math.ceil(implicitWidth), 64)
+                                    Layout.maximumWidth: Math.max(implicitWidth, 64)
                                     Layout.minimumWidth: 64
                                     Layout.fillHeight: true
                                     hoverEnabled: true
@@ -274,7 +274,7 @@ ApplicationWindow {
                                     }
                                     objectName: "inc"
                                     Layout.fillWidth: true
-                                    Layout.maximumWidth: Math.max(Math.ceil(implicitWidth), 64)
+                                    Layout.maximumWidth: Math.max(implicitWidth, 64)
                                     Layout.minimumWidth: 64
                                     Layout.fillHeight: true
                                     Layout.leftMargin: parent && parent.eldurLeads ? (parent.eldurLeads(this) ? 12 : 0) : 0
@@ -320,7 +320,7 @@ ApplicationWindow {
                                     }
                                     objectName: "reset"
                                     Layout.fillWidth: true
-                                    Layout.maximumWidth: Math.max(Math.ceil(implicitWidth), 64)
+                                    Layout.maximumWidth: Math.max(implicitWidth, 64)
                                     Layout.minimumWidth: 64
                                     Layout.fillHeight: true
                                     Layout.leftMargin: parent && parent.eldurLeads ? (parent.eldurLeads(this) ? 12 : 0) : 0

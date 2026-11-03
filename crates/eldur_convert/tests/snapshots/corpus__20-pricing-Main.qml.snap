@@ -218,9 +218,9 @@ ApplicationWindow {
                                                     verticalAlignment: Text.AlignVCenter
                                                     renderType: Text.NativeRendering
                                                 }
-                                                implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0133333) + leftPadding + rightPadding
+                                                implicitWidth: contentItem.implicitWidth * 1.0133333 + leftPadding + rightPadding
                                                 Layout.fillWidth: true
-                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.maximumWidth: implicitWidth
                                                 Layout.preferredHeight: 40
                                                 Layout.alignment: Qt.AlignTop
                                             }
@@ -296,9 +296,9 @@ ApplicationWindow {
                                                         }
                                                     }
                                                 }
-                                                implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0133333) + leftPadding + rightPadding
+                                                implicitWidth: contentItem.implicitWidth * 1.0133333 + leftPadding + rightPadding
                                                 Layout.fillWidth: true
-                                                Layout.maximumWidth: Math.ceil(implicitWidth)
+                                                Layout.maximumWidth: implicitWidth
                                                 Layout.preferredHeight: 40
                                                 Layout.alignment: Qt.AlignTop
                                                 Layout.leftMargin: 4

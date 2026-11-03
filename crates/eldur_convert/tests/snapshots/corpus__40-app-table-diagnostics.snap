@@ -2,4 +2,4 @@
 source: crates/eldur_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
-info[css]: index.html:47: a created <tr> has no item of its own in <body>, so it has no template there (dynamic-templates)
+

@@ -1161,7 +1161,7 @@ impl Emitter<'_, '_> {
             obj.set(
                 "implicitWidth",
                 Value::expr(format!(
-                    "Math.ceil(contentItem.implicitWidth * {scale}) + leftPadding + rightPadding"
+                    "contentItem.implicitWidth * {scale} + leftPadding + rightPadding"
                 )),
             );
         }

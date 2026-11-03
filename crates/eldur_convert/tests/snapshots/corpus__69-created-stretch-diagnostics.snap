@@ -3,4 +3,3 @@ source: crates/eldur_convert/tests/corpus.rs
 expression: "diagnostics.join(\"\\n\")"
 ---
 warning[js]: inline script #1:22: markup is not literal: only the elements written literally take the page's styles; the rest use generic items (dynamic-markup)
-info[css]: index.html:20: a created <div> goes where the script decides at run time; it is styled as if in <body> (dynamic-context)

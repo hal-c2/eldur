@@ -1,0 +1,32 @@
+<!doctype html><html><head><style>
+body{margin:8px;font:14px Arial}
+table.data{border-collapse:collapse;width:320px;table-layout:fixed}
+.data th,.data td{border:1px solid #bbb;padding:3px 6px;text-align:left}
+.data th{background:#eef;cursor:pointer}
+.data td.n{text-align:right}
+.data tfoot td{font-weight:bold;background:#f6f6f6}
+form{margin-top:10px}
+input{width:80px}
+ol.steps{padding-left:24px}
+ol.steps li.done{color:#999;text-decoration:line-through}
+</style></head><body>
+<table class="data" id="t"><thead><tr><th id="hn" style="width:186px">Name</th><th id="hq">Qty</th></tr></thead>
+<tbody id="tb"><tr><td>Pear</td><td class="n">4</td></tr><tr><td>Apple</td><td class="n">12</td></tr></tbody>
+<tfoot><tr><td>Total</td><td class="n" id="tot">16</td></tr></tfoot></table>
+<form id="f"><input id="nm" value="Fig"><input id="q" value="7"><button id="add" type="button">Add</button></form>
+<ol class="steps" id="st"><li id="l1">Pick</li><li id="l2">Wash</li></ol>
+<script>
+const R=n=>{const q=document.getElementById(n).getBoundingClientRect();console.log('CS '+n+' '+[q.x,q.y,q.width,q.height].join(','))};const done=()=>{document.body.appendChild(document.createElement('div')).id='csdone'};
+const $=i=>document.getElementById(i);
+const tag=()=>{[...$('tb').rows].forEach((r,i)=>{r.cells[0].id='r'+i+'a';r.cells[1].id='r'+i+'b'})};
+const ids=()=>['hn','hq','r0a','r0b','r1a','r1b','r2a','r2b','tot','nm','add','st','l1','l2','l3'].filter(i=>$(i));
+function addRow(){const tr=$('tb').insertRow();tr.insertCell().textContent=$('nm').value;const c=tr.insertCell();c.className='n';c.textContent=$('q').value;
+ $('tot').textContent=[...$('tb').rows].reduce((s,r)=>s+ +r.cells[1].textContent,0);}
+function sortBy(i){const rows=[...$('tb').rows].sort((a,b)=>a.cells[i].textContent.localeCompare(b.cells[i].textContent));rows.forEach(r=>$('tb').appendChild(r));}
+setTimeout(()=>{
+ tag();ids().forEach(R);
+ addRow();sortBy(0);tag();
+ $('l1').classList.add('done');const li=document.createElement('li');li.id='l3';li.textContent='Serve';$('st').appendChild(li);
+ setTimeout(()=>{ids().forEach(R);done()},50);
+},50);
+</script></body></html>

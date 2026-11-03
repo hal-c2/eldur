@@ -75,6 +75,10 @@ pub struct CounterRule {
     /// `(property, changes, important)`, the property one of `counter-reset`,
     /// `counter-increment` and `counter-set`; `none` is no changes.
     pub changes: Vec<(String, Vec<CounterChange>, bool)>,
+    /// `Some(true)` for the element's `::after`, `Some(false)` for its
+    /// `::before`: a pseudo-element counts inside its element, so it numbers
+    /// what follows it there (`li::before { counter-increment: step }`).
+    pub after: Option<bool>,
 }
 
 fn property(longhand: Longhand) -> Option<&'static str> {
@@ -109,6 +113,7 @@ fn box_property(longhand: Longhand) -> Option<&'static str> {
         L::BoxSizing => "box-sizing",
         L::BorderCollapse => "border-collapse",
         L::BorderSpacing => "border-spacing",
+        L::TableLayout => "table-layout",
         L::Width => "width",
         L::Height => "height",
         L::MinWidth => "min-width",
@@ -534,17 +539,24 @@ pub(crate) fn counter_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<C
             }
             for part in split_list(text) {
                 let part = part.trim();
-                // A pseudo-element's own counters are not followed.
-                if part.contains("::") || part.ends_with(":before") || part.ends_with(":after") {
+                let (element, after) = if let Some(e) = strip_pseudo(part, "after") {
+                    (e, Some(true))
+                } else if let Some(e) = strip_pseudo(part, "before") {
+                    (e, Some(false))
+                } else if part.contains("::") {
                     continue;
-                }
+                } else {
+                    (part, None)
+                };
                 let Some(specificity) = part_specificity(part) else {
                     continue;
                 };
+                let selector = if element.is_empty() { "*" } else { element };
                 out.push(CounterRule {
-                    selector: part.to_owned(),
+                    selector: selector.to_owned(),
                     specificity,
                     changes: changes.clone(),
+                    after,
                 });
             }
         }

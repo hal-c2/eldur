@@ -389,7 +389,7 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 renderType: Text.NativeRendering
                             }
-                            implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
+                            implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                             objectName: "ask"
                             width: Math.min(implicitWidth, Math.max(blockFlow.width, Math.ceil(Math.max(...ask.text.split(/\s+/).map(w => askWords.advanceWidth(w))) * 1.0256385) + leftPadding + rightPadding))
 
@@ -611,7 +611,7 @@ ApplicationWindow {
                                     wrapMode: Text.WordWrap
                                     renderType: Text.NativeRendering
                                 }
-                                implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
+                                implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                                 objectName: "cancel"
                                 width: Math.min(implicitWidth, Math.max(menuFlow.width, Math.ceil(Math.max(...cancel.text.split(/\s+/).map(w => cancelWords.advanceWidth(w))) * 1.0256385) + leftPadding + rightPadding))
 
@@ -660,7 +660,7 @@ ApplicationWindow {
                                     wrapMode: Text.WordWrap
                                     renderType: Text.NativeRendering
                                 }
-                                implicitWidth: Math.ceil(contentItem.implicitWidth * 1.0256385) + leftPadding + rightPadding
+                                implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                                 objectName: "save"
                                 width: Math.min(implicitWidth, Math.max(menuFlow.width, Math.ceil(Math.max(...save.text.split(/\s+/).map(w => saveWords.advanceWidth(w))) * 1.0256385) + leftPadding + rightPadding))
 

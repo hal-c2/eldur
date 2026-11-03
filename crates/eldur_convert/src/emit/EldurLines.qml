@@ -298,7 +298,9 @@ Item {
         if (typeof item.selectByMouse === "boolean") {
             return Math.round(item.baselineOffset);
         }
-        const kids = Array.from(item.children).filter(k => k.visible);
+        // A box taken out of flow (it has a slot where it would be) gives
+        // its container no baseline (CSS 2.2 §10.8.1).
+        const kids = Array.from(item.children).filter(k => k.visible && k.eldurSlot === undefined);
         // A flex row takes its first item's baseline, that item's bottom edge
         // when it has no text (css-flexbox §8.5); a spacer here has no height.
         if (item instanceof RowLayout) {

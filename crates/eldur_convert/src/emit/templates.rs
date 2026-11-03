@@ -72,11 +72,18 @@ fn attr(local: &str) -> QualName {
     QualName::new(None, ns!(), LocalName::from(local))
 }
 
-/// Elements whose text is not content.
+/// Elements whose text is not content. Text straight in a table or a row
+/// would be an anonymous cell, and would keep a table's grid from being live.
 fn holds_no_text(tag: &str) -> bool {
     matches!(
         tag,
-        "input"
+        "table"
+            | "thead"
+            | "tbody"
+            | "tfoot"
+            | "tr"
+            | "colgroup"
+            | "input"
             | "textarea"
             | "select"
             | "img"
@@ -635,6 +642,15 @@ pub(crate) fn add(
 ) -> Option<Added> {
     // Such an element becomes a node of the line, styled by the page's rules.
     let styled_as_node = |tag: &str| inline_rules && stays_inline(tag);
+    // Where no template fits, an open page's runtime cascade styles the
+    // element where it lands, and a table's rows and sections are only ever
+    // its grid's bookkeeping: saying they are styled as in <body> would be
+    // untrue.
+    let untemplated_is_fine = |tag: &str| {
+        styled_as_node(tag)
+            || scripts.analysis.open_elements
+            || matches!(tag, "tr" | "thead" | "tbody" | "tfoot" | "colgroup" | "col")
+    };
     let created = &scripts.analysis.created;
     if created.is_empty() || !cx.options.state_variants {
         return None;
@@ -669,7 +685,7 @@ pub(crate) fn add(
                             Some(t) => {
                                 builder.place(i, *node, Context::Static(t.qml_id.clone()), 0);
                             }
-                            None if styled_as_node(&e.tag) => {}
+                            None if untemplated_is_fine(&e.tag) => {}
                             None => diags.info(
                                 "css",
                                 e.line,
@@ -682,6 +698,7 @@ pub(crate) fn add(
                         }
                     }
                 }
+                ElementRef::Unknown if untemplated_is_fine(&e.tag) => {}
                 ElementRef::Unknown => diags.info(
                     "css",
                     e.line,
@@ -841,7 +858,7 @@ pub(crate) fn add(
                 Context::Any => "in <body>",
                 Context::Static(_) | Context::Probe(_) => "where the script puts it",
             };
-            if !styled_as_node(&e.tag) {
+            if !untemplated_is_fine(&e.tag) {
                 diags.info(
                 "css",
                 e.line,

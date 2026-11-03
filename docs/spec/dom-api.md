@@ -147,7 +147,7 @@ On a page with cascade rules a script's `el.style.<prop>` holds over the class b
 | `el.style.setProperty(name, val)` | `Eldur.wrap(<id>).style.setProperty(name, val)` | Supports both standard CSS properties (`background-color`, `width`, etc.) and CSS custom properties (`--*`) |
 | `el.style.getPropertyValue(name)` | `Eldur.wrap(<id>).style.getPropertyValue(name)` | Reads custom properties (`--*`) or mapped inline style values |
 | `el.style.removeProperty(name)` | `Eldur.wrap(<id>).style.removeProperty(name)` | Removes custom or inline property and returns previous value |
-| `el.style.cssText` (get / set) | `Eldur.wrap(<id>).style.cssText` | Parses `"prop: val; ..."` declarations and applies each via `setStyle` / `setProperty` (emits `Unsupported` static diagnostic because arbitrary CSS declarations cannot be statically bound in QML) |
+| `el.style.cssText` (get / set) | `Eldur.wrap(<id>).style.cssText` | The element's whole style declaration, the `style` attribute's part included. Reading gives `prop: value;` pairs joined by spaces, as Chromium does, so `cssText += "…"` appends. Setting replaces it: each declaration is applied through `setStyle`, and what the new text no longer names, the attribute's properties included, goes back to the cascade. No static diagnostic, since the runtime applies it like any `style.*` write. |
 | `window.getComputedStyle(el)` / `getComputedStyle(el)` | `Eldur.getComputedStyle(el)` | Returns live-like style view with `getPropertyValue(name)` and camelCase properties (`display`, `visibility`, `opacity`, `width`, `height`, `color`, `backgroundColor`, `borderRadius`, `borderWidth`, `fontSize`) |
 
 ---
@@ -454,7 +454,8 @@ container filled with inline-level children (`_gFillsLine`).
 - On a page without a cascade `getBoundingClientRect` of a `Text` counts its baseline translate, about 1 px low.
 - An inline element's rect is its font's ascent + descent around its run's baseline, as Chromium's (`tests/inline_runs_e2e.rs`). `getClientRects` follows Chromium's culled inline boxes: a span with no box of its own gives one rect per child unless a child differs in font. Generated content of the element's own font, as `<q>`'s quotes, is a child here: one rect for each quote and one for the text. Padding, border and generated text of another font give it a box.
 - A `querySelectorAll` matching any element inside a single `Text` goes to the runtime, so those are found; a partial static list would have dropped them.
-- A created row in a collapsed table reports a top half a border off; columns of a static collapsed table do not share created borders.
+- A cell of a written collapsed table measures from its borders' first pixel, not their middle, and its first column and last row hold the table's outer half border too (whole pixels keep the borders sharp); a row made into it measures as its written rows. Columns of a static collapsed table do not share created borders.
+- A written auto-layout table shares its spare width by its columns' max-content widths; Chromium weighs them otherwise (with 2px collapsed borders a 320px table's columns are 190 and 130 here, about 186 and 133 there): not yet understood.
 - A closed page's template keeps the converter's picture, except its margins:
   after a script changes the tree, the runtime works out each changed column's
   gaps, collapse through parents included, and holds each by a binding that keeps
@@ -488,7 +489,7 @@ container filled with inline-level children (`_gFillsLine`).
   `NATIVE_BORDER` in Rust, the created sources in the runtime.
 - A SpinBox has no empty state: a `type=number` nobody wrote reads `""` and shows 0.
 
-**Created elements on lines.** A created inline-level element under a static parent joins its line: a static `Text` becomes the line's first run, and an empty parent gets an anonymous line. Whitespace before the reference node becomes a text node there. A created `<span>` the rules make `inline-block` is a box even with no template for it. A created box's own children still use the older `_gLines` layouter, which does not place text beside boxes.
+**Created elements on lines.** A created inline-level element under a static parent joins its line: a static `Text` becomes the line's first run, and an empty parent gets an anonymous line. Whitespace before the reference node becomes a text node there. A created `<span>` the rules make `inline-block` is a box even with no template for it. When the parent's Text was anchored across a padded box (an `<li>`'s), the line keeps the box's content width; it doesn't take the Text's, which on the line is only as wide as its words. Inline elements appended after a static box's own text (`<p>Total: </p>` then a `<span class="pill">`) continue that text's line, as Chromium places them. They do not when the rules make one a box. Those rules are matched again for the place the element is going into: the ones it matched before it had a parent miss selectors that reach through it (`.j span:not(.k)`). A created element whose content is its own `Text` (`textContent` set on a template's element) reports that text as its one child node, so `childNodes` and `firstChild` see what Chromium does. A created box's own children still use the older `_gLines` layouter, which does not place text beside boxes.
 
 ## 14. Realistic pages
 

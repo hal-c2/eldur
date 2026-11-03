@@ -1,0 +1,24 @@
+<!doctype html><html><head><style>
+body{margin:10px;font:15px Arial,sans-serif}
+.card{padding:2px}
+</style></head><body>
+<div id="box">box</div>
+<div id="card" class="card" style="color: green">card</div>
+<div id="after">after</div>
+<script>
+const L=(n,e)=>{const r=e.getBoundingClientRect();console.log('CS '+n+' '+[r.x,r.y,r.width,r.height].join(','))};
+const box=document.getElementById('box');
+box.style.cssText='color: red; padding: 4px 6px; border: 1px solid blue';
+console.log('CS css '+box.style.cssText+' | '+box.style.padding+' | '+box.style.color);
+box.style.cssText+='margin-left: 20px;';
+console.log('CS css2 '+box.style.cssText);
+const card=document.getElementById('card');
+console.log('CS card0 '+card.style.cssText);
+card.style.cssText='width: 200px; background-color: rgb(0, 0, 255)';
+console.log('CS card1 '+card.style.cssText+' | '+card.style.color+' | '+card.style.width);
+card.style.cssText='';
+console.log('CS card2 ['+card.style.cssText+'] '+getComputedStyle(card).width);
+setTimeout(()=>{L('box',box);L('card',card);L('after',document.getElementById('after'));
+console.log('CS comp '+getComputedStyle(box).paddingLeft+' '+getComputedStyle(box).marginLeft+' '+getComputedStyle(box).color+' '+getComputedStyle(box).borderTopWidth);
+document.body.appendChild(document.createElement('div')).id='csdone';},50);
+</script></body></html>
