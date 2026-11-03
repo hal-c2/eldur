@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../../..");
 const { loadPlaywright } = await import(path.join(root, "tools/visual/playwright.mjs"));
-const { writeRecording, drainConsole, isMark } = await import(path.join(root, "tools/visual/record.mjs"));
+const { writeRecording, drainConsole, isMark, trackPending, catchUp } = await import(path.join(root, "tools/visual/record.mjs"));
 const shots = process.argv.includes("--shots") ? process.argv[process.argv.indexOf("--shots") + 1] : null;
 
 const only = process.argv.includes("--only") ? process.argv[process.argv.indexOf("--only") + 1].split(",") : null;
@@ -31,6 +31,7 @@ async function openTab() {
   tab.on("pageerror", (e) => {
     throw new Error(`page threw: ${e.message}`);
   });
+  await trackPending(tab);
   return tab;
 }
 let page = await openTab();
@@ -81,6 +82,11 @@ async function act(step) {
 
 async function state(name, watch) {
   await page.waitForTimeout(50);
+  // A step is what happened in its window, as the Qt side waits the same
+  // window. Timers due in it may still be waiting on a loaded machine: they
+  // run first. What is due later (a frame loop's next frame among it) belongs
+  // to the next step, so a page that never stops does not hold this.
+  await catchUp(page);
   // A bitmap of what is on screen, for the page to read `paint` watches from.
   let canvas = "null";
   if (watch.some((w) => w.paint)) {
@@ -139,6 +145,11 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
       break;
     }
     steps.push(await state(step.name, spec.watch));
+  }
+  // A page that logs and has nothing recorded was read before it said anything.
+  const html = fs.readFileSync(path.join(here, file), "utf8");
+  if (/console\.(log|info|warn|error)/.test(html) && steps.every((s) => s.log.length === 0)) {
+    throw new Error(`${name}: the page logs but no step recorded a line`);
   }
   out[name] = steps;
   if (shots) {

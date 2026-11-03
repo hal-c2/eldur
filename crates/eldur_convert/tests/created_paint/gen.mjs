@@ -16,13 +16,14 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../../..");
 const { loadPlaywright } = await import(path.join(root, "tools/visual/playwright.mjs"));
-const { writeRecording, drainConsole } = await import(path.join(root, "tools/visual/record.mjs"));
+const { writeRecording, trackPending, catchUp, settle, requireLogged } = await import(path.join(root, "tools/visual/record.mjs"));
 
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();
 const options = { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 };
 const page = await browser.newPage(options);
 const decoder = await browser.newPage(options);
+await trackPending(page);
 let log = [];
 page.on("console", (m) => {
   if (m.text().startsWith("CS ")) log.push(m.text());
@@ -90,6 +91,8 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
   await page.goto("file://" + path.join(here, file), { waitUntil: "load" });
   await page.mouse.move(1200, 780);
   await page.waitForTimeout(30);
+  // The pixels are what showed 30ms in; timers due by then have run.
+  await catchUp(page);
   const points = await places();
   const first = await pixels(points);
   const names = (await page.getAttribute("body", "data-steps")) || "";
@@ -98,10 +101,12 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
     const done = await step(name);
     // Past every transition on the pages.
     await page.waitForTimeout(250);
+    await catchUp(page);
     steps.push({ name, ...done, pixels: await pixels(points) });
   }
-  await page.waitForTimeout(30);
-  await drainConsole(page);
+  // The log is all the page says, however late its timers run.
+  await settle(page);
+  requireLogged(file, fs.readFileSync(path.join(here, file), "utf8"), log, "CS ");
   out[file.slice(0, -5)] = { log, pixels: first, steps };
 }
 await browser.close();

@@ -17,7 +17,8 @@
  * computed.mjs, executed before measuring (after --click):
  *   --run '[{"eval":"document.body.append(document.createElement(\"p\"))"}]'
  * Steps: eval, click, hover, focus, type [sel, text], wait ms.
- * `--after ms` waits that long after the steps, before measuring.
+ * `--after ms` waits that long after the steps, before measuring; the page's
+ * own timers and frames due by then have run, however loaded the machine.
  *
  * `--elements` (no selectors) prints every element that generates a box
  * other than an inline one, in document order, as {describe, x, y, width,
@@ -30,6 +31,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { loadPlaywright } from "./playwright.mjs";
+import { catchUp, trackPending } from "./record.mjs";
 import { runSteps } from "./run_steps.mjs";
 
 const args = process.argv.slice(2);
@@ -73,6 +75,7 @@ try {
     viewport: { width: 1280, height: 800 },
     deviceScaleFactor: 1,
   });
+  await trackPending(page, { current: html !== null });
   if (html !== null) {
     await page.setContent(html, { waitUntil: "load" });
   } else {
@@ -87,7 +90,10 @@ try {
     console.log(JSON.stringify({ click, ...scroll }));
   }
   if (run) await runSteps(page, run);
-  if (after) await page.waitForTimeout(after);
+  if (after) {
+    await page.waitForTimeout(after);
+    await catchUp(page);
+  }
   if (elements) {
     const rows = await page.evaluate(() => {
       const describe = (e) => {

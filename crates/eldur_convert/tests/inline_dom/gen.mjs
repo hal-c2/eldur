@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, "../../../..");
 const { loadPlaywright } = await import(path.join(root, "tools/visual/playwright.mjs"));
-const { writeRecording, drainConsole } = await import(path.join(root, "tools/visual/record.mjs"));
+const { writeRecording, trackPending, catchUp, settle, requireLogged } = await import(path.join(root, "tools/visual/record.mjs"));
 
 const { chromium } = await loadPlaywright();
 const browser = await chromium.launch();
@@ -25,6 +25,7 @@ const page = await browser.newPage({
   viewport: { width: 1280, height: 800 },
   deviceScaleFactor: 1,
 });
+await trackPending(page);
 let log = [];
 page.on("console", (m) => {
   if (m.text().startsWith("LC ")) log.push(m.text());
@@ -43,6 +44,7 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
       await page.keyboard.press(name.slice(4));
       clicks.push({ name, key: name.slice(4) });
       await page.waitForTimeout(30);
+      await catchUp(page);
       continue;
     }
     const point = await page.evaluate((name) => {
@@ -65,10 +67,13 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
     }, name);
     await page.mouse.click(point.x, point.y);
     clicks.push({ name, x: point.x, y: point.y });
-    // Console events arrive asynchronously; the next page must not steal these.
     await page.waitForTimeout(30);
+    // What the click set off and is due by now has run, however loaded the machine.
+    await catchUp(page);
   }
-  await drainConsole(page);
+  // The log is all the page says, however late its timers run.
+  await settle(page);
+  requireLogged(file, fs.readFileSync(path.join(here, file), "utf8"), log, "LC ");
   out[file.slice(0, -5)] = { log, clicks };
 }
 await browser.close();
