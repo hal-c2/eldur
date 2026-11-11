@@ -320,6 +320,50 @@ pub(crate) fn background_parts(value: &str) -> Option<(Option<String>, Option<St
     ))
 }
 
+/// A rule's `white-space` longhands, which the runtime reads as the one
+/// `white-space` its line breaking and space keeping go by.
+#[derive(Default)]
+struct WhiteSpaceParts {
+    collapse: Option<String>,
+    wrap: Option<String>,
+    important: bool,
+}
+
+impl WhiteSpaceParts {
+    fn set(&mut self, longhand: Longhand, value: &str, important: bool) {
+        let value = value.to_ascii_lowercase();
+        if longhand == Longhand::WhiteSpaceCollapse {
+            self.collapse = Some(value);
+        } else {
+            self.wrap = Some(value);
+        }
+        self.important |= important;
+    }
+
+    /// A longhand the rule leaves out is taken as its initial value: the
+    /// runtime has no per-longhand inheritance, and the shorthand, which sets
+    /// both, is what pages write.
+    fn declaration(&self) -> Option<(String, String, bool)> {
+        if self.collapse.is_none() && self.wrap.is_none() {
+            return None;
+        }
+        let nowrap = self.wrap.as_deref() == Some("nowrap");
+        let keyword = match (self.collapse.as_deref().unwrap_or("collapse"), nowrap) {
+            ("collapse", false) => "normal",
+            ("collapse", true) => "nowrap",
+            ("preserve", false) => "pre-wrap",
+            ("preserve", true) | ("break-spaces", true) => "pre",
+            // No keyword keeps breaks without wrapping: keeping the breaks
+            // and collapsing the spaces is what shows.
+            ("preserve-breaks", _) => "pre-line",
+            ("break-spaces", false) => "break-spaces",
+            // A CSS-wide keyword, which the shorthand sets on both longhands.
+            (other, _) => other,
+        };
+        Some(("white-space".to_owned(), keyword.to_owned(), self.important))
+    }
+}
+
 fn wide(keyword: &CssWide) -> &'static str {
     match keyword {
         CssWide::Initial => "initial",
@@ -379,8 +423,23 @@ pub(crate) fn runtime_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<R
                     || strip_pseudo(p.trim(), "after").is_some()
             });
             let mut declarations: Vec<(String, String, bool)> = Vec::new();
+            let mut white = WhiteSpaceParts::default();
             for d in &rule.declarations {
                 let entry = match &d.value {
+                    DeclValue::Expanded(
+                        l @ (Longhand::WhiteSpaceCollapse | Longhand::TextWrapMode),
+                        v,
+                    ) => {
+                        white.set(*l, v, d.important);
+                        None
+                    }
+                    DeclValue::Wide(
+                        l @ (Longhand::WhiteSpaceCollapse | Longhand::TextWrapMode),
+                        w,
+                    ) => {
+                        white.set(*l, wide(w), d.important);
+                        None
+                    }
                     DeclValue::Expanded(Longhand::Content, v) if on_pseudo => {
                         Some(("content".to_owned(), v.clone()))
                     }
@@ -414,6 +473,9 @@ pub(crate) fn runtime_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<R
                         declarations.push(decl);
                     }
                 }
+            }
+            if let Some(decl) = white.declaration() {
+                declarations.push(decl);
             }
             if declarations.is_empty() {
                 continue;
