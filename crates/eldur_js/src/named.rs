@@ -13,12 +13,12 @@ use oxc_span::{GetSpan, Span};
 use oxc_syntax::operator::UnaryOperator;
 
 use crate::parse::{ParsedScript, parse_script};
-use crate::resolve::unwrap_parens;
+use crate::resolve::{collect_window_property_writes, unwrap_parens};
 use crate::{Analysis, ScriptInput, ScriptKind};
 
 /// What the global object has before named access is asked: these win over an
 /// element of that name.
-const WINDOW_NAMES: &[&str] = &[
+pub(crate) const WINDOW_NAMES: &[&str] = &[
     "AbortController",
     "Array",
     "ArrayBuffer",
@@ -253,7 +253,7 @@ impl<'a> Visit<'a> for NameUses<'_> {
 /// source changed, and so whether `analysis` has to be taken again.
 ///
 /// A name means an element when nothing declares or assigns it, the window has no
-/// such property, and an element can have it as an id: `ids` is what the page
+/// such property (its own or one a script sets), and an element can have it as an id: `ids` is what the page
 /// wrote, and the script may write more. When a script computes an id, any such
 /// name can be one, so an undeclared name reads as null rather than throwing.
 pub fn resolve_named_elements(
@@ -282,6 +282,8 @@ pub fn resolve_named_elements(
                 taken.insert(scoping.symbol_name(sym).to_string());
             }
         }
+        // The window's own properties come before named access.
+        collect_window_property_writes(&parsed.program, scoping, &mut taken);
     }
     let names: HashSet<String> = free
         .into_iter()
