@@ -4340,8 +4340,16 @@ function _polishDown(item) {
 }
 
 // Takes a node out of the DOM. Never destroys it: a script may hold it and put
-// it back, as with a modal, and bindings of the page may read it by id.
+// it back, as with a modal, and bindings of the page may read it by id. Every
+// way of removing a node comes here, so the custom elements it takes along
+// hear of it whichever way it went.
 function _detachNode(raw) {
+    var leaving = _ceLeaving(raw);
+    _takeOut(raw);
+    _ceLeft(leaving);
+}
+
+function _takeOut(raw) {
     _counterTouch();
     // A browser says so as it goes; Qt only moves the focus, when it gets there.
     if (_in && _in.focused) {
@@ -5406,7 +5414,9 @@ function _replaceWithMarkup(raw, str) {
     _wsEnd(raw).length = 0;
     var parsed = _parseHtmlFragmentNodes(str);
     var nodes = _expandInsertRawNodes(parsed);
+    var held = _ceHold(nodes);
     _insertRawNodesBefore(_appendTarget(raw), nodes, null);
+    _ceInserted(held);
     _wsGiven(raw, "wsEnd", parsed.wsEnd);
 }
 
@@ -7028,6 +7038,23 @@ function _ceLeaving(raw) {
     return out;
 }
 
+// The custom elements a move takes out of their place in the document, the
+// nodes' own and those of the node they replace: a moved element is
+// disconnected before it is connected again.
+function _ceMoving(nodes, going) {
+    var out = [];
+    if (!_ce.any) {
+        return out;
+    }
+    for (var i = 0; i < nodes.length; ++i) {
+        out.push.apply(out, _ceLeaving(nodes[i]));
+    }
+    if (going) {
+        out.push.apply(out, _ceLeaving(going));
+    }
+    return out;
+}
+
 function _ceLeft(raws) {
     for (var i = 0; i < raws.length; ++i) {
         _ceCall(raws[i], "disconnectedCallback", []);
@@ -8458,9 +8485,16 @@ function _inlineBecomesLines(raw) {
     return next;
 }
 
-function _insertChildren(raw, nodes, ref) {
+// `going`, when given, is the node the inserted ones replace: it leaves once
+// they are in, and its custom elements hear so before the new ones do.
+function _insertChildren(raw, nodes, ref, going) {
     var held = _ceHold(nodes);
+    var leaving = _ceMoving(nodes, going);
     _insertChildrenAt(raw, nodes, ref);
+    if (going && going.parent !== undefined) {
+        _takeOut(going);
+    }
+    _ceLeft(leaving);
     _ceInserted(held);
 }
 
@@ -10604,9 +10638,7 @@ function wrap(rawItem) {
             if (rawChild && rawChild.__eldurInline) {
                 _vRemove(rawChild);
             } else if (rawChild && rawChild.parent !== undefined) {
-                var leaving = _ceLeaving(rawChild);
                 _detachNode(rawChild);
-                _ceLeft(leaving);
             }
             return child;
         },
@@ -10621,9 +10653,7 @@ function wrap(rawItem) {
             if (rawItem.__eldurInline) {
                 _vRemove(rawItem);
             } else if (rawItem.parent !== undefined) {
-                var leaving = _ceLeaving(rawItem);
                 _detachNode(rawItem);
-                _ceLeft(leaving);
             }
         },
         insertBefore: function(newChild, refChild) {
@@ -10645,10 +10675,7 @@ function wrap(rawItem) {
                 _vRemove(rawOld);
                 return oldChild;
             }
-            _insertChildren(rawItem, rawNodes, rawOld);
-            if (rawOld.parent !== undefined) {
-                _detachNode(rawOld);
-            }
+            _insertChildren(rawItem, rawNodes, rawOld, rawOld);
             return oldChild;
         },
         append: function() {
@@ -10708,10 +10735,7 @@ function wrap(rawItem) {
                 return;
             }
             var rawNodes = _expandInsertRawNodes(arguments);
-            _insertChildren(p, rawNodes, rawItem);
-            if (rawItem.parent !== undefined) {
-                _detachNode(rawItem);
-            }
+            _insertChildren(p, rawNodes, rawItem, rawItem);
         },
         replaceChildren: function() {
             var vAll = rawItem.__eldurInline ? rawItem : _vExisting(rawItem);
@@ -16399,7 +16423,9 @@ function _vTryInsert(raw, nodes, ref) {
         return false;
     }
     var held = _ceHold(nodes);
+    var leaving = _ceMoving(nodes, null);
     _vInsert(host, nodes, ref);
+    _ceLeft(leaving);
     _ceInserted(held);
     return true;
 }

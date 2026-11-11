@@ -4,6 +4,7 @@
   "LC appended attr:count:null:2,connected:host:n=2",
   "LC constructed true:COUNT-BADGE:ctor",
   "LC moved connected:host,disconnected:1",
+  "LC move disconnected,connected:other",
   "LC removed disconnected"
  ],
  "errors": [
@@ -11,6 +12,15 @@
   "LC again NotSupportedError:NotSupportedError",
   "LC plain TypeError:TypeError",
   "LC whenDefined SyntaxError"
+ ],
+ "lifecycle": [
+  "LC move disconnected:a,connected:p2",
+  "LC replaceChildren disconnected:a:0",
+  "LC replaceChild ctor,disconnected:b,connected:p1",
+  "LC replaceWith ctor,disconnected:c,connected:p1",
+  "LC textContent disconnected:d:0",
+  "LC innerHTML ctor,attr:3,connected:p3:1",
+  "LC cleared disconnected:e:0"
  ],
  "upgrade": [
   "LC before undefined",

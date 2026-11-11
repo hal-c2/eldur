@@ -2,6 +2,7 @@
 <html><head><meta charset="utf-8"><title>created</title></head>
 <body>
 <div id="host"></div>
+<div id="other"></div>
 <script>
 function L(k,v){console.log("LC "+k+" "+v)}
 var order=[];
@@ -26,6 +27,12 @@ order=[];
 document.getElementById("host").appendChild(b);
 document.getElementById("host").removeChild(a);
 L("moved",order.join(",")+":"+document.querySelectorAll("count-badge").length);
+order=[];
+document.getElementById("other").appendChild(a);
+document.getElementById("host").appendChild(a);
+order=[];
+document.getElementById("other").appendChild(a);
+L("move",order.join(","));
 order=[];
 b.remove();
 L("removed",order.join(","));
