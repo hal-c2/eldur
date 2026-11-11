@@ -4894,3 +4894,68 @@ function start() {
         assert!(output.contains(line), "{line} missing:\n{output}");
     }
 }
+
+// Expected values recorded from headless Chromium (Playwright) serving, over HTTP
+// with no missing.js next to it:
+//   <!DOCTYPE html><html><body><p id="out">pending</p><script>
+//   var log = [];
+//   var p = import("./missing.js");
+//   log.push("sync:" + (p instanceof Promise));
+//   p.then(function () { log.push("loaded"); },
+//          function (e) { log.push("rejected:" + (e instanceof TypeError)); });
+//   setTimeout(function () { document.getElementById("out").textContent = log.join(","); }, 200);
+//   </script></body></html>
+//   #out === "sync:true,rejected:true"
+// A module the converter could not inline must not stop page.js loading: the
+// rest of the script runs and the import rejects, as a missing module does.
+#[test]
+fn qml6_dynamic_import_of_a_module_not_inlined_rejects_and_the_page_still_runs() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default();
+    let (output, out) = run_page_allowing_unsupported(
+        &resolver,
+        r#"
+var log = [];
+var p = import("./missing.js");
+log.push("sync:" + (p instanceof Promise));
+p.then(function () { log.push("loaded"); },
+       function (e) { log.push("rejected:" + (e instanceof TypeError)); });
+var lazy = { load: function () { return import("./chunk" + ".js", { with: {} }); } };
+function report() { return log.join(","); }
+function reportLazy(done) {
+    lazy.load().then(function () { done("loaded"); },
+                     function (e) { done("lazy:" + (e instanceof TypeError) + ":" + String(e.message).indexOf("./chunk.js")); });
+}
+"#,
+        r#"Item {
+    id: root
+    property string lazy: ""
+    Timer {
+        interval: 50; running: true
+        onTriggered: {
+            console.log("ELDUR_OK_IMPORT", Page.report(), root.lazy);
+            Qt.quit();
+        }
+    }
+    Component.onCompleted: {
+        (Page.__eldur_init || Eldur.init)(root);
+        Page.reportLazy(function (s) { root.lazy = s; });
+    }
+}"#,
+    );
+    assert!(
+        output.contains("ELDUR_OK_IMPORT sync:true,rejected:true lazy:true:"),
+        "{output}"
+    );
+    assert!(!output.contains("lazy:true:-1"), "{output}");
+    assert!(
+        out.diagnostics
+            .iter()
+            .any(|d| d.message.contains("./missing.js") && d.message.contains("import(")),
+        "{:?}",
+        out.diagnostics
+    );
+    assert!(!out.page_js.contains("import("), "{}", out.page_js);
+}

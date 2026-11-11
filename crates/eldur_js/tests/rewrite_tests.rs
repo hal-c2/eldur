@@ -2727,3 +2727,62 @@ fn a_page_name_spelled_like_an_id_does_not_stand_for_the_element() {
         out.page_js
     );
 }
+
+/// A bundler's lazy chunk (`() => import("./chunk.js")`) inside an inlined
+/// module and in an inline handler: every `import(` leaves page.js, because
+/// QML refuses the whole file at that token, and each call is diagnosed once.
+#[test]
+fn lowers_dynamic_import_in_modules_and_handlers_and_diagnoses_each_once() {
+    let resolver = FakeResolver::default().with_element(1, "btn", TargetKind::Button);
+    let lazy = module_script(
+        "_astro/page.js",
+        r#"
+const loaders = { counter: () => import("./counter.js"), named: (n) => import(`./${n}.js`) };
+export function load(name) { return loaders[name](); }
+"#,
+    );
+    let main = module_script(
+        "_astro/main.js",
+        r#"
+import { load } from "./page.js";
+load("counter").catch(() => {});
+"#,
+    );
+    let click = handler(1, "click", r#"import("./on-click.js")"#);
+    let out = run_rewrite(&[lazy, main, click], &resolver);
+    assert!(!out.page_js.contains("import("), "{}", out.page_js);
+    assert!(
+        out.page_js
+            .contains(r#"counter: () => Eldur.dynamicImport("./counter.js")"#),
+        "{}",
+        out.page_js
+    );
+    assert!(
+        out.page_js.contains("Eldur.dynamicImport(`./${n}.js`)"),
+        "{}",
+        out.page_js
+    );
+    let messages: Vec<&str> = out
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("dynamic import"))
+        .map(|d| d.message.as_str())
+        .collect();
+    assert_eq!(
+        messages,
+        vec![
+            "dynamic import('./counter.js') cannot load a module in QML: the promise rejects as for a missing module",
+            "dynamic import() of a computed specifier cannot load a module in QML: the promise rejects as for a missing module",
+            "dynamic import('./on-click.js') cannot load a module in QML: the promise rejects as for a missing module",
+        ],
+        "{:?}",
+        out.diagnostics
+    );
+    assert!(
+        out.diagnostics
+            .iter()
+            .all(|d| d.severity == Severity::Unsupported),
+        "{:?}",
+        out.diagnostics
+    );
+}

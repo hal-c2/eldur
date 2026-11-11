@@ -5,10 +5,10 @@ use oxc_ast::ast::{
     AssignmentTargetPropertyIdentifier, AwaitExpression, BinaryExpression, BindingIdentifier,
     BindingPattern, BindingProperty, CallExpression, CatchClause, Class, ClassElement, ClassType,
     ComputedMemberExpression, Expression, ForInStatement, ForOfStatement, ForStatement, Function,
-    IdentifierReference, MethodDefinition, MethodDefinitionKind, ObjectExpression, ObjectProperty,
-    ObjectPropertyKind, PropertyKey, ReturnStatement, SimpleAssignmentTarget, Statement,
-    StaticMemberExpression, UnaryExpression, UpdateExpression, VariableDeclaration,
-    VariableDeclarationKind, VariableDeclarator,
+    IdentifierReference, ImportExpression, MethodDefinition, MethodDefinitionKind,
+    ObjectExpression, ObjectProperty, ObjectPropertyKind, PropertyKey, ReturnStatement,
+    SimpleAssignmentTarget, Statement, StaticMemberExpression, UnaryExpression, UpdateExpression,
+    VariableDeclaration, VariableDeclarationKind, VariableDeclarator,
 };
 use oxc_ast_visit::{Visit, walk};
 use oxc_semantic::{IsGlobalReference, Scoping, SymbolId};
@@ -1689,6 +1689,21 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             let header_span = Span::new(it.span.start, it.body.span.start);
             self.editor.replace(header_span, "catch (__eldur_err) ");
         }
+    }
+
+    fn visit_import_expression(&mut self, it: &ImportExpression<'a>) {
+        walk::walk_import_expression(self, it);
+        // A module that was inlined is reached through its bindings; one that
+        // reaches `import()` was not, and QML has no loader to fetch it.
+        let source = self.editor.extract_and_consume(it.source.span());
+        let call = match &it.options {
+            Some(options) => {
+                let options = self.editor.extract_and_consume(options.span());
+                format!("Eldur.dynamicImport({source}, {options})")
+            }
+            None => format!("Eldur.dynamicImport({source})"),
+        };
+        self.editor.replace(it.span, call);
     }
 
     fn visit_await_expression(&mut self, it: &AwaitExpression<'a>) {

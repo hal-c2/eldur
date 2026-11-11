@@ -3,8 +3,9 @@ use std::collections::{HashMap, HashSet};
 use oxc_allocator::Allocator;
 use oxc_ast::ast::{
     ArrowFunctionExpression, BigIntLiteral, BindingIdentifier, BindingPattern, CallExpression,
-    Class, ClassElement, Expression, ForOfStatement, Function, NewExpression, Program, RegExpFlags,
-    RegExpLiteral, Statement, VariableDeclaration, VariableDeclarationKind, WithStatement,
+    Class, ClassElement, Expression, ForOfStatement, Function, ImportExpression, NewExpression,
+    Program, RegExpFlags, RegExpLiteral, Statement, VariableDeclaration, VariableDeclarationKind,
+    WithStatement,
 };
 use oxc_ast_visit::{Visit, walk};
 use oxc_parser::Parser;
@@ -376,6 +377,20 @@ impl<'a> Visit<'a> for UnsupportedChecker<'_> {
             flags.push('v');
         }
         self.check_regex_pattern_and_flags(it.span, it.regex.pattern.text.as_str(), &flags);
+    }
+
+    fn visit_import_expression(&mut self, it: &ImportExpression<'a>) {
+        let what = match &it.source {
+            Expression::StringLiteral(spec) => format!("import('{}')", spec.value),
+            _ => "import() of a computed specifier".to_string(),
+        };
+        self.report(
+            it.span,
+            format!(
+                "dynamic {what} cannot load a module in QML: the promise rejects as for a missing module"
+            ),
+        );
+        walk::walk_import_expression(self, it);
     }
 
     fn visit_with_statement(&mut self, it: &WithStatement<'a>) {
