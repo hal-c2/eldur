@@ -834,3 +834,61 @@ fn output_does_not_depend_on_the_machines_fonts() {
         }
     }
 }
+
+/// A static site's pages link their stylesheet and images from the site's
+/// root (`/_assets/site.css`). Served from `dist/` over HTTP, Chromium
+/// (Playwright 1.65, 1280x800) gives the `<p>` `rgb(18, 52, 86)` from that
+/// sheet and loads the image; `--site-root dist` gives the converter the
+/// same files.
+#[test]
+fn site_root_resolves_root_relative_stylesheets_and_images() {
+    let td = TempDir::new("site_root");
+    let dist = td.path.join("dist");
+    fs::create_dir_all(dist.join("docs")).expect("create docs");
+    fs::create_dir_all(dist.join("_assets")).expect("create assets");
+    fs::write(dist.join("_assets/site.css"), "p { color: #123456 }").expect("write css");
+    fs::write(
+        dist.join("_assets/dot.svg"),
+        r#"<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"/>"#,
+    )
+    .expect("write svg");
+    let page = dist.join("docs/index.html");
+    fs::write(
+        &page,
+        r#"<!doctype html><link rel="stylesheet" href="/_assets/site.css"><p>Hi<img src="/_assets/dot.svg" alt=""></p>"#,
+    )
+    .expect("write page");
+
+    let convert = |site_root: Option<&Path>, out: &Path| {
+        let mut args = ConvertArgs::new(&page);
+        args.output = Some(out.to_path_buf());
+        args.site_root = site_root.map(Path::to_path_buf);
+        args.quiet = true;
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+        run_convert_with_io(&args, &eldur_cli::RealConverter, &mut stdout, &mut stderr)
+            .expect("convert");
+        (
+            fs::read_to_string(out.join("Main.qml")).expect("read Main.qml"),
+            String::from_utf8_lossy(&stderr).into_owned(),
+        )
+    };
+
+    let rooted_out = td.path.join("rooted");
+    let (qml, diags) = convert(Some(&dist), &rooted_out);
+    assert!(
+        qml.contains("#123456"),
+        "the rooted sheet's colour applies:\n{qml}"
+    );
+    assert!(!diags.contains("failed to load stylesheet"), "{diags}");
+    assert!(!diags.contains("was not found"), "{diags}");
+    assert!(rooted_out.join("assets/_assets/dot.svg").exists());
+
+    // Same page, same cache directory default, no root: the sheet is missing
+    // again, so the root must be part of the cache key.
+    let (plain_qml, plain_diags) = convert(None, &rooted_out);
+    assert!(!plain_qml.contains("#123456"), "{plain_qml}");
+    assert!(
+        plain_diags.contains("failed to load stylesheet"),
+        "{plain_diags}"
+    );
+}
