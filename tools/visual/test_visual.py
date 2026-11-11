@@ -239,6 +239,35 @@ Rectangle {
             self.assertFalse(any("page said" in line for line in warnings), warnings)
             self.assertTrue(any("page warned" in line for line in warnings), warnings)
 
+    def test_render_qml_timeout_reports_what_qml6_printed(self) -> None:
+        # A page still busy when the timeout ends: the error names the timeout
+        # and carries what qml6 said before it, rather than failing on the
+        # bytes subprocess hands back for a timed-out run.
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_dir = Path(tmp)
+            (tmp_dir / "Main.qml").write_text(
+                """import QtQuick
+
+Rectangle {
+    color: "#2563eb"
+    Component.onCompleted: {
+        console.warn("busy from here on")
+        var start = Date.now()
+        while (Date.now() - start < 20000) {}
+    }
+}
+""",
+                encoding="utf-8",
+            )
+            with self.assertRaises(render_qml.QmlRenderError) as caught:
+                render_qml.render_qml(
+                    tmp_dir, tmp_dir / "out.png", width=120, height=80, timeout=3.0,
+                    backend="software",
+                )
+            message = str(caught.exception)
+            self.assertIn("timed out after 3.0s", message)
+            self.assertIn("busy from here on", message)
+
     def test_render_qml_strict_fails_on_runtime_warnings(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_dir = Path(tmp)

@@ -247,6 +247,12 @@ def _without_page_logs(output: str) -> list[str]:
     return kept
 
 
+def _decoded(output: str | bytes | None) -> str:
+    if isinstance(output, bytes):
+        return output.decode("utf-8", errors="replace")
+    return output or ""
+
+
 def render_qml(
     qml_target: Path,
     out_png: Path,
@@ -349,7 +355,8 @@ def render_qml(
             check=False,
         )
     except subprocess.TimeoutExpired as exc:
-        out_so_far = ((exc.stdout or "") + "\n" + (exc.stderr or "")).strip()
+        # A timed-out run's output comes back as bytes even with text=True.
+        out_so_far = "\n".join(_decoded(part) for part in (exc.stdout, exc.stderr)).strip()
         detail = f"\nqml6 output before timeout:\n{out_so_far}" if out_so_far else ""
         raise QmlRenderError(
             f"qml6 timed out after {timeout:.1f}s while rendering {main_qml}{detail}"
