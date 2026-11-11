@@ -5869,6 +5869,10 @@ function setAttribute(item, attrName, attrValue) {
     if (item && !_isDomTarget(item) && typeof item.setAttribute === "function") {
         return item.setAttribute(attrName, attrValue);
     }
+    _ceAttributeWrite(_unwrap(item), attrName, false, function() { _setAttributeAt(item, attrName, attrValue); });
+}
+
+function _setAttributeAt(item, attrName, attrValue) {
     var raw = _unwrap(item);
     if (!raw) {
         return;
@@ -5987,6 +5991,10 @@ function removeAttribute(item, attrName) {
     if (item && !_isDomTarget(item) && typeof item.removeAttribute === "function") {
         return item.removeAttribute(attrName);
     }
+    _ceAttributeWrite(_unwrap(item), attrName, true, function() { _removeAttributeAt(item, attrName); });
+}
+
+function _removeAttributeAt(item, attrName) {
     var raw = _unwrap(item);
     if (!raw) {
         return;
@@ -6829,6 +6837,302 @@ function EventTarget() {
     };
     return selfTarget;
 }
+
+// ---------------------------------------------------------------------------
+// Custom elements: autonomous ones, `class X extends HTMLElement`. The
+// converted tree holds every parsed element already, so `define` upgrades
+// the ones of its name at once, in document order. A custom element is its
+// element's wrapper with the class's prototype under it, so the class's
+// methods and the element's DOM properties answer on the same object.
+// Customized built-ins (`{ extends }`) and shadow roots are not supported.
+// ---------------------------------------------------------------------------
+var _ce = {
+    defs: {},
+    waiting: {},
+    // The wrapper the next `HTMLElement` constructor call becomes.
+    upgrading: null,
+    // `new X()` making its own element: `createElement` must not upgrade it.
+    making: false,
+    any: false
+};
+
+var _CE_RESERVED = {
+    "annotation-xml": true, "color-profile": true, "font-face": true, "font-face-src": true,
+    "font-face-uri": true, "font-face-format": true, "font-face-name": true, "missing-glyph": true
+};
+
+function _ceError(name, message) {
+    var err = new Error(message);
+    err.name = name;
+    return err;
+}
+
+function _ceValidName(name) {
+    return /^[a-z](?:[-.0-9_a-z]|[^\x00-\x7f])*-(?:[-.0-9_a-z]|[^\x00-\x7f])*$/.test(name)
+        && !_CE_RESERVED[name];
+}
+
+function _ceDefOf(ctor) {
+    for (var name in _ce.defs) {
+        if (_ce.defs[name].ctor === ctor) {
+            return _ce.defs[name];
+        }
+    }
+    return null;
+}
+
+function HTMLElement() {
+    var target = new.target;
+    if (!target) {
+        throw new TypeError("Failed to construct 'HTMLElement': Please use the 'new' operator, this DOM object constructor cannot be called as a function.");
+    }
+    var w = _ce.upgrading;
+    _ce.upgrading = null;
+    if (!w) {
+        var def = _ceDefOf(target);
+        if (!def) {
+            throw new TypeError("Illegal constructor");
+        }
+        _ce.making = true;
+        try {
+            w = document.createElement(def.name);
+        } finally {
+            _ce.making = false;
+        }
+        _ceBecome(_unwrap(w), def);
+    }
+    Object.setPrototypeOf(w, target.prototype);
+    // The class's members win over the element's, as they would over
+    // HTMLElement.prototype's in a browser: the wrapper holds its DOM
+    // properties itself, so the ones the class declares go.
+    for (var proto = target.prototype; proto && proto !== HTMLElement.prototype; proto = Object.getPrototypeOf(proto)) {
+        var names = Object.getOwnPropertyNames(proto);
+        for (var i = 0; i < names.length; ++i) {
+            if (names[i] !== "constructor" && Object.prototype.hasOwnProperty.call(w, names[i])) {
+                delete w[names[i]];
+            }
+        }
+    }
+    return w;
+}
+
+// Every element is an HTMLElement to `instanceof`, not only custom ones.
+Object.defineProperty(HTMLElement, Symbol.hasInstance, {
+    value: function(obj) {
+        return !!(obj && typeof obj === "object" && obj.__eldurWrapper && obj.nodeType === 1);
+    }
+});
+
+function _ceBecome(raw, def) {
+    var m = _meta(raw);
+    m.ceState = "custom";
+    m.ceDef = def;
+}
+
+// As a browser reports an exception thrown by a callback: the page goes on.
+function _ceReport(err) {
+    console.error("Uncaught " + String(err) + (err && err.stack ? "\n" + err.stack : ""));
+}
+
+function _ceCall(raw, method, args) {
+    var w = wrap(raw);
+    if (typeof w[method] !== "function") {
+        return;
+    }
+    try {
+        w[method].apply(w, args);
+    } catch (err) {
+        _ceReport(err);
+    }
+}
+
+function _ceUpgrade(raw, def) {
+    var m = _meta(raw);
+    if (m.ceState) {
+        return;
+    }
+    m.ceState = "upgrading";
+    var w = wrap(raw);
+    _ce.upgrading = w;
+    try {
+        var made = new def.ctor();
+        if (made !== w) {
+            throw new TypeError("Failed to construct '" + def.name + "': the constructor did not return the element");
+        }
+    } catch (err) {
+        m.ceState = "failed";
+        _ceReport(err);
+        return;
+    } finally {
+        _ce.upgrading = null;
+    }
+    _ceBecome(raw, def);
+    for (var i = 0; i < def.observed.length; ++i) {
+        if (hasAttribute(raw, def.observed[i])) {
+            _ceCall(raw, "attributeChangedCallback", [def.observed[i], null, getAttribute(raw, def.observed[i])]);
+        }
+    }
+    if (_isConnected(raw)) {
+        _ceCall(raw, "connectedCallback", []);
+    }
+}
+
+function _ceEach(raw, fn) {
+    if (!raw || !_isQObject(raw)) {
+        return;
+    }
+    if (_meta(raw).ceState === "custom") {
+        fn(raw);
+    }
+    var kids = _rawElementChildren(raw);
+    for (var i = 0; i < kids.length; ++i) {
+        _ceEach(kids[i], fn);
+    }
+}
+
+// What `nodes` are, held by their records: an inline node going into a block,
+// or an element its new place restyles, is made another item on the way, and
+// the record goes with it.
+function _ceHold(nodes) {
+    if (!_ce.any) {
+        return null;
+    }
+    return nodes.map(function(n) {
+        var m = _itemMeta.get(n);
+        return m && m.raw === n ? m : n;
+    });
+}
+
+// After the held nodes went into the document: each custom element now in it.
+function _ceInserted(held) {
+    if (!held) {
+        return;
+    }
+    for (var i = 0; i < held.length; ++i) {
+        var node = held[i].raw && !_isQObject(held[i]) ? held[i].raw : held[i];
+        _ceEach(node, function(raw) {
+            if (_isConnected(raw)) {
+                _ceCall(raw, "connectedCallback", []);
+            }
+        });
+    }
+}
+
+// Before `raw` leaves the document: the custom elements it takes along.
+function _ceLeaving(raw) {
+    if (!_ce.any || !_isConnected(raw)) {
+        return [];
+    }
+    var out = [];
+    _ceEach(raw, function(r) { out.push(r); });
+    return out;
+}
+
+function _ceLeft(raws) {
+    for (var i = 0; i < raws.length; ++i) {
+        _ceCall(raws[i], "disconnectedCallback", []);
+    }
+}
+
+// An attribute write on an element whose class observes that name. Removing
+// an attribute the element does not have changes nothing, and says nothing.
+function _ceAttributeWrite(raw, name, removing, write) {
+    var m = _ce.any && raw ? _meta(raw) : null;
+    var def = m && m.ceState === "custom" ? m.ceDef : null;
+    var key = String(name).toLowerCase();
+    if (!def || def.observed.indexOf(key) < 0) {
+        write();
+        return;
+    }
+    var old = getAttribute(raw, key);
+    write();
+    if (!removing || old !== null) {
+        _ceCall(raw, "attributeChangedCallback", [key, old, getAttribute(raw, key)]);
+    }
+}
+
+// `document.createElement` of a defined name makes a custom element.
+function _ceCreated(raw, tag) {
+    var def = _ce.any && !_ce.making ? _ce.defs[tag] : null;
+    if (def) {
+        _ceUpgrade(raw, def);
+    }
+}
+
+var customElements = {
+    define: function(name, ctor, options) {
+        name = String(name);
+        if (typeof ctor !== "function") {
+            throw new TypeError("Failed to execute 'define' on 'CustomElementRegistry': The provided value is not of type 'CustomElementConstructor'.");
+        }
+        if (!_ceValidName(name)) {
+            throw _ceError("SyntaxError", "Failed to execute 'define' on 'CustomElementRegistry': \"" + name + "\" is not a valid custom element name");
+        }
+        if (_ce.defs[name]) {
+            throw _ceError("NotSupportedError", "Failed to execute 'define' on 'CustomElementRegistry': the name \"" + name + "\" has already been used with this registry");
+        }
+        if (_ceDefOf(ctor)) {
+            throw _ceError("NotSupportedError", "Failed to execute 'define' on 'CustomElementRegistry': this constructor has already been used with this registry");
+        }
+        if (options && options.extends !== undefined) {
+            unsupported("customElements.define() with { extends } (customized built-in elements)");
+            return;
+        }
+        var observed = ctor.observedAttributes;
+        var def = {
+            name: name,
+            ctor: ctor,
+            observed: observed ? Array.prototype.slice.call(observed).map(function(a) { return String(a).toLowerCase(); }) : []
+        };
+        _ce.defs[name] = def;
+        _ce.any = true;
+        var found = _root ? _queryTree(_root, name, false) : [];
+        for (var i = 0; i < found.length; ++i) {
+            _ceUpgrade(found[i], def);
+        }
+        var waiting = _ce.waiting[name];
+        if (waiting) {
+            delete _ce.waiting[name];
+            waiting.resolve(ctor);
+        }
+    },
+    get: function(name) {
+        var def = _ce.defs[String(name)];
+        return def ? def.ctor : undefined;
+    },
+    getName: function(ctor) {
+        var def = _ceDefOf(ctor);
+        return def ? def.name : null;
+    },
+    whenDefined: function(name) {
+        name = String(name);
+        if (!_ceValidName(name)) {
+            return Promise.reject(_ceError("SyntaxError", "Failed to execute 'whenDefined' on 'CustomElementRegistry': \"" + name + "\" is not a valid custom element name"));
+        }
+        if (_ce.defs[name]) {
+            return Promise.resolve(_ce.defs[name].ctor);
+        }
+        if (!_ce.waiting[name]) {
+            var entry = {};
+            entry.promise = new Promise(function(resolve) { entry.resolve = resolve; });
+            _ce.waiting[name] = entry;
+        }
+        return _ce.waiting[name].promise;
+    },
+    upgrade: function(root) {
+        var raw = _unwrap(root);
+        if (!_ce.any || !raw) {
+            return;
+        }
+        var all = [raw].concat(_queryTree(raw, "*", false));
+        for (var i = 0; i < all.length; ++i) {
+            var tag = _nodeTag(all[i]).toLowerCase();
+            if (_ce.defs[tag]) {
+                _ceUpgrade(all[i], _ce.defs[tag]);
+            }
+        }
+    }
+};
 
 function MutationObserver(_callback) {
     return {
@@ -8155,6 +8459,12 @@ function _inlineBecomesLines(raw) {
 }
 
 function _insertChildren(raw, nodes, ref) {
+    var held = _ceHold(nodes);
+    _insertChildrenAt(raw, nodes, ref);
+    _ceInserted(held);
+}
+
+function _insertChildrenAt(raw, nodes, ref) {
     // Inline and block children together, as an element's kids are when it is
     // made again: each stretch of the inline ones goes on the line it would alone.
     if (nodes.length > 1 && !_gIsBox(raw)) {
@@ -8163,7 +8473,7 @@ function _insertChildren(raw, nodes, ref) {
             var from = 0;
             for (var j = 1; j <= nodes.length; ++j) {
                 if (j === nodes.length || joins[j] !== joins[from]) {
-                    _insertChildren(raw, nodes.slice(from, j), ref);
+                    _insertChildrenAt(raw, nodes.slice(from, j), ref);
                     from = j;
                 }
             }
@@ -8807,7 +9117,8 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
     for (var a = 0; a < attrNames.length; ++a) {
         var ak = attrNames[a];
         if (ak !== "type" && ak !== "class") {
-            setAttribute(next, ak, m.attrs[ak]);
+            // The element's own attributes, carried: no script changed them.
+            _setAttributeAt(next, ak, m.attrs[ak]);
         }
     }
 
@@ -10293,7 +10604,9 @@ function wrap(rawItem) {
             if (rawChild && rawChild.__eldurInline) {
                 _vRemove(rawChild);
             } else if (rawChild && rawChild.parent !== undefined) {
+                var leaving = _ceLeaving(rawChild);
                 _detachNode(rawChild);
+                _ceLeft(leaving);
             }
             return child;
         },
@@ -10308,7 +10621,9 @@ function wrap(rawItem) {
             if (rawItem.__eldurInline) {
                 _vRemove(rawItem);
             } else if (rawItem.parent !== undefined) {
+                var leaving = _ceLeaving(rawItem);
                 _detachNode(rawItem);
+                _ceLeft(leaving);
             }
         },
         insertBefore: function(newChild, refChild) {
@@ -16083,7 +16398,9 @@ function _vTryInsert(raw, nodes, ref) {
     if (!host) {
         return false;
     }
+    var held = _ceHold(nodes);
     _vInsert(host, nodes, ref);
+    _ceInserted(held);
     return true;
 }
 
@@ -17091,7 +17408,9 @@ var document = {
         if (created && created.parent !== undefined) {
             created.parent = null;
         }
-        return wrap(created);
+        var made = wrap(created);
+        _ceCreated(created, tag);
+        return made;
     },
     createTextNode: function(text) {
         var created = Qt.createQmlObject("import QtQuick; Text { " + _NATIVE_TEXT + "}", _qobjectParent(), "eldur_text");
@@ -17193,6 +17512,8 @@ var window = {
     MutationObserver: MutationObserver,
     ResizeObserver: ResizeObserver,
     IntersectionObserver: IntersectionObserver,
+    HTMLElement: HTMLElement,
+    customElements: customElements,
     close: function() {
         if (_root && typeof _root.close === "function") {
             _root.close();

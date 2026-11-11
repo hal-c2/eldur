@@ -1,0 +1,24 @@
+{
+ "created": [
+  "LC created true:true:ctor",
+  "LC appended attr:count:null:2,connected:host:n=2",
+  "LC constructed true:COUNT-BADGE:ctor",
+  "LC moved connected:host,disconnected:1",
+  "LC removed disconnected"
+ ],
+ "errors": [
+  "LC invalid SyntaxError:SyntaxError:SyntaxError",
+  "LC again NotSupportedError:NotSupportedError",
+  "LC plain TypeError:TypeError",
+  "LC whenDefined SyntaxError"
+ ],
+ "upgrade": [
+  "LC before undefined",
+  "LC order ctor:first,attr:first:mode:null:dark,connected:first:dark:true,ctor:second,connected:second:system:true",
+  "LC same true:pick-dark:yes:SELECT:THEME-PICK",
+  "LC registry true:theme-pick",
+  "LC attrs attr:first:mode:dark:light,attr:second:mode:null:dark,attr:first:mode:light:null",
+  "LC elements true:true:false",
+  "LC whenDefined true"
+ ]
+}
