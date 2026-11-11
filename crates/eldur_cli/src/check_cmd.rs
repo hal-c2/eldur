@@ -141,6 +141,15 @@ fn run_qml6_offscreen(
         .current_dir(work_dir)
         .arg(file_name)
         .env("QT_QPA_PLATFORM", "offscreen")
+        // With a piped stderr Qt logs to the systemd journal instead, so a page
+        // that throws at load would pass the check silently.
+        .env("QT_FORCE_STDERR_LOGGING", "1")
+        // A page's own console.log is not a fault; warnings and errors still are.
+        .env("QT_LOGGING_RULES", "qml.debug=false")
+        // An off-screen run has no use for the accessibility bus, and where the
+        // bus socket refuses connections GLib's at-spi bridge prints a warning
+        // that would fail every page.
+        .env("NO_AT_BRIDGE", "1")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
