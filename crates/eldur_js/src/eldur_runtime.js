@@ -12423,15 +12423,53 @@ function _vInheritFont(text, s) {
     model.k.lh = line === null ? undefined : line;
     model.fontMoved = true;
     if (model === split) {
-        var run = _vModels.filter(function(m) { return m.k === model.k; })[0];
-        if (run) {
-            run.fontMoved = true;
-            _vChanged(run);
-        }
+        _vRunsMoved(model);
         return;
     }
     ++_vGen;
     _vRender(model);
+}
+
+// The runs cut from `split` share its `k`. Each run's nodes are restyled from
+// `k` only when their own model says its font moved; `_vChanged` of one
+// re-renders them all.
+function _vRunsMoved(split) {
+    var runs = _vModels.filter(function(m) { return m.k === split.k; });
+    runs.forEach(function(r) { r.fontMoved = true; });
+    if (runs.length > 0) {
+        _vChanged(runs[0]);
+    }
+}
+
+// The `Text` a line took the place of keeps the converter's bindings, which
+// give it another font when a class is written on an element around it: the
+// line and every run cut from it follow.
+function _vFollowText(text, lines, model) {
+    var seen = _vLiveBase(text);
+    text.fontChanged.connect(function() {
+        var now = _vLiveBase(text);
+        if (now.size === seen.size && now.family === seen.family && now.weight === seen.weight
+            && now.italic === seen.italic) {
+            return;
+        }
+        seen = now;
+        var f = lines.font;
+        f.pixelSize = now.size;
+        f.family = now.family;
+        f.weight = now.weight;
+        f.italic = now.italic;
+        lines.font = f;
+        lines.cssSize = now.size;
+        model.k.size = now.size;
+        model.k.us = now.size;
+        model.k.kw = undefined;
+        model.k.family = now.family;
+        model.fontMoved = true;
+        _vRunsMoved(model);
+    });
+    text.colorChanged.connect(function() {
+        lines.color = text.color;
+    });
 }
 
 function _vRunsFor(model) {
@@ -12507,6 +12545,7 @@ function _vLineFor(model, base) {
     _vRendering = false;
     _insertInFlow(target, [lines], null);
     _vCarryAfter(raw);
+    _vFollowText(text, lines, model);
     return lines;
 }
 

@@ -1018,3 +1018,15 @@ fn made_lines_icon() {
 fn made_lines_icon_open() {
     page("made_lines_icon_open");
 }
+
+/// A paragraph filled before it is in the page takes the font the rules give it there, in every run its boxes cut it into.
+#[test]
+fn made_lines_late_font() {
+    page("made_lines_late_font");
+}
+
+/// A paragraph filled before it is in the page takes the font the rules give it there, in every run its boxes cut it into. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_late_font_open() {
+    page("made_lines_late_font_open");
+}
