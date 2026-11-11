@@ -81,7 +81,9 @@ impl FsResources {
 
         let without_frag = trimmed.split('#').next().unwrap_or(trimmed);
         let path_part = without_frag.split('?').next().unwrap_or(without_frag);
-        if path_part.is_empty() {
+        // `//host/x` is protocol-relative: another host serves it, whatever
+        // the site root, so no local file stands for it.
+        if path_part.is_empty() || path_part.starts_with("//") {
             return None;
         }
 
@@ -484,12 +486,29 @@ mod tests {
         // A server never serves above its root; neither does the converter.
         fs::write(root.join("secret.css"), b"q{}").expect("write outside");
         assert_eq!(res.read("/../secret.css", &base), None);
+        // `//host/x` names another host, whatever the root: a server would
+        // fetch it from there, so no file in the site stands for it.
+        fs::create_dir_all(site.join("fonts.example")).expect("create host-named dir");
+        fs::write(site.join("fonts.example/f.css"), b"r{}").expect("write host-named css");
+        assert_eq!(res.resolve_path("//fonts.example/f.css", &base), None);
+        assert_eq!(res.read("//fonts.example/f.css?v=2", &base), None);
+        assert_eq!(
+            FsResources::with_cwd(&root).resolve_path("//fonts.example/f.css", &base),
+            None
+        );
+
         let missing = res.into_inputs();
         assert!(
             missing
                 .iter()
                 .any(|i| i.path == site.join("secret.css") && i.is_missing()),
             "the escaped path is looked up, and recorded missing, inside the root: {missing:?}"
+        );
+        assert!(
+            !missing
+                .iter()
+                .any(|i| i.path.starts_with(site.join("fonts.example"))),
+            "a URL on another host reads and records nothing in the site: {missing:?}"
         );
 
         // Without a root, `/x` is the file system's `/x`, as in a file:// page.
