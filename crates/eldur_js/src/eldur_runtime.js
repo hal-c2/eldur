@@ -8904,8 +8904,16 @@ function _materializeTextRun(raw) {
         raw.color = container.color;
         return raw;
     }
-    if (!component || typeof component.createObject !== "function"
-        || m.textRunComponent === component) {
+    if (!component || typeof component.createObject !== "function") {
+        return raw;
+    }
+    // Its spaces take the form of the line it is placed in now: text set
+    // while it was out of a line has the form of none.
+    if (m.textRunComponent === component) {
+        var form = _runText(m.runText !== undefined ? m.runText : String(raw.text), container);
+        if (raw.text !== form) {
+            raw.text = form;
+        }
         return raw;
     }
     var source = m.runText !== undefined ? m.runText : String(raw.text);
@@ -11801,12 +11809,25 @@ function _vWriteElement(st, v, pc) {
     });
 }
 
+// A model keeps its spaces as its element's `white-space` says now: the
+// converter's flag is the page's markup's, which a script's element and a
+// class written later do not have.
+function _vPre(model) {
+    var host = _gHasCascade() && !model.select ? _vHostElement(model) : null;
+    if (!host || host.__eldurInline) {
+        return model.pre;
+    }
+    ++_gGen;
+    var white = _gStyle(host)["white-space"];
+    return white !== "normal" && white !== "nowrap";
+}
+
 function _vMarkup(model, twin) {
     var base = _vBase(model);
     // A run between boxes starts and ends mid-line: the line takes its edge spaces.
     var inLine = model.text.parent && typeof model.text.parent.firstBaseline === "number";
     var st = {
-        out: "", prevSpace: !inLine, pre: model.pre, html: model.html, twin: twin, model: model,
+        out: "", prevSpace: !inLine, pre: _vPre(model), html: model.html, twin: twin, model: model,
         // On a line an element's background is its box's, which `EldurInlineBox` paints.
         boxed: inLine && typeof model.text.parent.setRunBox === "function",
         owners: [], inLink: false, linkColor: null,

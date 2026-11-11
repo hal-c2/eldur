@@ -1030,3 +1030,15 @@ fn made_lines_late_font() {
 fn made_lines_late_font_open() {
     page("made_lines_late_font_open");
 }
+
+/// A text node set while out of a `pre-wrap` line keeps its spaces when put back; one moved to a `normal` line collapses them.
+#[test]
+fn made_lines_respace() {
+    page("made_lines_respace");
+}
+
+/// A text node set while out of a `pre-wrap` line keeps its spaces when put back; one moved to a `normal` line collapses them. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_respace_open() {
+    page("made_lines_respace_open");
+}
