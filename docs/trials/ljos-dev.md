@@ -16,9 +16,10 @@ with Ljós, and compared with Chromium. The pages:
   `site/dist`.
 - **Serving:** each page was served over HTTP, as a deployed site is. Its
   root-relative URLs (`/_astro/…`) only resolve that way.
-- **Conversion:** each page was converted with `eldur convert` (with
-  `--site-root site/dist`, see below), from a build that holds the fixes listed
-  under "Fixed".
+- **Conversion:** each page was converted with `eldur convert --site-root
+  site/dist`. The build was `w/created-lines` with #10, #11, #12, #14 and #15
+  merged in as they stood on 2026-11-11. #19 was not in it, so the pictures
+  and the qml6 and Ljós columns show the pages with #16 still open.
 - **Rendering:**
   - qml6 rendered through `tools/visual/render_qml.py --backend gl` at
     1280×800.
@@ -65,9 +66,9 @@ there but wrong. **Fails** means it is missing or throws.
 |---|---|---|---|
 | Docs layout: header, sidebar, content, table of contents | Clean on MCP and demos | Clean | |
 | Sidebar navigation groups | Degraded: some groups paint a white box with light text | Clean | Follows the dark scheme (see "Colour scheme"). |
-| Table of contents ("On this page") | Clean | Clean | |
-| Tables (MCP) | Clean | Degraded: faint text | Ljós text colour. |
-| Inline code, headings, paragraphs (MCP, demos) | Clean | Degraded: the H1 is missing, and the body text is faint | Ljós. |
+| Table of contents ("On this page") | Clean on demos; degraded on MCP: a white box with faint light text | Degraded: faint text | qml6: the colour scheme. Ljós: its text colour. |
+| Tables (MCP) | Degraded: a white body with faint headers and values; only the inline code reads clearly | Degraded: faint text | qml6: the colour scheme. Ljós: its text colour. |
+| Inline code, headings, paragraphs (MCP, demos) | Clean | Degraded: the H1 and the body text are faint | Ljós text colour. |
 | Landing hero (H1, text, buttons, logo) | Fails: the page is black | Degraded: the H1 shows; the paragraph wraps one word per line | qml6: #16, then #17 aborts the settle pass. Ljós: its wrap mode. |
 
 ### Header and theme
@@ -77,7 +78,7 @@ there but wrong. **Fails** means it is missing or throws.
 | Header: search, GitHub, theme picker | Degraded: mostly empty | Degraded: dark, labels only | #5 (inline SVG icons), #8 (the picker's `<select>` inside an inline element). |
 | Buttons with an icon ("What is Ljós? →") | Degraded | Degraded | #6: only the text shows. |
 | Theme picker custom element (`starlight-theme-select`) | Clean after the fix | Clean after the fix | #4: `extends HTMLElement` threw on load. Fixed by #15. |
-| Theme provider (`window.StarlightThemeProvider = …`, then a bare name) | Fails: ReferenceError | Fails | #16. Fixed by #19. |
+| Theme provider (`window.StarlightThemeProvider = …`, then a bare name) | Fails: ReferenceError | Fails | #16. Fixed by #19, which the build did not hold. |
 | Colour scheme | Dark: `matchMedia("(prefers-color-scheme: light)")` is false | Dark | The off-screen run has no light preference. Chromium ran with the light scheme. |
 
 ### Scripts and the live island
@@ -104,7 +105,7 @@ there but wrong. **Fails** means it is missing or throws.
 | #4 | Fixed by #15 | Custom elements threw. |
 | #7 | Fixed by #11 | `eldur check` did not see script errors. |
 | #13 | Fixed by #14 | A render that timed out raised a TypeError. |
-| #16 | Fixed by #19 | `window.X` was not a global. |
+| #16 | Fixed by #19, after the renders | `window.X` was not a global. |
 | #5 | Open | Inline `<svg>` becomes a placeholder. |
 | #6 | Open | A `<button>` with element children shows only their text. |
 | #8 | Open | An inline element's form control is missing from queries. |
@@ -123,7 +124,7 @@ parts. It is not usable as a finished page.
 - **Sidebar navigation:** the groups and links are there in order, with the
   current page marked. Take the colours from the light scheme.
 - **Tables and code** (MCP): rows, column widths and inline code boxes match.
-- **Landing hero layout:** the item tree is right, but it renders only once #16
-  and #17 are fixed. The logo needs #5.
+- **Landing hero layout:** the item tree is right, but qml6 renders it only with
+  #19 in and #17 fixed. The logo needs #5.
 - **Search:** only the trigger button converts. The search dialog is a lazy
   module (Pagefind), and needs a native port.
