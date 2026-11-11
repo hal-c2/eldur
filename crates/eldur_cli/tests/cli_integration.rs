@@ -773,6 +773,16 @@ fn check_asks_qml6_for_stderr_logging_so_script_errors_reach_the_report() {
     let ok = check_dir_with_tools(&qml_dir, &tools, &mut quiet).expect("check");
     assert!(ok, "report was: {}", String::from_utf8_lossy(&quiet));
 
+    // console.info is the page's output too: Qt prints it in the same
+    // category at info level.
+    write_executable(
+        &tools.qml6,
+        "#!/usr/bin/env bash\nif [[ \"${QT_LOGGING_RULES:-}\" != *qml.info=false* ]]; then\n  echo \"qml: page info\" >&2\nfi\nexec sleep 5\n",
+    );
+    let mut info = Vec::new();
+    let ok = check_dir_with_tools(&qml_dir, &tools, &mut info).expect("check");
+    assert!(ok, "report was: {}", String::from_utf8_lossy(&info));
+
     // Nor is the host's accessibility bus: where its socket refuses
     // connections, GLib's at-spi bridge warns unless it is turned off.
     write_executable(
