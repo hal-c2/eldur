@@ -319,10 +319,12 @@ pub(crate) fn collect_unsupported_diagnostics(
     input: &ScriptInput,
     program: &Program<'_>,
     scoping: &Scoping,
+    scripts: &[ScriptInput],
 ) -> Vec<Diagnostic> {
     let mut checker = UnsupportedChecker {
         input,
         scoping,
+        scripts,
         async_depth: 0,
         diagnostics: Vec::new(),
     };
@@ -333,6 +335,9 @@ pub(crate) fn collect_unsupported_diagnostics(
 struct UnsupportedChecker<'a> {
     input: &'a ScriptInput,
     scoping: &'a Scoping,
+    /// The page's scripts, so an `import()` of one of its modules, which the
+    /// rewrite resolves, is not reported.
+    scripts: &'a [ScriptInput],
     async_depth: u32,
     diagnostics: Vec<Diagnostic>,
 }
@@ -380,6 +385,11 @@ impl<'a> Visit<'a> for UnsupportedChecker<'_> {
     }
 
     fn visit_import_expression(&mut self, it: &ImportExpression<'a>) {
+        // The rewrite reports the rare page module it still cannot resolve.
+        if dynamic_import_of_page_module(&self.input.name, it, self.scripts).is_some() {
+            walk::walk_import_expression(self, it);
+            return;
+        }
         let what = match &it.source {
             Expression::StringLiteral(spec) => format!("import('{}')", spec.value),
             _ => "import() of a computed specifier".to_string(),
@@ -641,4 +651,22 @@ fn detect_unsupported_regex_syntax(pattern: &str) -> Option<&'static str> {
         i += 1;
     }
     None
+}
+
+/// The page module `import(...)` names, when its specifier is a string literal
+/// with no options and it resolves to one of the page's module scripts: one the
+/// converter inlines, so the import can resolve to its namespace.
+pub(crate) fn dynamic_import_of_page_module(
+    importer: &str,
+    it: &ImportExpression<'_>,
+    scripts: &[ScriptInput],
+) -> Option<usize> {
+    if it.options.is_some() {
+        return None;
+    }
+    let Expression::StringLiteral(spec) = &it.source else {
+        return None;
+    };
+    crate::resolve::resolve_module_specifier(importer, spec.value.as_str(), scripts)
+        .filter(|&idx| matches!(scripts[idx].kind, ScriptKind::Module))
 }

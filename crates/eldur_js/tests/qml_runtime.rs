@@ -4959,3 +4959,80 @@ function reportLazy(done) {
     );
     assert!(!out.page_js.contains("import("), "{}", out.page_js);
 }
+
+// Expected value recorded from headless Chromium (Playwright) serving, over
+// HTTP, index.html `<p id="out">pending</p><script type="module"
+// src="./main.js">` with chunk.js and main.js as below, main.js writing the
+// log into #out instead of the console:
+//   #out === "sync:true,ns:2:chunk:3:3:bump|count|default"
+// A module imported both statically and lazily is one module: the lazy import
+// resolves to its namespace, whose bindings are live and keys sorted.
+#[test]
+fn qml6_dynamic_import_of_an_inlined_module_resolves_to_its_live_namespace() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let dir = TempQmlDir::new("dynamic_import_namespace");
+    let resolver = FakeResolver::default();
+    let chunk = ScriptInput {
+        name: "chunk.js".to_string(),
+        kind: ScriptKind::Module,
+        line_offset: 1,
+        source: "export let count = 1;\nexport function bump() { count += 1; return count; }\nexport default \"chunk\";\n".to_string(),
+    };
+    let main = ScriptInput {
+        name: "main.js".to_string(),
+        kind: ScriptKind::Module,
+        line_offset: 1,
+        source: r#"
+import { bump } from "./chunk.js";
+bump();
+var log = [];
+var p = import("./chunk.js");
+log.push("sync:" + (p instanceof Promise));
+p.then(function (m) {
+  log.push("ns:" + m.count + ":" + m.default + ":" + m.bump() + ":" + m.count + ":" + Object.keys(m).join("|"));
+  console.log("ELDUR_OK_DYN_NS", log.join(","));
+});
+"#
+        .to_string(),
+    };
+    let scripts = [chunk, main];
+    let analysis = analyze(&scripts);
+    let out = rewrite(&scripts, &analysis, &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+    dir.write_file("eldur_runtime.js", RUNTIME_JS);
+    let page_path = dir.write_file("page.js", &out.page_js);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import "page.js" as Page
+
+Item {
+    id: root
+    Timer { interval: 50; running: true; onTriggered: Qt.quit() }
+    Component.onCompleted: Page.__eldur_init(root)
+}
+"#,
+    );
+    if has_binary("qmllint") {
+        let lint = Command::new("qmllint")
+            .arg(&page_path)
+            .output()
+            .expect("failed to run qmllint");
+        assert!(
+            lint.status.success(),
+            "qmllint: {}{}\npage.js:\n{}",
+            String::from_utf8_lossy(&lint.stdout),
+            String::from_utf8_lossy(&lint.stderr),
+            out.page_js
+        );
+    }
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
+    assert!(
+        output.contains("ELDUR_OK_DYN_NS sync:true,ns:2:chunk:3:3:bump|count|default"),
+        "{output}\npage.js:\n{}",
+        out.page_js
+    );
+}

@@ -2786,3 +2786,119 @@ load("counter").catch(() => {});
         out.diagnostics
     );
 }
+
+/// A bundler imports a shared chunk statically and lazily. The lazy import of a
+/// module this page holds resolves to that module's namespace: no rejection,
+/// no "missing module" diagnostic, one namespace for every importer.
+#[test]
+fn dynamic_import_of_an_inlined_module_resolves_to_its_namespace() {
+    let resolver = FakeResolver::default().with_element(1, "btn", TargetKind::Button);
+    let chunk = module_script(
+        "_astro/chunk.js",
+        "export let count = 1;\nexport function bump() { count += 1; return count; }\nexport default \"chunk\";\n",
+    );
+    let main = module_script(
+        "_astro/main.js",
+        r#"
+import { bump } from "./chunk.js";
+bump();
+export const lazy = () => import("./chunk.js");
+"#,
+    );
+    // Not imported statically by anything before it: emitted first, as a
+    // static import's module is.
+    let late = module_script("_astro/late.js", "export const late = 1;\n");
+    let other = module_script(
+        "_astro/other.js",
+        r#"
+import("./chunk.js").then((m) => m.bump());
+import("./late.js");
+import("./missing.js");
+"#,
+    );
+    let click = handler(1, "click", r#"import("/_astro/chunk.js")"#);
+    let out = run_rewrite(&[chunk, main, other, late, click], &resolver);
+    assert!(!out.page_js.contains("import("), "{}", out.page_js);
+    assert!(
+        !out.page_js.contains(r#"Eldur.dynamicImport("./chunk.js")"#)
+            && !out.page_js.contains(r#"Eldur.dynamicImport("./late.js")"#)
+            && !out
+                .page_js
+                .contains(r#"Eldur.dynamicImport("/_astro/chunk.js")"#),
+        "{}",
+        out.page_js
+    );
+    assert!(
+        out.page_js
+            .contains(r#"Eldur.dynamicImport("./missing.js")"#),
+        "{}",
+        out.page_js
+    );
+    // The page's own promise, which `instanceof Promise` on the page names.
+    assert!(
+        out.page_js
+            .contains("Eldur.Promise.resolve(__eldur_module_namespace())"),
+        "{}",
+        out.page_js
+    );
+    // One namespace object per module, made on the first call, whose getters
+    // read the live bindings, keys sorted as a namespace's are.
+    let made = out.page_js.matches("get bump()").count();
+    assert_eq!(made, 1, "{}", out.page_js);
+    let bump = out.page_js.find("get bump()").expect("bump getter");
+    let count = out.page_js.find("get count()").expect("count getter");
+    let default = out.page_js.find("get default()").expect("default getter");
+    assert!(bump < count && count < default, "{}", out.page_js);
+    let late_decl = out.page_js.find("late = 1").expect("late emitted");
+    let other_use = out.page_js.find("m.bump()").expect("other emitted");
+    assert!(late_decl < other_use, "{}", out.page_js);
+    let messages: Vec<&str> = out
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("dynamic import"))
+        .map(|d| d.message.as_str())
+        .collect();
+    assert_eq!(
+        messages,
+        vec![
+            "dynamic import('./missing.js') cannot load a module in QML: the promise rejects as for a missing module",
+        ],
+        "{:?}",
+        out.diagnostics
+    );
+}
+
+/// A module that imports, statically, the module that imports it lazily: the
+/// cycle cannot be inlined in that order, so the import rejects and says why.
+#[test]
+fn dynamic_import_of_a_module_still_being_inlined_rejects_and_says_why() {
+    let resolver = FakeResolver::default();
+    let a = module_script(
+        "a.js",
+        "import { b } from \"./b.js\";\nexport const a = b;\n",
+    );
+    let b = module_script(
+        "b.js",
+        "export const b = 1;\nexport const back = () => import(\"./a.js\");\n",
+    );
+    let out = run_rewrite(&[a, b], &resolver);
+    assert!(
+        out.page_js.contains(r#"Eldur.dynamicImport("./a.js")"#),
+        "{}",
+        out.page_js
+    );
+    let messages: Vec<&str> = out
+        .diagnostics
+        .iter()
+        .filter(|d| d.message.contains("dynamic import"))
+        .map(|d| d.message.as_str())
+        .collect();
+    assert_eq!(
+        messages,
+        vec![
+            "dynamic import('./a.js') of a module that imports this one cannot be inlined: the promise rejects as for a missing module",
+        ],
+        "{:?}",
+        out.diagnostics
+    );
+}
