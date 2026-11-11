@@ -299,11 +299,15 @@ impl<'a> PageBuilder<'a> {
         self.visiting_modules.remove(&script_idx);
         self.emitted_modules.insert(script_idx);
         self.module_exports.insert(script_idx, exports);
+        // Imported lazily by a script before it: the name was handed out then.
+        self.declare_module_namespace(script_idx);
     }
 
-    /// The page modules `v` imports with `import("literal")`, each emitted
-    /// before `v` as a static import's module is, mapped from specifier to the
-    /// function that returns its namespace.
+    /// The page modules `v` imports with `import("literal")`, mapped from
+    /// specifier to the function that returns its namespace. The module is
+    /// not emitted here: `import()` never runs a module ahead of its importer,
+    /// so each one stays at its own place on the page and its namespace
+    /// function is declared once it has been emitted there.
     fn dynamic_import_namespaces(&mut self, v: &ValidScript<'a>) -> HashMap<String, String> {
         let mut found = DynamicImports {
             importer: &v.input.name,
@@ -316,44 +320,48 @@ impl<'a> PageBuilder<'a> {
             if namespaces.contains_key(&spec) {
                 continue;
             }
-            let in_cycle = self.visiting_modules.contains(&dep_idx);
-            if !in_cycle {
-                self.ensure_module_emitted(dep_idx);
-            }
-            let Some(exports) = self.module_exports.get(&dep_idx) else {
-                // Still being inlined (it imports, statically, the module being
-                // lowered now, so its bindings do not exist yet), or not
-                // converted at all, which its own diagnostics say.
-                let why = if in_cycle {
-                    "of a module that imports this one cannot be inlined"
-                } else {
-                    "of a module that could not be converted cannot load it"
-                };
+            if !self.valid_map.contains_key(&dep_idx) {
+                // Not converted at all, which its own diagnostics say.
                 self.diagnostics.push(Diagnostic {
                     severity: Severity::Unsupported,
                     source: v.input.name.clone(),
                     line: Some(crate::parse::line_for_span(v.input, span)),
                     message: format!(
-                        "dynamic import('{spec}') {why}: the promise rejects as for a missing module"
+                        "dynamic import('{spec}') of a module that could not be converted cannot load it: the promise rejects as for a missing module"
                     ),
                 });
                 continue;
-            };
+            }
             let name = match self.module_namespaces.get(&dep_idx) {
                 Some(name) => name.clone(),
                 None => {
                     let name = self.shared.alloc_fn_name("__eldur_module_namespace");
-                    self.out.top_decls.push(format!(
-                        "function {name}() {{ return {name}.value || ({name}.value = {}); }}",
-                        format_live_namespace_object(exports)
-                    ));
                     self.module_namespaces.insert(dep_idx, name.clone());
+                    if self.emitted_modules.contains(&dep_idx) {
+                        self.declare_module_namespace(dep_idx);
+                    }
                     name
                 }
             };
             namespaces.insert(spec, name);
         }
         namespaces
+    }
+
+    /// Declares the function an `import()` of `script_idx` calls. A function
+    /// declaration is hoisted and its getters read the bindings only when
+    /// called, so where it lands in page.js does not matter.
+    fn declare_module_namespace(&mut self, script_idx: usize) {
+        let (Some(name), Some(exports)) = (
+            self.module_namespaces.get(&script_idx),
+            self.module_exports.get(&script_idx),
+        ) else {
+            return;
+        };
+        self.out.top_decls.push(format!(
+            "function {name}() {{ return {name}.value || ({name}.value = {}); }}",
+            format_live_namespace_object(exports)
+        ));
     }
 
     fn process_handler_attribute(

@@ -2805,8 +2805,9 @@ bump();
 export const lazy = () => import("./chunk.js");
 "#,
     );
-    // Not imported statically by anything before it: emitted first, as a
-    // static import's module is.
+    // Imported only lazily: it stays at its own place on the page, as
+    // `import()` never runs a module ahead of its importer (the order itself
+    // is `a_lazily_imported_module_runs_at_its_own_place_on_the_page`).
     let late = module_script("_astro/late.js", "export const late = 1;\n");
     let other = module_script(
         "_astro/other.js",
@@ -2849,9 +2850,19 @@ import("./missing.js");
     let count = out.page_js.find("get count()").expect("count getter");
     let default = out.page_js.find("get default()").expect("default getter");
     assert!(bump < count && count < default, "{}", out.page_js);
-    let late_decl = out.page_js.find("late = 1").expect("late emitted");
-    let other_use = out.page_js.find("m.bump()").expect("other emitted");
-    assert!(late_decl < other_use, "{}", out.page_js);
+    assert_eq!(
+        out.page_js.matches("late = 1").count(),
+        1,
+        "{}",
+        out.page_js
+    );
+    assert!(
+        out.page_js
+            .contains("Eldur.Promise.resolve(__eldur_module_namespace_2())")
+            && out.page_js.contains("get late() { return late; }"),
+        "{}",
+        out.page_js
+    );
     let messages: Vec<&str> = out
         .diagnostics
         .iter()
@@ -2868,10 +2879,11 @@ import("./missing.js");
     );
 }
 
-/// A module that imports, statically, the module that imports it lazily: the
-/// cycle cannot be inlined in that order, so the import rejects and says why.
+/// A module that imports, statically, the module that imports it lazily. The
+/// lazy import names a module emitted later on the page, which is fine: its
+/// namespace is read when the promise is made, after the page has run.
 #[test]
-fn dynamic_import_of_a_module_still_being_inlined_rejects_and_says_why() {
+fn dynamic_import_of_a_module_that_imports_this_one_resolves_to_its_namespace() {
     let resolver = FakeResolver::default();
     let a = module_script(
         "a.js",
@@ -2882,23 +2894,51 @@ fn dynamic_import_of_a_module_still_being_inlined_rejects_and_says_why() {
         "export const b = 1;\nexport const back = () => import(\"./a.js\");\n",
     );
     let out = run_rewrite(&[a, b], &resolver);
+    assert!(!out.page_js.contains("dynamicImport"), "{}", out.page_js);
     assert!(
-        out.page_js.contains(r#"Eldur.dynamicImport("./a.js")"#),
+        out.page_js
+            .contains("Eldur.Promise.resolve(__eldur_module_namespace())"),
         "{}",
         out.page_js
     );
-    let messages: Vec<&str> = out
-        .diagnostics
-        .iter()
-        .filter(|d| d.message.contains("dynamic import"))
-        .map(|d| d.message.as_str())
-        .collect();
-    assert_eq!(
-        messages,
-        vec![
-            "dynamic import('./a.js') of a module that imports this one cannot be inlined: the promise rejects as for a missing module",
-        ],
+    assert!(out.page_js.contains("get a()"), "{}", out.page_js);
+    assert!(
+        !out.diagnostics
+            .iter()
+            .any(|d| d.message.contains("dynamic import")),
         "{:?}",
         out.diagnostics
+    );
+}
+
+/// Classic `app.js` holds an `import()` of a page module, then classic
+/// `later.js`, then that module. Chromium logs classic, later, chunk: the
+/// lazy import leaves the module's top-level code where the page has it.
+#[test]
+fn a_lazily_imported_module_runs_at_its_own_place_on_the_page() {
+    let resolver = FakeResolver::default();
+    let app = classic(
+        "app.js",
+        "var cfg = 7;\nconsole.log('classic');\nfunction go() { return import(\"./chunk.js\"); }\n",
+    );
+    let later = classic("later.js", "console.log('later');\n");
+    let chunk = module_script(
+        "chunk.js",
+        "console.log('chunk', cfg);\nexport const x = 1;\n",
+    );
+    let out = run_rewrite(&[app, later, chunk], &resolver);
+    let classic_at = out.page_js.find("console.log('classic')").expect("app.js");
+    let later_at = out.page_js.find("console.log('later')").expect("later.js");
+    let chunk_at = out.page_js.find("console.log('chunk'").expect("chunk.js");
+    assert!(
+        classic_at < later_at && later_at < chunk_at,
+        "{}",
+        out.page_js
+    );
+    assert!(
+        out.page_js
+            .contains("Eldur.Promise.resolve(__eldur_module_namespace())"),
+        "{}",
+        out.page_js
     );
 }

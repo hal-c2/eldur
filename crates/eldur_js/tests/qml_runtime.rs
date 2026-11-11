@@ -5036,3 +5036,64 @@ Item {
         out.page_js
     );
 }
+
+// Chromium 158, the page `<script src="app.js">`, `<script src="later.js">`,
+// `<script type="module" src="chunk.js">` with the sources below:
+//   ELDUR_OK_DYN_ORDER classic,later,chunk:7,ns:1
+// A lazy import in an earlier script leaves the module's top-level code at the
+// module's own place, and the promise resolves once that code has run.
+#[test]
+fn qml6_a_lazily_imported_module_runs_at_its_own_place_on_the_page() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let dir = TempQmlDir::new("dynamic_import_order");
+    let resolver = FakeResolver::default();
+    let script = |name: &str, kind: ScriptKind, source: &str| ScriptInput {
+        name: name.to_string(),
+        kind,
+        line_offset: 1,
+        source: source.to_string(),
+    };
+    let scripts = [
+        script(
+            "app.js",
+            ScriptKind::Classic,
+            "var log = [];\nvar cfg = 7;\nlog.push('classic');\nfunction go() { return import(\"./chunk.js\"); }\n",
+        ),
+        script(
+            "later.js",
+            ScriptKind::Classic,
+            "log.push('later');\ngo().then(function (m) {\n  log.push('ns:' + m.x);\n  console.log(\"ELDUR_OK_DYN_ORDER\", log.join(\",\"));\n});\n",
+        ),
+        script(
+            "chunk.js",
+            ScriptKind::Module,
+            "log.push('chunk:' + cfg);\nexport const x = 1;\n",
+        ),
+    ];
+    let analysis = analyze(&scripts);
+    let out = rewrite(&scripts, &analysis, &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+    dir.write_file("eldur_runtime.js", RUNTIME_JS);
+    dir.write_file("page.js", &out.page_js);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import "page.js" as Page
+
+Item {
+    id: root
+    Timer { interval: 50; running: true; onTriggered: Qt.quit() }
+    Component.onCompleted: Page.__eldur_init(root)
+}
+"#,
+    );
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
+    assert!(
+        output.contains("ELDUR_OK_DYN_ORDER classic,later,chunk:7,ns:1"),
+        "{output}\npage.js:\n{}",
+        out.page_js
+    );
+}
