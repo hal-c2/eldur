@@ -11511,9 +11511,22 @@ function _vAlignOf(out, won) {
         out.va = written;
     } else if (/%$/.test(written)) {
         out.vp = parseFloat(written);
-    } else if (written !== "baseline" && !isNaN(parseFloat(written))) {
-        out.vs = parseFloat(written) * (/r?em$/.test(written) ? out.size : 1);
+    } else if (written !== "baseline") {
+        var px = _alignLength(written, out.size, _vRemBase(), out);
+        if (px !== null && !isNaN(px)) {
+            out.vs = px;
+        }
     }
+}
+
+// What `rem` is of: the root element's font size where the rules give the page
+// one, else the initial 16px.
+function _vRemBase() {
+    if (!_gHasCascade() || typeof document === "undefined" || !document.documentElement) {
+        return 16;
+    }
+    var size = _gStyle(_unwrap(document.documentElement)).fontSize;
+    return size > 0 ? size : 16;
 }
 
 function _vStyle(v) {
@@ -17899,7 +17912,8 @@ function _gStyle(raw) {
         var sized = _gPx(sizeText, parentSize, parentSize, rootSize);
         s.fontSize = sized === null ? parentSize : sized;
     }
-    s.rootSize = rootSize === null || !parent ? s.fontSize : rootSize;
+    // The root's own `rem` lengths, past its font-size, are of its own size.
+    s.rootSize = rootSize === null || !parent || tag === "html" ? s.fontSize : rootSize;
     var lineText = value("line-height");
     if (lineText === "inherit") {
         s.lineFactor = inherited ? inherited.lineFactor : null;
@@ -17978,13 +17992,18 @@ function _gStyle(raw) {
     return s;
 }
 
+// What `rem` is of: the `html` element's size. The walk stops there because the
+// window's own Items sit above it and compute to the initial 16px.
 function _gRootFontSize(raw, parent) {
     if (!parent) {
         return null;
     }
     var top = parent;
-    for (var up = _gParent(top); up; up = _gParent(top)) {
+    for (var up = parent; up; up = _gParent(up)) {
         top = up;
+        if (_nodeTag(up) === "html") {
+            break;
+        }
     }
     return _gStyle(top).fontSize;
 }
@@ -18623,8 +18642,6 @@ function _gLayOutRun(group, s, innerW, x, y, cut) {
     return lines.implicitHeight;
 }
 
-// `vertical-align` as `EldurLines` takes it: a keyword, or a shift up in pixels
-// as `length`. A percentage is of the element's own line height (CSS 2.2 §10.8.1).
 // Where an atomic box sits on its line, for `EldurLines`.
 function _gBoxLevel(kid, va) {
     if (typeof kid.eldurVAlign === "string") {
@@ -18633,18 +18650,36 @@ function _gBoxLevel(kid, va) {
     }
 }
 
+// A `vertical-align` length in pixels, or `null` for a value that is none: that
+// is `baseline`, as a declaration that does not parse would leave it. `ex` and
+// `ch` are the element's own font's (CSS Values 4 §6.1.1).
+function _alignLength(written, size, rootSize, box) {
+    var font = /^[-+]?(?:\d*\.\d+|\d+)(?:e[-+]?\d+)?(ex|ch)$/.exec(written);
+    if (font) {
+        return parseFloat(written) * EldurFonts.fontUnit(font[1], box);
+    }
+    return _gPx(written, null, size, rootSize);
+}
+
+// `vertical-align` as `EldurLines` takes it: a keyword, or a shift up in pixels
+// as `length`. A percentage is of the element's own line height (CSS 2.2 §10.8.1).
 function _gVAlign(s) {
     var written = String(s["vertical-align"] || "baseline").trim().toLowerCase();
     if (/^(sub|super|top|bottom|middle|text-top|text-bottom)$/.test(written)) {
         return { align: written };
     }
-    var n = parseFloat(written);
-    if (written === "baseline" || isNaN(n) || n === 0) {
+    var shift = null;
+    if (/^[-+]?[\d.]+%$/.test(written)) {
+        shift = parseFloat(written) / 100
+            * (_gLineHeight(s) !== null ? _gLineHeight(s) : EldurFonts.normalLine(_gFontOf(s), s.fontSize));
+    } else if (written !== "baseline") {
+        var font = _gFontOf(s);
+        shift = _alignLength(written, s.fontSize, s.rootSize,
+            { family: font.family, size: s.fontSize, weight: font.weight, italic: font.italic });
+    }
+    if (shift === null || isNaN(shift) || shift === 0) {
         return { align: null };
     }
-    var shift = /%$/.test(written)
-        ? n / 100 * (_gLineHeight(s) !== null ? _gLineHeight(s) : EldurFonts.normalLine(_gFontOf(s), s.fontSize))
-        : /r?em$/.test(written) ? n * (/rem$/.test(written) ? 16 : s.fontSize) : n;
     return { align: "length", shift: shift };
 }
 

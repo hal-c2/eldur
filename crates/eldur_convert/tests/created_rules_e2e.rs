@@ -1042,3 +1042,15 @@ fn made_lines_respace() {
 fn made_lines_respace_open() {
     page("made_lines_respace_open");
 }
+
+/// `vertical-align` in `rem`, `ex`, `ch` and `vh` on made spans and inline-blocks, on lines tall enough that no shift grows them.
+#[test]
+fn made_lines_valign_units() {
+    page("made_lines_valign_units");
+}
+
+/// `vertical-align` in `rem`, `ex`, `ch` and `vh` on made spans and inline-blocks, on lines tall enough that no shift grows them. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_valign_units_open() {
+    page("made_lines_valign_units_open");
+}
