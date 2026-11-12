@@ -12464,6 +12464,29 @@ function _vChanged(model) {
     }
 }
 
+// The root's attributes moved, and with them what every run inherits and what
+// its variables say: what the converter worked out was for the old ones. Each
+// run is styled again, once, and that is what later changes compare with.
+function _vRescheme() {
+    var models = _vModels.filter(function(m) { return !m.select; });
+    models.forEach(function(m) {
+        _vEachElement(m.kids, function(v) { v.sig0 = undefined; });
+    });
+    _vChanged(null);
+    models.forEach(function(m) {
+        if (_vModels.indexOf(m) === -1) {
+            return;
+        }
+        if (!m.hoisted) {
+            m.k.color = _vBase(m).color;
+        }
+        _vEachElement(m.kids, function(v) {
+            v.c = _vStyle(v);
+            v.sig0 = _vSig(v);
+        });
+    });
+}
+
 // `v`'s box on a line, for `EldurFonts.placeRun`.
 function _vBoxOf(c, v) {
     var box = { size: c.size, family: c.family, weight: c.weight, italic: c.italic };
@@ -23863,7 +23886,9 @@ function _gStaticChanges() {
             continue;
         }
         var sig = _gStaticSig(entry.raw);
-        if (sig !== entry.sig && rootMoved) {
+        // What the root's attributes say reaches an element through what it
+        // inherits as much as through its own rules, which may say the same.
+        if (rootMoved) {
             _gRepaintStatic(entry.raw);
             entry.sig = sig;
             keep.push(entry);
@@ -23877,46 +23902,46 @@ function _gStaticChanges() {
     if (rootMoved) {
         _gStaticRoot = _gRootAttrs(html);
         _gRepaintCanvas(html);
+        _vRescheme();
     }
     ++_gGen;
 }
 
 // The root's attributes change what a whole page says, usually its colours. The
 // page keeps the form it was converted to, children, text and all, and takes
-// the new values.
+// the new values. A colour is written only when it changed: a write ends the
+// binding a state (`:hover`, `:focus`) holds on it.
 function _gRepaintStatic(raw) {
     var s = _gStyle(raw);
     if (raw.__eldurInline || s.display === "none") {
         return;
     }
+    var color = _gQtColor(s["color"]);
     var e = _gEdges(raw, s, raw.parent ? raw.parent.width : 0);
     if (raw.background !== undefined && raw.background !== null) {
         if (raw.background.color !== undefined && s.won["background-color"]) {
-            raw.background.color = _gQtColor(s["background-color"]);
+            _gRepaint(raw.background, "color", _gQtColor(s["background-color"]));
         }
         if (raw.background.border !== undefined && s.won["border-top-color"]) {
-            raw.background.border.color = _gQtColor(s["border-top-color"]);
+            _gRepaint(raw.background.border, "color", _gQtColor(s["border-top-color"]));
         }
         if (raw.contentItem && raw.contentItem.color !== undefined) {
-            raw.contentItem.color = _gQtColor(s["color"]);
+            _gRepaint(raw.contentItem, "color", color);
         }
         return;
     }
     if (typeof raw.text === "string" && raw.color !== undefined) {
-        raw.color = _gQtColor(s["color"]);
-        if (raw.linkColor !== undefined) {
-            raw.linkColor = _gLinkColor(raw);
+        _gRepaintText(raw, raw, color);
+        return;
+    }
+    var box = raw.border !== undefined && raw.color !== undefined;
+    if (box) {
+        if (_nodeTag(raw) !== "body" && _nodeTag(raw) !== "html") {
+            _gRepaint(raw, "color", _gQtColor(s["background-color"]));
         }
-        return;
-    }
-    if (raw.border === undefined || raw.color === undefined) {
-        return;
-    }
-    if (_nodeTag(raw) !== "body" && _nodeTag(raw) !== "html") {
-        raw.color = _gQtColor(s["background-color"]);
-    }
-    if (e.bt > 0) {
-        raw.border.color = _gQtColor(s["border-top-color"]);
+        if (e.bt > 0) {
+            _gRepaint(raw.border, "color", _gQtColor(s["border-top-color"]));
+        }
     }
     var kids = raw.children;
     for (var i = 0; i < kids.length; ++i) {
@@ -23924,13 +23949,36 @@ function _gRepaintStatic(raw) {
         if (typeof kid.eldurTag === "string") {
             continue;
         }
-        if (kid.spacing !== undefined) {
+        if (typeof kid.text === "string" && kid.color !== undefined) {
+            // The element's own text, which inherits its colour as an anonymous
+            // box does; a box made of a wrapper and its text has no colour else.
+            _gRepaintText(kid, raw, color);
+        } else if (!box) {
+            continue;
+        } else if (kid.spacing !== undefined) {
             _gRepadStatic(raw, kid, e);
         } else if (kid.color !== undefined && kid.children.length === 0) {
             // A strip for one side: which one, its shape and place say.
             var across = kid.width >= kid.height;
             var side = across ? (kid.y > 0 ? "bottom" : "top") : (kid.x > 0 ? "right" : "left");
-            kid.color = _gQtColor(s["border-" + side + "-color"]);
+            _gRepaint(kid, "color", _gQtColor(s["border-" + side + "-color"]));
+        }
+    }
+}
+
+function _gRepaint(obj, prop, color) {
+    if (!Qt.colorEqual(obj[prop], color)) {
+        obj[prop] = color;
+    }
+}
+
+// `owner` is the element whose style `text` shows.
+function _gRepaintText(text, owner, color) {
+    _gRepaint(text, "color", color);
+    if (text.linkColor !== undefined) {
+        var link = _gLinkColor(owner);
+        if (link !== undefined) {
+            _gRepaint(text, "linkColor", link);
         }
     }
 }
