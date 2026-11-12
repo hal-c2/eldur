@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>lifecycle</title></head>
+<body>
+<div id="p1"></div>
+<div id="p2"></div>
+<div id="p3"></div>
+<script>
+function L(k,v){console.log("LC "+k+" "+v)}
+var order=[];
+class XB extends HTMLElement {
+  static get observedAttributes(){return ["count"]}
+  constructor(){super();order.push("ctor")}
+  attributeChangedCallback(n,o,v){order.push("attr:"+v)}
+  connectedCallback(){order.push("connected:"+this.parentNode.id)}
+  disconnectedCallback(){order.push("disconnected:"+this.id)}
+}
+customElements.define("x-b",XB);
+function make(id){var e=document.createElement("x-b");e.id=id;return e}
+var p1=document.getElementById("p1"),p2=document.getElementById("p2"),p3=document.getElementById("p3");
+p1.appendChild(make("a"));p1.appendChild(make("b"));
+order=[];
+p2.replaceChildren();
+p2.appendChild(document.getElementById("a"));
+L("move",order.join(","));
+order=[];
+p2.replaceChildren();
+L("replaceChildren",order.join(",")+":"+p2.children.length);
+order=[];
+p1.replaceChild(make("c"),document.getElementById("b"));
+L("replaceChild",order.join(","));
+order=[];
+document.getElementById("c").replaceWith(make("d"));
+L("replaceWith",order.join(","));
+order=[];
+p1.textContent="text";
+L("textContent",order.join(",")+":"+p1.children.length);
+order=[];
+p3.innerHTML='<x-b count="3" id="e"></x-b>';
+L("innerHTML",order.join(",")+":"+p3.children.length);
+order=[];
+p3.innerHTML="";
+L("cleared",order.join(",")+":"+p3.children.length);
+order=[];
+var s1=make("s1");p1.appendChild(s1);
+order=[];
+p1.replaceChild(s1,s1);
+L("replaceChildSelf",order.join(",")+":"+s1.isConnected+":"+p1.children.length);
+order=[];
+s1.replaceWith(s1);
+L("replaceWithSelf",order.join(",")+":"+s1.isConnected+":"+p1.children.length);
+</script>
+</body></html>

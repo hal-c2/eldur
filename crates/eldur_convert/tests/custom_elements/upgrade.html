@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>upgrade</title><style>theme-pick{display:block}</style></head>
+<body>
+<theme-pick mode="dark"><select><option value="light">Light</option><option value="dark" selected>Dark</option></select></theme-pick>
+<theme-pick id="second"><select><option value="system">System</option></select></theme-pick>
+<p id="out">pending</p>
+<script>
+function L(k,v){console.log("LC "+k+" "+v)}
+var order=[];
+customElements.whenDefined("theme-pick").then(function(c){L("whenDefined",c===ThemePick)});
+class ThemePick extends HTMLElement {
+  static get observedAttributes(){return ["mode"]}
+  constructor(){super();this.dataset.ready="yes";this.sel=this.querySelector("select");order.push("ctor:"+(this.id||"first"))}
+  attributeChangedCallback(n,o,v){order.push("attr:"+(this.id||"first")+":"+n+":"+o+":"+v)}
+  connectedCallback(){order.push("connected:"+(this.id||"first")+":"+this.sel.value+":"+(this instanceof ThemePick))}
+  label(){return "pick-"+this.getAttribute("mode")}
+}
+L("before",typeof customElements.get("theme-pick"));
+customElements.define("theme-pick",ThemePick);
+L("order",order.join(","));
+var first=document.querySelector("theme-pick");
+L("same",(first instanceof ThemePick)+":"+first.label()+":"+first.dataset.ready+":"+first.sel.tagName+":"+first.tagName);
+L("registry",(customElements.get("theme-pick")===ThemePick)+":"+customElements.getName(ThemePick));
+order=[];
+first.setAttribute("mode","light");
+first.setAttribute("title","not observed");
+document.getElementById("second").setAttribute("mode","dark");
+first.removeAttribute("mode");
+L("attrs",order.join(","));
+L("elements",(first instanceof HTMLElement)+":"+(document.getElementById("out") instanceof HTMLElement)+":"+(order instanceof HTMLElement));
+</script>
+</body></html>

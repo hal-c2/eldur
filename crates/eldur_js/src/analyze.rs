@@ -20,7 +20,7 @@ use crate::parse::{
 };
 use crate::resolve::{
     ScriptQueryBindings, build_cross_script_query_map, extract_dom_query_from_call,
-    extract_string_literal, is_global_document, is_global_ident, kebab_to_camel,
+    extract_string_literal, is_global_document, is_global_ident, is_global_window, kebab_to_camel,
     known_dom_event_from_on_prop, resolve_module_specifier, unwrap_parens,
 };
 use crate::{
@@ -1131,6 +1131,11 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
             }
             if method == "getSelection" {
                 self.analysis.reads_text_selection = true;
+            }
+            // Defining a custom element upgrades the elements of its name,
+            // found by tag at run time, and its class reaches into them.
+            if method == "define" && is_custom_element_registry(&member.object, self.scoping) {
+                self.analysis.runtime_dom = true;
             }
 
             if member.property.name == "createElement"
@@ -2379,4 +2384,15 @@ pub(crate) fn is_motion_event(name: &str) -> bool {
             | "animationend"
             | "animationcancel"
     )
+}
+
+/// `customElements` or `window.customElements`, unshadowed.
+fn is_custom_element_registry(expr: &Expression<'_>, scoping: &Scoping) -> bool {
+    match unwrap_parens(expr) {
+        e @ Expression::Identifier(_) => is_global_ident(e, "customElements", scoping),
+        Expression::StaticMemberExpression(member) => {
+            member.property.name == "customElements" && is_global_window(&member.object, scoping)
+        }
+        _ => false,
+    }
 }

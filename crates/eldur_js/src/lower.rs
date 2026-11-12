@@ -824,6 +824,8 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             "MutationObserver" => Some("Eldur.MutationObserver"),
             "ResizeObserver" => Some("Eldur.ResizeObserver"),
             "IntersectionObserver" => Some("Eldur.IntersectionObserver"),
+            "HTMLElement" => Some("Eldur.HTMLElement"),
+            "customElements" => Some("Eldur.customElements"),
             "getComputedStyle" => Some("Eldur.getComputedStyle"),
             "scrollTo" => Some("Eldur.scrollTo"),
             "scrollBy" => Some("Eldur.scrollBy"),

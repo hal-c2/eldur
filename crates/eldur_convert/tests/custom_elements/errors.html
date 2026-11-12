@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>errors</title></head>
+<body>
+<script>
+function L(k,v){console.log("LC "+k+" "+v)}
+function name(f){try{f();return "ok"}catch(e){return e.name}}
+class A extends HTMLElement {}
+class B extends HTMLElement {}
+L("invalid",name(function(){customElements.define("nodash",A)})+":"+name(function(){customElements.define("Up-per",A)})+":"+name(function(){customElements.define("font-face",A)}));
+customElements.define("a-one",A);
+L("again",name(function(){customElements.define("a-one",B)})+":"+name(function(){customElements.define("a-two",A)}));
+L("plain",name(function(){new HTMLElement()})+":"+name(function(){new B()}));
+customElements.whenDefined("bad").then(function(){L("whenDefined","resolved")},function(e){L("whenDefined",e.name)});
+</script>
+</body></html>
