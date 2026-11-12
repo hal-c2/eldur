@@ -12471,6 +12471,17 @@ function _vRescheme() {
     var models = _vModels.filter(function(m) { return !m.select; });
     models.forEach(function(m) {
         _vEachElement(m.kids, function(v) { v.sig0 = undefined; });
+        // A block of one element still holds what the converter said the block
+        // was, and its first render paints the `Text` with that.
+        if (m.hoisted) {
+            var owner = m.text;
+            while (owner && typeof owner.eldurTag !== "string") {
+                owner = owner.parent;
+            }
+            if (owner) {
+                m.k.color = _vColor(_gStyle(owner)["color"], m.k.color);
+            }
+        }
     });
     _vChanged(null);
     models.forEach(function(m) {

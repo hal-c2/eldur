@@ -2,8 +2,9 @@
 //! setting `data-theme` before the body paints, or a toggle later) repaints all
 //! of its text, not only the boxes whose own rules name a custom property.
 //!
-//! Text that only inherits `color` from `body`, a box's inner text, a run's
-//! link colour and a border all follow the scheme. The expected colours are
+//! Text that only inherits `color` from `body`, a box's inner text, a block
+//! made of one inline element, a run's link colour and a border all follow the
+//! scheme. The expected colours are
 //! what Chromium computes for the same page after the same steps.
 
 use std::process::Command;
@@ -26,6 +27,8 @@ a { color: var(--link); }
 </head><body>
 <h1>Title</h1>
 <p id="p">Body <b>bold</b> and <a href="#x">a link</a>.</p>
+<p><b>Only bold</b></p>
+<div>Text <i>only italic</i></div>
 <div class="box" id="box">Boxed</div>
 <p><span>Run</span> <em>with</em> <code>parts</code> and <span class="hl">a mark</span></p>
 <div>Line text <button>Inline</button> after</div>
