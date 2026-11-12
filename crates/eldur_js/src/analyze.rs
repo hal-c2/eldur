@@ -58,7 +58,8 @@ pub(crate) fn analyze(scripts: &[ScriptInput]) -> Analysis {
             );
         }
 
-        let unsupported = collect_unsupported_diagnostics(input, &parsed.program, &parsed.scoping);
+        let unsupported =
+            collect_unsupported_diagnostics(input, &parsed.program, &parsed.scoping, scripts);
         analysis.diagnostics.extend(unsupported);
 
         valid_scripts.push((idx, input, parsed));

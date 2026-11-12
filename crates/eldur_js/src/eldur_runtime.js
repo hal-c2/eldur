@@ -449,6 +449,20 @@ function asyncRun(thisArg, genFn) {
     });
 }
 
+// `import(specifier)` of a module the converter did not inline. QML's JS engine
+// has no module loader and rejects the whole file at `import(`, so the call is
+// lowered to this: it rejects as a browser's does when the module is missing,
+// and the rest of the page keeps running.
+function dynamicImport(specifier) {
+    var spec;
+    try {
+        spec = String(specifier);
+    } catch (err) {
+        return Promise.reject(err);
+    }
+    return Promise.reject(new TypeError("Failed to fetch dynamically imported module: " + spec));
+}
+
 // Helper for lowered object rest destructuring: `const { a, ...rest } = src`.
 function objectRest(source, excludedKeys) {
     var target = {};

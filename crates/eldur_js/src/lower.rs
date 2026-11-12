@@ -5,10 +5,10 @@ use oxc_ast::ast::{
     AssignmentTargetPropertyIdentifier, AwaitExpression, BinaryExpression, BindingIdentifier,
     BindingPattern, BindingProperty, CallExpression, CatchClause, Class, ClassElement, ClassType,
     ComputedMemberExpression, Expression, ForInStatement, ForOfStatement, ForStatement, Function,
-    IdentifierReference, MethodDefinition, MethodDefinitionKind, ObjectExpression, ObjectProperty,
-    ObjectPropertyKind, PropertyKey, ReturnStatement, SimpleAssignmentTarget, Statement,
-    StaticMemberExpression, UnaryExpression, UpdateExpression, VariableDeclaration,
-    VariableDeclarationKind, VariableDeclarator,
+    IdentifierReference, ImportExpression, MethodDefinition, MethodDefinitionKind,
+    ObjectExpression, ObjectProperty, ObjectPropertyKind, PropertyKey, ReturnStatement,
+    SimpleAssignmentTarget, Statement, StaticMemberExpression, UnaryExpression, UpdateExpression,
+    VariableDeclaration, VariableDeclarationKind, VariableDeclarator,
 };
 use oxc_ast_visit::{Visit, walk};
 use oxc_semantic::{IsGlobalReference, Scoping, SymbolId};
@@ -219,6 +219,9 @@ pub(crate) struct AstLowerer<'a, 'b> {
     /// leaves method header syntax (`async foo(...)`) to `visit_method_definition`.
     method_fn_spans: HashSet<(u32, u32)>,
     pub symbol_renames: HashMap<SymbolId, String>,
+    /// `import("x")` specifiers naming a module this page inlines, mapped to
+    /// the top-level function that returns that module's namespace.
+    pub dynamic_imports: HashMap<String, String>,
 }
 
 impl<'a, 'b> AstLowerer<'a, 'b> {
@@ -248,6 +251,7 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
             post_class_static_inits: HashMap::new(),
             method_fn_spans: HashSet::new(),
             symbol_renames: HashMap::new(),
+            dynamic_imports: HashMap::new(),
         }
     }
 
@@ -1691,6 +1695,32 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             let header_span = Span::new(it.span.start, it.body.span.start);
             self.editor.replace(header_span, "catch (__eldur_err) ");
         }
+    }
+
+    fn visit_import_expression(&mut self, it: &ImportExpression<'a>) {
+        walk::walk_import_expression(self, it);
+        let source = self.editor.extract_and_consume(it.source.span());
+        // A module this page inlines is already loaded: the import resolves
+        // to its namespace, as a browser's does for a module in its map. The
+        // promise is the page's own (`Eldur.Promise`), so `instanceof Promise`
+        // holds.
+        if it.options.is_none()
+            && let Expression::StringLiteral(spec) = &it.source
+            && let Some(namespace) = self.dynamic_imports.get(spec.value.as_str())
+        {
+            self.editor
+                .replace(it.span, format!("Eldur.Promise.resolve({namespace}())"));
+            return;
+        }
+        // Any other module would have to be fetched, and QML has no loader.
+        let call = match &it.options {
+            Some(options) => {
+                let options = self.editor.extract_and_consume(options.span());
+                format!("Eldur.dynamicImport({source}, {options})")
+            }
+            None => format!("Eldur.dynamicImport({source})"),
+        };
+        self.editor.replace(it.span, call);
     }
 
     fn visit_await_expression(&mut self, it: &AwaitExpression<'a>) {
