@@ -1,0 +1,16 @@
+<!doctype html><!-- Inline content a script makes breaks into lines as the same content written would. -->
+<html><head><style>
+body{margin:8px;font:14px Arial}
+#root{width:300px}
+p{margin:0 0 6px;background:#eef;line-height:1.3}
+</style></head><body>
+<div id="root"></div>
+<script>
+function dump(pfx){var all=document.querySelectorAll("#root *");for(var i=0;i<all.length;i++){var e=all[i];var q=e.getBoundingClientRect();console.log('CS '+pfx+' '+e.tagName.toLowerCase()+i+' '+[q.x,q.y,q.width,q.height].join(','))}}
+var root=document.getElementById('root');
+var p=document.createElement('p');var b=document.createElement('b');b.textContent='Status:';p.appendChild(b);
+var t=document.createTextNode(' ok');p.appendChild(t);root.appendChild(p);
+var q=document.createElement('p');q.textContent='below';root.appendChild(q);
+setTimeout(function(){dump('H1');t.data=' the build failed on three platforms and the report explains which tests broke and why they broke';
+setTimeout(function(){dump('H2');t.data=' fine again';setTimeout(function(){dump('H3');document.body.appendChild(document.createElement('div')).id='csdone'},300)},300)},100);
+</script></body></html>

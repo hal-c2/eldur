@@ -1,0 +1,23 @@
+<!doctype html><!-- A written paragraph a script cuts into runs with a box it makes takes a later font in every run, not only the first. -->
+<html><head><style>
+body{margin:8px;font:14px Arial}
+#wrap{width:320px}
+#wrap.big{font:20px Georgia}
+p{margin:0}
+b{color:#036}
+code{font:12px monospace;background:#ddd;padding:0 3px}
+</style></head><body>
+<div id="wrap"><p id="p"><b>One</b> alpha <b>Two</b> beta <b>Three</b> gamma <i>four</i> delta</p></div>
+<script>
+var kinds=["div"];document.createElement(kinds[0]);
+function dump(pfx){var all=document.querySelectorAll('#wrap *');for(var i=0;i<all.length;i++){var e=all[i];var q=e.getBoundingClientRect();console.log('CS '+pfx+' '+e.tagName.toLowerCase()+i+' '+[q.x,q.y,q.width,q.height].join(','))}}
+var p=document.getElementById('p');
+var bs=p.querySelectorAll('b');
+var c1=document.createElement('code');c1.textContent='x1';p.insertBefore(c1,bs[1]);
+var c2=document.createElement('code');c2.textContent='y2';p.insertBefore(c2,bs[2]);
+setTimeout(function(){
+  dump('A');
+  document.getElementById('wrap').className='big';
+  setTimeout(function(){dump('B');document.body.appendChild(document.createElement('div')).id='csdone'},50);
+},50);
+</script></body></html>

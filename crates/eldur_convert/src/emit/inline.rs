@@ -65,8 +65,8 @@ pub(crate) fn name_runs(obj: &mut Object) {
 /// What an inline element paints of its own box, beside it when used.
 pub(crate) const ELDUR_INLINE_BOX_QML: &str = include_str!("EldurInlineBox.qml");
 
-/// The width of a created inline element or text run in a `Flow`: its
-/// natural width, no wider than the line.
+/// The width of a created inline element or text run on an `EldurLines`
+/// line: its natural width, no wider than the line.
 const OWN_WIDTH: &str = "parent ? Math.min(implicitWidth, parent.width) : implicitWidth";
 
 /// Whether `items` hold an atomic inline-level box, at any depth.
@@ -1020,9 +1020,9 @@ impl Emitter<'_, '_> {
             emitted.bottom.value().max(0.0),
         ];
         if own {
-            // Its template is instantiated apart from the Flow, so it cannot
+            // Its template is instantiated apart from the line, so it cannot
             // name it, and it has no wrapper to hold margins: a Text keeps
-            // them as padding, a painted box loses them (§6.8).
+            // them as padding, a painted box as the margins a line reads.
             if obj.type_name == "Text" {
                 for (name, m) in [("leftPadding", margins[0]), ("rightPadding", margins[1])] {
                     if round(m) != 0.0 {
@@ -1048,6 +1048,13 @@ impl Emitter<'_, '_> {
                 obj.set("implicitWidth", number(w + extra_w));
             }
             obj.set("width", Value::expr(OWN_WIDTH));
+            // Its line box is cut from its height, which its empty Text's
+            // line would otherwise give it.
+            if let Size::Length(l) = &style.height
+                && let Some(h) = l.as_px()
+            {
+                obj.set("height", number(h + extra_h));
+            }
             return Part {
                 obj,
                 hint: super::hint(self.doc, a),

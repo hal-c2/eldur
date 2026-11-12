@@ -1,8 +1,10 @@
 //! Inline elements a script creates in a block (`docs/design/dynamic-styles.md`
 //! §6.8): `<span>`, `<strong>` and `<a>` appended to a block `<li>`, or
-//! written into it as markup, are items of their own in the line's `Flow`,
-//! with the page's colours, weights, decorations and backgrounds, a class
-//! toggle on them and `:hover` on their item.
+//! written into it as markup, are nodes on the line's `EldurLines` model,
+//! drawn in its runs with the page's colours, weights, decorations and
+//! backgrounds, a class toggle on them and `:hover` on their block. What is
+//! drawn is read from the runs' markup and the boxes behind them; where an
+//! element is, from its rect as a script reads it.
 //!
 //! The page is `tests/inline_templates/page.html`, driven with real input
 //! through qmltestrunner. The expected values are Chromium's after the same
@@ -70,6 +72,7 @@ const TEST: &str = r##"
 import QtQuick
 import QtQuick.LocalStorage
 import QtTest
+import "eldur_runtime.js" as Eldur
 
 Item {
     id: host
@@ -127,11 +130,6 @@ TestCase {
     function tagged(item, tag) {
         return items(item, []).filter(i => i.eldurTag === tag && i.visible && i.width > 0)
             .sort((a, b) => pageY(a) - pageY(b))
-    }
-    function within(item, tag) {
-        const found = items(item, []).find(i => i.eldurTag === tag)
-        verify(found !== undefined, "no " + tag + " in " + item)
-        return found
     }
 
     function position(item) {
@@ -210,101 +208,202 @@ TestCase {
 const FOCUSED: &str = r##"
     function list() { return named("list") }
     function rows() { return tagged(list(), "li") }
-    function label(n) { return within(rows()[n - 1], "span") }
-    function strong(n) { return within(rows()[n - 1], "strong") }
-    function tag() { return within(rows()[2], "span") }
-    function link() { return within(rows()[2], "a") }
-    // The Text that draws an element: itself, or the one in its box.
-    function textOf(item) {
-        return typeof item.text === "string" ? item : items(item, []).find(i => typeof i.text === "string" && i !== item)
+    function element(select, n) {
+        const found = Eldur.document.querySelectorAll(select)[n || 0]
+        verify(found !== undefined && found !== null, "no " + select)
+        return found
     }
-    // The text nodes between the elements: the Texts in a row's line that
-    // are no element.
+    function label(n) { return element("#list .label", n - 1) }
+    function strong(n) { return element("#list strong", n - 1) }
+    function tag() { return element("#list .tag") }
+    function link() { return element("#list a") }
+
+    // The runs a row's line draws: the `Text`s on its `EldurLines`.
     function runs(row) {
-        return items(row, []).filter(i => typeof i.text === "string" && i.eldurTag === undefined
-            && i.parent && i.parent.eldurTextRun !== undefined)
+        return items(row, []).filter(i => typeof i.text === "string" && i.parent
+            && i.parent.eldurTextRun !== undefined && i.visible)
+    }
+    function decode(s) {
+        return s.replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+            .replace(/&quot;/g, "\"").replace(/&amp;/g, "&")
+    }
+    // What a run draws, piece by piece: its text read through the StyledText
+    // (or RichText) markup the runtime wrote, each piece with the colour,
+    // weight, italic and decorations Qt draws it with.
+    function pieces(run) {
+        const out = []
+        const stack = [{ color: run.color, weight: run.font.weight, italic: run.font.italic,
+                         underline: run.font.underline, strike: run.font.strikeout, tag: "" }]
+        const re = /<(\/?)([a-z]+)([^>]*)>|([^<]+)/g
+        let m
+        while ((m = re.exec(run.text)) !== null) {
+            const top = stack[stack.length - 1]
+            if (m[4] !== undefined) {
+                out.push(Object.assign({}, top, { text: decode(m[4]) }))
+                continue
+            }
+            const name = m[2]
+            if (m[1] === "/") {
+                for (let i = stack.length - 1; i > 0; i--) {
+                    if (stack[i].tag === name) { stack.length = i; break }
+                }
+                continue
+            }
+            if (name === "br")
+                continue
+            const s = Object.assign({}, top, { tag: name })
+            const attrs = m[3]
+            const color = attrs.match(/color="([^"]*)"/)
+            if (name === "font" && color)
+                s.color = Qt.color(color[1])
+            if (name === "b")
+                s.weight = 700
+            if (name === "i")
+                s.italic = true
+            if (name === "u")
+                s.underline = true
+            if (name === "s")
+                s.strike = true
+            if (name === "a") {
+                // Qt draws a StyledText link in `linkColor`, underlined.
+                s.color = run.linkColor
+                s.underline = true
+            }
+            const style = attrs.match(/style="([^"]*)"/)
+            if (style) {
+                const css = style[1]
+                const c = css.match(/(?:^|;)color:([^;]*)/)
+                if (c)
+                    s.color = Qt.color(c[1])
+                if (/text-decoration:none/.test(css))
+                    s.underline = false
+            }
+            stack.push(s)
+        }
+        return out
+    }
+    // The style `words` are drawn with in `row`, which must be one style.
+    function drawn(row, words) {
+        const all = runs(row).map(pieces).reduce((a, b) => a.concat(b), [])
+        const text = all.map(p => p.text).join("")
+        const at = text.indexOf(words)
+        verify(at >= 0, JSON.stringify(words) + " is not drawn in " + JSON.stringify(text))
+        const covering = []
+        let pos = 0
+        for (const p of all) {
+            if (pos < at + words.length && pos + p.text.length > at)
+                covering.push(p)
+            pos += p.text.length
+        }
+        for (const p of covering) {
+            verify(String(p.color) === String(covering[0].color) && p.weight === covering[0].weight
+                && p.italic === covering[0].italic && p.underline === covering[0].underline
+                && p.strike === covering[0].strike, JSON.stringify(words) + " is drawn in more than one style")
+        }
+        return covering[0]
     }
 
-    // `color`, `font-weight`, `font-style` and `text-decoration-line`, the
-    // last also drawn for a decoration a block propagates (`decorated`).
-    function sameStyle(item, name, what, decorated) {
-        const text = textOf(item)
-        sameColor(text.color, want(name, "color"), what + " colour")
-        compare(text.font.weight, Number(want(name, "font-weight")), what + " weight")
-        compare(text.font.italic, want(name, "font-style") === "italic", what + " italic")
+    // `color`, `font-weight`, `font-style` and `text-decoration-line` of
+    // `words` as drawn, the last also drawn for a decoration a block
+    // propagates (`decorated`).
+    function sameStyle(row, words, name, what, decorated) {
+        const p = drawn(row, words)
+        sameColor(p.color, want(name, "color"), what + " colour")
+        compare(p.weight, Number(want(name, "font-weight")), what + " weight")
+        compare(p.italic, want(name, "font-style") === "italic", what + " italic")
         const line = want(name, "text-decoration-line")
-        compare(text.font.underline, line === "underline", what + " underline")
-        compare(text.font.strikeout, line === "line-through" || decorated === "line-through",
+        compare(p.underline, line === "underline", what + " underline")
+        compare(p.strike, line === "line-through" || decorated === "line-through",
             what + " line-through")
     }
-    // Text boxes: Qt's line is 18-19px where Chromium's inline box is its
-    // 17px content area, and each glyph run is measured by its own font
-    // engine, so positions and widths along a line may drift by a few
-    // pixels; the rows themselves must match to 1px.
-    function sameTextBox(item, box, what) {
-        const origin = { item: list(), box: boxes("initial geometry", "#list")[0] }
-        const p = item.mapToItem(origin.item, 0, 0)
-        near(p.x, box.x - origin.box.x, 3, what + " x")
-        near(p.y, box.y - origin.box.y, 2, what + " y")
-        near(item.width, box.width, 3, what + " width")
-        near(item.height, box.height, 2, what + " height")
+    // An element's box as a script reads it (the runtime's rects of the runs
+    // on its line), or an item's: Qt's line is 18-19px where Chromium's
+    // inline box is its 17px content area, and each glyph run is measured by
+    // its own font engine, so positions and widths along a line may drift by
+    // a few pixels; the rows themselves must match to 1px.
+    function sameTextBox(got, box, what) {
+        const listBox = boxes("initial geometry", "#list")[0]
+        const at = element("#list").getBoundingClientRect()
+        near(got.x - at.x, box.x - listBox.x, 3, what + " x")
+        near(got.y - at.y, box.y - listBox.y, 2, what + " y")
+        near(got.width, box.width, 3, what + " width")
+        near(got.height, box.height, 2, what + " height")
+    }
+    function sameElementBox(e, box, what) {
+        sameTextBox(e.getBoundingClientRect(), box, what)
+    }
+    // Where an item is, in the coordinates a script's rects are in.
+    function itemBox(item) {
+        const p = item.mapToItem(list(), 0, 0)
+        const at = element("#list").getBoundingClientRect()
+        return { x: at.x + p.x, y: at.y + p.y, width: item.width, height: item.height }
     }
 
     function test_created_inline_elements_take_the_page_styles() {
         compare(rows().length, 3, "rows")
-        sameStyle(label(1), "initial label1", "label 1")
-        sameStyle(strong(1), "initial strong1", "strong 1")
-        sameStyle(tag(), "initial tag", "tag")
-        sameColor(tag().color, want("initial tag", "background-color"), "tag background")
-        sameStyle(link(), "initial link", "link")
-        compare(label(1).text, "First")
-        compare(strong(2).text, "Grace")
-        compare(textOf(tag()).text, "tagged")
-        compare(link().text, "a link")
+        sameStyle(rows()[0], "First", "initial label1", "label 1")
+        sameStyle(rows()[0], "Ada", "initial strong1", "strong 1")
+        sameStyle(rows()[2], "tagged", "initial tag", "tag")
+        sameStyle(rows()[2], "a link", "initial link", "link")
+        compare(label(1).textContent, "First")
+        compare(strong(2).textContent, "Grace")
+        compare(tag().textContent, "tagged")
+        compare(link().textContent, "a link")
+        // The tag's background is its box's, painted behind its text.
+        const bg = css(want("initial tag", "background-color"))
+        const paint = items(rows()[2], []).filter(i => i.color !== undefined && typeof i.text !== "string"
+            && i.visible && i.width > 0 && Math.abs(i.color.r * 255 - bg.r) <= 1
+            && Math.abs(i.color.g * 255 - bg.g) <= 1 && Math.abs(i.color.b * 255 - bg.b) <= 1)
+        compare(paint.length, 1, "tag backgrounds")
+        sameColor(paint[0].color, want("initial tag", "background-color"), "tag background")
+        sameTextBox(itemBox(paint[0]), boxes("initial geometry", "#list .tag")[0], "tag background")
     }
 
     function test_text_nodes_take_the_line_styles() {
-        const between = runs(rows()[0])
+        const kids = Array.from(element("#list li", 0).childNodes)
+        const between = kids.filter(n => n.nodeType === 3)
         compare(between.length, 1, "text nodes in row 1")
-        compare(between[0].text, " by ")
-        sameStyle(between[0], "initial item1", "text node")
-        compare(runs(rows()[2]).length, 1, "text nodes in row 3")
+        compare(between[0].data, " by ")
+        sameStyle(rows()[0], " by ", "initial item1", "text node")
+        compare(Array.from(element("#list li", 2).childNodes).filter(n => n.nodeType === 3).length, 1,
+            "text nodes in row 3")
+        sameStyle(rows()[2], " and ", "initial item1", "text node in row 3")
     }
 
     function test_created_inline_geometry() {
         const g = "initial geometry"
         sameBox(list(), boxes(g, "#list")[0], "list")
         sameBoxes(rows(), g, "#list li", "item")
-        sameTextBox(label(1), boxes(g, "#list .label")[0], "label 1")
-        sameTextBox(label(2), boxes(g, "#list .label")[1], "label 2")
-        sameTextBox(strong(1), boxes(g, "#list strong")[0], "strong 1")
-        sameTextBox(strong(2), boxes(g, "#list strong")[1], "strong 2")
-        sameTextBox(tag(), boxes(g, "#list .tag")[0], "tag")
-        sameTextBox(link(), boxes(g, "#list a")[0], "link")
+        sameElementBox(label(1), boxes(g, "#list .label")[0], "label 1")
+        sameElementBox(label(2), boxes(g, "#list .label")[1], "label 2")
+        sameElementBox(strong(1), boxes(g, "#list strong")[0], "strong 1")
+        sameElementBox(strong(2), boxes(g, "#list strong")[1], "strong 2")
+        sameElementBox(tag(), boxes(g, "#list .tag")[0], "tag")
+        sameElementBox(link(), boxes(g, "#list a")[0], "link")
     }
 
-    // `classList.toggle('warn')` on a created span: its own binding, and the
+    // `classList.toggle('warn')` on a created span: its own style, and the
     // line moves the rest over.
     function test_toggling_a_class_on_a_created_span() {
         click(named("warn"))
-        sameStyle(label(1), "warn label1", "label 1")
-        sameStyle(label(2), "warn label2", "label 2")
+        sameStyle(rows()[0], "First", "warn label1", "label 1")
+        sameStyle(rows()[1], "Second", "warn label2", "label 2")
         const g = "warn geometry"
         sameBoxes(rows(), g, "#list li", "item")
-        sameTextBox(label(1), boxes(g, "#list .label")[0], "label 1")
-        sameTextBox(strong(1), boxes(g, "#list strong")[0], "strong 1")
+        sameElementBox(label(1), boxes(g, "#list .label")[0], "label 1")
+        sameElementBox(strong(1), boxes(g, "#list strong")[0], "strong 1")
     }
 
     function test_hovering_the_item_recolours_its_label() {
         hover(rows()[0])
-        sameStyle(label(1), "hover label1", "label 1")
-        sameStyle(label(2), "hover label2", "label 2")
+        sameStyle(rows()[0], "First", "hover label1", "label 1")
+        sameStyle(rows()[1], "Second", "hover label2", "label 2")
     }
 
     function test_hover_and_class_together() {
         click(named("warn"))
         hover(rows()[0])
-        sameStyle(label(1), "warn hover label1", "label 1")
+        sameStyle(rows()[0], "First", "warn hover label1", "label 1")
     }
 
     // `.item.done` on a created block: its colour and its line-through,
@@ -312,9 +411,9 @@ const FOCUSED: &str = r##"
     function test_a_class_on_the_block_reaches_its_inline_children() {
         click(named("done"))
         const line = want("done item2", "text-decoration-line")
-        sameStyle(runs(rows()[1])[0], "done item2", "text node")
-        sameStyle(label(2), "done label2", "label 2", line)
-        sameStyle(strong(2), "done strong2", "strong 2", line)
-        sameStyle(label(1), "initial label1", "label 1")
+        sameStyle(rows()[1], " by ", "done item2", "text node")
+        sameStyle(rows()[1], "Second", "done label2", "label 2", line)
+        sameStyle(rows()[1], "Grace", "done strong2", "strong 2", line)
+        sameStyle(rows()[0], "First", "initial label1", "label 1")
     }
 "##;

@@ -92,7 +92,7 @@ Inline runs become one `Text`. See "Inline formatting" for when they split.
 | i | inline | `<i>` in StyledText | — | Full | |
 | b | inline | `<b>` in StyledText | — | Full | |
 | u | inline | `font.underline: true` | — | Full | |
-| mark | inline | `Flow` item with background `Rectangle` | — | Emulated | Highlight needs a rectangle behind the text |
+| mark | inline | A run on an `EldurLines`, its background painted by `EldurInlineBox` | — | Emulated | Highlight needs a rectangle behind the text |
 | bdi | inline | `Text` | `dir` → `LayoutMirroring` | Approx | Bidi isolation handled by the Qt text layout |
 | bdo | inline | `Text` with `horizontalAlignment` | `dir` | Approx | Override direction only |
 | span | inline | `Text` (plain) | cascade | Full | Split when styled (see Inline formatting) |
@@ -190,7 +190,7 @@ Inline runs become one `Text`. See "Inline formatting" for when they split.
 - **`Text.RichText`** (used for `pre`/`table`-like content or when more HTML is needed). It accepts the `QTextDocument` HTML subset, including `blockquote`, `center`, `code`, `dl`/`dt`/`dd`, `em`, `hr`, `pre`, `strong`, `span` with inline style (`color`, `font-size`, `font-weight`, `font-family`, `text-decoration`), `table`/`tr`/`td` (verify). Scripts and external stylesheets are not supported.
 - **`Text.PlainText`** when the run has no markup.
 
-**The converter splits the run into a `Flow` of separate `Text` items** when any of these is true:
+**The converter splits the run into separate `Text` runs on an `EldurLines`** (`docs/spec/layout.md` §1.3, §2), which still breaks them as one paragraph, when any of these is true:
 - The inline element has `background`, `border`, `padding`, or `margin`.
 - The element is `mark`, or a `span` with a background.
 - The element has a click handler or hover state (`onclick`, `:hover`).

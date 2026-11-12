@@ -1,0 +1,26 @@
+<!doctype html><!-- Inline content a script makes breaks into lines as the same content written would. -->
+<html><head><style>
+body{margin:8px;font:15px Arial}
+#root{width:420px;list-style:none;padding:0;margin:0}
+.res{margin:0 0 10px}
+.res a{color:#1a0dab;font-size:17px}
+.res .url{color:#006621;font-size:13px}
+.res p{margin:2px 0;color:#444;line-height:1.5}
+mark{background:#ff6;color:inherit}
+</style></head><body>
+<ul id="root"></ul>
+<script>
+var kinds=["div"];document.createElement(kinds[0]);
+function dump(pfx){var all=document.querySelectorAll("#root *");for(var i=0;i<all.length;i++){var e=all[i];var q=e.getBoundingClientRect();console.log('CS '+pfx+' '+e.tagName.toLowerCase()+i+' '+[q.x,q.y,q.width,q.height].join(','))}}
+var hits=[['Inline layout in Qt Quick','example.org/qt/inline','How the <mark> layouter places runs: every line of an inline formatting context gets its own baseline and the runs of text sit on it.','layouter'],
+['CSS Text Module Level 3','w3.org/TR/css-text-3','Defines line breaking, white space processing and justification; a soft wrap opportunity is where a line may break.','line'],
+['Short','a.b','Only one mark here.','mark']];
+var root=document.getElementById('root');
+hits.forEach(function(h){var li=document.createElement('li');li.className='res';
+var a=document.createElement('a');a.href='#';a.textContent=h[0];li.appendChild(a);
+var u=document.createElement('div');u.className='url';u.textContent=h[1];li.appendChild(u);
+var p=document.createElement('p');var parts=h[2].split(h[3]);
+parts.forEach(function(t,i){p.appendChild(document.createTextNode(t));if(i<parts.length-1){var m=document.createElement('mark');m.textContent=h[3];p.appendChild(m)}});
+li.appendChild(p);root.appendChild(li)});
+setTimeout(function(){dump('H');document.body.appendChild(document.createElement('div')).id='csdone'},100);
+</script></body></html>

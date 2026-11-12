@@ -166,6 +166,77 @@ const KNOWN: &[(&str, &str, &str, &str)] = &[
         "as the second-column cells above, and a written collapsed table keeps its rows on \
      whole pixels: its last row holds the table's outer half border as well",
     ),
+    (
+        "made_lines_chat",
+        "CS H div8 15,148.96875,360,31.59375",
+        "CS H div8 15,147.9687,360,31.5938",
+        "on a page the analysis follows, the made bubbles are the converter's templates \
+     in the log's ColumnLayout, and Qt's layouts put their items on whole pixels: \
+     the third bubble sits at 133 where the sum is 134.0 (4 + 51.2 + 4 + 70.8 + 4); \
+     the open page lays the same bubbles out with the rules and matches",
+    ),
+    (
+        "made_lines_chat",
+        "CS H b9 25,155.96875,17.90625,16",
+        "CS H b9 25,154.968748,17.875,16",
+        "in the third bubble, which is 1px high (above)",
+    ),
+    (
+        "made_lines_chat",
+        "CS H a10 65.484375,155.96875,28.03125,16",
+        "CS H a10 65.5,154.968748,27.875,16",
+        "in the third bubble, which is 1px high (above)",
+    ),
+    (
+        "made_lines_chat",
+        "CS H code11 124.65625,156.96875,13.203125,16",
+        "CS H code11 124.515625,155.968748,13.1875,16",
+        "in the third bubble, which is 1px high (above)",
+    ),
+    (
+        "made_lines_log",
+        "CS H span1 14,31,397.8125,34",
+        "CS H span1 14,31,304,34",
+        "Qt breaks a `pre-wrap` line after the URL's `/` (UAX #14 allows it), Chromium \
+     keeps the URL whole on the first line; written spans in the same pane break \
+     the same way (measured on the written copy of this page)",
+    ),
+    (
+        "made_lines_log_open",
+        "CS H span1 14,31,397.8125,34",
+        "CS H span1 14,31,304,34",
+        "Qt breaks a `pre-wrap` line after the URL's `/` (UAX #14 allows it), Chromium \
+     keeps the URL whole on the first line; written spans in the same pane break \
+     the same way (measured on the written copy of this page)",
+    ),
+    (
+        "made_lines_indent",
+        "CS H b1 38,11,37.5,17",
+        "CS H b1 8,11,37.375,17",
+        "`text-indent` is not converted, for written paragraphs either (the converter \
+     reports it): the first line starts 30px left of Chromium's, and the second \
+     line's break moves with it",
+    ),
+    (
+        "made_lines_indent",
+        "CS H a2 166.421875,59,35.03125,17",
+        "CS H a2 141.25,59,34.875,17",
+        "on the second line, which breaks with the first line's missing indent",
+    ),
+    (
+        "made_lines_indent_open",
+        "CS H b1 38,11,37.5,17",
+        "CS H b1 8,11,37.375,17",
+        "`text-indent` is not converted, for written paragraphs either (the converter \
+     reports it): the first line starts 30px left of Chromium's, and the second \
+     line's break moves with it",
+    ),
+    (
+        "made_lines_indent_open",
+        "CS H a2 166.421875,59,35.03125,17",
+        "CS H a2 141.25,59,34.875,17",
+        "on the second line, which breaks with the first line's missing indent",
+    ),
 ];
 
 /// Pixels a logged number may be off: glyph widths differ a little between the two
@@ -838,4 +909,196 @@ fn rule_empty_generated_boxes() {
 #[test]
 fn rule_inline_class_changes() {
     page("rule_inline_class_changes");
+}
+
+/// Chat messages: a `<b>` name, text, an `<a>` link and padded `<code>` in each made bubble.
+#[test]
+fn made_lines_chat() {
+    page("made_lines_chat");
+}
+
+/// Chat messages: a `<b>` name, text, an `<a>` link and padded `<code>` in each made bubble. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_chat_open() {
+    page("made_lines_chat_open");
+}
+
+/// Search results: `<mark>` in wrapped snippets, and a made `<li>`'s link on its line.
+#[test]
+fn made_lines_search() {
+    page("made_lines_search");
+}
+
+/// Search results: `<mark>` in wrapped snippets, and a made `<li>`'s link on its line. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_search_open() {
+    page("made_lines_search_open");
+}
+
+/// `innerHTML`: a centred paragraph with a padded, rounded inline-block badge, `<em>`, and a long word under `overflow-wrap: anywhere`.
+#[test]
+fn made_lines_card() {
+    page("made_lines_card");
+}
+
+/// `innerHTML`: a centred paragraph with a padded, rounded inline-block badge, `<em>`, and a long word under `overflow-wrap: anywhere`. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_card_open() {
+    page("made_lines_card_open");
+}
+
+/// A written `white-space: pre-wrap` pane takes made spans one line each, and a text node after them.
+#[test]
+fn made_lines_log() {
+    page("made_lines_log");
+}
+
+/// A written `white-space: pre-wrap` pane takes made spans one line each, and a text node after them. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_log_open() {
+    page("made_lines_log_open");
+}
+
+/// A made paragraph's text node set longer, then shorter: its lines are cut again each time.
+#[test]
+fn made_lines_swap() {
+    page("made_lines_swap");
+}
+
+/// A made paragraph's text node set longer, then shorter: its lines are cut again each time. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_swap_open() {
+    page("made_lines_swap_open");
+}
+
+/// `vertical-align` `middle`, `super` and `sub` on made icons, badges and spans in wrapped text.
+#[test]
+fn made_lines_valign() {
+    page("made_lines_valign");
+}
+
+/// `vertical-align` `middle`, `super` and `sub` on made icons, badges and spans in wrapped text. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_valign_open() {
+    page("made_lines_valign_open");
+}
+
+/// `text-indent` and `line-height: 1.6` on a made paragraph.
+#[test]
+fn made_lines_indent() {
+    page("made_lines_indent");
+}
+
+/// `text-indent` and `line-height: 1.6` on a made paragraph. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_indent_open() {
+    page("made_lines_indent_open");
+}
+
+/// `innerHTML` straight into a centred block, no paragraph: text, an inline-block badge, `<em>`, a long word under `overflow-wrap: anywhere`, a coloured span.
+#[test]
+fn made_lines_textcard() {
+    page("made_lines_textcard");
+}
+
+/// `innerHTML` straight into a centred block, no paragraph: text, an inline-block badge, `<em>`, a long word under `overflow-wrap: anywhere`, a coloured span. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_textcard_open() {
+    page("made_lines_textcard_open");
+}
+
+/// Made inline-blocks with `vertical-align: middle`, and a made `<sup>`, on written paragraphs' lines.
+#[test]
+fn made_lines_icon() {
+    page("made_lines_icon");
+}
+
+/// Made inline-blocks with `vertical-align: middle`, and a made `<sup>`, on written paragraphs' lines. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_icon_open() {
+    page("made_lines_icon_open");
+}
+
+/// A paragraph filled before it is in the page takes the font the rules give it there, in every run its boxes cut it into.
+#[test]
+fn made_lines_late_font() {
+    page("made_lines_late_font");
+}
+
+/// A paragraph filled before it is in the page takes the font the rules give it there, in every run its boxes cut it into. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_late_font_open() {
+    page("made_lines_late_font_open");
+}
+
+/// A text node set while out of a `pre-wrap` line keeps its spaces when put back; one moved to a `normal` line collapses them.
+#[test]
+fn made_lines_respace() {
+    page("made_lines_respace");
+}
+
+/// A text node set while out of a `pre-wrap` line keeps its spaces when put back; one moved to a `normal` line collapses them. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_respace_open() {
+    page("made_lines_respace_open");
+}
+
+/// `vertical-align` in `rem`, `ex`, `ch` and `vh` on made spans and inline-blocks, on lines tall enough that no shift grows them.
+#[test]
+fn made_lines_valign_units() {
+    page("made_lines_valign_units");
+}
+
+/// `vertical-align` in `rem`, `ex`, `ch` and `vh` on made spans and inline-blocks, on lines tall enough that no shift grows them. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_valign_units_open() {
+    page("made_lines_valign_units_open");
+}
+
+/// A made paragraph that sets only how it wraps keeps the spaces of the `pre-wrap` block around it; `text-wrap-mode: nowrap` keeps them on one line.
+#[test]
+fn made_lines_wrap_style() {
+    page("made_lines_wrap_style");
+}
+
+/// A made paragraph that sets only how it wraps keeps the spaces of the `pre-wrap` block around it; `text-wrap-mode: nowrap` keeps them on one line. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_wrap_style_open() {
+    page("made_lines_wrap_style_open");
+}
+
+/// A made paragraph whose `white-space` comes from a `var()` holding no keyword is `unset` and takes its `pre-wrap` block's; a script's unreadable `whiteSpace` or `textWrap` leaves the value it wrote before.
+#[test]
+fn made_lines_wrap_invalid() {
+    page("made_lines_wrap_invalid");
+}
+
+/// A made paragraph whose `white-space` comes from a `var()` holding no keyword is `unset` and takes its `pre-wrap` block's; a script's unreadable `whiteSpace` or `textWrap` leaves the value it wrote before. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_wrap_invalid_open() {
+    page("made_lines_wrap_invalid_open");
+}
+
+/// A made `pre-wrap` paragraph wraps at a kept space on a text node's edge: a node of one space between spans, a space that ends a node before a span, and one that starts a node after a span. A space after a `<br>` stays at the start of its line.
+#[test]
+fn made_lines_wrap_edges() {
+    page("made_lines_wrap_edges");
+}
+
+/// A made `pre-wrap` paragraph wraps at a kept space on a text node's edge: a node of one space between spans, a space that ends a node before a span, and one that starts a node after a span. A space after a `<br>` stays at the start of its line. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_wrap_edges_open() {
+    page("made_lines_wrap_edges_open");
+}
+
+/// A made `pre-wrap` paragraph whose text holds a U+0001 keeps it as a character, never a break: a word that runs past its box with one in it stays on its line, and a space that ends the node after it still breaks.
+#[test]
+fn made_lines_wrap_control() {
+    page("made_lines_wrap_control");
+}
+
+/// A made `pre-wrap` paragraph whose text holds a U+0001 keeps it as a character, never a break: a word that runs past its box with one in it stays on its line, and a space that ends the node after it still breaks. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_wrap_control_open() {
+    page("made_lines_wrap_control_open");
 }

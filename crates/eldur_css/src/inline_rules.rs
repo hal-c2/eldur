@@ -138,6 +138,10 @@ fn box_property(longhand: Longhand) -> Option<&'static str> {
         L::TextDecorationStyle => "text-decoration-style",
         L::TextDecorationColor => "text-decoration-color",
         L::TextAlign => "text-align",
+        // Where a created inline box sits on its line, and where its text breaks.
+        L::VerticalAlign => "vertical-align",
+        L::OverflowWrap => "overflow-wrap",
+        L::WordBreak => "word-break",
         L::Opacity => "opacity",
         L::Position => "position",
         L::Top => "top",
@@ -316,6 +320,17 @@ pub(crate) fn background_parts(value: &str) -> Option<(Option<String>, Option<St
     ))
 }
 
+/// The runtime's name for a `white-space` longhand. It gets the two as
+/// written and inherits each on its own: a rule that sets only how text wraps,
+/// as `text-wrap: balance` does, leaves the spaces as the parent keeps them.
+fn white_space_property(longhand: Longhand) -> Option<&'static str> {
+    match longhand {
+        Longhand::WhiteSpaceCollapse => Some("white-space-collapse"),
+        Longhand::TextWrapMode => Some("text-wrap-mode"),
+        _ => None,
+    }
+}
+
 fn wide(keyword: &CssWide) -> &'static str {
     match keyword {
         CssWide::Initial => "initial",
@@ -385,9 +400,11 @@ pub(crate) fn runtime_rules(sheets: &[Stylesheet], viewport: &Viewport) -> Vec<R
                     }
                     DeclValue::Expanded(l, v) => property(*l)
                         .or_else(|| box_property(*l))
+                        .or_else(|| white_space_property(*l))
                         .map(|name| (name.to_owned(), v.clone())),
                     DeclValue::Wide(l, w) => property(*l)
                         .or_else(|| box_property(*l))
+                        .or_else(|| white_space_property(*l))
                         .map(|name| (name.to_owned(), wide(w).to_owned())),
                     // One entry per longhand it may set; the runtime expands it
                     // once the variables are known.

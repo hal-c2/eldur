@@ -1,0 +1,17 @@
+<!doctype html><!-- Inline content a script makes breaks into lines as the same content written would. -->
+<html><head><style>
+body{margin:8px;font:15px Arial}
+#root{width:320px}
+.para{text-indent:2em;line-height:1.6;margin:0}
+.para b{color:#036}
+</style></head><body>
+<div id="root"></div>
+<script>
+function dump(pfx){var all=document.querySelectorAll("#root *");for(var i=0;i<all.length;i++){var e=all[i];var q=e.getBoundingClientRect();console.log('CS '+pfx+' '+e.tagName.toLowerCase()+i+' '+[q.x,q.y,q.width,q.height].join(','))}}
+var root=document.getElementById('root');var p=document.createElement('p');p.className='para';
+var b=document.createElement('b');b.textContent='Note.';p.appendChild(b);
+p.appendChild(document.createTextNode(' The first line of this paragraph starts two ems in, and every line is one point six times the font size apart, with '));
+var a=document.createElement('a');a.href='#';a.textContent='a link';p.appendChild(a);p.appendChild(document.createTextNode(' near the end.'));
+root.appendChild(p);
+setTimeout(function(){dump('H');document.body.appendChild(document.createElement('div')).id='csdone'},100);
+</script></body></html>

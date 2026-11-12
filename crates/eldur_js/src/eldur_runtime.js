@@ -515,6 +515,7 @@ function init(rootItem, baseUrl, documentUrl) {
     }
     _vModels = [];
     _vRules = null;
+    _vStateRules = null;
     _gCascadeRules = null;
     _gPaintTable = null;
     _gWarned = {};
@@ -4648,7 +4649,9 @@ function _tableCaptions(raw) {
     return out;
 }
 
-function _rawKids(raw, withText, withPseudo) {
+// With `asRuns`, a run of text cut from an inline model is itself in the list
+// where its nodes would be: it is what a line places.
+function _rawKids(raw, withText, withPseudo, asRuns) {
     var container = _childContainer(raw);
     if (!container || !container.children) {
         return [];
@@ -4691,7 +4694,7 @@ function _rawKids(raw, withText, withPseudo) {
             continue;
         }
         if (_isAnonLines(child)) {
-            var inLines = _rawKids(child, withText, withPseudo);
+            var inLines = _rawKids(child, withText, withPseudo, asRuns);
             for (var al = 0; al < inLines.length; ++al) {
                 out.push(inLines[al]);
             }
@@ -4710,6 +4713,10 @@ function _rawKids(raw, withText, withPseudo) {
             continue;
         }
         if (!withText && _meta(child).createdTag === "#text" && _isLines(container)) {
+            continue;
+        }
+        if (_vAnonText(child) && asRuns) {
+            out.push(child);
             continue;
         }
         if (_vAnonText(child)) {
@@ -5187,7 +5194,7 @@ function setText(item, value) {
     m.explicitText = str;
     if (m.runText !== undefined) {
         m.runText = str;
-        raw.text = _runText(str);
+        raw.text = _runText(str, raw.parent);
         return;
     }
     if (typeof raw.text === "string") {
@@ -5455,6 +5462,9 @@ function _serializeElement(raw) {
 function setStyle(item, prop, value) {
     var raw = _unwrap(item);
     if (!raw) {
+        return;
+    }
+    if (_gUnreadableWhiteSpace(String(prop), value)) {
         return;
     }
     if (raw.__eldurInline) {
@@ -7786,6 +7796,38 @@ function _anonLinesOf(raw) {
     return null;
 }
 
+// A run at the end of a line that ends with no model, as a template's line
+// starts or one ends after a box: inline content appended to it is nodes of
+// its model, cut into runs and painted as a written paragraph's are, not
+// items of their own. A box the runtime lays out restyles its line's runs.
+function _vNewLinesTail(raw) {
+    var lines = _anonLinesOf(raw);
+    if (!lines || _gIsBox(raw)) {
+        return null;
+    }
+    return _vNewRun(lines, null);
+}
+
+// An empty run of `lines` before `before`, with a model in the line's font.
+function _vNewRun(lines, before) {
+    var text = _vRunText(lines, null);
+    // Its model is made here; the line's others are to be read from markup first.
+    if (lines.children.length > 0) {
+        _vModelOf(lines.children[0]);
+    }
+    _meta(lines).vRunsBuilt = true;
+    var model = { text: text, kids: [], k: _vLiveBase(lines), hoisted: false, bare: false, html: false,
+                  pre: Boolean(lines.preserveSpace), underline: false, strike: false };
+    if (lines.cssSize > 0) {
+        model.k.size = lines.cssSize;
+    }
+    model.k.lh = lines.lineHeight > 0 ? lines.lineHeight : undefined;
+    _meta(text).vModel = model;
+    _vModels.push(model);
+    _insertInFlow(lines, [text], before);
+    return model;
+}
+
 // The model of the run a line of `raw`'s ends with: what is appended to `raw`
 // joins it, as it would have joined the model the runs were cut from.
 function _vLinesTail(raw) {
@@ -7820,11 +7862,22 @@ function _newLines(owner) {
         ++_gGen;
         var s = _gStyle(owner);
         lines.font = _gFontOf(s);
-        lines.color = s.color;
+        lines.color = _gQtColor(s.color);
         var line = _gLineHeight(s);
         lines.lineHeight = line === null ? 0 : line;
     }
     return lines;
+}
+
+// A line taking a `Text`'s place is set as it was: a closed page has no
+// cascade to say how its paragraph aligns and wraps, and the converter set
+// the `Text` from the page's style.
+function _linesLike(lines, text) {
+    lines.textAlign = text.horizontalAlignment;
+    lines.noWrap = text.wrapMode === 0; // Text.NoWrap
+    lines.preserveSpace = text.eldurPre === true;
+    // `overflow-wrap` breaks a word in its text nodes too.
+    _meta(lines).wrapMode = text.wrapMode === 0 ? 1 : text.wrapMode;
 }
 
 // Every static line is fixed, `normal` too (eldur_fonts.js): a `line-height` of
@@ -7847,7 +7900,7 @@ function _dressLineText(lines, node) {
     node.font = lines.font;
     node.color = lines.color;
     node.textFormat = 0; // Text.PlainText; a library script has no `Text`
-    node.wrapMode = 1; // Text.WordWrap
+    node.wrapMode = _meta(lines).wrapMode || 1; // Text.WordWrap
     node.renderType = 1; // Text.NativeRendering
 }
 
@@ -7875,6 +7928,7 @@ function _textStartsLine(raw, column, lines) {
     text.parent = lines;
     lines.font = text.font;
     lines.color = text.color;
+    _linesLike(lines, text);
     if (_hasOwnLine(text)) {
         lines.lineHeight = text.lineHeight;
     }
@@ -7981,6 +8035,7 @@ function _anonTextBecomesLines(owner, column, text, next) {
     var lines = _newLines(owner);
     lines.font = text.font;
     lines.color = text.color;
+    _linesLike(lines, text);
     if (_hasOwnLine(text)) {
         lines.lineHeight = text.lineHeight;
     }
@@ -8008,6 +8063,7 @@ function _lineSplitsModel(raw, ref) {
     var lines = _newLines(raw);
     lines.font = text.font;
     lines.color = text.color;
+    _linesLike(lines, text);
     if (_hasOwnLine(text)) {
         lines.lineHeight = text.lineHeight;
     }
@@ -8081,12 +8137,16 @@ function _inlineBecomesLines(raw) {
     var font = raw.font;
     var color = raw.color;
     var name = raw.objectName;
+    var like = { horizontalAlignment: raw.horizontalAlignment, wrapMode: raw.wrapMode, eldurPre: raw.eldurPre };
+    var ownLine = _hasOwnLine(raw) ? raw.lineHeight : 0;
     // The swap would carry the text over before the line has its font.
     m.explicitText = "";
     var next = _swapRawItem(raw, null, source);
     next.objectName = name;
     next.font = font;
     next.color = color;
+    _linesLike(next, like);
+    next.lineHeight = ownLine;
     // The text is a node of the line from now on.
     delete m.explicitText;
     if (text !== "") {
@@ -8098,6 +8158,21 @@ function _inlineBecomesLines(raw) {
 }
 
 function _insertChildren(raw, nodes, ref) {
+    // Inline and block children together, as an element's kids are when it is
+    // made again: each stretch of the inline ones goes on the line it would alone.
+    if (nodes.length > 1 && !_gIsBox(raw)) {
+        var joins = nodes.map(_joinsLine);
+        if (joins.some(Boolean) && !joins.every(Boolean)) {
+            var from = 0;
+            for (var j = 1; j <= nodes.length; ++j) {
+                if (j === nodes.length || joins[j] !== joins[from]) {
+                    _insertChildren(raw, nodes.slice(from, j), ref);
+                    from = j;
+                }
+            }
+            return;
+        }
+    }
     var line = nodes.length > 0 ? _lineToJoin(raw, nodes, ref || null) : null;
     if (line) {
         var usable = _forRealItems(nodes);
@@ -8807,12 +8882,18 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
     return next;
 }
 
-// A text node in a line of created inline elements (a `Flow` with
-// `eldurTextRun`, §6.8) is a `Text` of its own between them, in the line's
-// font and colour. Qt does not measure a trailing space, and the spaces
-// between items are the text's own, so they are no-break spaces.
-function _runText(str) {
-    return String(str).replace(/[ \t\n\r\f]+/g, "\u00a0");
+// A text node in a line of created inline elements (an `EldurLines` with
+// `eldurTextRun`, §6.8) is a `Text` run of its own between them, in the line's
+// font and colour. The line breaks it at its spaces as it does a written run,
+// so they are collapsed as `white-space` says and kept breakable. A `Flow`
+// (a hand-written template's line) measures each item as Qt does, and Qt does
+// not measure a trailing space: there the spaces are no-break ones.
+function _runText(str, line) {
+    if (line && line.preserveSpace) {
+        return String(str);
+    }
+    var lines = line && typeof line.setRunBox === "function";
+    return String(str).replace(/[ \t\n\r\f]+/g, lines || !line ? " " : "\u00a0");
 }
 
 function _materializeTextRun(raw) {
@@ -8826,8 +8907,16 @@ function _materializeTextRun(raw) {
         raw.color = container.color;
         return raw;
     }
-    if (!component || typeof component.createObject !== "function"
-        || m.textRunComponent === component) {
+    if (!component || typeof component.createObject !== "function") {
+        return raw;
+    }
+    // Its spaces take the form of the line it is placed in now: text set
+    // while it was out of a line has the form of none.
+    if (m.textRunComponent === component) {
+        var form = _runText(m.runText !== undefined ? m.runText : String(raw.text), container);
+        if (raw.text !== form) {
+            raw.text = form;
+        }
         return raw;
     }
     var source = m.runText !== undefined ? m.runText : String(raw.text);
@@ -8840,7 +8929,7 @@ function _materializeTextRun(raw) {
             tail.push(container.children[i]);
         }
     }
-    var next = component.createObject(_qobjectParent(), { text: _runText(source) });
+    var next = component.createObject(_qobjectParent(), { text: _runText(source, container) });
     if (!next) {
         return raw;
     }
@@ -8907,7 +8996,40 @@ function _materializeSubtree(raw) {
     for (var i = 0; i < kids.length; ++i) {
         _materializeSubtree(kids[i]);
     }
+    _vModelTemplateLine(cur);
     return cur;
+}
+
+// A template's line takes a script's text and inline elements as items of
+// their own. Made nodes of one model, each such stretch of them is cut into
+// runs that break and are painted as a written paragraph's are (§6.8).
+function _vModelTemplateLine(raw) {
+    if (!_vHasRules() || _gActive() || _gIsBox(raw)) {
+        return;
+    }
+    var lines = _anonLinesOf(raw);
+    if (!lines || !lines.eldurTextRun) {
+        return;
+    }
+    var group = [];
+    var flush = function(before) {
+        if (group.length === 0) {
+            return;
+        }
+        var model = _vNewRun(lines, before);
+        var nodes = group;
+        group = [];
+        _vInsert(model, nodes, null);
+    };
+    Array.from(lines.children).forEach(function(kid) {
+        var created = _meta(kid).createdTag;
+        if (created && !_vModelOf(kid) && _vStaysInline(kid, raw, null)) {
+            group.push(kid);
+        } else {
+            flush(kid);
+        }
+    });
+    flush(null);
 }
 
 // Whether an item's glyphs reach the screen other than pixel for pixel, as
@@ -10616,7 +10738,7 @@ function _vEnsureModel(text) {
         hoisted: false,
         bare: false,
         html: false,
-        pre: false,
+        pre: text.eldurPre === true,
         underline: Boolean(text.font && text.font.underline),
         strike: Boolean(text.font && text.font.strikeout)
     };
@@ -11392,9 +11514,22 @@ function _vAlignOf(out, won) {
         out.va = written;
     } else if (/%$/.test(written)) {
         out.vp = parseFloat(written);
-    } else if (written !== "baseline" && !isNaN(parseFloat(written))) {
-        out.vs = parseFloat(written) * (/r?em$/.test(written) ? out.size : 1);
+    } else if (written !== "baseline") {
+        var px = _alignLength(written, out.size, _vRemBase(), out);
+        if (px !== null && !isNaN(px)) {
+            out.vs = px;
+        }
     }
+}
+
+// What `rem` is of: the root element's font size where the rules give the page
+// one, else the initial 16px.
+function _vRemBase() {
+    if (!_gHasCascade() || typeof document === "undefined" || !document.documentElement) {
+        return 16;
+    }
+    var size = _gStyle(_unwrap(document.documentElement)).fontSize;
+    return size > 0 ? size : 16;
 }
 
 function _vStyle(v) {
@@ -11517,11 +11652,63 @@ function _vNeedsHtml(kids, pc, family, onLine) {
     return false;
 }
 
+// What a kept space is written as when the line may break after it. The last
+// space of a run before a word is a plain one, where the line may break: a run
+// of `&nbsp;` alone never lets `pre-wrap` text wrap. Each space is still one
+// character, and none collapses into the one before, which is an `&nbsp;` or a
+// word: a space at the start of the text or of a line stays an `&nbsp;`, as a
+// plain one there is dropped. A space between nodes, as in `<span>[a]</span>
+// word`, breaks as one inside a node does: one that ends a node is written as
+// an `&nbsp;` and settled when the next node's first character is known.
+function _vKeptSpace(st, data, i) {
+    var before = i > 0 ? data.charAt(i - 1) : _vKeptBefore(st);
+    if (before === "" || before === "\n") {
+        return "&nbsp;";
+    }
+    var after = data.charAt(i + 1);
+    if (after === "") {
+        st.spacePending = true;
+        return "&nbsp;";
+    }
+    return after === " " || after === "\n" ? "&nbsp;" : " ";
+}
+
+// The character written last, past the tags that close and open elements; ""
+// at the start of the text or after a `<br>`. It walks back over the tags only,
+// not the text written before them.
+function _vKeptBefore(st) {
+    var end = st.out.length;
+    while (end > 0 && st.out.charAt(end - 1) === ">") {
+        var open = st.out.lastIndexOf("<", end - 1);
+        if (open < 0 || st.out.slice(open, end) === "<br>") {
+            return "";
+        }
+        end = open;
+    }
+    return end === 0 ? "" : st.out.charAt(end - 1);
+}
+
+// A pending space is plain when a word follows it, and stays an `&nbsp;`
+// otherwise. Its place in the output is kept, not searched for: text can hold
+// any character, and the output only grows past it.
+function _vSettleSpace(st, next) {
+    var at = st.spaceAt;
+    st.spaceAt = -1;
+    if (at >= 0 && next !== "" && next !== " " && next !== "\n") {
+        st.out = st.out.slice(0, at) + " " + st.out.slice(at + "&nbsp;".length);
+    }
+}
+
 function _vWriteText(st, data, owner) {
     var out = "";
+    if (st.pre && st.breaks && data !== "") {
+        _vSettleSpace(st, data.charAt(0));
+    }
     for (var i = 0; i < data.length; ++i) {
         var ch = data.charAt(i);
-        if (st.pre) {
+        if (st.pre && st.breaks && ch === " ") {
+            out += _vKeptSpace(st, data, i);
+        } else if (st.pre) {
             out += ch === "\n" ? "<br>" : ch === " " ? "&nbsp;" : ch === "&" ? "&amp;" : ch === "<" ? "&lt;" : ch === ">" ? "&gt;" : ch;
         } else if (/[ \t\r\n\f]/.test(ch)) {
             if (!st.prevSpace) {
@@ -11541,6 +11728,10 @@ function _vWriteText(st, data, owner) {
         st.out += "<a href=\"eldur:" + (st.owners.length - 1) + "\">" + out + "</a>";
     } else {
         st.out += out;
+    }
+    if (st.spacePending) {
+        st.spacePending = false;
+        st.spaceAt = st.out.length - (st.twin ? "</a>" : "").length - "&nbsp;".length;
     }
 }
 
@@ -11690,12 +11881,38 @@ function _vWriteElement(st, v, pc) {
     });
 }
 
+// A model keeps its spaces as its element's `white-space` says now: the
+// converter's flag is the page's markup's, which a script's element and a
+// class written later do not have.
+function _vPre(model) {
+    var white = _vWhiteSpace(model);
+    return white === null ? model.pre : white !== "normal" && white !== "nowrap";
+}
+
+// Whether the spaces a model keeps may also end a line: `pre-wrap` and
+// `break-spaces` wrap after a run of them. The converter's flag says only that
+// they are kept, so without a style to read they stay unbreakable, as before.
+function _vBreaksKept(model) {
+    var white = _vWhiteSpace(model);
+    return white === "pre-wrap" || white === "break-spaces";
+}
+
+function _vWhiteSpace(model) {
+    var host = _gHasCascade() && !model.select ? _vHostElement(model) : null;
+    if (!host || host.__eldurInline) {
+        return null;
+    }
+    return _gFreshStyle(host)["white-space"];
+}
+
 function _vMarkup(model, twin) {
     var base = _vBase(model);
     // A run between boxes starts and ends mid-line: the line takes its edge spaces.
     var inLine = model.text.parent && typeof model.text.parent.firstBaseline === "number";
     var st = {
-        out: "", prevSpace: !inLine, pre: model.pre, html: model.html, twin: twin, model: model,
+        out: "", prevSpace: !inLine, pre: _vPre(model), breaks: _vBreaksKept(model),
+        spacePending: false, spaceAt: -1,
+        html: model.html, twin: twin, model: model,
         // On a line an element's background is its box's, which `EldurInlineBox` paints.
         boxed: inLine && typeof model.text.parent.setRunBox === "function",
         owners: [], inLink: false, linkColor: null,
@@ -11703,6 +11920,7 @@ function _vMarkup(model, twin) {
             && !_vStyle(model.kids[0]).underline
     };
     _vWriteKids(st, model.kids, base, null);
+    _vSettleSpace(st, "");
     if (!st.pre && !inLine) {
         st.out = st.out.replace(/ ((?:<\/[a-z]+>)*)$/, "$1");
     }
@@ -11718,7 +11936,7 @@ function _vRender(model) {
     var text = model.text;
     if (model.hoisted) {
         var k = model.k;
-        text.color = k.color;
+        text.color = _gQtColor(k.color);
         text.font.weight = k.weight;
         text.font.italic = k.italic;
         text.font.underline = model.underline;
@@ -11743,15 +11961,81 @@ function _vRender(model) {
         _naturalLine(text);
     }
     text.textFormat = model.html ? 1 : 4;
+    // A `color` takes no `rgb()` string, which the model's colours are.
     if (st.linkColor !== null) {
-        text.linkColor = st.linkColor;
+        text.linkColor = _gQtColor(st.linkColor);
     }
+    _vWatchStates(model);
     _vRendering = true;
     text.text = markup;
     _vRendering = false;
     model.rendered = true;
     model.twinText = null;
+    // On an open page the rules size the boxes, not Qt's layouts: text that now
+    // takes more or fewer lines moves what is below it only when they run again.
+    if (!_gRunning && _gActive()) {
+        _gDirty = true;
+    }
     _layoutChanged(text);
+}
+
+// The state compounds of the inline rules, as `_gLoadStateRules` reads the cascade's.
+var _vStateRules = null;
+
+function _vLoadStateRules() {
+    if (_vStateRules) {
+        return _vStateRules;
+    }
+    _vStateRules = [];
+    _vLoadRules().forEach(function(rule) {
+        if (!rule.paintsInline) {
+            return;
+        }
+        rule.sel.split(/\s*[>+~\s]\s*(?![^(]*\))/).forEach(function(compound) {
+            var kinds = compound.match(_G_STATE_WORD);
+            if (!kinds) {
+                return;
+            }
+            try {
+                _vStateRules.push({
+                    list: _parseSelector(compound.replace(_G_STATE_WORD, "") || "*"),
+                    kinds: kinds.map(function(k) { return k.slice(1); })
+                });
+            } catch (e) {
+                // A selector no element can match has nothing to watch.
+            }
+        });
+    });
+    return _vStateRules;
+}
+
+// A rule like `.item:hover .label` restyles nodes of a model when an element
+// around its line changes state. A template's own items bind to that state,
+// but the nodes are markup: the element is watched, and the models redrawn.
+function _vWatchStates(model) {
+    var rules = _vLoadStateRules();
+    // A class that makes an element match comes with a write, which is a new generation.
+    if (rules.length === 0 || model.statesGen === _vGen) {
+        return;
+    }
+    model.statesGen = _vGen;
+    for (var at = model.text.parent; at; at = at.parent) {
+        if (!_gIsElement(at)) {
+            continue;
+        }
+        for (var r = 0; r < rules.length; ++r) {
+            var matches = false;
+            try {
+                matches = _matchesList(at, rules[r].list);
+            } catch (e) {
+                matches = false;
+            }
+            if (matches) {
+                _meta(at).vWatched = true;
+                rules[r].kinds.forEach(function(kind) { _gWatch(at, kind); });
+            }
+        }
+    }
 }
 
 // After any write a selector could notice. A `Text` nothing touched keeps
@@ -12150,7 +12434,8 @@ function _vLineModels(model) {
     var siblings = Array.from(line.children);
     function adjacent(i, j) {
         return siblings.slice(siblings.indexOf(kids[i]) + 1, siblings.indexOf(kids[j]))
-            .every(function(c) { return c.eldurInlineOwner !== undefined || c.width === 0; });
+            // A script's element is a box even before its style sizes it.
+            .every(function(c) { return c.eldurInlineOwner !== undefined || (c.width === 0 && !_meta(c).createdTag); });
     }
     while (from > 0 && models[from - 1] && adjacent(from - 1, from)) {
         --from;
@@ -12225,9 +12510,11 @@ function _vBlockFont(raw, name) {
 // A script can fill an element before it is in the page, when the block has
 // no cascade yet and its model took Qt's default font; the cascade brings the
 // font the runs inherit.
+// Its model may already be cut into runs, which share its `k`.
 function _vInheritFont(text, s) {
-    var model = _vModelOf(text);
-    if (!model || model.select || model.hoisted || model.text !== text) {
+    var split = _meta(text).vSplitFrom;
+    var model = _vModelOf(text) || split;
+    if (!model || model.select || model.hoisted || (model.text !== text && model !== split)) {
         return;
     }
     var family = _gFamily(s["font-family"]);
@@ -12242,8 +12529,54 @@ function _vInheritFont(text, s) {
     model.k.lf = s.lineFactor === null ? undefined : s.lineFactor;
     model.k.lh = line === null ? undefined : line;
     model.fontMoved = true;
+    if (model === split) {
+        _vRunsMoved(model);
+        return;
+    }
     ++_vGen;
     _vRender(model);
+}
+
+// The runs cut from `split` share its `k`. Each run's nodes are restyled from
+// `k` only when their own model says its font moved; `_vChanged` of one
+// re-renders them all.
+function _vRunsMoved(split) {
+    var runs = _vModels.filter(function(m) { return m.k === split.k; });
+    runs.forEach(function(r) { r.fontMoved = true; });
+    if (runs.length > 0) {
+        _vChanged(runs[0]);
+    }
+}
+
+// The `Text` a line took the place of keeps the converter's bindings, which
+// give it another font when a class is written on an element around it: the
+// line and every run cut from it follow.
+function _vFollowText(text, lines, model) {
+    var seen = _vLiveBase(text);
+    text.fontChanged.connect(function() {
+        var now = _vLiveBase(text);
+        if (now.size === seen.size && now.family === seen.family && now.weight === seen.weight
+            && now.italic === seen.italic) {
+            return;
+        }
+        seen = now;
+        var f = lines.font;
+        f.pixelSize = now.size;
+        f.family = now.family;
+        f.weight = now.weight;
+        f.italic = now.italic;
+        lines.font = f;
+        lines.cssSize = now.size;
+        model.k.size = now.size;
+        model.k.us = now.size;
+        model.k.kw = undefined;
+        model.k.family = now.family;
+        model.fontMoved = true;
+        _vRunsMoved(model);
+    });
+    text.colorChanged.connect(function() {
+        lines.color = text.color;
+    });
 }
 
 function _vRunsFor(model) {
@@ -12297,7 +12630,8 @@ function _vLineFor(model, base) {
     lines.font.weight = base.weight;
     lines.font.italic = base.italic;
     lines.cssSize = base.size;
-    lines.color = base.color;
+    lines.color = _gQtColor(base.color);
+    _linesLike(lines, text);
     if (base.lh > 0) {
         lines.lineHeight = base.lh;
     }
@@ -12310,6 +12644,7 @@ function _vLineFor(model, base) {
     var m = _meta(text);
     m.vModel = null;
     m.vSplit = true;
+    m.vSplitFrom = model;
     delete m.explicitText;
     _vRendering = true;
     text.textFormat = 0; // Text.PlainText; a library script has no `Text`
@@ -12317,6 +12652,7 @@ function _vLineFor(model, base) {
     _vRendering = false;
     _insertInFlow(target, [lines], null);
     _vCarryAfter(raw);
+    _vFollowText(text, lines, model);
     return lines;
 }
 
@@ -12359,13 +12695,29 @@ function _vRunText(line, like) {
     var made = Qt.createQmlObject(
         // `eldurInline` makes it a run to the DOM, as the converter's are: its
         // elements are its parent's children. Its model is set here, never parsed.
-        "import QtQuick; Text { property string eldurInline: \"\"; wrapMode: Text.Wrap; "
+        "import QtQuick; Text { property string eldurInline: \"\"; wrapMode: Text.WordWrap; "
         + "textFormat: Text.StyledText; renderType: Text.NativeRendering }",
         _qobjectParent(), "eldur_run");
     made.font = line.font;
-    made.color = line.color;
+    // The rules may set the line's colour after its runs are made; what differs
+    // from it is in the markup.
+    made.color = Qt.binding(function() { return line.color; });
+    // A block's decoration is drawn through all its inline content, and a class
+    // binding or the rules may change the line's later. Each run has a size and
+    // family of its own, so only the decoration follows the line's font.
+    var decorate = function() {
+        var f = made.font;
+        if (f.underline !== line.font.underline || f.strikeout !== line.font.strikeout) {
+            f.underline = line.font.underline;
+            f.strikeout = line.font.strikeout;
+            made.font = f;
+        }
+    };
+    line.fontChanged.connect(made, decorate);
+    // `text-align` places the line's runs, not the glyphs in a run (the line
+    // justifies a run itself).
     if (like) {
-        made.horizontalAlignment = like.horizontalAlignment;
+        made.wrapMode = like.wrapMode;
     }
     return made;
 }
@@ -12629,7 +12981,7 @@ function _vFragments(v) {
         function push(x, width, baseline) {
             var pt = onLine ? line.mapToItem(null, 0, baseline - box.ascent)
                 : text.mapToItem(null, 0, baseline - box.ascent);
-            var shift = onLine ? 0 : _gGlyphShift(text);
+            var shift = onLine ? 0 : _gGlyphShift(text) + (_meta(text).gLineShift || 0);
             var left = onLine ? line.mapToItem(null, x, 0).x : text.mapToItem(null, x, 0).x;
             // `x` comes off the run, which `position: relative` has moved already.
             var moved = levels.reduce(function(sum, level) { return sum + (level.relY || 0); }, 0);
@@ -12665,8 +13017,10 @@ function _vFragments(v) {
                 if (fills) {
                     var tail = n === rows.length - 1 ? after : 0;
                     var head = n === 0 ? lead : 0;
-                    push(text.x + p.x + (p.lead || 0) - head,
-                        Math.max(0, p.width - (p.lead || 0) - (p.trail || 0)) + head + tail, base2);
+                    // Its edge spaces are in its box where they did not collapse.
+                    push(text.x + p.x + (p.lead || 0) - head - (p.ownLead || 0),
+                        Math.max(0, p.width - (p.lead || 0) - (p.trail || 0)) + head + tail
+                            + (p.ownLead || 0) + (p.ownTrail || 0), base2);
                 } else if (scan[n]) {
                     push(text.x + p.x + scan[n].min, scan[n].max - scan[n].min, base2);
                 } else if (!v.kids || v.kids.length === 0) {
@@ -12727,9 +13081,12 @@ function _vRows(v, model) {
     var text = model.text;
     var lineHeight = twin.contentHeight / Math.max(1, twin.lineCount);
     var step = Math.max(1, Math.floor((twin.font.pixelSize || 16) / 2));
+    // Text that may not wrap runs on past its box, and its glyphs there are
+    // still where they are drawn.
+    var reach = Math.max(text.width, twin.contentWidth);
     var rows = {};
     for (var y = step / 2; y < twin.contentHeight; y += step) {
-        for (var x = 0; x < text.width; x += 2) {
+        for (var x = 0; x < reach; x += 2) {
             if (_vIn(_vHitAt(model, x, y), v)) {
                 var at = Math.floor(y / lineHeight);
                 var row = rows[at] || (rows[at] = { min: x, max: x + 2 });
@@ -12754,7 +13111,7 @@ function _vRows(v, model) {
             return inside;
         }
         row.min = edge(row.min, Math.max(0, row.min - 2));
-        row.max = edge(row.max - 2, Math.min(text.width, row.max));
+        row.max = edge(row.max - 2, Math.min(reach, row.max));
     });
     return rows;
 }
@@ -15213,7 +15570,25 @@ function AbortController() {
 function _vFromCreated(raw) {
     var m = _meta(raw);
     if (m.createdTag === "#text") {
-        return _vLeaf(raw.text, null, null);
+        var leaf = _vLeaf(m.runText !== undefined ? m.runText : raw.text, null, null);
+        // The script's node is the leaf from here on: writing its data changes the line.
+        if (m.wrapper) {
+            _itemMeta.delete(raw);
+            _itemMeta.set(leaf, m);
+            delete m.createdTag;
+            delete m.runText;
+            m.vCreated = true;
+            if (m._setRaw) {
+                m._setRaw(leaf);
+            }
+        }
+        if (raw.parent) {
+            raw.parent = null;
+        }
+        if (typeof raw.destroy === "function") {
+            raw.destroy();
+        }
+        return leaf;
     }
     var tag = m.createdTag;
     var kidSource = m.flow ? m.flow.children : raw.children;
@@ -15255,6 +15630,11 @@ function _vFromCreated(raw) {
     for (var k = 0; k < kids.length; ++k) {
         kids[k].vparent = v;
         v.kids.push(kids[k]);
+    }
+    // `destroy` waits for the event loop: till then the item would still be a
+    // child of its line, for a script asking now.
+    if (raw.parent) {
+        raw.parent = null;
     }
     if (typeof raw.destroy === "function") {
         raw.destroy();
@@ -15312,7 +15692,7 @@ function _vToReal(v) {
     }
     // What the markup showed was the model's; on a closed page no pass paints this.
     if (_isPlainTextItem(made)) {
-        made.color = look.color;
+        made.color = _gQtColor(look.color);
         made.font.weight = look.weight;
         made.font.italic = look.italic;
         made.font.underline = look.underline;
@@ -15725,9 +16105,10 @@ function _vHostOf(raw, nodes, ref) {
         return raw;
     }
     if (_holdsLines(raw)) {
-        var tail = !ref ? _vLinesTail(raw) : null;
-        return tail && nodes.every(function(n) { return n.__eldurInline || _vStaysInline(n, raw, ref); })
-            ? tail : null;
+        if (ref || !nodes.every(function(n) { return n.__eldurInline || _vStaysInline(n, raw, ref); })) {
+            return null;
+        }
+        return _vLinesTail(raw) || _vNewLinesTail(raw);
     }
     // A block breaks out of a line of text; what is a node of a model has no box
     // to break out with.
@@ -15749,7 +16130,9 @@ function _vHostOf(raw, nodes, ref) {
     if (_gActive() && _rawElementChildren(raw).length > 0) {
         return null;
     }
-    return _vOwnModel(raw) || (_markupMakesElements(raw) ? null : _vBoxModel(raw));
+    // A template the converter wrote for an inline element in this box is its look
+    // as an item; on the box's line it is a node, styled by the rules as its text is.
+    return _vOwnModel(raw) || _vBoxModel(raw);
 }
 
 // A model's nodes going to the item that replaces its element's: they stay one
@@ -16449,7 +16832,8 @@ function _elementsUnder(startNode, keep, firstOnly) {
         return results;
     }
     _walkItems(rootNode, function(node) {
-        if ((node !== rootNode || !startNode) && !_isInternalHelperNode(node) && keep(node)) {
+        // A script's text node is an item too, but no element: `*` is not to find it.
+        if ((node !== rootNode || !startNode) && !_isInternalHelperNode(node) && !_isTextNode(node) && keep(node)) {
             results.push(node);
             return firstOnly;
         }
@@ -16929,6 +17313,9 @@ window = new Proxy(window, {
 
 var _gDirty = false;
 var _gGen = 0;
+// Writes that can change what an element computes, for `_gFreshStyle`.
+var _gWrites = 0;
+var _gWritesSeen = -1;
 var _gLive = [];
 // An open page's templates paint themselves, but the margins between them and
 // what a script adds beside them are still this page's to work out.
@@ -16958,11 +17345,13 @@ var _gWarned = {};
 var _gMarginHelper = null;
 
 var _G_CONTROL = /^(button|input|textarea|select|img|table|thead|tbody|tfoot|tr|td|th|caption|colgroup|col|canvas|video|audio|svg|iframe)$/;
-var _G_INHERITED = ["color", "font-family", "font-weight", "font-style", "text-align", "visibility", "white-space",
-    "border-collapse", "border-spacing"];
+var _G_INHERITED = ["color", "font-family", "font-weight", "font-style", "text-align", "visibility",
+    "white-space-collapse", "text-wrap-mode",
+    "border-collapse", "border-spacing", "overflow-wrap", "word-break"];
 var _G_INHERITED_INITIAL = { "color": "rgb(0, 0, 0)", "font-family": "", "font-weight": "400", "font-style": "normal",
-    "text-align": "start", "visibility": "visible", "white-space": "normal", "border-collapse": "separate",
-    "border-spacing": "0px" };
+    "text-align": "start", "visibility": "visible", "white-space-collapse": "collapse", "text-wrap-mode": "wrap",
+    "border-collapse": "separate",
+    "border-spacing": "0px", "overflow-wrap": "normal", "word-break": "normal" };
 var _G_INITIAL = {
     "display": "inline", "position": "static", "box-sizing": "content-box", "opacity": "1",
     "background-color": "rgba(0, 0, 0, 0)", "flex-direction": "row", "flex-wrap": "nowrap",
@@ -17020,12 +17409,24 @@ function _gRules() {
 }
 
 function _gTouch() {
+    ++_gWrites;
     _holdFocus();
     if (!_gHasCascade()) {
         return;
     }
     _gDirty = true;
     _layoutChanged(_root);
+}
+
+// What an element computes now, between the cascade's passes. The cache is
+// dropped only when a write came since the last such read: a render that reads
+// many elements, with nothing written between, keeps it.
+function _gFreshStyle(raw) {
+    if (_gWritesSeen !== _gWrites) {
+        _gWritesSeen = _gWrites;
+        ++_gGen;
+    }
+    return _gStyle(raw);
 }
 
 function _gIsBox(raw) {
@@ -17040,6 +17441,8 @@ function _gBoxSource(tag, outOfFlow) {
         + (outOfFlow ? "property Item eldurSlot: null; property var eldurBlock: \"parent\"; " : "")
         + "property real eldurMt: 0; property real eldurMr: 0; property real eldurMb: 0; property real eldurMl: 0; "
         + "property real eldurPw: -1; property bool eldurFill: false; property int eldurAlign: 0; "
+        // Where a line puts it, when it is inline-level (`EldurLines`).
+        + "property string eldurVAlign: \"baseline\"; property real eldurVShift: 0; "
         + "property real eldurGapT: 0; property real eldurGapL: 0; property real eldurTrack: -1; "
         // A box narrower than its grid track keeps the track's width in its
         // margin, as the converter's own grid items do: the track has no other size.
@@ -17306,6 +17709,85 @@ function _gSides(parts) {
     return [a, b, c, d];
 }
 
+// `white-space` and `text-wrap` as the longhands the cascade inherits one by
+// one (CSS Text 4 §3): `text-wrap` sets only how text wraps, so a lone
+// `text-wrap: balance` keeps the spaces a parent's `pre-wrap` keeps.
+var _G_WHITE_SPACE = {
+    normal: ["collapse", "wrap"], nowrap: ["collapse", "nowrap"], pre: ["preserve", "nowrap"],
+    "pre-wrap": ["preserve", "wrap"], "pre-line": ["preserve-breaks", "wrap"], "break-spaces": ["break-spaces", "wrap"]
+};
+
+// Each property's words. A value that is not made of them, each kind once, is
+// one a browser cannot read: the declaration is dropped, not taken as `normal`.
+var _G_WHITE_SPACE_WORDS = {
+    collapse: ["collapse", "preserve", "preserve-breaks", "break-spaces"],
+    mode: ["wrap", "nowrap"],
+    style: ["auto", "balance", "stable", "pretty"]
+};
+var _G_WHITE_SPACE_KINDS = {
+    "white-space": ["collapse", "mode"], "text-wrap": ["mode", "style"],
+    "white-space-collapse": ["collapse"], "text-wrap-mode": ["mode"]
+};
+
+// The longhands `prop`'s words set, or `null` when they are not a value of it.
+function _gWhiteSpaceLonghands(prop, parts) {
+    var words = parts.map(function(w) { return String(w).toLowerCase(); });
+    if (words.length === 1 && /^(inherit|initial|unset|revert|revert-layer)$/.test(words[0])) {
+        return prop === "white-space"
+            ? [["white-space-collapse", words[0]], ["text-wrap-mode", words[0]]]
+            : [[prop === "text-wrap" ? "text-wrap-mode" : prop, words[0]]];
+    }
+    if (prop === "white-space" && words.length === 1 && _G_WHITE_SPACE[words[0]]) {
+        var pair = _G_WHITE_SPACE[words[0]];
+        return [["white-space-collapse", pair[0]], ["text-wrap-mode", pair[1]]];
+    }
+    var kinds = _G_WHITE_SPACE_KINDS[prop];
+    var found = {};
+    for (var i = 0; i < words.length; ++i) {
+        var kind = kinds.filter(function(k) { return _G_WHITE_SPACE_WORDS[k].indexOf(words[i]) !== -1; })[0];
+        if (!kind || found[kind]) {
+            return null;
+        }
+        found[kind] = words[i];
+    }
+    if (words.length === 0) {
+        return null;
+    }
+    if (prop === "white-space-collapse" || prop === "text-wrap-mode") {
+        return [[prop, words[0]]];
+    }
+    var mode = [["text-wrap-mode", found.mode || "wrap"]];
+    return prop === "text-wrap" ? mode : [["white-space-collapse", found.collapse || "collapse"]].concat(mode);
+}
+
+// A script's write of a `white-space` value a browser cannot read, which it
+// ignores, keeping what was written before. One with `var()` is read later.
+function _gUnreadableWhiteSpace(prop, value) {
+    var name = prop.indexOf("-") === -1 ? _camelToKebab(prop) : prop.toLowerCase();
+    var text = value === null || value === undefined ? "" : String(value).trim();
+    if (!_G_WHITE_SPACE_KINDS[name] || text === "" || text.indexOf("var(") !== -1) {
+        return false;
+    }
+    return _gWhiteSpaceLonghands(name, _gSplitValue(text.replace(/!\s*important\s*$/i, ""))) === null;
+}
+
+// The one `white-space` keyword the runtime's line breaking goes by, from the
+// two longhands an element computes.
+function _gWhiteSpace(collapse, mode) {
+    var nowrap = mode === "nowrap";
+    if (collapse === "preserve") {
+        return nowrap ? "pre" : "pre-wrap";
+    }
+    if (collapse === "break-spaces") {
+        return nowrap ? "pre" : "break-spaces";
+    }
+    if (collapse === "preserve-breaks") {
+        // No keyword keeps breaks without wrapping: kept breaks are what show.
+        return "pre-line";
+    }
+    return nowrap ? "nowrap" : "normal";
+}
+
 // Only a shorthand whose value held `var()` reaches the runtime whole: the
 // converter expanded the others.
 function _gExpand(prop, value) {
@@ -17320,6 +17802,12 @@ function _gExpand(prop, value) {
     var parts = _gSplitValue(value);
     if (prop === "overflow") {
         return [["overflow-x", parts[0]], ["overflow-y", parts[1] || parts[0]]];
+    }
+    if (prop === "word-wrap") {
+        return [["overflow-wrap", value]];
+    }
+    if (_G_WHITE_SPACE_KINDS[prop]) {
+        return _gWhiteSpaceLonghands(prop, parts) || [];
     }
     if (prop === "margin" || prop === "padding") {
         var sides = _gSides(parts);
@@ -17411,6 +17899,11 @@ function _gOfferDecl(won, prop, value, weight, vars) {
         }
     }
     var longhands = _gExpand(prop, text);
+    // What `var()` put in is read only now: a value that cannot be read is
+    // `unset` (CSS Variables 1 §3.1), not a declaration that was never there.
+    if (longhands.length === 0 && text !== value && _G_WHITE_SPACE_KINDS[prop]) {
+        longhands = _gExpand(prop, "unset");
+    }
     for (var i = 0; i < longhands.length; ++i) {
         _gOffer(won, longhands[i][0], longhands[i][1], weight);
     }
@@ -17564,6 +18057,12 @@ function _gStyle(raw) {
     }
     if (m.gOverlay) {
         Object.keys(m.gOverlay).forEach(function(prop) {
+            if (prop === "white-space" || prop === "text-wrap") {
+                _gExpand(prop, m.gOverlay[prop]).forEach(function(longhand) {
+                    won[longhand[0]] = { value: longhand[1], weight: Infinity };
+                });
+                return;
+            }
             won[prop] = { value: m.gOverlay[prop], weight: Infinity };
         });
     }
@@ -17599,7 +18098,8 @@ function _gStyle(raw) {
         var sized = _gPx(sizeText, parentSize, parentSize, rootSize);
         s.fontSize = sized === null ? parentSize : sized;
     }
-    s.rootSize = rootSize === null || !parent ? s.fontSize : rootSize;
+    // The root's own `rem` lengths, past its font-size, are of its own size.
+    s.rootSize = rootSize === null || !parent || tag === "html" ? s.fontSize : rootSize;
     var lineText = value("line-height");
     if (lineText === "inherit") {
         s.lineFactor = inherited ? inherited.lineFactor : null;
@@ -17628,6 +18128,7 @@ function _gStyle(raw) {
         }
         s[name] = text;
     }
+    s["white-space"] = _gWhiteSpace(s["white-space-collapse"], s["text-wrap-mode"]);
     s.color = s.color === undefined ? s["color"] : s.color;
     var color = _gColor(s["color"], inherited ? inherited["color"] : "rgb(0, 0, 0)");
     s["color"] = color;
@@ -17678,13 +18179,18 @@ function _gStyle(raw) {
     return s;
 }
 
+// What `rem` is of: the `html` element's size. The walk stops there because the
+// window's own Items sit above it and compute to the initial 16px.
 function _gRootFontSize(raw, parent) {
     if (!parent) {
         return null;
     }
     var top = parent;
-    for (var up = _gParent(top); up; up = _gParent(top)) {
+    for (var up = parent; up; up = _gParent(up)) {
         top = up;
+        if (_nodeTag(up) === "html") {
+            break;
+        }
     }
     return _gStyle(top).fontSize;
 }
@@ -18044,10 +18550,17 @@ function _gFollowOwnHeight(raw) {
 }
 
 // What flows in a box, text nodes too: not its own `Text`, not virtual nodes.
-function _gBoxKids(raw) {
-    return _gPseudoEnds(_rawKids(raw, true, true).filter(function(kid) {
-        return !kid.__eldurInline && (kid.objectName || _meta(kid).createdTag || !_isPlainTextItem(kid));
+function _gBoxKids(raw, asRuns) {
+    return _gPseudoEnds(_rawKids(raw, true, true, asRuns).filter(function(kid) {
+        return !kid.__eldurInline && (kid.objectName || _meta(kid).createdTag || !_isPlainTextItem(kid)
+            || asRuns && _gIsRun(kid));
     }));
+}
+
+// A run of text an inline model of the box was cut into: the model styles it,
+// and only a line places it.
+function _gIsRun(kid) {
+    return _vAnonText(kid) && Boolean(_vModelOf(kid)) && !_vModelOf(kid).select;
 }
 
 // A pseudo-element's box is laid out first or last, wherever a script's
@@ -18065,13 +18578,15 @@ function _gPseudoEnds(kids) {
         .map(function(e) { return e[2]; });
 }
 
+var _G_RUN_STYLE = { display: "inline", position: "static", float: "none" };
+
 // A box's kids in order: a run of what shares lines, or one block.
 function _gFlowGroups(raw) {
-    var kids = _gBoxKids(raw);
+    var kids = _gBoxKids(raw, true);
     var groups = [];
     var run = null;
     for (var i = 0; i < kids.length; ++i) {
-        var ks = _gStyle(kids[i]);
+        var ks = _gIsRun(kids[i]) ? _G_RUN_STYLE : _gStyle(kids[i]);
         // Its slot is what sits here, and it is placed against its containing block.
         if (_gOutOfFlow(ks) && ks.display !== "none") {
             continue;
@@ -18211,6 +18726,8 @@ function _gArrangeLines(raw, groups) {
             return;
         }
         var lines = _newLines(raw);
+        // Its runs' models are already built: none is to be read from markup.
+        _meta(lines).vRunsBuilt = true;
         lines.parent = raw;
         group.run.forEach(function(kid) {
             kid.parent = null;
@@ -18219,6 +18736,23 @@ function _gArrangeLines(raw, groups) {
         group.lines = lines;
     });
     old.forEach(function(lines) { _gUnline(lines, raw); });
+}
+
+// Where a line of `s`'s text may break, as the converter has it: CSS breaks a
+// word only when told to.
+function _gWrapMode(s) {
+    var white = s["white-space"];
+    if (white === "nowrap" || white === "pre") {
+        return 0; // Text.NoWrap
+    }
+    if (s["word-break"] === "break-all") {
+        return 3; // Text.WrapAnywhere
+    }
+    var wrap = s["overflow-wrap"];
+    if (wrap === "anywhere" || wrap === "break-word" || s["word-break"] === "break-word") {
+        return 4; // Text.WrapAtWordBoundaryOrAnywhere
+    }
+    return 1; // Text.WordWrap
 }
 
 // One box's run of inline content on the one layouter there is. Returns its height.
@@ -18230,6 +18764,8 @@ function _gLayOutRun(group, s, innerW, x, y, cut) {
     }
     var whitespace = s["white-space"];
     lines.font = _gFontOf(s);
+    // Its runs' line boxes are of the CSS size, which a font's whole pixels are not.
+    lines.cssSize = s.fontSize;
     lines.color = _gQtColor(s.color);
     var line = _gLineHeight(s);
     lines.lineHeight = line === null ? 0 : line;
@@ -18240,8 +18776,16 @@ function _gLayOutRun(group, s, innerW, x, y, cut) {
     lines.textAlign = align === "center" || align === "-webkit-center" ? 4
         : align === "right" || align === "end" || align === "-webkit-right" ? 2
         : align === "justify" ? 8 : 1;
+    // A text node breaks a word as its parent's style says; the line breaks
+    // lines, so a NoWrap line's runs still wrap no further than it.
+    var wrap = _gWrapMode(s);
+    _meta(lines).wrapMode = wrap === 0 ? 1 : wrap;
     for (var i = 0; i < group.run.length; ++i) {
         var kid = group.run[i];
+        if (_gIsRun(kid)) {
+            _gSet(kid, "wrapMode", _gWrapMode(s));
+            continue;
+        }
         if (_meta(kid).createdTag === "#text") {
             _dressLineText(lines, kid);
             continue;
@@ -18255,12 +18799,27 @@ function _gLayOutRun(group, s, innerW, x, y, cut) {
         var ke = _gEdges(kid, ks, innerW);
         _gPlace(kid, innerW, { shrink: true }, null);
         _gLineMargins(kid, ke);
+        var va = _gVAlign(ks);
         if (_isPlainTextItem(kid)) {
             // The line places it, on its natural height.
             _gSet(kid, "lineHeightMode", 0);
             _gSet(kid, "lineHeight", 1);
-            _gSet(kid, "wrapMode", 1);
+            _gSet(kid, "wrapMode", _gWrapMode(ks));
+            // `text-align` places the line's runs, not the glyphs in a run: an
+            // italic run's ink is wider than its advance, and centred in it, it
+            // would be drawn off its place.
+            _gSet(kid, "horizontalAlignment", 1); // Text.AlignLeft
             lines.setRunLineHeight(kid, _gLineHeight(ks));
+            // Off the baseline, the run's box is its own, as a written run's is.
+            if (va.align || _meta(kid).gLevels) {
+                var box = _gLineBox(ks, va);
+                if (JSON.stringify(box) !== _meta(kid).gLevels) {
+                    _meta(kid).gLevels = JSON.stringify(box);
+                    lines.setRunLevels(kid, [box]);
+                }
+            }
+        } else {
+            _gBoxLevel(kid, va);
         }
     }
     lines.x = x;
@@ -18268,6 +18827,64 @@ function _gLayOutRun(group, s, innerW, x, y, cut) {
     lines.width = innerW;
     lines.layout();
     return lines.implicitHeight;
+}
+
+// Where an atomic box sits on its line, for `EldurLines`.
+function _gBoxLevel(kid, va) {
+    if (typeof kid.eldurVAlign === "string") {
+        _gSet(kid, "eldurVAlign", va.align || "baseline");
+        _gSet(kid, "eldurVShift", va.shift || 0);
+    }
+}
+
+// A `vertical-align` length in pixels, or `null` for a value that is none: that
+// is `baseline`, as a declaration that does not parse would leave it. `ex` and
+// `ch` are the element's own font's (CSS Values 4 §6.1.1).
+function _alignLength(written, size, rootSize, box) {
+    var font = /^[-+]?(?:\d*\.\d+|\d+)(?:e[-+]?\d+)?(ex|ch)$/.exec(written);
+    if (font) {
+        return parseFloat(written) * EldurFonts.fontUnit(font[1], box);
+    }
+    return _gPx(written, null, size, rootSize);
+}
+
+// `vertical-align` as `EldurLines` takes it: a keyword, or a shift up in pixels
+// as `length`. A percentage is of the element's own line height (CSS 2.2 §10.8.1).
+function _gVAlign(s) {
+    var written = String(s["vertical-align"] || "baseline").trim().toLowerCase();
+    if (/^(sub|super|top|bottom|middle|text-top|text-bottom)$/.test(written)) {
+        return { align: written };
+    }
+    var shift = null;
+    if (/^[-+]?[\d.]+%$/.test(written)) {
+        shift = parseFloat(written) / 100
+            * (_gLineHeight(s) !== null ? _gLineHeight(s) : EldurFonts.normalLine(_gFontOf(s), s.fontSize));
+    } else if (written !== "baseline") {
+        var font = _gFontOf(s);
+        shift = _alignLength(written, s.fontSize, s.rootSize,
+            { family: font.family, size: s.fontSize, weight: font.weight, italic: font.italic });
+    }
+    if (shift === null || isNaN(shift) || shift === 0) {
+        return { align: null };
+    }
+    return { align: "length", shift: shift };
+}
+
+// An inline element's box on its line, for `EldurFonts.placeRun`, as `_vBoxOf`
+// gives a model's.
+function _gLineBox(s, va) {
+    var font = _gFontOf(s);
+    var box = { size: s.fontSize, family: font.family, weight: font.weight, italic: font.italic };
+    var line = _gLineHeight(s);
+    if (line !== null) {
+        box.line = line;
+    }
+    if (va.align === "length") {
+        box.shift = va.shift;
+    } else if (va.align) {
+        box.align = va.align;
+    }
+    return box;
 }
 
 // Block children stack, with their margins collapsing; inline-level ones share
@@ -18300,7 +18917,10 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
     if (text && text.text !== "") {
         _gPaintText(text, s, innerW, raw);
         text.x = x;
-        text.y = y + _gLineShift(text, s);
+        // Where Qt draws a line's glyphs is not where CSS has them; the shift is
+        // the item's, not its lines' (`_vFragments`).
+        _meta(text).gLineShift = _gLineShift(text, s);
+        text.y = y + _meta(text).gLineShift;
         if (around || _meta(text).gBeside) {
             _gBeside(text, around, 0, 0);
         }
@@ -18308,6 +18928,7 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
         first = false;
     } else if (text) {
         _gPaintText(text, s, innerW, raw);
+        _meta(text).gLineShift = 0;
         text.x = x;
         text.y = y;
     }
@@ -18943,6 +19564,7 @@ function _gPaintTextLines(text, owner, s) {
 
 function _gPaintText(text, s, innerW, owner) {
     text.font = _gFontOf(s);
+    _gSet(text, "wrapMode", _gWrapMode(s));
     _vInheritFont(text, s);
     text.color = _gQtColor(s["color"]);
     _gPaintTextLines(text, owner, s);
@@ -21315,7 +21937,13 @@ function _gWatch(raw, kind) {
         return;
     }
     m.gWatching[kind] = true;
-    var changed = function() { _gTouch(); };
+    // Text on a line inside it is markup of a model, which no binding redraws.
+    var changed = function() {
+        _gTouch();
+        if (m.vWatched) {
+            _vChanged(null);
+        }
+    };
     if (kind === "hover") {
         if (typeof raw.hovered === "boolean") {
             if (typeof raw.hoverEnabled === "boolean") {
@@ -21326,7 +21954,7 @@ function _gWatch(raw, kind) {
             var hover = Qt.createQmlObject("import QtQuick; HoverHandler { blocking: false }", raw, "eldur_hover");
             hover.hoveredChanged.connect(function() {
                 m.gHover = hover.hovered;
-                _gTouch();
+                changed();
             });
         }
     } else if (kind === "active") {
@@ -21336,7 +21964,7 @@ function _gWatch(raw, kind) {
             var tap = Qt.createQmlObject("import QtQuick; TapHandler { gesturePolicy: TapHandler.DragThreshold }", raw, "eldur_press");
             tap.pressedChanged.connect(function() {
                 m.gPress = tap.pressed;
-                _gTouch();
+                changed();
             });
         }
     } else if (kind === "checked") {
@@ -22051,7 +22679,9 @@ function _gLayoutRoots() {
         _meta(raw).gMargins = margins;
         _gFollowWidth(raw.parent);
         if (_isLines(raw.parent)) {
+            // A box on a line the rules don't lay out, a written paragraph's.
             _gLineMargins(raw, e);
+            _gBoxLevel(raw, _gVAlign(s));
         }
         if (containers.indexOf(raw.parent) === -1) {
             containers.push(raw.parent);

@@ -1,0 +1,25 @@
+<!doctype html><!-- Made paragraphs whose `white-space` cannot be read: a `var()` that holds no keyword makes it `unset`, so the paragraph wraps and keeps spaces as its `pre-wrap` block does, not as the lower `pre` rule says; a script's unreadable `whiteSpace` or `textWrap` leaves the value written before it. -->
+<html><head><style>
+body{margin:8px;font:13px monospace}
+#root{width:200px}
+.chat{white-space:pre-wrap;--ws:prewrap}
+.chat p{white-space:pre;margin:0 0 4px}
+.chat .v{white-space:var(--ws)}
+.chat .t{white-space:pre-wrap}
+.w{color:#c60}
+</style></head><body>
+<div id="root"></div>
+<script>
+function dump(pfx){var all=document.querySelectorAll("#root *");for(var i=0;i<all.length;i++){var e=all[i];var q=e.getBoundingClientRect();console.log('CS '+pfx+' '+e.tagName.toLowerCase()+i+' '+[q.x,q.y,q.width,q.height].join(','))}}
+var root=document.getElementById('root');
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt)e.textContent=txt;return e}
+function line(cls,a,mid,b){var p=el('p',cls);p.appendChild(el('span','w',a));p.appendChild(document.createTextNode(mid));p.appendChild(el('span','w',b));return p}
+var chat=el('div','chat');
+chat.appendChild(line('v','[a]',' aa  bb  cc  dd  ee  ff  gg ','[b]'));
+var s=line('','[c]','  x   y  ','[d]');s.style.whiteSpace='normal';s.style.whiteSpace='prewrap';
+chat.appendChild(s);
+var t=line('t','[e]',' long  line  that  would  wrap ','[f]');t.style.textWrap='nowrap';t.style.textWrap='nowrap wrap';
+chat.appendChild(t);
+root.appendChild(chat);
+setTimeout(function(){dump('H');document.body.appendChild(document.createElement('div')).id='csdone'},100);
+</script></body></html>

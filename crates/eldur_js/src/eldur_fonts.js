@@ -271,6 +271,18 @@ function _xHeightOf(face, box) {
     return face.xs ? face.xs[((box.weight || 400) >= 600 ? 1 : 0) + (box.italic ? 2 : 0)] : face.x;
 }
 
+// What one `ex` or `ch` is in pixels for `box`'s font: its x-height, and the
+// advance of "0" (CSS Values 4 §6.1.1).
+function fontUnit(unit, box) {
+    var name = family(box.family);
+    var size = box.size;
+    if (unit === "ex") {
+        return _xHeightOf(TABLE.faces[name.toLowerCase()], box) * size;
+    }
+    var pixels = Math.max(1, Math.round(size));
+    return _qtFont(name, pixels, box.weight || 400, !!box.italic).advanceWidth("0") * size / pixels;
+}
+
 // One inline box on its own baseline (layout.md §1.3). `box` has the CSS size and
 // stack; `line` absent is `normal`. Above and below take the half-leading, floored.
 function inlineBox(box) {

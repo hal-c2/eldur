@@ -232,8 +232,8 @@ Rectangle {
     `position`): keep the base form and emit diagnostic `dynamic-form`
     (§12).
 - **IFC splitting.** An inline element that has a condition is "a script or
-  `:hover` target", so ARCHITECTURE.md already gives it its own item in a
-  `Flow`. Styles inside a `StyledText` run cannot be bound.
+  `:hover` target", so ARCHITECTURE.md already gives it a run of its own on
+  an `EldurLines`. Styles inside a `StyledText` run cannot be bound.
 
 ### 4.3 Transitions
 
@@ -526,62 +526,87 @@ through the registry (S9a).
 
 ### 6.8 Created inline elements
 
-A static line is one `Text` with StyledText runs (§7), and a run has no
-object for a template to style. So an inline element a script makes
-(`<span class="label">`, `<strong>`, `<a>`, by `createElement` or in
-`innerHTML` markup) is **an item of its own** when its probe is inside a
-created element or in `<body>`:
+Inline content a script makes is broken into lines by the same layouter as
+the page's own: `EldurLines` (`docs/spec/layout.md` §1.3, §2). That covers
+`createElement` with `appendChild`/`insertBefore`/`replaceChild`, `innerHTML`
+and `insertAdjacentHTML` markup, `textContent` and text nodes, and
+inline-block children. There is no `Flow` of inline items any more.
 
-- **The line.** The created block's inline content becomes a `Flow`
-  (`inline.rs inline_flow`). The runtime's `_appendTarget` already appends
-  to it, because a `Flow` has `spacing`.
-- **The element.** A `Text`, or a `Rectangle` holding a `Text` when it has
-  a background or border, with the template's colour, weight, style and
-  decoration. The decoration includes what the block propagates (CSS Text
-  Decoration 3 §2: `.item.done { text-decoration: line-through }` strikes
-  its children). Its width is
-  `parent ? Math.min(implicitWidth, parent.width) : implicitWidth`, so it
-  wraps only when it is wider than the line.
-- **Text nodes.** A text node between the elements becomes a `Text` made
-  from the `Flow`'s `readonly property Component eldurTextRun`, which has
-  the block's font, colour and decoration (`_materializeTextRun`). Spaces
-  become U+00A0, because Qt does not measure a `Text`'s trailing spaces,
-  and the space before `by` would vanish.
-- **Boxes.** Vertical margin and padding are zeroed: they do not move an
-  inline box's line (CSS 2.2 §10.6.1), but an item's would. Horizontal
-  margins of a `Text` become its `leftPadding`/`rightPadding`. Horizontal
-  padding of a painted element is the `Rectangle`'s.
-- **Class toggles** on created elements work the same as on blocks (§6.4
-  step 3). The keys include every set a toggle makes. A toggle through a
-  query (`list.querySelector('.label').classList.toggle('warn')`) or an
-  unattributed target counts when the selector matches the probe, or when
-  the class could style it (§2.2). Before this, `span.label.warn` missed
-  its key and fell back to a generic item.
-- **Shared keys.** Two probes with the same key (a `li.item` built with
-  `createElement` and another built from markup) are two templates. The
-  first wins the key, so the second's children are also registered under
-  the winner (`span.tag@eldurT_li_0`); the runtime finds them by the
-  template the parent actually has.
+- **The line.** A created block's inline content is an `EldurLines` with a
+  `readonly property Component eldurTextRun` (`inline.rs inline_flow`).
+  `_appendTarget` appends to it, because a line has `spacing`.
+- **Text and inline elements are nodes, not items.** On a closed page, the
+  created inline elements and text nodes of a template's line become nodes of an
+  inline model (`_vModelTemplateLine` after `_materializeSubtree`, and
+  `_vNewLinesTail` for content appended later, through `_vHostOf`). The model
+  is cut into runs of one font and line box (`_vRunsFor`, `_vPutRuns`), and the
+  line places them as it places a written paragraph's: words break across
+  lines, baselines line up, mixed sizes and `vertical-align` get their own line
+  boxes, and `text-align` moves runs, not glyphs inside a run. The template a
+  converter wrote for such an element is its look as an item. On a line, the
+  rules style it as a node (`eldurInlineRules`, which now also carry
+  `vertical-align`, `overflow-wrap` and `word-break`).
+- **Boxes stay items.** An atomic inline (inline-block, a control, `img`) is an
+  item on the line. A made one gets its CSS `height` as well as its width
+  (`inline.rs atomic`), because its empty `Text` would otherwise give its line box
+  a text line's height. Runs on either side of a made box stay separate runs even
+  before its style has sized it (`_vLineModels`).
+- **A line that replaces a `Text`** keeps that `Text`'s alignment, wrapping and
+  `white-space: pre*` (`_linesLike`). On a closed page there is no cascade to
+  say how the paragraph aligns and wraps, and the converter set the `Text`
+  from the page's style. The converter marks a preserving `Text` with
+  `eldurPre`.
+- **Open pages.** The run-time cascade lays the line out (`_gLayOutRun`). It
+  sets the line's font, CSS size, colour, `text-align` and wrap mode
+  (`_gWrapMode`: `overflow-wrap`/`word-break`), sets each run's line height
+  and line box, and gives each box its `vertical-align` through
+  `eldurVAlign`/`eldurVShift` (`_gBoxLevel`). A box made on a written
+  paragraph's line, which no rule run lays out, gets its level in
+  `_gLayoutRoots`. A `_vRender` that changes how many lines a run takes marks
+  the layout dirty, because on an open page the rules size the boxes, not
+  Qt's layouts.
+- **Text nodes.** A text node that is its own item (`_materializeTextRun`)
+  collapses its spaces as `white-space` says, and they stay breakable spaces
+  (`_runText`). The line places a run's edge spaces itself, so U+00A0 is no
+  longer needed there. A hand-written template whose line is still a `Flow`
+  keeps U+00A0, because Qt does not measure an item's trailing space.
+- **Element rectangles.** A node's `getBoundingClientRect` comes from the
+  line's placement of its run (`runLines`). An edge space the line put beside a
+  run counts inside its element when CSS keeps it there: a leading space that
+  collapsed into nothing before it, and a trailing one with more after it on the
+  line (`ownLead`/`ownTrail`).
+- **Colours.** A model's colours are CSS strings (`rgb(34, 34, 34)`), and Qt 6
+  reads that as black when it is assigned to a `color`. Every colour from a
+  model or the cascade goes through `_gQtColor`. A run's colour is bound to its
+  line's, because the rules may set the line's colour after the runs are made.
+- **Decorations and states around a line.** A block's `text-decoration` is
+  drawn through all its inline content: a run follows its line's
+  `font.underline`/`font.strikeout`, which the converter binds to the block's
+  classes (`_vRunText`). The nodes are markup, which no template binding
+  redraws, so an element around the line that a state rule's compound matches
+  (`.item:hover .label`) is watched (`_vWatchStates` with `_gWatch`), and a
+  change of its state redraws the models.
+- **Class toggles** on created elements work as on blocks (§6.4 step 3).
+  The keys include every set a toggle makes. A toggle through a query, or on
+  a target the analysis cannot attribute, counts when the selector matches the
+  probe or when the class could style it (§2.2).
+- **Shared keys.** Two probes with the same key are two templates. The first
+  wins the key, and the second's children are also registered under the winner
+  (`span.tag@eldurT_li_0`). The runtime finds them by the template the parent
+  actually has.
 
-Limits:
+Limits (measured against Chromium, `tests/created_rules`, `tests/apps`):
 
-- A created inline element does not break across lines. The `Flow` wraps
-  between items, and a long `<span>` wraps inside its own box.
-- The `Flow` aligns tops, not baselines. Mixed font sizes on one line sit
-  higher than in Chromium.
-- Qt's line box is 18–19px where Chromium's inline content area is 17px
-  (16px sans-serif). Each run is shaped on its own, so x positions drift
-  by up to ~3px along a line. The end-to-end test allows 3px in x and
-  width and 2px in y and height for text boxes, and 1px for the blocks.
-- A painted inline (`Rectangle` + `Text`) loses its horizontal margins.
-- **Static parents keep a StyledText line.** A created inline appended to
-  a static block (`Context::Static`) has no template and still takes the
-  `@*`/generic fallback, and `innerHTML` markup on a static element is
-  StyledText (`_markupMakesElements`). Turning a static line into a `Flow`
-  would change every static page.
+- `text-indent` is not converted anywhere, written or made (the converter
+  reports it). A made indented paragraph starts flush.
+- A pre-wrap word longer than the line breaks inside the word, where Chromium
+  lets it overflow.
+- Qt Layouts round some boxes to whole pixels, so a made box can be up to 1px
+  off in y (made chat bubbles). A made `<mark>` on a wrapping line is ~2px off
+  in x and ~3px in width.
 - A created `<a>` is probed with `href=""`. Analysis records only `type`
-  and `class`, and an `<a>` without `href` would not match `a:link` or
-  the user-agent link style.
+  and `class`, and an `<a>` without `href` would not match `a:link` or the
+  user-agent link style.
 
 ---
 
@@ -637,7 +662,7 @@ Limits:
 | `eldurIndex`, `eldurCount` | `int`, 1-based place among element siblings, and their number | converter (document value), runtime (`_renumber`) | structural bindings (§5.5) |
 | `eldurTypeIndex`, `eldurTypeCount` | `int`, the same among siblings with the same tag | converter (only when an of-type test reads it), runtime | structural bindings |
 | `eldurIs<Test>` | `readonly bool`, e.g. `eldurIsFirstChild`, `eldurIsNthChild2n1` | converter (in templates) | descendant templates' bindings |
-| `eldurTextRun` | `readonly Component` on a created block's line `Flow`: a `Text` with the block's text style | converter (§6.8) | runtime (text nodes in that line) |
+| `eldurTextRun` | `readonly Component` on a created block's `EldurLines`: a `Text` with the block's text style | converter (§6.8) | runtime (text nodes in that line) |
 | `root.eldurTemplates` | `var` object: key → `Component` | converter | runtime |
 | `root.eldurStyledClasses` | `var` array of strings, sorted | converter | runtime (key building) |
 | `root.baseUrl` | `string` | converter | runtime (`init`, already supported) |
@@ -664,7 +689,7 @@ diagnostic.
 - Rematerialisation on a form-changing class change.
 - Created text nodes in a line with `eldurTextRun` (§6.8):
   `_materializeTextRun` remakes the node's `Text` from that Component, in
-  place, with spaces as U+00A0. `textContent` reads and writes the text
+  place, with its spaces collapsed as `white-space` says. `textContent` reads and writes the text
   as the script set it, and `_layoutChanged` follows each swap.
 - Positions (S9b): `_renumber(container)` rewrites `eldurIndex`/`eldurCount`
   (and the type pair where declared) on the container's element children

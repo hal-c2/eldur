@@ -1,0 +1,14 @@
+<!doctype html><!-- Made inline-blocks with `vertical-align: middle` and a made `<sup>` on the line of a written paragraph. -->
+<html><head><style>
+body { margin: 0; padding: 16px; font: 14px Arial, sans-serif; color: #222; }
+#icons { width: 300px; }
+.icon { display: inline-block; width: 12px; height: 12px; background: #39c; vertical-align: middle; }
+sup.n { vertical-align: super; font-size: 10px; }
+</style></head><body>
+<p id="icons"></p><p id="icons2"></p>
+<script>
+var kinds=["div"];document.createElement(kinds[0]);
+["icons","icons2"].forEach(function(id,k){var p=document.getElementById(id);p.append("Status ");var i=document.createElement("span");i.className="icon";p.appendChild(i);p.append(" ready");if(k===0){var n=document.createElement("sup");n.className="n";n.textContent="2";p.appendChild(n)}});
+function dump(pfx){var all=document.querySelectorAll("#icons *, #icons2 *, #icons, #icons2");for(var i=0;i<all.length;i++){var e=all[i];var q=e.getBoundingClientRect();console.log('CS '+pfx+' '+e.tagName.toLowerCase()+i+' '+[q.x,q.y,q.width,q.height].join(','))}}
+setTimeout(function(){dump('H');document.body.appendChild(document.createElement('div')).id='csdone'},100);
+</script></body></html>

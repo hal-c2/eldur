@@ -1,0 +1,29 @@
+<!doctype html><!-- `vertical-align` lengths in `rem`, `ex`, `ch` and `vh` on made spans and inline-blocks: `rem` is the root's size. The line is tall enough for every shift, so none grows it. -->
+<html><head><style>
+html{font-size:20px}
+body{margin:8px;font:15px Arial}
+#root{width:300px;line-height:3}
+.r,.x,.c,.v{font-size:12px;line-height:1}
+.r{vertical-align:0.5rem;color:#c00}
+.x{vertical-align:1ex;color:#080}
+.c{vertical-align:-1ch;color:#00c}
+.v{vertical-align:1vh;color:#808}
+.ib{display:inline-block;width:10px;height:10px;background:#36c}
+.ibr{vertical-align:0.5rem}.ibx{vertical-align:1ex}.ibc{vertical-align:-1ch}
+</style></head><body>
+<div id="root"></div>
+<script>
+function dump(pfx){var all=document.querySelectorAll("#root *");for(var i=0;i<all.length;i++){var e=all[i];var q=e.getBoundingClientRect();console.log('CS '+pfx+' '+e.tagName.toLowerCase()+i+' '+[q.x,q.y,q.width,q.height].join(','))}}
+var root=document.getElementById('root');var p=document.createElement('p');
+function el(tag,cls,txt){var e=document.createElement(tag);e.className=cls;if(txt)e.textContent=txt;return e}
+p.appendChild(document.createTextNode('Up by rem '));p.appendChild(el('span','r','r'));
+p.appendChild(document.createTextNode(' by ex '));p.appendChild(el('span','x','x'));
+p.appendChild(document.createTextNode(' down by ch '));p.appendChild(el('span','c','c'));
+p.appendChild(document.createTextNode(' by vh '));p.appendChild(el('span','v','v'));
+root.appendChild(p);
+var q=document.createElement('p');
+q.appendChild(document.createTextNode('Boxes '));q.appendChild(el('span','ib ibr'));
+q.appendChild(el('span','ib ibx'));q.appendChild(el('span','ib ibc'));
+root.appendChild(q);
+setTimeout(function(){dump('H');document.body.appendChild(document.createElement('div')).id='csdone'},100);
+</script></body></html>

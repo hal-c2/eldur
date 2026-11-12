@@ -1,0 +1,23 @@
+<!doctype html><!-- Made `pre-wrap` paragraphs whose text holds a U+0001, which is a character and not a break: a word that runs past its box with one in it stays on its line, a U+0001 before a node ending in a space leaves that space to break, and a U+0001 between two spans keeps its width. -->
+<html><head><style>
+body{margin:8px;font:13px monospace}
+#root{width:200px}
+.chat{white-space:pre-wrap}
+.chat p{margin:0 0 4px}
+.w{color:#c60}
+</style></head><body>
+<div id="root"></div>
+<script>
+function dump(pfx){var all=document.querySelectorAll("#root *");for(var i=0;i<all.length;i++){var e=all[i];var q=e.getBoundingClientRect();console.log('CS '+pfx+' '+e.tagName.toLowerCase()+i+' '+[q.x,q.y,q.width,q.height].join(','))}}
+var root=document.getElementById('root');
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt)e.textContent=txt;return e}
+function para(parts){var p=el('p');parts.forEach(function(x){p.appendChild(typeof x==='string'?document.createTextNode(x):x)});return p}
+function w(t){return el('span','w',t)}
+var C=String.fromCharCode(1);
+var chat=el('div','chat');
+chat.appendChild(para([w('[a]'),'aaaaaaaa'+C+'bbbbbbbbbbbbbbbbbb',w('[b]')]));
+chat.appendChild(para([w('[c]'),'x'+C+'y','c ',w('[dddddddddddddddddddd]')]));
+chat.appendChild(para([w('[e]'),'p'+C+'q',w('[f]')]));
+root.appendChild(chat);
+setTimeout(function(){dump('H');document.body.appendChild(document.createElement('div')).id='csdone'},100);
+</script></body></html>

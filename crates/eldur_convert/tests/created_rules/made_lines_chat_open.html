@@ -1,0 +1,24 @@
+<!doctype html><!-- Inline content a script makes breaks into lines as the same content written would. -->
+<html><head><style>
+body{margin:8px;font:14px Arial}
+#log{width:360px;border:1px solid #ccc;padding:6px}
+.msg{background:#eef;border-radius:8px;padding:6px 10px;margin:4px 0;line-height:1.4}
+.msg b{color:#036}
+.msg a{color:#a00}
+.msg code{font:12px monospace;background:#ddd;padding:0 3px}
+</style></head><body>
+<div id="log"></div>
+<script>
+var kinds=["div"];document.createElement(kinds[0]);
+function dump(pfx){var all=document.querySelectorAll('#log *');for(var i=0;i<all.length;i++){var e=all[i];var q=e.getBoundingClientRect();console.log('CS '+pfx+' '+e.tagName.toLowerCase()+i+' '+[q.x,q.y,q.width,q.height].join(','))}}
+var data=[['Ana','sent the quarterly numbers, see','report','q3.xls'],['Bjorn','that looks fine to me but the totals on the second sheet do not add up, check','sheet two','SUM(B2:B9)'],['Cy','ok','here','x']];
+var log=document.getElementById('log');
+data.forEach(function(d){var m=document.createElement('div');m.className='msg';
+var b=document.createElement('b');b.textContent=d[0];m.appendChild(b);
+m.appendChild(document.createTextNode(' '+d[1]+' '));
+var a=document.createElement('a');a.href='#';a.textContent=d[2];m.appendChild(a);
+m.appendChild(document.createTextNode(' and '));
+var c=document.createElement('code');c.textContent=d[3];m.appendChild(c);
+log.appendChild(m)});
+setTimeout(function(){dump('H');document.body.appendChild(document.createElement('div')).id='csdone'},100);
+</script></body></html>

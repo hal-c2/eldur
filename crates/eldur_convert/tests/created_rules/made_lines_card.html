@@ -1,0 +1,14 @@
+<!doctype html><!-- Inline content a script makes breaks into lines as the same content written would. -->
+<html><head><style>
+body{margin:8px;font:14px Arial}
+#root{width:260px;border:1px solid #bbb;border-radius:6px;padding:10px}
+.c{text-align:center;overflow-wrap:anywhere;margin:0;line-height:1.4}
+.badge{display:inline-block;padding:2px 6px;border-radius:4px;background:#2a6;color:#fff;font-size:11px}
+em{color:#a40}
+</style></head><body>
+<div id="root"></div>
+<script>
+function dump(pfx){var all=document.querySelectorAll("#root *");for(var i=0;i<all.length;i++){var e=all[i];var q=e.getBoundingClientRect();console.log('CS '+pfx+' '+e.tagName.toLowerCase()+i+' '+[q.x,q.y,q.width,q.height].join(','))}}
+document.getElementById('root').innerHTML='<p class="c">Build <span class="badge">PASSED</span> on <em>main</em> at commit 7f3a9c2e1b0d4f6a8c9e2b1d3f5a7c9e0b2d4f6a8 by the nightly runner</p>';
+setTimeout(function(){dump('H');document.body.appendChild(document.createElement('div')).id='csdone'},100);
+</script></body></html>
