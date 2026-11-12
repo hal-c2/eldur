@@ -85,6 +85,21 @@ pub fn serialize_options(options: &eldur_convert::Options) -> String {
     .to_string()
 }
 
+/// The cache key's options: the conversion's, plus the site root, which
+/// changes which files a root-relative URL reads (a missing file under one
+/// root is recorded as missing, so the other root's run would hit it).
+fn cache_options(options: &eldur_convert::Options, site_root: Option<&Path>) -> String {
+    let options = serialize_options(options);
+    match site_root {
+        None => options,
+        Some(root) => serde_json::json!({
+            "options": options,
+            "site_root": root.to_string_lossy(),
+        })
+        .to_string(),
+    }
+}
+
 pub(crate) fn execute_convert(
     args: &ConvertArgs,
     converter: &dyn Converter,
@@ -110,11 +125,23 @@ pub(crate) fn execute_convert(
 
     let out_dir = args.resolved_output_dir();
     let options = args.to_convert_options();
+    let site_root = args
+        .site_root
+        .as_ref()
+        .map(|root| {
+            let canonical = fs::canonicalize(root)
+                .with_context(|| format!("failed to resolve site root {}", root.display()))?;
+            if !canonical.is_dir() {
+                bail!("site root {} is not a directory", canonical.display());
+            }
+            Ok(canonical)
+        })
+        .transpose()?;
 
     let key = eldur_cache::CacheKey {
         entry: canonical_input.clone(),
         converter_version: converter_version().to_owned(),
-        options: serialize_options(&options),
+        options: cache_options(&options, site_root.as_deref()),
     };
 
     let cache =
@@ -165,6 +192,9 @@ pub(crate) fn execute_convert(
     };
 
     let mut resources = FsResources::new()?;
+    if let Some(root) = site_root {
+        resources = resources.with_site_root(root);
+    }
     let output = converter.convert(&conv_input, &options, &mut resources);
 
     let diagnostics: Vec<String> = output.diagnostics.iter().map(ToString::to_string).collect();

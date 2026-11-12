@@ -80,6 +80,12 @@ pub struct ConvertArgs {
     #[arg(long = "viewport", value_name = "WxH", value_parser = parse_viewport)]
     pub viewport: Option<(f32, f32)>,
 
+    /// Directory that root-relative URLs (`/css/site.css`) resolve under, as
+    /// the web server serving the page would have it. Without it they
+    /// resolve under the file system's root, as in a `file://` page.
+    #[arg(long = "site-root", value_name = "DIR")]
+    pub site_root: Option<PathBuf>,
+
     /// Root QML element kind.
     #[arg(long = "root", value_enum, default_value_t = RootArg::Window)]
     pub root: RootArg,
@@ -117,6 +123,7 @@ impl ConvertArgs {
             input: input.into(),
             output: None,
             viewport: None,
+            site_root: None,
             root: RootArg::Window,
             no_comments: false,
             no_states: false,

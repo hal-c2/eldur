@@ -11,6 +11,7 @@ use anyhow::Context;
 #[derive(Debug, Clone)]
 pub struct FsResources {
     cwd: PathBuf,
+    site_root: Option<PathBuf>,
     recorded: BTreeMap<PathBuf, eldur_cache::Input>,
 }
 
@@ -26,8 +27,25 @@ impl FsResources {
     pub fn with_cwd(cwd: impl Into<PathBuf>) -> Self {
         Self {
             cwd: cwd.into(),
+            site_root: None,
             recorded: BTreeMap::new(),
         }
+    }
+
+    /// Resolves root-relative URLs (`/css/site.css`) under `root`, as a web
+    /// server serving that directory would, instead of under the file
+    /// system's root. A static site generator's output links its assets this
+    /// way, and without a root every one of them is missing.
+    #[must_use]
+    pub fn with_site_root(mut self, root: impl Into<PathBuf>) -> Self {
+        let root = root.into();
+        let root = if root.is_absolute() {
+            root
+        } else {
+            self.cwd.join(root)
+        };
+        self.site_root = Some(root);
+        self
     }
 
     /// Every file dependency read (or found missing) so far, in deterministic
@@ -63,16 +81,22 @@ impl FsResources {
 
         let without_frag = trimmed.split('#').next().unwrap_or(trimmed);
         let path_part = without_frag.split('?').next().unwrap_or(without_frag);
-        if path_part.is_empty() {
+        // `//host/x` is protocol-relative: another host serves it, whatever
+        // the site root, so no local file stands for it.
+        if path_part.is_empty() || path_part.starts_with("//") {
             return None;
         }
 
         let decoded = percent_decode(path_part);
 
         if path_part.starts_with('/') {
-            let decoded_norm = self.normalize_path(Path::new(&decoded));
+            let rooted = |p: &str| match &self.site_root {
+                Some(root) => under_root(root, p),
+                None => PathBuf::from(p),
+            };
+            let decoded_norm = self.normalize_path(&rooted(&decoded));
             if decoded != path_part && !decoded_norm.exists() {
-                let raw_norm = self.normalize_path(Path::new(path_part));
+                let raw_norm = self.normalize_path(&rooted(path_part));
                 if raw_norm.exists() {
                     return Some(raw_norm);
                 }
@@ -262,6 +286,16 @@ fn hex_nibble(b: u8) -> Option<u8> {
     }
 }
 
+/// `url_path` (root-relative) under `root`. `..` cannot climb above the root,
+/// as a server's URL path cannot.
+fn under_root(root: &Path, url_path: &str) -> PathBuf {
+    let inside: PathBuf = clean_lexical(Path::new(url_path))
+        .components()
+        .filter(|c| matches!(c, Component::Normal(_)))
+        .collect();
+    root.join(inside)
+}
+
 fn clean_lexical(path: &Path) -> PathBuf {
     let mut out = PathBuf::new();
     let mut has_root = false;
@@ -427,5 +461,58 @@ mod tests {
         assert_eq!(inputs.len(), 1);
         assert_eq!(inputs[0].path, root.join("absent.css"));
         assert!(inputs[0].is_missing());
+    }
+
+    #[test]
+    fn root_relative_urls_resolve_under_the_site_root_and_stay_inside_it() {
+        let td = TempDir::new("site_root");
+        let root = fs::canonicalize(&td.0).expect("canon root");
+        let site = root.join("dist");
+        fs::create_dir_all(site.join("docs/page")).expect("create page dir");
+        fs::create_dir_all(site.join("_assets")).expect("create assets dir");
+        fs::write(site.join("_assets/site.css"), b"p{}").expect("write css");
+        let base = site
+            .join("docs/page/index.html")
+            .to_string_lossy()
+            .into_owned();
+
+        let mut res = FsResources::with_cwd(&root).with_site_root(&site);
+        let css = res
+            .read("/_assets/site.css?v=1", &base)
+            .expect("rooted css");
+        assert_eq!(css.bytes, b"p{}");
+        assert_eq!(Path::new(&css.resolved), site.join("_assets/site.css"));
+
+        // A server never serves above its root; neither does the converter.
+        fs::write(root.join("secret.css"), b"q{}").expect("write outside");
+        assert_eq!(res.read("/../secret.css", &base), None);
+        // `//host/x` names another host, whatever the root: a server would
+        // fetch it from there, so no file in the site stands for it.
+        fs::create_dir_all(site.join("fonts.example")).expect("create host-named dir");
+        fs::write(site.join("fonts.example/f.css"), b"r{}").expect("write host-named css");
+        assert_eq!(res.resolve_path("//fonts.example/f.css", &base), None);
+        assert_eq!(res.read("//fonts.example/f.css?v=2", &base), None);
+        assert_eq!(
+            FsResources::with_cwd(&root).resolve_path("//fonts.example/f.css", &base),
+            None
+        );
+
+        let missing = res.into_inputs();
+        assert!(
+            missing
+                .iter()
+                .any(|i| i.path == site.join("secret.css") && i.is_missing()),
+            "the escaped path is looked up, and recorded missing, inside the root: {missing:?}"
+        );
+        assert!(
+            !missing
+                .iter()
+                .any(|i| i.path.starts_with(site.join("fonts.example"))),
+            "a URL on another host reads and records nothing in the site: {missing:?}"
+        );
+
+        // Without a root, `/x` is the file system's `/x`, as in a file:// page.
+        let mut plain = FsResources::with_cwd(&root);
+        assert_eq!(plain.read("/_assets/site.css", &base), None);
     }
 }
