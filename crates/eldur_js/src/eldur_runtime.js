@@ -11652,16 +11652,54 @@ function _vNeedsHtml(kids, pc, family, onLine) {
     return false;
 }
 
+// A kept space that ends a text node: whether it may break is known only when
+// the next node's first character is written. See `_vKeptSpace`.
+var _V_SPACE_PENDING = "\u0001";
+
+// What a kept space is written as when the line may break after it. The last
+// space of a run before a word is a plain one, where the line may break: a run
+// of `&nbsp;` alone never lets `pre-wrap` text wrap. Each space is still one
+// character, and none collapses into the one before, which is an `&nbsp;` or a
+// word: a space at the start of the text or of a line stays an `&nbsp;`, as a
+// plain one there is dropped. A space between nodes, as in `<span>[a]</span>
+// word`, breaks as one inside a node does.
+function _vKeptSpace(st, data, i) {
+    var before = i > 0 ? data.charAt(i - 1) : _vKeptBefore(st);
+    if (before === "" || before === "\n") {
+        return "&nbsp;";
+    }
+    var after = data.charAt(i + 1);
+    if (after === "") {
+        return _V_SPACE_PENDING;
+    }
+    return after === " " || after === "\n" ? "&nbsp;" : " ";
+}
+
+// The character written last, past the tags that close and open elements; ""
+// at the start of the text or after a `<br>`.
+function _vKeptBefore(st) {
+    var tail = st.out.replace(/(?:<(?!br>)[^>]*>)+$/, "");
+    return tail === "" || /<br>$/.test(tail) ? "" : tail.charAt(tail.length - 1);
+}
+
+// A pending space is plain when a word follows it, and an `&nbsp;` otherwise.
+function _vSettleSpace(st, next) {
+    var at = st.out.lastIndexOf(_V_SPACE_PENDING);
+    if (at >= 0) {
+        var plain = next !== "" && next !== " " && next !== "\n";
+        st.out = st.out.slice(0, at) + (plain ? " " : "&nbsp;") + st.out.slice(at + 1);
+    }
+}
+
 function _vWriteText(st, data, owner) {
     var out = "";
+    if (st.pre && st.breaks && data !== "") {
+        _vSettleSpace(st, data.charAt(0));
+    }
     for (var i = 0; i < data.length; ++i) {
         var ch = data.charAt(i);
-        if (st.pre && st.breaks && ch === " " && i > 0 && data.charAt(i - 1) !== "\n" && /[^ \n]/.test(data.charAt(i + 1))) {
-            // The last kept space before a word is a plain one, where the line
-            // may break: a run of `&nbsp;` alone never lets `pre-wrap` text wrap.
-            // Each space is still one character, and none collapses into the
-            // one before, which is an `&nbsp;` or a word.
-            out += " ";
+        if (st.pre && st.breaks && ch === " ") {
+            out += _vKeptSpace(st, data, i);
         } else if (st.pre) {
             out += ch === "\n" ? "<br>" : ch === " " ? "&nbsp;" : ch === "&" ? "&amp;" : ch === "<" ? "&lt;" : ch === ">" ? "&gt;" : ch;
         } else if (/[ \t\r\n\f]/.test(ch)) {
@@ -11869,6 +11907,7 @@ function _vMarkup(model, twin) {
             && !_vStyle(model.kids[0]).underline
     };
     _vWriteKids(st, model.kids, base, null);
+    _vSettleSpace(st, "");
     if (!st.pre && !inLine) {
         st.out = st.out.replace(/ ((?:<\/[a-z]+>)*)$/, "$1");
     }

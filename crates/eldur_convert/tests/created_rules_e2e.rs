@@ -1078,3 +1078,15 @@ fn made_lines_wrap_invalid() {
 fn made_lines_wrap_invalid_open() {
     page("made_lines_wrap_invalid_open");
 }
+
+/// A made `pre-wrap` paragraph wraps at a kept space on a text node's edge: a node of one space between spans, a space that ends a node before a span, and one that starts a node after a span. A space after a `<br>` stays at the start of its line.
+#[test]
+fn made_lines_wrap_edges() {
+    page("made_lines_wrap_edges");
+}
+
+/// A made `pre-wrap` paragraph wraps at a kept space on a text node's edge: a node of one space between spans, a space that ends a node before a span, and one that starts a node after a span. A space after a `<br>` stays at the start of its line. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_wrap_edges_open() {
+    page("made_lines_wrap_edges_open");
+}
