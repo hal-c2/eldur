@@ -1,4 +1,4 @@
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -125,6 +125,19 @@ fn collect_qml_files(dir: &Path, out: &mut Vec<PathBuf>) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// A page's own console.log and console.info (the `qml` category at debug and
+/// info level) are not faults; its warnings and errors still are. Qt applies
+/// rules in order and the last match wins, so the user's own rules, which may
+/// turn the page's output back on while debugging, come after these.
+fn qt_logging_rules(inherited: Option<&OsStr>) -> OsString {
+    let mut rules = OsString::from("qml.debug=false;qml.info=false");
+    if let Some(user) = inherited.filter(|rules| !rules.is_empty()) {
+        rules.push(";");
+        rules.push(user);
+    }
+    rules
+}
+
 fn run_qml6_offscreen(
     main_qml: &Path,
     tools: &QmlTools,
@@ -141,6 +154,17 @@ fn run_qml6_offscreen(
         .current_dir(work_dir)
         .arg(file_name)
         .env("QT_QPA_PLATFORM", "offscreen")
+        // With a piped stderr Qt logs to the systemd journal instead, so a page
+        // that throws at load would pass the check silently.
+        .env("QT_FORCE_STDERR_LOGGING", "1")
+        .env(
+            "QT_LOGGING_RULES",
+            qt_logging_rules(std::env::var_os("QT_LOGGING_RULES").as_deref()),
+        )
+        // An off-screen run has no use for the accessibility bus, and where the
+        // bus socket refuses connections GLib's at-spi bridge prints a warning
+        // that would fail every page.
+        .env("NO_AT_BRIDGE", "1")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
@@ -209,4 +233,24 @@ fn trim_trailing_newline(s: &str) -> &str {
     s.strip_suffix("\r\n")
         .or_else(|| s.strip_suffix('\n'))
         .unwrap_or(s)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn qt_logging_rules_quiet_the_pages_own_output_and_keep_the_users_rules() {
+        assert_eq!(qt_logging_rules(None), "qml.debug=false;qml.info=false");
+        // Qt applies rules in order and the last match wins, so the user's
+        // come after the check's and can turn the page's output back on.
+        assert_eq!(
+            qt_logging_rules(Some(OsStr::new("qt.qml.binding=true;qml.debug=true"))),
+            "qml.debug=false;qml.info=false;qt.qml.binding=true;qml.debug=true"
+        );
+        assert_eq!(
+            qt_logging_rules(Some(OsStr::new(""))),
+            "qml.debug=false;qml.info=false"
+        );
+    }
 }

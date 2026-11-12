@@ -726,6 +726,74 @@ fn check_runs_qmllint_and_offscreen_qml6_failing_on_any_output() {
     assert!(text.contains("ReferenceError: foo is not defined"));
 }
 
+/// Qt sends `console.*` and uncaught script errors to the systemd journal when
+/// stderr is not a terminal, so a page that throws at load prints nothing to a
+/// piped qml6 unless the check asks for stderr logging.
+#[test]
+fn check_asks_qml6_for_stderr_logging_so_script_errors_reach_the_report() {
+    let td = TempDir::new("check-stderr");
+    let qml_dir = td.path.join("app_qml");
+    let bin_dir = td.path.join("mock_bin");
+    fs::create_dir_all(&qml_dir).expect("create qml_dir");
+    fs::create_dir_all(&bin_dir).expect("create bin_dir");
+    fs::write(qml_dir.join("Main.qml"), b"import QtQuick\nItem {}\n").expect("write Main.qml");
+
+    let mock_qmllint = bin_dir.join("mock_qmllint");
+    let mock_qml6 = bin_dir.join("mock_qml6");
+    write_executable(&mock_qmllint, "#!/usr/bin/env bash\nexit 0\n");
+    // Behaves as Qt does with a piped stderr: the error goes to the journal
+    // unless QT_FORCE_STDERR_LOGGING is set.
+    write_executable(
+        &mock_qml6,
+        "#!/usr/bin/env bash\nif [[ \"${QT_FORCE_STDERR_LOGGING:-}\" == \"1\" ]]; then\n  echo \"page.js:3: ReferenceError: HTMLElement is not defined\" >&2\nfi\nexec sleep 5\n",
+    );
+
+    let tools = QmlTools {
+        qmllint: mock_qmllint,
+        qml6: mock_qml6,
+        qml_timeout: Duration::from_millis(80),
+    };
+
+    let mut report = Vec::new();
+    let ok = check_dir_with_tools(&qml_dir, &tools, &mut report).expect("check");
+    let text = String::from_utf8_lossy(&report);
+    assert!(!ok, "a page that throws at load must fail the check");
+    assert!(
+        text.contains("ReferenceError: HTMLElement is not defined"),
+        "report was: {text}"
+    );
+
+    // A page's own console.log is not a fault: Qt prints it in the `qml`
+    // category at debug level, which the check turns off.
+    write_executable(
+        &tools.qml6,
+        "#!/usr/bin/env bash\nif [[ \"${QT_LOGGING_RULES:-}\" != *qml.debug=false* ]]; then\n  echo \"qml: page ready\" >&2\nfi\nexec sleep 5\n",
+    );
+    let mut quiet = Vec::new();
+    let ok = check_dir_with_tools(&qml_dir, &tools, &mut quiet).expect("check");
+    assert!(ok, "report was: {}", String::from_utf8_lossy(&quiet));
+
+    // console.info is the page's output too: Qt prints it in the same
+    // category at info level.
+    write_executable(
+        &tools.qml6,
+        "#!/usr/bin/env bash\nif [[ \"${QT_LOGGING_RULES:-}\" != *qml.info=false* ]]; then\n  echo \"qml: page info\" >&2\nfi\nexec sleep 5\n",
+    );
+    let mut info = Vec::new();
+    let ok = check_dir_with_tools(&qml_dir, &tools, &mut info).expect("check");
+    assert!(ok, "report was: {}", String::from_utf8_lossy(&info));
+
+    // Nor is the host's accessibility bus: where its socket refuses
+    // connections, GLib's at-spi bridge warns unless it is turned off.
+    write_executable(
+        &tools.qml6,
+        "#!/usr/bin/env bash\nif [[ \"${NO_AT_BRIDGE:-}\" != \"1\" ]]; then\n  echo \"atspi-WARNING **: Couldn't connect to accessibility bus\" >&2\nfi\nexec sleep 5\n",
+    );
+    let mut no_bus = Vec::new();
+    let ok = check_dir_with_tools(&qml_dir, &tools, &mut no_bus).expect("check");
+    assert!(ok, "report was: {}", String::from_utf8_lossy(&no_bus));
+}
+
 #[test]
 fn binary_help_and_argument_errors() {
     let exe = env!("CARGO_BIN_EXE_eldur");
