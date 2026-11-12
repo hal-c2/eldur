@@ -5464,6 +5464,9 @@ function setStyle(item, prop, value) {
     if (!raw) {
         return;
     }
+    if (_gUnreadableWhiteSpace(String(prop), value)) {
+        return;
+    }
     if (raw.__eldurInline) {
         _vSetStyle(raw, prop, value);
         return;
@@ -11653,7 +11656,13 @@ function _vWriteText(st, data, owner) {
     var out = "";
     for (var i = 0; i < data.length; ++i) {
         var ch = data.charAt(i);
-        if (st.pre) {
+        if (st.pre && st.breaks && ch === " " && i > 0 && data.charAt(i - 1) !== "\n" && /[^ \n]/.test(data.charAt(i + 1))) {
+            // The last kept space before a word is a plain one, where the line
+            // may break: a run of `&nbsp;` alone never lets `pre-wrap` text wrap.
+            // Each space is still one character, and none collapses into the
+            // one before, which is an `&nbsp;` or a word.
+            out += " ";
+        } else if (st.pre) {
             out += ch === "\n" ? "<br>" : ch === " " ? "&nbsp;" : ch === "&" ? "&amp;" : ch === "<" ? "&lt;" : ch === ">" ? "&gt;" : ch;
         } else if (/[ \t\r\n\f]/.test(ch)) {
             if (!st.prevSpace) {
@@ -11826,12 +11835,24 @@ function _vWriteElement(st, v, pc) {
 // converter's flag is the page's markup's, which a script's element and a
 // class written later do not have.
 function _vPre(model) {
+    var white = _vWhiteSpace(model);
+    return white === null ? model.pre : white !== "normal" && white !== "nowrap";
+}
+
+// Whether the spaces a model keeps may also end a line: `pre-wrap` and
+// `break-spaces` wrap after a run of them. The converter's flag says only that
+// they are kept, so without a style to read they stay unbreakable, as before.
+function _vBreaksKept(model) {
+    var white = _vWhiteSpace(model);
+    return white === "pre-wrap" || white === "break-spaces";
+}
+
+function _vWhiteSpace(model) {
     var host = _gHasCascade() && !model.select ? _vHostElement(model) : null;
     if (!host || host.__eldurInline) {
-        return model.pre;
+        return null;
     }
-    var white = _gFreshStyle(host)["white-space"];
-    return white !== "normal" && white !== "nowrap";
+    return _gFreshStyle(host)["white-space"];
 }
 
 function _vMarkup(model, twin) {
@@ -11839,7 +11860,8 @@ function _vMarkup(model, twin) {
     // A run between boxes starts and ends mid-line: the line takes its edge spaces.
     var inLine = model.text.parent && typeof model.text.parent.firstBaseline === "number";
     var st = {
-        out: "", prevSpace: !inLine, pre: _vPre(model), html: model.html, twin: twin, model: model,
+        out: "", prevSpace: !inLine, pre: _vPre(model), breaks: _vBreaksKept(model),
+        html: model.html, twin: twin, model: model,
         // On a line an element's background is its box's, which `EldurInlineBox` paints.
         boxed: inLine && typeof model.text.parent.setRunBox === "function",
         owners: [], inLink: false, linkColor: null,
@@ -17643,25 +17665,58 @@ var _G_WHITE_SPACE = {
     "pre-wrap": ["preserve", "wrap"], "pre-line": ["preserve-breaks", "wrap"], "break-spaces": ["break-spaces", "wrap"]
 };
 
+// Each property's words. A value that is not made of them, each kind once, is
+// one a browser cannot read: the declaration is dropped, not taken as `normal`.
+var _G_WHITE_SPACE_WORDS = {
+    collapse: ["collapse", "preserve", "preserve-breaks", "break-spaces"],
+    mode: ["wrap", "nowrap"],
+    style: ["auto", "balance", "stable", "pretty"]
+};
+var _G_WHITE_SPACE_KINDS = {
+    "white-space": ["collapse", "mode"], "text-wrap": ["mode", "style"],
+    "white-space-collapse": ["collapse"], "text-wrap-mode": ["mode"]
+};
+
+// The longhands `prop`'s words set, or `null` when they are not a value of it.
 function _gWhiteSpaceLonghands(prop, parts) {
     var words = parts.map(function(w) { return String(w).toLowerCase(); });
     if (words.length === 1 && /^(inherit|initial|unset|revert|revert-layer)$/.test(words[0])) {
         return prop === "white-space"
             ? [["white-space-collapse", words[0]], ["text-wrap-mode", words[0]]]
-            : [["text-wrap-mode", words[0]]];
+            : [[prop === "text-wrap" ? "text-wrap-mode" : prop, words[0]]];
     }
-    var mode = words.filter(function(w) { return w === "wrap" || w === "nowrap"; })[0] || "wrap";
-    if (prop === "text-wrap") {
-        return [["text-wrap-mode", mode]];
-    }
-    if (words.length === 1 && _G_WHITE_SPACE[words[0]]) {
+    if (prop === "white-space" && words.length === 1 && _G_WHITE_SPACE[words[0]]) {
         var pair = _G_WHITE_SPACE[words[0]];
         return [["white-space-collapse", pair[0]], ["text-wrap-mode", pair[1]]];
     }
-    var collapse = words.filter(function(w) {
-        return /^(collapse|preserve|preserve-breaks|break-spaces)$/.test(w);
-    })[0] || "collapse";
-    return [["white-space-collapse", collapse], ["text-wrap-mode", mode]];
+    var kinds = _G_WHITE_SPACE_KINDS[prop];
+    var found = {};
+    for (var i = 0; i < words.length; ++i) {
+        var kind = kinds.filter(function(k) { return _G_WHITE_SPACE_WORDS[k].indexOf(words[i]) !== -1; })[0];
+        if (!kind || found[kind]) {
+            return null;
+        }
+        found[kind] = words[i];
+    }
+    if (words.length === 0) {
+        return null;
+    }
+    if (prop === "white-space-collapse" || prop === "text-wrap-mode") {
+        return [[prop, words[0]]];
+    }
+    var mode = [["text-wrap-mode", found.mode || "wrap"]];
+    return prop === "text-wrap" ? mode : [["white-space-collapse", found.collapse || "collapse"]].concat(mode);
+}
+
+// A script's write of a `white-space` value a browser cannot read, which it
+// ignores, keeping what was written before. One with `var()` is read later.
+function _gUnreadableWhiteSpace(prop, value) {
+    var name = prop.indexOf("-") === -1 ? _camelToKebab(prop) : prop.toLowerCase();
+    var text = value === null || value === undefined ? "" : String(value).trim();
+    if (!_G_WHITE_SPACE_KINDS[name] || text === "" || text.indexOf("var(") !== -1) {
+        return false;
+    }
+    return _gWhiteSpaceLonghands(name, _gSplitValue(text.replace(/!\s*important\s*$/i, ""))) === null;
 }
 
 // The one `white-space` keyword the runtime's line breaking goes by, from the
@@ -17699,8 +17754,8 @@ function _gExpand(prop, value) {
     if (prop === "word-wrap") {
         return [["overflow-wrap", value]];
     }
-    if (prop === "white-space" || prop === "text-wrap") {
-        return _gWhiteSpaceLonghands(prop, parts);
+    if (_G_WHITE_SPACE_KINDS[prop]) {
+        return _gWhiteSpaceLonghands(prop, parts) || [];
     }
     if (prop === "margin" || prop === "padding") {
         var sides = _gSides(parts);
@@ -17792,6 +17847,11 @@ function _gOfferDecl(won, prop, value, weight, vars) {
         }
     }
     var longhands = _gExpand(prop, text);
+    // What `var()` put in is read only now: a value that cannot be read is
+    // `unset` (CSS Variables 1 §3.1), not a declaration that was never there.
+    if (longhands.length === 0 && text !== value && _G_WHITE_SPACE_KINDS[prop]) {
+        longhands = _gExpand(prop, "unset");
+    }
     for (var i = 0; i < longhands.length; ++i) {
         _gOffer(won, longhands[i][0], longhands[i][1], weight);
     }

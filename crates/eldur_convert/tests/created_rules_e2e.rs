@@ -1066,3 +1066,15 @@ fn made_lines_wrap_style() {
 fn made_lines_wrap_style_open() {
     page("made_lines_wrap_style_open");
 }
+
+/// A made paragraph whose `white-space` comes from a `var()` holding no keyword is `unset` and takes its `pre-wrap` block's; a script's unreadable `whiteSpace` or `textWrap` leaves the value it wrote before.
+#[test]
+fn made_lines_wrap_invalid() {
+    page("made_lines_wrap_invalid");
+}
+
+/// A made paragraph whose `white-space` comes from a `var()` holding no keyword is `unset` and takes its `pre-wrap` block's; a script's unreadable `whiteSpace` or `textWrap` leaves the value it wrote before. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_wrap_invalid_open() {
+    page("made_lines_wrap_invalid_open");
+}
