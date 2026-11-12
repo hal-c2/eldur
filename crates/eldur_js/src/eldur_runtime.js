@@ -11652,17 +11652,14 @@ function _vNeedsHtml(kids, pc, family, onLine) {
     return false;
 }
 
-// A kept space that ends a text node: whether it may break is known only when
-// the next node's first character is written. See `_vKeptSpace`.
-var _V_SPACE_PENDING = "\u0001";
-
 // What a kept space is written as when the line may break after it. The last
 // space of a run before a word is a plain one, where the line may break: a run
 // of `&nbsp;` alone never lets `pre-wrap` text wrap. Each space is still one
 // character, and none collapses into the one before, which is an `&nbsp;` or a
 // word: a space at the start of the text or of a line stays an `&nbsp;`, as a
 // plain one there is dropped. A space between nodes, as in `<span>[a]</span>
-// word`, breaks as one inside a node does.
+// word`, breaks as one inside a node does: one that ends a node is written as
+// an `&nbsp;` and settled when the next node's first character is known.
 function _vKeptSpace(st, data, i) {
     var before = i > 0 ? data.charAt(i - 1) : _vKeptBefore(st);
     if (before === "" || before === "\n") {
@@ -11670,24 +11667,35 @@ function _vKeptSpace(st, data, i) {
     }
     var after = data.charAt(i + 1);
     if (after === "") {
-        return _V_SPACE_PENDING;
+        st.spacePending = true;
+        return "&nbsp;";
     }
     return after === " " || after === "\n" ? "&nbsp;" : " ";
 }
 
 // The character written last, past the tags that close and open elements; ""
-// at the start of the text or after a `<br>`.
+// at the start of the text or after a `<br>`. It walks back over the tags only,
+// not the text written before them.
 function _vKeptBefore(st) {
-    var tail = st.out.replace(/(?:<(?!br>)[^>]*>)+$/, "");
-    return tail === "" || /<br>$/.test(tail) ? "" : tail.charAt(tail.length - 1);
+    var end = st.out.length;
+    while (end > 0 && st.out.charAt(end - 1) === ">") {
+        var open = st.out.lastIndexOf("<", end - 1);
+        if (open < 0 || st.out.slice(open, end) === "<br>") {
+            return "";
+        }
+        end = open;
+    }
+    return end === 0 ? "" : st.out.charAt(end - 1);
 }
 
-// A pending space is plain when a word follows it, and an `&nbsp;` otherwise.
+// A pending space is plain when a word follows it, and stays an `&nbsp;`
+// otherwise. Its place in the output is kept, not searched for: text can hold
+// any character, and the output only grows past it.
 function _vSettleSpace(st, next) {
-    var at = st.out.lastIndexOf(_V_SPACE_PENDING);
-    if (at >= 0) {
-        var plain = next !== "" && next !== " " && next !== "\n";
-        st.out = st.out.slice(0, at) + (plain ? " " : "&nbsp;") + st.out.slice(at + 1);
+    var at = st.spaceAt;
+    st.spaceAt = -1;
+    if (at >= 0 && next !== "" && next !== " " && next !== "\n") {
+        st.out = st.out.slice(0, at) + " " + st.out.slice(at + "&nbsp;".length);
     }
 }
 
@@ -11720,6 +11728,10 @@ function _vWriteText(st, data, owner) {
         st.out += "<a href=\"eldur:" + (st.owners.length - 1) + "\">" + out + "</a>";
     } else {
         st.out += out;
+    }
+    if (st.spacePending) {
+        st.spacePending = false;
+        st.spaceAt = st.out.length - (st.twin ? "</a>" : "").length - "&nbsp;".length;
     }
 }
 
@@ -11899,6 +11911,7 @@ function _vMarkup(model, twin) {
     var inLine = model.text.parent && typeof model.text.parent.firstBaseline === "number";
     var st = {
         out: "", prevSpace: !inLine, pre: _vPre(model), breaks: _vBreaksKept(model),
+        spacePending: false, spaceAt: -1,
         html: model.html, twin: twin, model: model,
         // On a line an element's background is its box's, which `EldurInlineBox` paints.
         boxed: inLine && typeof model.text.parent.setRunBox === "function",
