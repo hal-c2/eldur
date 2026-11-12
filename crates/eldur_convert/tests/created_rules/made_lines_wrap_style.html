@@ -1,0 +1,22 @@
+<!doctype html><!-- Made paragraphs that set only how they wrap, inside a made `pre-wrap` block: `text-wrap: pretty` keeps the spaces it inherits, and `text-wrap-mode: nowrap` keeps them on one line. -->
+<html><head><style>
+body{margin:8px;font:13px monospace}
+#root{width:200px}
+.chat{white-space:pre-wrap}
+.chat p{text-wrap:pretty;margin:0 0 4px}
+.chat .nw{text-wrap-mode:nowrap}
+.w{color:#c60}
+</style></head><body>
+<div id="root"></div>
+<script>
+function dump(pfx){var all=document.querySelectorAll("#root *");for(var i=0;i<all.length;i++){var e=all[i];var q=e.getBoundingClientRect();console.log('CS '+pfx+' '+e.tagName.toLowerCase()+i+' '+[q.x,q.y,q.width,q.height].join(','))}}
+var root=document.getElementById('root');
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt)e.textContent=txt;return e}
+var chat=el('div','chat');
+var p=el('p');p.appendChild(el('span','w','[a]'));p.appendChild(document.createTextNode('   x    y   '));p.appendChild(el('span','w','[b]'));
+chat.appendChild(p);
+var q=el('p','nw');q.appendChild(el('span','w','[c]'));q.appendChild(document.createTextNode(' long  line  that  would  wrap '));q.appendChild(el('span','w','[d]'));
+chat.appendChild(q);
+root.appendChild(chat);
+setTimeout(function(){dump('H');document.body.appendChild(document.createElement('div')).id='csdone'},100);
+</script></body></html>

@@ -1054,3 +1054,15 @@ fn made_lines_valign_units() {
 fn made_lines_valign_units_open() {
     page("made_lines_valign_units_open");
 }
+
+/// A made paragraph that sets only how it wraps keeps the spaces of the `pre-wrap` block around it; `text-wrap-mode: nowrap` keeps them on one line.
+#[test]
+fn made_lines_wrap_style() {
+    page("made_lines_wrap_style");
+}
+
+/// A made paragraph that sets only how it wraps keeps the spaces of the `pre-wrap` block around it; `text-wrap-mode: nowrap` keeps them on one line. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_wrap_style_open() {
+    page("made_lines_wrap_style_open");
+}

@@ -13007,9 +13007,12 @@ function _vRows(v, model) {
     var text = model.text;
     var lineHeight = twin.contentHeight / Math.max(1, twin.lineCount);
     var step = Math.max(1, Math.floor((twin.font.pixelSize || 16) / 2));
+    // Text that may not wrap runs on past its box, and its glyphs there are
+    // still where they are drawn.
+    var reach = Math.max(text.width, twin.contentWidth);
     var rows = {};
     for (var y = step / 2; y < twin.contentHeight; y += step) {
-        for (var x = 0; x < text.width; x += 2) {
+        for (var x = 0; x < reach; x += 2) {
             if (_vIn(_vHitAt(model, x, y), v)) {
                 var at = Math.floor(y / lineHeight);
                 var row = rows[at] || (rows[at] = { min: x, max: x + 2 });
@@ -13034,7 +13037,7 @@ function _vRows(v, model) {
             return inside;
         }
         row.min = edge(row.min, Math.max(0, row.min - 2));
-        row.max = edge(row.max - 2, Math.min(text.width, row.max));
+        row.max = edge(row.max - 2, Math.min(reach, row.max));
     });
     return rows;
 }
@@ -17268,10 +17271,12 @@ var _gWarned = {};
 var _gMarginHelper = null;
 
 var _G_CONTROL = /^(button|input|textarea|select|img|table|thead|tbody|tfoot|tr|td|th|caption|colgroup|col|canvas|video|audio|svg|iframe)$/;
-var _G_INHERITED = ["color", "font-family", "font-weight", "font-style", "text-align", "visibility", "white-space",
+var _G_INHERITED = ["color", "font-family", "font-weight", "font-style", "text-align", "visibility",
+    "white-space-collapse", "text-wrap-mode",
     "border-collapse", "border-spacing", "overflow-wrap", "word-break"];
 var _G_INHERITED_INITIAL = { "color": "rgb(0, 0, 0)", "font-family": "", "font-weight": "400", "font-style": "normal",
-    "text-align": "start", "visibility": "visible", "white-space": "normal", "border-collapse": "separate",
+    "text-align": "start", "visibility": "visible", "white-space-collapse": "collapse", "text-wrap-mode": "wrap",
+    "border-collapse": "separate",
     "border-spacing": "0px", "overflow-wrap": "normal", "word-break": "normal" };
 var _G_INITIAL = {
     "display": "inline", "position": "static", "box-sizing": "content-box", "opacity": "1",
@@ -17630,6 +17635,52 @@ function _gSides(parts) {
     return [a, b, c, d];
 }
 
+// `white-space` and `text-wrap` as the longhands the cascade inherits one by
+// one (CSS Text 4 §3): `text-wrap` sets only how text wraps, so a lone
+// `text-wrap: balance` keeps the spaces a parent's `pre-wrap` keeps.
+var _G_WHITE_SPACE = {
+    normal: ["collapse", "wrap"], nowrap: ["collapse", "nowrap"], pre: ["preserve", "nowrap"],
+    "pre-wrap": ["preserve", "wrap"], "pre-line": ["preserve-breaks", "wrap"], "break-spaces": ["break-spaces", "wrap"]
+};
+
+function _gWhiteSpaceLonghands(prop, parts) {
+    var words = parts.map(function(w) { return String(w).toLowerCase(); });
+    if (words.length === 1 && /^(inherit|initial|unset|revert|revert-layer)$/.test(words[0])) {
+        return prop === "white-space"
+            ? [["white-space-collapse", words[0]], ["text-wrap-mode", words[0]]]
+            : [["text-wrap-mode", words[0]]];
+    }
+    var mode = words.filter(function(w) { return w === "wrap" || w === "nowrap"; })[0] || "wrap";
+    if (prop === "text-wrap") {
+        return [["text-wrap-mode", mode]];
+    }
+    if (words.length === 1 && _G_WHITE_SPACE[words[0]]) {
+        var pair = _G_WHITE_SPACE[words[0]];
+        return [["white-space-collapse", pair[0]], ["text-wrap-mode", pair[1]]];
+    }
+    var collapse = words.filter(function(w) {
+        return /^(collapse|preserve|preserve-breaks|break-spaces)$/.test(w);
+    })[0] || "collapse";
+    return [["white-space-collapse", collapse], ["text-wrap-mode", mode]];
+}
+
+// The one `white-space` keyword the runtime's line breaking goes by, from the
+// two longhands an element computes.
+function _gWhiteSpace(collapse, mode) {
+    var nowrap = mode === "nowrap";
+    if (collapse === "preserve") {
+        return nowrap ? "pre" : "pre-wrap";
+    }
+    if (collapse === "break-spaces") {
+        return nowrap ? "pre" : "break-spaces";
+    }
+    if (collapse === "preserve-breaks") {
+        // No keyword keeps breaks without wrapping: kept breaks are what show.
+        return "pre-line";
+    }
+    return nowrap ? "nowrap" : "normal";
+}
+
 // Only a shorthand whose value held `var()` reaches the runtime whole: the
 // converter expanded the others.
 function _gExpand(prop, value) {
@@ -17647,6 +17698,9 @@ function _gExpand(prop, value) {
     }
     if (prop === "word-wrap") {
         return [["overflow-wrap", value]];
+    }
+    if (prop === "white-space" || prop === "text-wrap") {
+        return _gWhiteSpaceLonghands(prop, parts);
     }
     if (prop === "margin" || prop === "padding") {
         var sides = _gSides(parts);
@@ -17891,6 +17945,12 @@ function _gStyle(raw) {
     }
     if (m.gOverlay) {
         Object.keys(m.gOverlay).forEach(function(prop) {
+            if (prop === "white-space" || prop === "text-wrap") {
+                _gExpand(prop, m.gOverlay[prop]).forEach(function(longhand) {
+                    won[longhand[0]] = { value: longhand[1], weight: Infinity };
+                });
+                return;
+            }
             won[prop] = { value: m.gOverlay[prop], weight: Infinity };
         });
     }
@@ -17956,6 +18016,7 @@ function _gStyle(raw) {
         }
         s[name] = text;
     }
+    s["white-space"] = _gWhiteSpace(s["white-space-collapse"], s["text-wrap-mode"]);
     s.color = s.color === undefined ? s["color"] : s.color;
     var color = _gColor(s["color"], inherited ? inherited["color"] : "rgb(0, 0, 0)");
     s["color"] = color;
