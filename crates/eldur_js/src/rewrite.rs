@@ -17,14 +17,15 @@ use crate::lower::{
     AstLowerer, SharedRewriteState, is_elidable_dom_declarator, sanitize_ident,
     static_property_key_name,
 };
+use crate::named::QML_GLOBAL_NAMES;
 use crate::parse::{
     GlobalDeclTracker, ParsedScript, collect_binding_identifiers, collect_hoisted_var_names,
     collect_unsupported_diagnostics, parse_script,
 };
 use crate::resolve::{
-    ScriptQueryBindings, build_cross_script_query_map, extract_string_literal, is_global_document,
-    is_global_ident, is_global_window, known_dom_event_from_on_prop, normalize_handler_event,
-    resolve_module_specifier, unwrap_parens,
+    ScriptQueryBindings, build_cross_script_query_map, collect_window_property_writes,
+    extract_string_literal, is_global_document, is_global_ident, is_global_window,
+    known_dom_event_from_on_prop, normalize_handler_event, resolve_module_specifier, unwrap_parens,
 };
 use crate::{
     Analysis, Diagnostic, DomQuery, DomResolver, ElementKey, EventBinding, JsOutput, QmlTarget,
@@ -239,6 +240,28 @@ pub(crate) fn rewrite(
             }
         }
     }
+    // A classic script's own top-level binding stays that binding: page.js
+    // declares it once for every script. So does a name QML's global object
+    // has; a browser name it lacks reaches the window property or throws.
+    let mut declared_globals: HashSet<&str> = QML_GLOBAL_NAMES.iter().copied().collect();
+    for v in &valid_scripts {
+        collect_window_property_writes(
+            &v.parsed.program,
+            &v.parsed.scoping,
+            &mut shared.window_globals,
+        );
+        if matches!(v.input.kind, ScriptKind::Classic) {
+            let scoping = &v.parsed.scoping;
+            declared_globals.extend(
+                scoping
+                    .iter_bindings_in(scoping.root_scope_id())
+                    .map(|sym| scoping.symbol_name(sym)),
+            );
+        }
+    }
+    shared
+        .window_globals
+        .retain(|name| !declared_globals.contains(name.as_str()));
 
     // Pre-scan `.on<event> = ...` assignments across all valid scripts to find which
     // `(qml_id, event)` pairs cannot be hoisted as a single static top-level binding.

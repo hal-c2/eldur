@@ -1,8 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
 use oxc_ast::ast::{
-    BindingPattern, CallExpression, Class, Expression, ForOfStatement, ForStatementLeft, Function,
-    IdentifierReference, Program, Statement, VariableDeclarator,
+    AssignmentExpression, AssignmentTarget, BindingPattern, CallExpression, Class, Expression,
+    ForOfStatement, ForStatementLeft, Function, IdentifierReference, Program, Statement,
+    VariableDeclarator,
 };
 use oxc_ast_visit::{Visit, walk};
 use oxc_semantic::{IsGlobalReference, Scoping, SymbolId};
@@ -78,6 +79,42 @@ pub(crate) fn is_global_window(expr: &Expression<'_>, scoping: &Scoping) -> bool
     is_global_ident(e, "window", scoping)
         || is_global_ident(e, "globalThis", scoping)
         || is_global_ident(e, "self", scoping)
+}
+
+/// Adds the names `program` sets as properties of the window (`window.X = v`,
+/// `globalThis["X"] ??= v`, `self.X = v`) to `out`. In a browser each is a
+/// global binding from then on, which any script can name bare.
+pub(crate) fn collect_window_property_writes(
+    program: &Program<'_>,
+    scoping: &Scoping,
+    out: &mut HashSet<String>,
+) {
+    struct Writes<'s> {
+        scoping: &'s Scoping,
+        out: &'s mut HashSet<String>,
+    }
+    impl<'a> Visit<'a> for Writes<'_> {
+        fn visit_assignment_expression(&mut self, it: &AssignmentExpression<'a>) {
+            let name = match &it.left {
+                AssignmentTarget::StaticMemberExpression(m)
+                    if is_global_window(&m.object, self.scoping) =>
+                {
+                    Some(m.property.name.to_string())
+                }
+                AssignmentTarget::ComputedMemberExpression(m)
+                    if is_global_window(&m.object, self.scoping) =>
+                {
+                    extract_string_literal(&m.expression)
+                }
+                _ => None,
+            };
+            if let Some(name) = name {
+                self.out.insert(name);
+            }
+            walk::walk_assignment_expression(self, it);
+        }
+    }
+    Writes { scoping, out }.visit_program(program);
 }
 
 pub(crate) fn is_global_document(expr: &Expression<'_>, scoping: &Scoping) -> bool {

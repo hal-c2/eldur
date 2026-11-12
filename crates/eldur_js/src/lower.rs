@@ -51,6 +51,11 @@ pub(crate) struct SharedRewriteState {
     pub redispatching_slots: Vec<String>,
     /// Top-level identifiers already claimed so generated helper names never collide.
     pub used_names: HashSet<String>,
+    /// Names a script sets on the window that no classic script declares and
+    /// the window does not have itself: a bare reference to one is that
+    /// property, as in a browser, where the window's properties are global
+    /// bindings. QML's global object takes no new properties.
+    pub window_globals: HashSet<String>,
 }
 
 impl SharedRewriteState {
@@ -847,6 +852,9 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
         };
         if let Some(rep) = mapped {
             self.editor.replace(it.span, rep);
+        } else if self.shared.window_globals.contains(it.name.as_str()) {
+            self.editor
+                .replace(it.span, format!("Eldur.window.{}", it.name));
         }
     }
 

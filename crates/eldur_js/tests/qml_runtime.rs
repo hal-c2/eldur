@@ -5097,3 +5097,131 @@ Item {
         out.page_js
     );
 }
+
+// Expected line recorded from Chromium: the same two scripts in a page, read
+// back from its console.
+#[test]
+fn qml6_a_name_set_on_the_window_is_a_global_in_every_script() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let dir = TempQmlDir::new("window_globals");
+    let resolver = FakeResolver::default();
+    let head = ScriptInput {
+        name: "inline script #1".to_string(),
+        kind: ScriptKind::Classic,
+        line_offset: 1,
+        source: r#"
+window.Provider = (() => ({ n: 1, bump() { return ++this.n; } }))();
+globalThis["Other"] = "o";
+function later() { return typeof Provider + ":" + Late; }
+self.Late = "late";
+"#
+        .to_string(),
+    };
+    let body = ScriptInput {
+        name: "inline script #2".to_string(),
+        kind: ScriptKind::Classic,
+        line_offset: 1,
+        source: r#"
+var log = [];
+log.push(typeof Provider, Provider.n, Provider.bump(), Other, later());
+Provider = { n: 10, bump() { return ++this.n; } };
+log.push(window.Provider.n);
+log.push(typeof Missing);
+try { Missing; log.push("no-error"); } catch (e) { log.push(e.name); }
+console.log("ELDUR_OK_WIN_GLOBALS " + log.join(","));
+"#
+        .to_string(),
+    };
+    let scripts = [head, body];
+    let analysis = analyze(&scripts);
+    let out = rewrite(&scripts, &analysis, &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+    dir.write_file("eldur_runtime.js", RUNTIME_JS);
+    dir.write_file("page.js", &out.page_js);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import "page.js" as Page
+
+Item {
+    id: root
+    Component.onCompleted: {
+        Page.__eldur_init(root);
+        Qt.quit();
+    }
+}
+"#,
+    );
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
+    assert!(
+        output
+            .contains("ELDUR_OK_WIN_GLOBALS object,1,2,o,object:late,10,undefined,ReferenceError"),
+        "{output}\npage.js:\n{}",
+        out.page_js
+    );
+}
+
+// Expected line recorded from Chromium 158: the same two scripts in a page,
+// read back from its console. Chromium has every name natively; QML's global
+// object lacks requestIdleCallback and cancelIdleCallback, so the polyfills
+// are what the bare names reach, while JSON stays QML's own.
+#[test]
+fn qml6_a_polyfilled_browser_global_is_callable_bare() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let dir = TempQmlDir::new("window_polyfill");
+    let resolver = FakeResolver::default();
+    let head = ScriptInput {
+        name: "inline script #1".to_string(),
+        kind: ScriptKind::Classic,
+        line_offset: 1,
+        source: r#"
+window.requestIdleCallback = window.requestIdleCallback || function (cb) { return setTimeout(cb, 1); };
+window.cancelIdleCallback = window.cancelIdleCallback || function (id) { clearTimeout(id); };
+window.JSON = window.JSON || {};
+"#
+        .to_string(),
+    };
+    let body = ScriptInput {
+        name: "inline script #2".to_string(),
+        kind: ScriptKind::Classic,
+        line_offset: 1,
+        source: r#"
+var log = [typeof requestIdleCallback, typeof cancelIdleCallback, JSON.stringify([1])];
+cancelIdleCallback(requestIdleCallback(function () {}));
+console.log("ELDUR_OK_WIN_POLYFILL " + log.join(","));
+"#
+        .to_string(),
+    };
+    let scripts = [head, body];
+    let analysis = analyze(&scripts);
+    let out = rewrite(&scripts, &analysis, &resolver);
+    assert!(out.diagnostics.is_empty(), "{:?}", out.diagnostics);
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+    dir.write_file("eldur_runtime.js", RUNTIME_JS);
+    dir.write_file("page.js", &out.page_js);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import "page.js" as Page
+
+Item {
+    id: root
+    Component.onCompleted: {
+        Page.__eldur_init(root);
+        Qt.quit();
+    }
+}
+"#,
+    );
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
+    assert!(
+        output.contains("ELDUR_OK_WIN_POLYFILL function,function,[1]"),
+        "{output}\npage.js:\n{}",
+        out.page_js
+    );
+}

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use eldur_js::{
     DomQuery, DomResolver, ElementKey, EventBinding, JsOutput, QmlTarget, ScriptInput, ScriptKind,
-    Severity, TargetKind, analyze, rewrite,
+    Severity, TargetKind, analyze, resolve_named_elements, rewrite,
 };
 
 #[derive(Default)]
@@ -2940,5 +2940,94 @@ fn a_lazily_imported_module_runs_at_its_own_place_on_the_page() {
             .contains("Eldur.Promise.resolve(__eldur_module_namespace())"),
         "{}",
         out.page_js
+    );
+}
+
+/// In a browser a property set on the window is a global binding: after
+/// `window.X = v`, a bare `X` in any script or handler is that property, read
+/// or written. A name a classic script declares is its own binding, a
+/// parameter is the function's, and a name QML's global object has (`Map`,
+/// polyfilled or not) stays what it is.
+#[test]
+fn a_bare_name_a_script_sets_on_the_window_is_that_window_property() {
+    let resolver = FakeResolver::default().with_element(1, "btn", TargetKind::Button);
+    let head = classic(
+        "head.js",
+        r#"
+window.Provider = { n: 1 };
+globalThis["Other"] = "o";
+function later() { return typeof Provider + Late; }
+self.Late = "late";
+var Local = 1;
+window.Local = 2;
+window.Map = window.Map || function () {};
+"#,
+    );
+    let body = classic(
+        "body.js",
+        r#"
+Provider.n += 1;
+Provider = { n: 10 };
+console.log(Other, Local, Missing, { Provider }, new Map());
+function shadow(Provider) { return Provider; }
+"#,
+    );
+    let click = handler(1, "click", "Provider.n++");
+    let out = run_rewrite(&[head, body, click], &resolver);
+    let js = &out.page_js;
+    for want in [
+        "typeof Eldur.window.Provider + Eldur.window.Late",
+        "Eldur.window.Provider.n += 1",
+        "Eldur.window.Provider = { n: 10 }",
+        "console.log(Eldur.window.Other, Local, Missing, { Provider: Eldur.window.Provider }, new Map())",
+        "function shadow(Provider) { return Provider; }",
+        "Eldur.window.Provider.n++",
+    ] {
+        assert!(js.contains(want), "{want} missing:\n{js}");
+    }
+}
+
+/// A polyfill sets a browser name the QML global object lacks, then calls it
+/// bare: the bare name is that window property, or it throws ReferenceError.
+/// A name QML's global object has (`JSON`) keeps its own binding.
+#[test]
+fn a_polyfilled_browser_global_called_bare_is_the_window_property() {
+    let resolver = FakeResolver::default();
+    let head = classic(
+        "polyfill.js",
+        r#"
+window.requestIdleCallback = window.requestIdleCallback || function (cb) { return setTimeout(cb, 1); };
+window.Intl = window.Intl || {};
+window.JSON = window.JSON || {};
+"#,
+    );
+    let body = classic(
+        "app.js",
+        "requestIdleCallback(function () {});\nconsole.log(typeof Intl, JSON.stringify([1]));\n",
+    );
+    let out = run_rewrite(&[head, body], &resolver);
+    let js = &out.page_js;
+    for want in [
+        "Eldur.window.requestIdleCallback(function () {})",
+        "console.log(typeof Eldur.window.Intl, JSON.stringify([1]))",
+    ] {
+        assert!(js.contains(want), "{want} missing:\n{js}");
+    }
+}
+
+/// HTML's named access comes after the window's own properties: a name a
+/// script sets on the window is that property, not the element with that id.
+#[test]
+fn a_name_set_on_the_window_is_not_the_element_with_that_id() {
+    let mut scripts = [
+        classic("a.js", "window.panel = { open: true };\n"),
+        classic("b.js", "console.log(panel.open, card.id);\n"),
+    ];
+    let ids = ["panel", "card"].map(str::to_owned).into_iter().collect();
+    let analysis = analyze(&scripts);
+    assert!(resolve_named_elements(&mut scripts, &ids, &analysis));
+    assert_eq!(
+        scripts[1].source,
+        "console.log(panel.open, document.getElementById(\"card\").id);\n"
     );
 }

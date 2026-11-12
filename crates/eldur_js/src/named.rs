@@ -13,12 +13,12 @@ use oxc_span::{GetSpan, Span};
 use oxc_syntax::operator::UnaryOperator;
 
 use crate::parse::{ParsedScript, parse_script};
-use crate::resolve::unwrap_parens;
+use crate::resolve::{collect_window_property_writes, unwrap_parens};
 use crate::{Analysis, ScriptInput, ScriptKind};
 
 /// What the global object has before named access is asked: these win over an
 /// element of that name.
-const WINDOW_NAMES: &[&str] = &[
+pub(crate) const WINDOW_NAMES: &[&str] = &[
     "AbortController",
     "Array",
     "ArrayBuffer",
@@ -200,6 +200,79 @@ const WINDOW_NAMES: &[&str] = &[
     "window",
 ];
 
+/// What QML's global object has: measured in qml6 (Qt 6.12) as the names whose
+/// `typeof` does not throw in a `.pragma library` script. A page that sets one
+/// of these on the window keeps the QML binding for a bare name; any other name
+/// it sets there, a polyfilled browser API included, is that window property.
+pub(crate) const QML_GLOBAL_NAMES: &[&str] = &[
+    "Array",
+    "ArrayBuffer",
+    "Atomics",
+    "Boolean",
+    "DataView",
+    "Date",
+    "Error",
+    "EvalError",
+    "Float32Array",
+    "Float64Array",
+    "Function",
+    "Infinity",
+    "Int16Array",
+    "Int32Array",
+    "Int8Array",
+    "JSON",
+    "Map",
+    "Math",
+    "NaN",
+    "Number",
+    "Object",
+    "Promise",
+    "Proxy",
+    "QT_TRANSLATE_NOOP",
+    "QT_TRID_NOOP",
+    "QT_TR_NOOP",
+    "Qt",
+    "RangeError",
+    "ReferenceError",
+    "Reflect",
+    "RegExp",
+    "Set",
+    "SharedArrayBuffer",
+    "String",
+    "Symbol",
+    "SyntaxError",
+    "TypeError",
+    "URIError",
+    "URL",
+    "URLSearchParams",
+    "Uint16Array",
+    "Uint32Array",
+    "Uint8Array",
+    "Uint8ClampedArray",
+    "WeakMap",
+    "WeakSet",
+    "XMLHttpRequest",
+    "arguments",
+    "console",
+    "decodeURI",
+    "decodeURIComponent",
+    "encodeURI",
+    "encodeURIComponent",
+    "escape",
+    "eval",
+    "gc",
+    "isFinite",
+    "isNaN",
+    "parseFloat",
+    "parseInt",
+    "print",
+    "qsTr",
+    "qsTrId",
+    "qsTranslate",
+    "undefined",
+    "unescape",
+];
+
 struct NameUses<'s> {
     scoping: &'s Scoping,
     names: &'s HashSet<String>,
@@ -253,7 +326,7 @@ impl<'a> Visit<'a> for NameUses<'_> {
 /// source changed, and so whether `analysis` has to be taken again.
 ///
 /// A name means an element when nothing declares or assigns it, the window has no
-/// such property, and an element can have it as an id: `ids` is what the page
+/// such property (its own or one a script sets), and an element can have it as an id: `ids` is what the page
 /// wrote, and the script may write more. When a script computes an id, any such
 /// name can be one, so an undeclared name reads as null rather than throwing.
 pub fn resolve_named_elements(
@@ -282,6 +355,8 @@ pub fn resolve_named_elements(
                 taken.insert(scoping.symbol_name(sym).to_string());
             }
         }
+        // The window's own properties come before named access.
+        collect_window_property_writes(&parsed.program, scoping, &mut taken);
     }
     let names: HashSet<String> = free
         .into_iter()
