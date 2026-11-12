@@ -1457,7 +1457,20 @@ impl Emitter<'_, '_> {
             };
             let props = plan.props(start, span, layout_item);
             let in_fr = !horizontal && span == 1 && plan.is_fr(start);
+            // A percentage of the grid area cannot size the tracks that make the
+            // area: the item takes its `fr` share like the rest of its tracks and
+            // stops at its own width. Given as its preferred width, it would widen
+            // its tracks past their share and squeeze the `fr` columns beside them.
+            let shares = horizontal
+                && matches!(size, Size::Length(l) if l.as_px().is_none() && !is_viewport_relative(l))
+                && (start..start + span).all(|t| plan.is_fr(t));
             match (own, align) {
+                (Some(v), align) if shares => {
+                    obj.set("Layout.preferredWidth", Value::Number(0.0));
+                    obj.set("Layout.fillWidth", true);
+                    obj.set("Layout.maximumWidth", v);
+                    flags.push(align.unwrap_or("Qt.AlignLeft"));
+                }
                 // Its size is no part of what the track is given: all `fr`
                 // rows are at 0, and it only stops short of filling.
                 (Some(v), align) if in_fr => {
