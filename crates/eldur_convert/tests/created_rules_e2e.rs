@@ -1090,3 +1090,15 @@ fn made_lines_wrap_edges() {
 fn made_lines_wrap_edges_open() {
     page("made_lines_wrap_edges_open");
 }
+
+/// A made `pre-wrap` paragraph whose text holds a U+0001 keeps it as a character, never a break: a word that runs past its box with one in it stays on its line, and a space that ends the node after it still breaks.
+#[test]
+fn made_lines_wrap_control() {
+    page("made_lines_wrap_control");
+}
+
+/// A made `pre-wrap` paragraph whose text holds a U+0001 keeps it as a character, never a break: a word that runs past its box with one in it stays on its line, and a space that ends the node after it still breaks. The same after a `createElement` the analysis cannot follow.
+#[test]
+fn made_lines_wrap_control_open() {
+    page("made_lines_wrap_control_open");
+}

@@ -586,6 +586,38 @@
   "clicks": [],
   "probes": []
  },
+ "made_lines_wrap_control": {
+  "log": [
+   "CS H div0 8,8,200,76",
+   "CS H p1 8,8,200,17",
+   "CS H span2 8,8,23.40625,17",
+   "CS H span3 242.015625,8,23.40625,17",
+   "CS H p4 8,29,200,34",
+   "CS H span5 8,29,23.40625,17",
+   "CS H span6 8,46,171.609375,17",
+   "CS H p7 8,67,200,17",
+   "CS H span8 8,67,23.40625,17",
+   "CS H span9 54.8125,67,23.40625,17"
+  ],
+  "clicks": [],
+  "probes": []
+ },
+ "made_lines_wrap_control_open": {
+  "log": [
+   "CS H div0 8,8,200,76",
+   "CS H p1 8,8,200,17",
+   "CS H span2 8,8,23.40625,17",
+   "CS H span3 242.015625,8,23.40625,17",
+   "CS H p4 8,29,200,34",
+   "CS H span5 8,29,23.40625,17",
+   "CS H span6 8,46,171.609375,17",
+   "CS H p7 8,67,200,17",
+   "CS H span8 8,67,23.40625,17",
+   "CS H span9 54.8125,67,23.40625,17"
+  ],
+  "clicks": [],
+  "probes": []
+ },
  "made_lines_wrap_edges": {
   "log": [
    "CS H div0 8,8,200,148",
