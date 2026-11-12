@@ -97,6 +97,9 @@ struct PageBuilder<'a> {
     emitted_modules: HashSet<usize>,
     visiting_modules: HashSet<usize>,
     module_exports: HashMap<usize, ModuleExports>,
+    /// Module index -> the top-level function returning its namespace, for
+    /// `import()` of a module the page inlines.
+    module_namespaces: HashMap<usize, String>,
     diagnostics: Vec<Diagnostic>,
 }
 
@@ -179,7 +182,8 @@ pub(crate) fn rewrite(
             );
         }
 
-        let unsupported = collect_unsupported_diagnostics(input, &parsed.program, &parsed.scoping);
+        let unsupported =
+            collect_unsupported_diagnostics(input, &parsed.program, &parsed.scoping, scripts);
         diagnostics.extend(unsupported);
 
         if let ScriptKind::HandlerAttribute { element, .. } = &input.kind
@@ -263,6 +267,7 @@ pub(crate) fn rewrite(
         emitted_modules: HashSet::new(),
         visiting_modules: HashSet::new(),
         module_exports: HashMap::new(),
+        module_namespaces: HashMap::new(),
         diagnostics,
     };
 
@@ -294,6 +299,69 @@ impl<'a> PageBuilder<'a> {
         self.visiting_modules.remove(&script_idx);
         self.emitted_modules.insert(script_idx);
         self.module_exports.insert(script_idx, exports);
+        // Imported lazily by a script before it: the name was handed out then.
+        self.declare_module_namespace(script_idx);
+    }
+
+    /// The page modules `v` imports with `import("literal")`, mapped from
+    /// specifier to the function that returns its namespace. The module is
+    /// not emitted here: `import()` never runs a module ahead of its importer,
+    /// so each one stays at its own place on the page and its namespace
+    /// function is declared once it has been emitted there.
+    fn dynamic_import_namespaces(&mut self, v: &ValidScript<'a>) -> HashMap<String, String> {
+        let mut found = DynamicImports {
+            importer: &v.input.name,
+            scripts: self.scripts,
+            found: Vec::new(),
+        };
+        found.visit_program(&v.parsed.program);
+        let mut namespaces = HashMap::new();
+        for (spec, dep_idx, span) in found.found {
+            if namespaces.contains_key(&spec) {
+                continue;
+            }
+            if !self.valid_map.contains_key(&dep_idx) {
+                // Not converted at all, which its own diagnostics say.
+                self.diagnostics.push(Diagnostic {
+                    severity: Severity::Unsupported,
+                    source: v.input.name.clone(),
+                    line: Some(crate::parse::line_for_span(v.input, span)),
+                    message: format!(
+                        "dynamic import('{spec}') of a module that could not be converted cannot load it: the promise rejects as for a missing module"
+                    ),
+                });
+                continue;
+            }
+            let name = match self.module_namespaces.get(&dep_idx) {
+                Some(name) => name.clone(),
+                None => {
+                    let name = self.shared.alloc_fn_name("__eldur_module_namespace");
+                    self.module_namespaces.insert(dep_idx, name.clone());
+                    if self.emitted_modules.contains(&dep_idx) {
+                        self.declare_module_namespace(dep_idx);
+                    }
+                    name
+                }
+            };
+            namespaces.insert(spec, name);
+        }
+        namespaces
+    }
+
+    /// Declares the function an `import()` of `script_idx` calls. A function
+    /// declaration is hoisted and its getters read the bindings only when
+    /// called, so where it lands in page.js does not matter.
+    fn declare_module_namespace(&mut self, script_idx: usize) {
+        let (Some(name), Some(exports)) = (
+            self.module_namespaces.get(&script_idx),
+            self.module_exports.get(&script_idx),
+        ) else {
+            return;
+        };
+        self.out.top_decls.push(format!(
+            "function {name}() {{ return {name}.value || ({name}.value = {}); }}",
+            format_live_namespace_object(exports)
+        ));
     }
 
     fn process_handler_attribute(
@@ -321,6 +389,7 @@ impl<'a> PageBuilder<'a> {
             .shared
             .alloc_fn_name(&format!("__eldur_on_{safe_ev}_{}", target.qml_id));
 
+        let dynamic_imports = self.dynamic_import_namespaces(v);
         let scoping = &v.parsed.scoping;
         let bindings =
             ScriptQueryBindings::build(v.input, &v.parsed.program, scoping, self.cross_script);
@@ -334,6 +403,7 @@ impl<'a> PageBuilder<'a> {
             target.clone(),
             final_span,
         );
+        lowerer.dynamic_imports = dynamic_imports;
         lowerer.visit_program(&v.parsed.program);
         let body_rewritten = lowerer.editor.finish();
         let trimmed = body_rewritten.trim();
@@ -392,6 +462,8 @@ impl<'a> PageBuilder<'a> {
             }
         }
 
+        let dynamic_imports = self.dynamic_import_namespaces(v);
+
         let scripts = self.scripts;
         let resolver = self.resolver;
         let module_exports = &self.module_exports;
@@ -420,6 +492,7 @@ impl<'a> PageBuilder<'a> {
             &mut self.shared,
         );
         lowerer.symbol_renames = symbol_renames;
+        lowerer.dynamic_imports = dynamic_imports;
 
         for stmt in &v.parsed.program.body {
             match stmt {
@@ -2119,6 +2192,48 @@ fn format_namespace_object(exports: &ModuleExports) -> (String, bool) {
         ("{}".to_string(), any_deferred)
     } else {
         (format!("{{ {} }}", fields.join(", ")), any_deferred)
+    }
+}
+
+/// A module namespace for `import()`: getters read the live bindings, as a
+/// namespace's do, and the keys are sorted, as a namespace's are.
+fn format_live_namespace_object(exports: &ModuleExports) -> String {
+    let mut keys: Vec<&String> = exports.ordered_keys.iter().collect();
+    keys.sort_by(|a, b| a.encode_utf16().cmp(b.encode_utf16()));
+    let fields: Vec<String> = keys
+        .into_iter()
+        .filter_map(|key| {
+            let (target_ident, _, _) = exports.entries.get(key)?;
+            Some(if is_valid_js_ident(key) {
+                format!("get {key}() {{ return {target_ident}; }}")
+            } else {
+                format!("get {key:?}() {{ return {target_ident}; }}")
+            })
+        })
+        .collect();
+    if fields.is_empty() {
+        "{}".to_string()
+    } else {
+        format!("{{ {} }}", fields.join(", "))
+    }
+}
+
+/// Every `import("literal")` in a script that names a page module.
+struct DynamicImports<'s> {
+    importer: &'s str,
+    scripts: &'s [ScriptInput],
+    found: Vec<(String, usize, oxc_span::Span)>,
+}
+
+impl<'a> Visit<'a> for DynamicImports<'_> {
+    fn visit_import_expression(&mut self, it: &oxc_ast::ast::ImportExpression<'a>) {
+        if let Some(idx) =
+            crate::parse::dynamic_import_of_page_module(self.importer, it, self.scripts)
+            && let Expression::StringLiteral(spec) = &it.source
+        {
+            self.found.push((spec.value.to_string(), idx, it.span));
+        }
+        walk::walk_import_expression(self, it);
     }
 }
 
