@@ -17,7 +17,7 @@ use crate::lower::{
     AstLowerer, SharedRewriteState, is_elidable_dom_declarator, sanitize_ident,
     static_property_key_name,
 };
-use crate::named::WINDOW_NAMES;
+use crate::named::QML_GLOBAL_NAMES;
 use crate::parse::{
     GlobalDeclTracker, ParsedScript, collect_binding_identifiers, collect_hoisted_var_names,
     collect_unsupported_diagnostics, parse_script,
@@ -241,8 +241,9 @@ pub(crate) fn rewrite(
         }
     }
     // A classic script's own top-level binding stays that binding: page.js
-    // declares it once for every script.
-    let mut declared_globals: HashSet<&str> = WINDOW_NAMES.iter().copied().collect();
+    // declares it once for every script. So does a name QML's global object
+    // has; a browser name it lacks reaches the window property or throws.
+    let mut declared_globals: HashSet<&str> = QML_GLOBAL_NAMES.iter().copied().collect();
     for v in &valid_scripts {
         collect_window_property_writes(
             &v.parsed.program,

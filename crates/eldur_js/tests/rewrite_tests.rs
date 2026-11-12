@@ -2946,8 +2946,8 @@ fn a_lazily_imported_module_runs_at_its_own_place_on_the_page() {
 /// In a browser a property set on the window is a global binding: after
 /// `window.X = v`, a bare `X` in any script or handler is that property, read
 /// or written. A name a classic script declares is its own binding, a
-/// parameter is the function's, and the window's own names (`Map`, polyfilled
-/// or not) stay what they are.
+/// parameter is the function's, and a name QML's global object has (`Map`,
+/// polyfilled or not) stays what it is.
 #[test]
 fn a_bare_name_a_script_sets_on_the_window_is_that_window_property() {
     let resolver = FakeResolver::default().with_element(1, "btn", TargetKind::Button);
@@ -2982,6 +2982,34 @@ function shadow(Provider) { return Provider; }
         "console.log(Eldur.window.Other, Local, Missing, { Provider: Eldur.window.Provider }, new Map())",
         "function shadow(Provider) { return Provider; }",
         "Eldur.window.Provider.n++",
+    ] {
+        assert!(js.contains(want), "{want} missing:\n{js}");
+    }
+}
+
+/// A polyfill sets a browser name the QML global object lacks, then calls it
+/// bare: the bare name is that window property, or it throws ReferenceError.
+/// A name QML's global object has (`JSON`) keeps its own binding.
+#[test]
+fn a_polyfilled_browser_global_called_bare_is_the_window_property() {
+    let resolver = FakeResolver::default();
+    let head = classic(
+        "polyfill.js",
+        r#"
+window.requestIdleCallback = window.requestIdleCallback || function (cb) { return setTimeout(cb, 1); };
+window.Intl = window.Intl || {};
+window.JSON = window.JSON || {};
+"#,
+    );
+    let body = classic(
+        "app.js",
+        "requestIdleCallback(function () {});\nconsole.log(typeof Intl, JSON.stringify([1]));\n",
+    );
+    let out = run_rewrite(&[head, body], &resolver);
+    let js = &out.page_js;
+    for want in [
+        "Eldur.window.requestIdleCallback(function () {})",
+        "console.log(typeof Eldur.window.Intl, JSON.stringify([1]))",
     ] {
         assert!(js.contains(want), "{want} missing:\n{js}");
     }
