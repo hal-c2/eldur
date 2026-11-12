@@ -11830,8 +11830,7 @@ function _vPre(model) {
     if (!host || host.__eldurInline) {
         return model.pre;
     }
-    ++_gGen;
-    var white = _gStyle(host)["white-space"];
+    var white = _gFreshStyle(host)["white-space"];
     return white !== "normal" && white !== "nowrap";
 }
 
@@ -17237,6 +17236,9 @@ window = new Proxy(window, {
 
 var _gDirty = false;
 var _gGen = 0;
+// Writes that can change what an element computes, for `_gFreshStyle`.
+var _gWrites = 0;
+var _gWritesSeen = -1;
 var _gLive = [];
 // An open page's templates paint themselves, but the margins between them and
 // what a script adds beside them are still this page's to work out.
@@ -17328,12 +17330,24 @@ function _gRules() {
 }
 
 function _gTouch() {
+    ++_gWrites;
     _holdFocus();
     if (!_gHasCascade()) {
         return;
     }
     _gDirty = true;
     _layoutChanged(_root);
+}
+
+// What an element computes now, between the cascade's passes. The cache is
+// dropped only when a write came since the last such read: a render that reads
+// many elements, with nothing written between, keeps it.
+function _gFreshStyle(raw) {
+    if (_gWritesSeen !== _gWrites) {
+        _gWritesSeen = _gWrites;
+        ++_gGen;
+    }
+    return _gStyle(raw);
 }
 
 function _gIsBox(raw) {
