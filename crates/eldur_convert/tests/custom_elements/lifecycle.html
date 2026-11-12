@@ -40,5 +40,13 @@ L("innerHTML",order.join(",")+":"+p3.children.length);
 order=[];
 p3.innerHTML="";
 L("cleared",order.join(",")+":"+p3.children.length);
+order=[];
+var s1=make("s1");p1.appendChild(s1);
+order=[];
+p1.replaceChild(s1,s1);
+L("replaceChildSelf",order.join(",")+":"+s1.isConnected+":"+p1.children.length);
+order=[];
+s1.replaceWith(s1);
+L("replaceWithSelf",order.join(",")+":"+s1.isConnected+":"+p1.children.length);
 </script>
 </body></html>

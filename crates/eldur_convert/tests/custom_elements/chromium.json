@@ -13,6 +13,21 @@
   "LC plain TypeError:TypeError",
   "LC whenDefined SyntaxError"
  ],
+ "inline": [
+  "LC insert ctor,connected:s",
+  "LC remove disconnected:a",
+  "LC removeChild disconnected:b",
+  "LC toBlock disconnected:c,connected:d",
+  "LC toLine disconnected:c,connected:s",
+  "LC replaceChild ctor,disconnected:c,connected:s",
+  "LC replaceWith ctor,disconnected:e,connected:s",
+  "LC replaceChildSelf disconnected:f,connected:s:true:1",
+  "LC replaceWithSelf disconnected:f,connected:s:true:1",
+  "LC replaceChildren disconnected:f:0",
+  "LC textContent disconnected:g:0",
+  "LC innerHTML ctor,connected:w:1",
+  "LC cleared disconnected:h:0"
+ ],
  "lifecycle": [
   "LC move disconnected:a,connected:p2",
   "LC replaceChildren disconnected:a:0",
@@ -20,7 +35,9 @@
   "LC replaceWith ctor,disconnected:c,connected:p1",
   "LC textContent disconnected:d:0",
   "LC innerHTML ctor,attr:3,connected:p3:1",
-  "LC cleared disconnected:e:0"
+  "LC cleared disconnected:e:0",
+  "LC replaceChildSelf disconnected:s1,connected:p1:true:1",
+  "LC replaceWithSelf disconnected:s1,connected:p1:true:1"
  ],
  "upgrade": [
   "LC before undefined",

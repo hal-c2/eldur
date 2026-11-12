@@ -6988,13 +6988,14 @@ function _ceUpgrade(raw, def) {
 }
 
 function _ceEach(raw, fn) {
-    if (!raw || !_isQObject(raw)) {
+    if (!raw || !(raw.__eldurInline || _isQObject(raw))) {
         return;
     }
     if (_meta(raw).ceState === "custom") {
         fn(raw);
     }
-    var kids = _rawElementChildren(raw);
+    // An element inside a line of text is a node of the line's model, not an item.
+    var kids = raw.__eldurInline ? (raw.kids || []).filter(_vIsElement) : _rawElementChildren(raw);
     for (var i = 0; i < kids.length; ++i) {
         _ceEach(kids[i], fn);
     }
@@ -7013,13 +7014,19 @@ function _ceHold(nodes) {
     });
 }
 
+// What a held node is now: an element moving between a line of text and a box
+// is another node there, and its record says which.
+function _ceNow(h) {
+    return h.raw && !_isQObject(h) && !h.__eldurInline ? h.raw : h;
+}
+
 // After the held nodes went into the document: each custom element now in it.
 function _ceInserted(held) {
     if (!held) {
         return;
     }
     for (var i = 0; i < held.length; ++i) {
-        var node = held[i].raw && !_isQObject(held[i]) ? held[i].raw : held[i];
+        var node = _ceNow(held[i]);
         _ceEach(node, function(raw) {
             if (_isConnected(raw)) {
                 _ceCall(raw, "connectedCallback", []);
@@ -7028,13 +7035,17 @@ function _ceInserted(held) {
     }
 }
 
-// Before `raw` leaves the document: the custom elements it takes along.
+// Before `raw` leaves the document: the custom elements it takes along, held
+// by their records as `_ceHold` holds nodes.
 function _ceLeaving(raw) {
     if (!_ce.any || !_isConnected(raw)) {
         return [];
     }
     var out = [];
-    _ceEach(raw, function(r) { out.push(r); });
+    _ceEach(raw, function(r) {
+        var m = _itemMeta.get(r);
+        out.push(m && m.raw === r ? m : r);
+    });
     return out;
 }
 
@@ -7055,9 +7066,9 @@ function _ceMoving(nodes, going) {
     return out;
 }
 
-function _ceLeft(raws) {
-    for (var i = 0; i < raws.length; ++i) {
-        _ceCall(raws[i], "disconnectedCallback", []);
+function _ceLeft(held) {
+    for (var i = 0; i < held.length; ++i) {
+        _ceCall(_ceNow(held[i]), "disconnectedCallback", []);
     }
 }
 
@@ -8488,6 +8499,18 @@ function _inlineBecomesLines(raw) {
 // `going`, when given, is the node the inserted ones replace: it leaves once
 // they are in, and its custom elements hear so before the new ones do.
 function _insertChildren(raw, nodes, ref, going) {
+    if (going && nodes.indexOf(going) !== -1) {
+        // Replaced by itself: it stays, before the next sibling that is not moving.
+        var kids = _rawElementChildren(raw);
+        ref = null;
+        for (var k = kids.indexOf(going) + 1; k > 0 && k < kids.length; ++k) {
+            if (nodes.indexOf(kids[k]) === -1) {
+                ref = kids[k];
+                break;
+            }
+        }
+        going = null;
+    }
     var held = _ceHold(nodes);
     var leaving = _ceMoving(nodes, going);
     _insertChildrenAt(raw, nodes, ref);
@@ -10635,9 +10658,7 @@ function wrap(rawItem) {
         },
         removeChild: function(child) {
             var rawChild = _unwrap(child);
-            if (rawChild && rawChild.__eldurInline) {
-                _vRemove(rawChild);
-            } else if (rawChild && rawChild.parent !== undefined) {
+            if (rawChild && (rawChild.__eldurInline || rawChild.parent !== undefined)) {
                 _detachNode(rawChild);
             }
             return child;
@@ -10650,9 +10671,7 @@ function wrap(rawItem) {
                 }
                 return;
             }
-            if (rawItem.__eldurInline) {
-                _vRemove(rawItem);
-            } else if (rawItem.parent !== undefined) {
+            if (rawItem.__eldurInline || rawItem.parent !== undefined) {
                 _detachNode(rawItem);
             }
         },
@@ -10671,8 +10690,7 @@ function wrap(rawItem) {
                 return oldChild;
             }
             var rawNodes = _expandInsertRawNodes([newChild]);
-            if (_vTryInsert(rawItem, rawNodes, rawOld)) {
-                _vRemove(rawOld);
+            if (_vTryInsert(rawItem, rawNodes, rawOld, rawOld)) {
                 return oldChild;
             }
             _insertChildren(rawItem, rawNodes, rawOld, rawOld);
@@ -10689,7 +10707,7 @@ function wrap(rawItem) {
             var rawNodes = _expandInsertRawNodes(arguments);
             var vFirst = _vHostOf(rawItem, rawNodes, null);
             if (vFirst) {
-                _vInsert(vFirst, rawNodes, vFirst.kids.filter(_vIsRendered)[0] || null);
+                _vPut(vFirst, rawNodes, vFirst.kids.filter(_vIsRendered)[0] || null, null);
                 return;
             }
             var kids = _rawElementChildren(rawItem);
@@ -10698,7 +10716,7 @@ function wrap(rawItem) {
         },
         before: function() {
             if (rawItem.__eldurInline) {
-                _vInsert(rawItem.vparent || rawItem.model, _expandInsertRawNodes(arguments), rawItem);
+                _vPut(rawItem.vparent || rawItem.model, _expandInsertRawNodes(arguments), rawItem, null);
                 return;
             }
             var p = _logicalParent(rawItem);
@@ -10711,7 +10729,7 @@ function wrap(rawItem) {
         after: function() {
             if (rawItem.__eldurInline) {
                 var afterIn = rawItem.vparent || rawItem.model;
-                _vInsert(afterIn, _expandInsertRawNodes(arguments), afterIn.kids[afterIn.kids.indexOf(rawItem) + 1] || null);
+                _vPut(afterIn, _expandInsertRawNodes(arguments), afterIn.kids[afterIn.kids.indexOf(rawItem) + 1] || null, null);
                 return;
             }
             var p = _logicalParent(rawItem);
@@ -10726,8 +10744,7 @@ function wrap(rawItem) {
         },
         replaceWith: function() {
             if (rawItem.__eldurInline) {
-                _vInsert(rawItem.vparent || rawItem.model, _expandInsertRawNodes(arguments), rawItem);
-                _vRemove(rawItem);
+                _vPut(rawItem.vparent || rawItem.model, _expandInsertRawNodes(arguments), rawItem, rawItem);
                 return;
             }
             var p = _logicalParent(rawItem);
@@ -10741,7 +10758,7 @@ function wrap(rawItem) {
             var vAll = rawItem.__eldurInline ? rawItem : _vExisting(rawItem);
             if (vAll) {
                 _vDetachKids(vAll);
-                _vInsert(vAll, _expandInsertRawNodes(arguments), null);
+                _vPut(vAll, _expandInsertRawNodes(arguments), null, null);
                 return;
             }
             var existing = _rawElementChildren(rawItem);
@@ -11160,6 +11177,12 @@ function _vText(c) {
 
 function _vDetachKids(c) {
     var old = c.kids.slice();
+    var leaving = [];
+    for (var j = 0; j < old.length; ++j) {
+        if (!old[j].gen) {
+            leaving.push.apply(leaving, _ceLeaving(old[j]));
+        }
+    }
     c.kids = c.kids.filter(function(k) { return k.gen; });
     for (var i = 0; i < old.length; ++i) {
         if (!old[i].gen) {
@@ -11167,6 +11190,7 @@ function _vDetachKids(c) {
             old[i].vparent = null;
         }
     }
+    _ceLeft(leaving);
 }
 
 function _vSetModel(node, model) {
@@ -11248,6 +11272,23 @@ function _vSetInnerHTML(c, html) {
     }
     _vChanged(model);
     _pseudoTouch();
+    if (_ce.any) {
+        _ceUpgradeParsed(c.kids);
+    }
+}
+
+// The custom elements markup made inside a line of text, in document order:
+// each is constructed, then hears it is connected, as one the parser made.
+function _ceUpgradeParsed(kids) {
+    for (var i = 0; i < kids.length; ++i) {
+        if (_vIsElement(kids[i]) && !kids[i].gen) {
+            var def = _ce.defs[kids[i].eldurTag];
+            if (def) {
+                _ceUpgrade(kids[i], def);
+            }
+            _ceUpgradeParsed(kids[i].kids);
+        }
+    }
 }
 
 function _vEscapeText(s) {
@@ -15924,7 +15965,16 @@ function _vToReal(v) {
         return plain;
     }
     var m = _meta(v);
-    var made = _unwrap(document.createElement(v.eldurTag));
+    // The same element as another item: a custom one keeps its record below,
+    // and is not constructed again.
+    var wasMaking = _ce.making;
+    _ce.making = true;
+    var made;
+    try {
+        made = _unwrap(document.createElement(v.eldurTag));
+    } finally {
+        _ce.making = wasMaking;
+    }
     var mm = _meta(made);
     var script = m.wrapper;
     var look = _vStyle(v);
@@ -16416,18 +16466,31 @@ function _vCarryModel(raw, old, nodes) {
     return true;
 }
 
-// `true` when the nodes went into a line of text.
-function _vTryInsert(raw, nodes, ref) {
+// `true` when the nodes went into a line of text, in place of `going` if given.
+function _vTryInsert(raw, nodes, ref, going) {
     var host = _vHostOf(raw, nodes, ref);
     if (!host) {
         return false;
     }
+    _vPut(host, nodes, ref, going);
+    return true;
+}
+
+// `_insertChildren` for a line of text: a custom element that moves, or that
+// `going` takes along, hears it left before it hears it came. A node replaced
+// by itself stays (`_vInsert` steps past it as the ref).
+function _vPut(host, nodes, ref, going) {
+    if (going && nodes.indexOf(going) !== -1) {
+        going = null;
+    }
     var held = _ceHold(nodes);
-    var leaving = _ceMoving(nodes, null);
+    var leaving = _ceMoving(nodes, going);
     _vInsert(host, nodes, ref);
+    if (going) {
+        _vRemove(going);
+    }
     _ceLeft(leaving);
     _ceInserted(held);
-    return true;
 }
 
 // A created element that is its own Text holds its text as a node, as the

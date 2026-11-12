@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>inline</title>
+<style>p{color:red}</style></head>
+<body>
+<p id="t">Hello <span id="s">world</span> end</p>
+<p id="u">Another <b id="w">line</b> here</p>
+<div id="d"></div>
+<script>
+function L(k,v){console.log("LC "+k+" "+v)}
+var order=[];
+class XI extends HTMLElement {
+  constructor(){super();order.push("ctor")}
+  connectedCallback(){order.push("connected:"+this.parentNode.id)}
+  disconnectedCallback(){order.push("disconnected:"+this.id)}
+}
+customElements.define("x-i",XI);
+function make(id){var e=document.createElement("x-i");e.id=id;return e}
+var s=document.getElementById("s"),t=document.getElementById("t"),d=document.getElementById("d"),w=document.getElementById("w");
+function at(id){return document.getElementById(id)}
+order=[];
+s.appendChild(make("a"));
+L("insert",order.join(","));
+order=[];
+at("a").remove();
+L("remove",order.join(","));
+s.appendChild(make("b"));
+order=[];
+s.removeChild(at("b"));
+L("removeChild",order.join(","));
+s.appendChild(make("c"));
+order=[];
+d.appendChild(at("c"));
+L("toBlock",order.join(","));
+order=[];
+s.appendChild(at("c"));
+L("toLine",order.join(","));
+order=[];
+s.replaceChild(make("e"),at("c"));
+L("replaceChild",order.join(","));
+order=[];
+at("e").replaceWith(make("f"));
+L("replaceWith",order.join(","));
+var f=at("f");
+order=[];
+s.replaceChild(f,f);
+L("replaceChildSelf",order.join(",")+":"+f.isConnected+":"+s.children.length);
+order=[];
+f.replaceWith(f);
+L("replaceWithSelf",order.join(",")+":"+f.isConnected+":"+s.children.length);
+order=[];
+s.replaceChildren();
+L("replaceChildren",order.join(",")+":"+s.children.length);
+s.appendChild(make("g"));
+order=[];
+t.textContent="x";
+L("textContent",order.join(",")+":"+t.children.length);
+order=[];
+w.innerHTML='<x-i id="h"></x-i>';
+L("innerHTML",order.join(",")+":"+w.children.length);
+order=[];
+w.innerHTML="";
+L("cleared",order.join(",")+":"+w.children.length);
+</script>
+</body></html>
