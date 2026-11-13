@@ -7,7 +7,10 @@
 //! scheme. A block of one element also takes the font its block now has, as Qt
 //! holds it (a whole pixel size, never below 1), and is not rewritten while
 //! it stays. Blocks in a state (two hovered at once, one pressed) keep that
-//! state's values in the new scheme, and the rest take the new scheme. The
+//! state's values in the new scheme, and the rest take the new scheme. Text a
+//! script moved onto a line beside an inline control follows too, while a run
+//! with its own colour keeps it; a line height that goes back to `normal` is
+//! as tall as a plain line again. The
 //! expected colours are what Chromium computes for the same page after the
 //! same steps.
 
@@ -20,8 +23,8 @@ const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const PAGE: &str = r##"<!DOCTYPE html>
 <html><head><style>
-:root { --fg: #c1c3c8; --bg: #130f0a; --link: #ff8800; --hover: #44ffaa; --wrap: #997700; --act: #3366ff; --size: 14px; --weight: 400; --frac: 16px; --tiny: 2px; }
-:root[data-theme='light'] { --fg: #23262f; --bg: #ffffff; --link: #0044aa; --hover: #aa0044; --wrap: #007799; --act: #cc3300; --size: 22px; --weight: 700; --frac: 13.6px; --tiny: 0.4px; }
+:root { --fg: #c1c3c8; --bg: #130f0a; --link: #ff8800; --hover: #44ffaa; --wrap: #997700; --act: #3366ff; --size: 14px; --weight: 400; --frac: 16px; --tiny: 2px; --lh: normal; }
+:root[data-theme='light'] { --fg: #23262f; --bg: #ffffff; --link: #0044aa; --hover: #aa0044; --wrap: #007799; --act: #cc3300; --size: 22px; --weight: 700; --frac: 13.6px; --tiny: 0.4px; --lh: 24px; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 16px sans-serif; }
 a { color: var(--link); }
 a:hover { color: var(--hover); }
@@ -35,6 +38,8 @@ a:hover { color: var(--hover); }
 .weighted { font-weight: var(--weight); }
 .box { border: 1px solid var(--fg); padding: 4px; }
 .hl { color: var(--link); }
+.mine { color: var(--link); }
+.lined { line-height: var(--lh); }
 </style>
 <script>document.documentElement.dataset.theme = 'light';</script>
 </head><body>
@@ -54,9 +59,22 @@ a:hover { color: var(--hover); }
 <div class="box" id="box">Boxed</div>
 <p><span>Run</span> <em>with</em> <code>parts</code> and <span class="hl">a mark</span></p>
 <div>Line text <button>Inline</button> after</div>
+<div id="grow">Grown text</div>
+<p class="lined">Lined text</p>
+<p>Plain line</p>
 <button id="t">Toggle</button>
 <button id="poke">Poke</button>
+<button id="grower">Grow</button>
 <script>
+// An inline control a script puts beside a block's own text takes the text
+// onto a line with it; a run of its own colour joins them.
+document.getElementById('grower').addEventListener('click', () => {
+  const grow = document.getElementById('grow');
+  grow.appendChild(document.createElement('button')).textContent = 'Added';
+  const mine = grow.appendChild(document.createElement('span'));
+  mine.className = 'mine';
+  mine.textContent = 'Own colour';
+});
 // A key, as the pointer is busy pressing. On the body: the runtime's
 // `document` is every page's in one engine, and keeps an earlier page's (#30).
 document.body.addEventListener('keydown', e => {
@@ -94,12 +112,14 @@ TestCase {
     // Every piece of page text the converter made, skipping controls, whose
     // text the style draws.
     // The `.shy` blocks are only there for their sizes: a scheme that hides
-    // them leaves them showing in the old colours (#29).
+    // them leaves them showing in the old colours (#29). `.mine` has a colour
+    // of its own.
     function texts(item, out) {
         if (item.eldurTag === "button")
             return out
         if (item.text !== undefined && item.color !== undefined && item.font !== undefined
-                && String(item.text).trim() !== "" && String(item.text).indexOf("Shy") < 0)
+                && String(item.text).trim() !== "" && String(item.text).indexOf("Shy") < 0
+                && String(item.text).indexOf("Own colour") < 0)
             out.push(item)
         for (const child of item.children)
             texts(child, out)
@@ -135,9 +155,34 @@ TestCase {
         compare(weighted.font.weight, weight, step + ": #weighted weighs " + weighted.font.weight)
     }
 
-    // A colour on the `Text`, or written into its markup.
+    // The colour the text is drawn in: what its markup writes, which wins
+    // over the `Text`'s own, or else the `Text`'s. A markup colour left from
+    // another scheme is not the one asked for, whatever the `Text` says.
     function painted(t, c) {
-        return String(t.text).toLowerCase().indexOf(c) >= 0 || Qt.colorEqual(t.color, c)
+        const baked = String(t.text).match(/#[0-9a-f]{6}/gi) || []
+        if (baked.length > 0)
+            return baked.every(b => Qt.colorEqual(b, c))
+        return Qt.colorEqual(t.color, c)
+    }
+
+    // `.lined` is 24 px in one scheme and `normal` in the other, as tall as
+    // a plain paragraph's.
+    function lined(page, px, step) {
+        const t = textOf(page, "Lined text")
+        verify(t !== null, "no .lined")
+        const plain = textOf(page, "Plain line")
+        verify(plain !== null, "no plain paragraph")
+        compare(t.lineHeight, px === null ? plain.lineHeight : px,
+                step + ": .lined is " + t.lineHeight + " high, a plain line " + plain.lineHeight)
+        if (px === null)
+            verify(t.lineHeight !== 24, step + ": .lined keeps the other scheme's 24 px")
+    }
+
+    // The run with its own colour keeps it, in the new scheme's value.
+    function own(page, link, step) {
+        const t = textOf(page, "Own colour")
+        verify(t !== null, "no .mine")
+        verify(painted(t, link), step + ": .mine is " + t.color + " " + t.text + ", not " + link)
     }
 
     function scheme(page, fg, bg, link, step) {
@@ -160,25 +205,54 @@ TestCase {
         verify(Qt.colorEqual(box.border.color, fg), step + ": #box border " + box.border.color + " is not " + fg)
     }
 
+    Component {
+        id: stale
+        Text {
+            textFormat: Text.StyledText
+        }
+    }
+
+    // A `Text` in the new colour whose markup still writes the old one is
+    // drawn in the old one: it is not painted, and a run in only the new
+    // colour is.
+    function test_painted_reads_the_markup() {
+        const t = createTemporaryObject(stale, host, {
+            color: "#c1c3c8", text: "<font color=\"#23262f\">Stale</font>" })
+        verify(!painted(t, "#c1c3c8"), "stale markup passes as painted")
+        verify(painted(t, "#23262f"), "the markup's colour is not what is drawn")
+        t.text = "<font color=\"#c1c3c8\">Fresh</font> and <b>more</b>"
+        verify(painted(t, "#c1c3c8"), "fresh markup is not painted")
+        t.text = "Plain"
+        verify(painted(t, "#c1c3c8") && !painted(t, "#23262f"), "a plain text is not its colour")
+    }
+
     function test_scheme() {
         const component = Qt.createComponent("Main.qml")
         verify(component.status === Component.Ready, component.errorString())
         const page = createTemporaryObject(component, host, { width: 800, height: 600 })
         waitForRendering(page)
         wait(50)
+        find(page, i => i.eldurTag === "button" && i.text === "Grow").clicked()
+        wait(50)
         scheme(page, "#23262f", "#ffffff", "#0044aa", "load")
         fonts(page, 22, 700, "load")
+        lined(page, 24, "load")
+        own(page, "#0044aa", "load")
         const button = find(page, i => i.eldurTag === "button" && i.text === "Toggle")
         verify(button !== null, "no #t")
         mouseClick(button)
         wait(50)
         scheme(page, "#c1c3c8", "#130f0a", "#ff8800", "dark")
         fonts(page, 14, 400, "dark")
+        lined(page, null, "dark")
+        own(page, "#ff8800", "dark")
         compare(textOf(page, "px").text, "14px 400", "dark: what the script reads")
         mouseClick(button)
         wait(50)
         scheme(page, "#23262f", "#ffffff", "#0044aa", "light")
         fonts(page, 22, 700, "light")
+        lined(page, 24, "light")
+        own(page, "#0044aa", "light")
         compare(textOf(page, "px").text, "22px 700", "light: what the script reads")
     }
 

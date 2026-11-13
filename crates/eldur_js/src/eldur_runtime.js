@@ -24111,6 +24111,54 @@ function _gRepaintStatic(raw) {
             _gRepaint(kid, "color", _gQtColor(s["border-" + side + "-color"]));
         }
     }
+    _gRepaintLines(raw, s);
+}
+
+// A script's inline content beside a block's own text takes the text onto
+// anonymous lines (`_textStartsLine`, `_anonTextBecomesLines`), out of reach of
+// the walk over the block's children. The lines and the text on them inherit
+// from the block as the text did; an element on them keeps its own style.
+// Inline runs read their base from the line (`_vBase`), so the line is brought
+// up to date before `_vRescheme` renders them.
+function _gRepaintLines(raw, s) {
+    var holders = [raw];
+    var flow = _meta(raw).flow;
+    if (flow) {
+        holders.push(flow);
+    }
+    for (var i = 0; i < raw.children.length; ++i) {
+        var kid = raw.children[i];
+        if (kid !== flow && typeof kid.spacing === "number" && typeof kid.eldurTag !== "string"
+            && !kid.objectName && !_meta(kid).createdTag) {
+            holders.push(kid);
+        }
+    }
+    var color = _gQtColor(s["color"]);
+    var line = _gLineHeight(s);
+    holders.forEach(function(holder) {
+        for (var h = 0; h < holder.children.length; ++h) {
+            var lines = holder.children[h];
+            if (!_isAnonLines(lines)) {
+                continue;
+            }
+            _gRepaint(lines, "color", color);
+            _gRepaintFont(lines, s);
+            // 0 is `normal` on a line.
+            var want = line === null ? 0 : line;
+            if (lines.lineHeight !== want) {
+                lines.lineHeight = want;
+            }
+            for (var k = 0; k < lines.children.length; ++k) {
+                var item = lines.children[k];
+                var made = _meta(item).createdTag;
+                if (typeof item.eldurTag === "string" || (made && made !== "#text")
+                    || typeof item.text !== "string" || item.color === undefined) {
+                    continue;
+                }
+                _gRepaintText(item, raw, s);
+            }
+        }
+    });
 }
 
 function _gRepaint(obj, prop, color) {
@@ -24124,6 +24172,34 @@ function _gRepaint(obj, prop, color) {
 // not say of it (its decorations, its spacing) stays.
 function _gRepaintText(text, owner, s) {
     _gRepaint(text, "color", _gQtColor(s["color"]));
+    _gRepaintFont(text, s);
+    var line = _gLineHeight(s);
+    if (text.lineHeightMode === 1) { // Text.FixedHeight
+        if (line !== null) {
+            if (text.lineHeight !== line) {
+                text.lineHeight = line;
+            }
+        } else {
+            // A `normal` line is a binding on the font, which follows it; one
+            // the other scheme wrote over is bound again.
+            var size = s.fontSize;
+            if (text.lineHeight !== EldurFonts.normalLine(text.font, size, text.text)) {
+                text.lineHeight = Qt.binding(function() {
+                    return EldurFonts.normalLine(text.font, size, text.text);
+                });
+            }
+        }
+    }
+    if (text.linkColor !== undefined) {
+        var link = _gLinkColor(owner);
+        if (link !== undefined) {
+            _gRepaint(text, "linkColor", link);
+        }
+    }
+}
+
+// Each part of the font is written only when it moved.
+function _gRepaintFont(text, s) {
     var font = {
         pixelSize: Math.max(Math.round(s.fontSize), 1),
         weight: _gWeightNumber(s["font-weight"]),
@@ -24136,17 +24212,6 @@ function _gRepaintText(text, owner, s) {
             text.font[part] = font[part];
         }
     });
-    var line = _gLineHeight(s);
-    // A `normal` line is a binding on the font, which follows it.
-    if (line !== null && text.lineHeightMode === 1 && text.lineHeight !== line) {
-        text.lineHeight = line;
-    }
-    if (text.linkColor !== undefined) {
-        var link = _gLinkColor(owner);
-        if (link !== undefined) {
-            _gRepaint(text, "linkColor", link);
-        }
-    }
 }
 
 function _gRepadStatic(raw, content, e) {
