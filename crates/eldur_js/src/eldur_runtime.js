@@ -11643,8 +11643,11 @@ var _V_BLOCK_LOOK = [
         key: "size",
         read: function(s) { return s.fontSize; },
         paint: function(text, v) {
-            if (text.font.pixelSize !== Math.max(Math.round(v), 1)) {
-                text.font.pixelSize = v;
+            // Qt holds a whole size of at least a pixel and drops a write below
+            // one: what is compared is what is written.
+            var px = Math.max(Math.round(v), 1);
+            if (text.font.pixelSize !== px) {
+                text.font.pixelSize = px;
             }
         }
     },
