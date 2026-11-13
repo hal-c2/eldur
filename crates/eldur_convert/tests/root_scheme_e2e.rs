@@ -23,8 +23,8 @@ const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const PAGE: &str = r##"<!DOCTYPE html>
 <html><head><style>
-:root { --fg: #c1c3c8; --bg: #130f0a; --link: #ff8800; --hover: #44ffaa; --wrap: #997700; --act: #3366ff; --size: 14px; --weight: 400; --frac: 16px; --tiny: 2px; --lh: normal; }
-:root[data-theme='light'] { --fg: #23262f; --bg: #ffffff; --link: #0044aa; --hover: #aa0044; --wrap: #007799; --act: #cc3300; --size: 22px; --weight: 700; --frac: 13.6px; --tiny: 0.4px; --lh: 24px; }
+:root { --fg: #c1c3c8; --bg: #130f0a; --link: #ff8800; --hover: #44ffaa; --wrap: #997700; --act: #3366ff; --size: 14px; --weight: 400; --frac: 16px; --tiny: 2px; --lh: normal; --big: 22.4px; }
+:root[data-theme='light'] { --fg: #23262f; --bg: #ffffff; --link: #0044aa; --hover: #aa0044; --wrap: #007799; --act: #cc3300; --size: 22px; --weight: 700; --frac: 13.6px; --tiny: 0.4px; --lh: 24px; --big: 13px; }
 body { margin: 0; background: var(--bg); color: var(--fg); font: 16px sans-serif; }
 a { color: var(--link); }
 a:hover { color: var(--hover); }
@@ -40,6 +40,8 @@ a:hover { color: var(--hover); }
 .hl { color: var(--link); }
 .mine { color: var(--link); }
 .lined { line-height: var(--lh); }
+.ring { border: 1px solid var(--fg); }
+.big { font-size: var(--big); }
 </style>
 <script>document.documentElement.dataset.theme = 'light';</script>
 </head><body>
@@ -60,6 +62,8 @@ a:hover { color: var(--hover); }
 <p><span>Run</span> <em>with</em> <code>parts</code> and <span class="hl">a mark</span></p>
 <div>Line text <button>Inline</button> after</div>
 <div id="grow">Grown text</div>
+<div class="big">Big <span class="ring">ringed</span></div>
+<div class="big">Big plain</div>
 <p class="lined">Lined text</p>
 <p>Plain line</p>
 <button id="t">Toggle</button>
@@ -178,6 +182,21 @@ TestCase {
             verify(t.lineHeight !== 24, step + ": .lined keeps the other scheme's 24 px")
     }
 
+    // A run with a box of its own puts its block on lines, whose strut is
+    // the block's size in each scheme (22.4 px, which the converter writes
+    // on the lines, and 13 px): as tall as a plain line of that size.
+    function tall(page, step) {
+        let line = textOf(page, "ringed")
+        while (line && typeof line.firstBaseline !== "number")
+            line = line.parent
+        verify(line, step + ": .ring is not on lines")
+        const plain = textOf(page, "Big plain")
+        verify(plain !== null, "no plain .big line")
+        verify(Math.abs(line.height - plain.height) <= 1,
+               step + ": .ring's line is " + line.height + " high, a plain line " + plain.height
+               + " (" + line.cssSize + " px)")
+    }
+
     // The run with its own colour keeps it, in the new scheme's value.
     function own(page, link, step) {
         const t = textOf(page, "Own colour")
@@ -188,6 +207,11 @@ TestCase {
     function scheme(page, fg, bg, link, step) {
         if (page.color !== undefined)
             verify(Qt.colorEqual(page.color, bg), step + ": canvas " + page.color + " is not " + bg)
+        // The repaint comes with the cascade's next settle, which a loaded
+        // machine can hold back past a fixed wait: give it a bounded time,
+        // then say what is wrong.
+        for (let i = 0; i < 40 && !texts(page, []).every(t => Qt.colorEqual(t.color, fg)); ++i)
+            wait(50)
         const found = texts(page, [])
         verify(found.length >= 4, step + ": only " + found.length + " texts")
         for (const t of found) {
@@ -238,6 +262,7 @@ TestCase {
         fonts(page, 22, 700, "load")
         lined(page, 24, "load")
         own(page, "#0044aa", "load")
+        tall(page, "load")
         const button = find(page, i => i.eldurTag === "button" && i.text === "Toggle")
         verify(button !== null, "no #t")
         mouseClick(button)
@@ -246,6 +271,7 @@ TestCase {
         fonts(page, 14, 400, "dark")
         lined(page, null, "dark")
         own(page, "#ff8800", "dark")
+        tall(page, "dark")
         compare(textOf(page, "px").text, "14px 400", "dark: what the script reads")
         mouseClick(button)
         wait(50)
@@ -253,6 +279,7 @@ TestCase {
         fonts(page, 22, 700, "light")
         lined(page, 24, "light")
         own(page, "#0044aa", "light")
+        tall(page, "light")
         compare(textOf(page, "px").text, "22px 700", "light: what the script reads")
     }
 

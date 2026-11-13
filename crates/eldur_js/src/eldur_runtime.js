@@ -24135,30 +24135,47 @@ function _gRepaintLines(raw, s) {
     }
     var color = _gQtColor(s["color"]);
     var line = _gLineHeight(s);
+    // The converter's lines are the block's flow itself; a script's sit in it.
+    var found = holders.filter(function(holder) { return holder !== raw && _isAnonLines(holder); });
     holders.forEach(function(holder) {
         for (var h = 0; h < holder.children.length; ++h) {
-            var lines = holder.children[h];
-            if (!_isAnonLines(lines)) {
-                continue;
-            }
-            _gRepaint(lines, "color", color);
-            _gRepaintFont(lines, s);
-            // 0 is `normal` on a line.
-            var want = line === null ? 0 : line;
-            if (lines.lineHeight !== want) {
-                lines.lineHeight = want;
-            }
-            for (var k = 0; k < lines.children.length; ++k) {
-                var item = lines.children[k];
-                var made = _meta(item).createdTag;
-                if (typeof item.eldurTag === "string" || (made && made !== "#text")
-                    || typeof item.text !== "string" || item.color === undefined) {
-                    continue;
-                }
-                _gRepaintText(item, raw, s);
+            if (_isAnonLines(holder.children[h]) && found.indexOf(holder.children[h]) < 0) {
+                found.push(holder.children[h]);
             }
         }
     });
+    // An element that is lines itself has its runs restyled by `_vRescheme`,
+    // which reads their base from it.
+    if (_isLines(raw)) {
+        _gRepaintLine(raw, s, color, line);
+    }
+    found.forEach(function(lines) {
+        _gRepaintLine(lines, s, color, line);
+        for (var k = 0; k < lines.children.length; ++k) {
+            var item = lines.children[k];
+            var made = _meta(item).createdTag;
+            if (typeof item.eldurTag === "string" || (made && made !== "#text")
+                || typeof item.text !== "string" || item.color === undefined) {
+                continue;
+            }
+            _gRepaintText(item, raw, s);
+        }
+    });
+}
+
+// What a line's strut and inherited text take from its block.
+function _gRepaintLine(lines, s, color, line) {
+    _gRepaint(lines, "color", color);
+    _gRepaintFont(lines, s);
+    // The strut is of the CSS size, which the font's whole pixels are not.
+    if (lines.cssSize !== s.fontSize) {
+        lines.cssSize = s.fontSize;
+    }
+    // 0 is `normal` on a line.
+    var want = line === null ? 0 : line;
+    if (lines.lineHeight !== want) {
+        lines.lineHeight = want;
+    }
 }
 
 function _gRepaint(obj, prop, color) {
