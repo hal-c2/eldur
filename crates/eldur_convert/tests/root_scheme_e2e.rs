@@ -163,10 +163,14 @@ TestCase {
     // over the `Text`'s own, or else the `Text`'s. A markup colour left from
     // another scheme is not the one asked for, whatever the `Text` says.
     function painted(t, c) {
-        const baked = String(t.text).match(/#[0-9a-f]{6}/gi) || []
-        if (baked.length > 0)
-            return baked.every(b => Qt.colorEqual(b, c))
-        return Qt.colorEqual(t.color, c)
+        const markup = String(t.text)
+        const baked = markup.match(/#[0-9a-f]{6}/gi) || []
+        if (!baked.every(b => Qt.colorEqual(b, c)))
+            return false
+        // Text outside a coloured `<font>` is drawn in the item's colour.
+        const inherited = markup.replace(/<font\b[^>]*>[\s\S]*?<\/font>/gi, "")
+                                .replace(/<[^>]*>/g, "").trim()
+        return (baked.length > 0 && inherited.length === 0) || Qt.colorEqual(t.color, c)
     }
 
     // `.lined` is 24 px in one scheme and `normal` in the other, as tall as
@@ -210,10 +214,15 @@ TestCase {
         // The repaint comes with the cascade's next settle, which a loaded
         // machine can hold back past a fixed wait: give it a bounded time,
         // then say what is wrong.
-        for (let i = 0; i < 40 && !texts(page, []).every(t => Qt.colorEqual(t.color, fg)); ++i)
+        let waited = 0
+        for (; waited < 40 && !texts(page, []).every(t => Qt.colorEqual(t.color, fg)); ++waited)
             wait(50)
         const found = texts(page, [])
         verify(found.length >= 4, step + ": only " + found.length + " texts")
+        const stale = found.filter(t => !Qt.colorEqual(t.color, fg))
+        verify(stale.length === 0, step + ": after " + waited * 50 + " ms " + stale.length + " of "
+               + found.length + " texts are not " + fg + ": "
+               + stale.map(t => (t.eldurTag || "text") + " \"" + String(t.text).slice(0, 20) + "\" " + t.color).join(", "))
         for (const t of found) {
             const what = step + ": " + (t.eldurTag || "text") + " \"" + String(t.text).slice(0, 40) + "\""
             verify(Qt.colorEqual(t.color, fg), what + " is painted " + t.color + ", not " + fg)
@@ -246,6 +255,11 @@ TestCase {
         verify(painted(t, "#23262f"), "the markup's colour is not what is drawn")
         t.text = "<font color=\"#c1c3c8\">Fresh</font> and <b>more</b>"
         verify(painted(t, "#c1c3c8"), "fresh markup is not painted")
+        t.text = "<font color=\"#23262f\">Fresh</font> and more"
+        verify(!painted(t, "#23262f"), "text outside the markup's colour passes as painted")
+        t.color = "#23262f"
+        verify(painted(t, "#23262f"), "markup and inherited text of one colour are not painted")
+        t.color = "#c1c3c8"
         t.text = "Plain"
         verify(painted(t, "#c1c3c8") && !painted(t, "#23262f"), "a plain text is not its colour")
     }
