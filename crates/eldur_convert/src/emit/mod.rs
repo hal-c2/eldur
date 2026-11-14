@@ -203,6 +203,10 @@ pub(crate) struct Emitter<'a, 'd> {
     strips: HashMap<NodeId, [bool; 4]>,
     /// Boxes whose border or outline changes form under a state.
     plain_edges: HashSet<NodeId>,
+    /// Elements some combination gives a share of their grid area
+    /// (`grid::is_share`): their grid keeps a keeper for them in every
+    /// combination, so the forms agree.
+    shares: HashSet<NodeId>,
     /// Whether the control being emitted is in `plain_edges`.
     plain_control: bool,
     /// Elements `display: none` in the combination being emitted, laid out
@@ -289,6 +293,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             sticky: HashSet::new(),
             strips: HashMap::new(),
             plain_edges: HashSet::new(),
+            shares: HashSet::new(),
             plain_control: false,
             collapsed: HashSet::new(),
             force_paint: false,

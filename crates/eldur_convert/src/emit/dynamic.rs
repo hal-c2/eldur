@@ -792,6 +792,15 @@ struct Emitted {
     inline_covered: BTreeSet<NodeId>,
 }
 
+/// What every combination is emitted with, found from all of them so that
+/// their forms agree.
+struct Across {
+    sticky: HashSet<NodeId>,
+    strips: HashMap<NodeId, [bool; 4]>,
+    plain_edges: HashSet<NodeId>,
+    shares: HashSet<NodeId>,
+}
+
 impl Dynamic<'_, '_> {
     fn run(mut self) -> Emission {
         for element in &mut self.found.elements {
@@ -829,6 +838,19 @@ impl Dynamic<'_, '_> {
             .filter(|e| edges_change_form(&e.by_mask))
             .map(|e| e.node)
             .collect();
+        let shares: HashSet<NodeId> = self
+            .found
+            .elements
+            .iter()
+            .filter(|e| e.by_mask.iter().any(|s| super::grid::is_share(&s.width)))
+            .map(|e| e.node)
+            .collect();
+        let across = Across {
+            sticky,
+            strips,
+            plain_edges,
+            shares,
+        };
         // The display an element hidden in some combinations has when shown.
         let shown: HashMap<NodeId, Display> = self
             .found
@@ -848,15 +870,7 @@ impl Dynamic<'_, '_> {
             inline_covered,
             mut imports,
             mut ids,
-        } = Self::emit_world(
-            self.cx,
-            &styles,
-            &sticky,
-            &strips,
-            &plain_edges,
-            collapsed,
-            self.diags,
-        );
+        } = Self::emit_world(self.cx, &styles, &across, collapsed, self.diags);
         let mut markers = HashMap::new();
         marker_paths(&root, &mut Vec::new(), &mut markers);
         // A condition on an element without an item of its own (an inline
@@ -882,15 +896,7 @@ impl Dynamic<'_, '_> {
             let (styles, collapsed) = self.world(flipped, &shown);
             // Only the document's world reports; the others repeat it.
             let mut scratch = Diagnostics::new(&self.diags.document);
-            let emitted = Self::emit_world(
-                self.cx,
-                &styles,
-                &sticky,
-                &strips,
-                &plain_edges,
-                collapsed,
-                &mut scratch,
-            );
+            let emitted = Self::emit_world(self.cx, &styles, &across, collapsed, &mut scratch);
             imports.extend(emitted.imports);
             trees.push(emitted.root);
         }
@@ -1061,9 +1067,7 @@ impl Dynamic<'_, '_> {
     fn emit_world(
         cx: &Inputs<'_>,
         styles: &StyleMap,
-        sticky: &HashSet<NodeId>,
-        strips: &HashMap<NodeId, [bool; 4]>,
-        plain_edges: &HashSet<NodeId>,
+        across: &Across,
         collapsed: HashSet<NodeId>,
         diags: &mut Diagnostics,
     ) -> Emitted {
@@ -1101,9 +1105,10 @@ impl Dynamic<'_, '_> {
         for id in cx.probe.iter().flat_map(|p| &p.reserved) {
             emitter.ids.reserve(id);
         }
-        emitter.sticky = sticky.clone();
-        emitter.strips = strips.clone();
-        emitter.plain_edges = plain_edges.clone();
+        emitter.sticky = across.sticky.clone();
+        emitter.strips = across.strips.clone();
+        emitter.plain_edges = across.plain_edges.clone();
+        emitter.shares = across.shares.clone();
         emitter.collapsed = collapsed;
         let root = emitter.document(tree.as_ref(), body);
         let emitted = Emitted {
@@ -1456,6 +1461,9 @@ fn default_value(ty: &str, prop: &str) -> Option<Value> {
         "offset" if ty == "RectangularShadow" => Some(Value::expr("Qt.vector2d(0, 0)")),
         p if p.starts_with("anchors.") && p.ends_with("Margin") => n(0.0),
         p if p.starts_with("Layout.") && p.ends_with("Margin") => n(0.0),
+        "Layout.maximumWidth" | "Layout.maximumHeight" => {
+            Some(Value::expr("Number.POSITIVE_INFINITY"))
+        }
         _ => None,
     }
 }
