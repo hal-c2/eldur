@@ -102,6 +102,11 @@ pub struct ConvertArgs {
     #[arg(long = "no-animations")]
     pub no_animations: bool,
 
+    /// Write eldur_runtime.js and eldur_fonts.js whole, not only what the
+    /// page reaches: for a host that calls into them itself.
+    #[arg(long = "whole-runtime")]
+    pub whole_runtime: bool,
+
     /// Bypass reading from and writing to the build cache.
     #[arg(long = "no-cache")]
     pub no_cache: bool,
@@ -128,6 +133,7 @@ impl ConvertArgs {
             no_comments: false,
             no_states: false,
             no_animations: false,
+            whole_runtime: false,
             no_cache: false,
             cache_dir: None,
             quiet: false,
@@ -164,6 +170,8 @@ impl ConvertArgs {
             source_comments: !self.no_comments,
             state_variants: !self.no_states,
             animations: !self.no_animations,
+            whole_runtime: self.whole_runtime,
+            runtime_uses: Vec::new(),
         }
     }
 }

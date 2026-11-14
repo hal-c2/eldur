@@ -75,6 +75,8 @@ pub fn serialize_options(options: &eldur_convert::Options) -> String {
         "root": root,
         "source_comments": options.source_comments,
         "state_variants": options.state_variants,
+        "whole_runtime": options.whole_runtime,
+        "runtime_uses": options.runtime_uses,
         "viewport": {
             "height": options.viewport.height,
             "prefers_dark": options.viewport.prefers_dark,

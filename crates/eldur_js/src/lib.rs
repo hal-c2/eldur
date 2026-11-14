@@ -404,6 +404,7 @@ pub fn analyze(scripts: &[ScriptInput]) -> Analysis {
 }
 
 pub use named::resolve_named_elements;
+pub use shake::{library_names, shake_library};
 
 /// Pass 2: rewrite all scripts into one `page.js`.
 #[must_use]
@@ -425,3 +426,4 @@ mod named;
 mod parse;
 mod resolve;
 mod rewrite;
+mod shake;

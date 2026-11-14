@@ -26,7 +26,7 @@ if [[ "$runtime" == "auto" ]]; then
     runtime=qml6
   else
     echo "dev: neither ljos nor qml6 found; skipped running $out/Main.qml" >&2
-    echo "dev: install ljos (cargo install --path crates/ljos_cli --locked in a ljos-ui checkout) or Qt 6 (qt6-declarative)" >&2
+    echo "dev: install ljos (mise run install in a ljos-ui checkout) or Qt 6 (qt6-declarative)" >&2
     exit 0
   fi
 fi

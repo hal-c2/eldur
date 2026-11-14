@@ -40,6 +40,13 @@ pub struct Options {
     pub state_variants: bool,
     /// Turn CSS transitions/animations into QML Behaviors/animations.
     pub animations: bool,
+    /// Write `eldur_runtime.js` and `eldur_fonts.js` whole, not only what the
+    /// page's QML and scripts reach: for a host that calls into them itself.
+    pub whole_runtime: bool,
+    /// Names a host calls itself in the runtime or the font module
+    /// (`document` for `Eldur.document`, `family` for `EldurFonts.family`),
+    /// kept with what the page reaches.
+    pub runtime_uses: Vec<String>,
 }
 
 impl Default for Options {
@@ -50,6 +57,8 @@ impl Default for Options {
             source_comments: true,
             state_variants: true,
             animations: true,
+            whole_runtime: false,
+            runtime_uses: Vec::new(),
         }
     }
 }
@@ -184,3 +193,4 @@ mod metadata;
 mod paint_values;
 mod pipeline;
 mod scripts;
+mod ua_rules;

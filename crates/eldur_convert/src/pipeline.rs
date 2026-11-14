@@ -228,7 +228,8 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
                 }
             }
             if scripts.analysis.needs_cascade() {
-                let rules = eldur_css::runtime_rules(&sheets, &options.viewport);
+                let mut rules = eldur_css::runtime_rules(&sheets, &options.viewport);
+                crate::ua_rules::PossibleTags::new(&doc, &scripts.analysis).retain(&mut rules);
                 let mut with_rules = crate::images::Images {
                     backgrounds: images.backgrounds.clone(),
                     files: std::mem::take(&mut files),
@@ -294,10 +295,10 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
                 }
                 decls.push(metadata::control_fonts_decl());
             } else if inline_rules {
-                decls.push(metadata::inline_rules_decl(&eldur_css::inline_rules(
-                    &sheets,
-                    &options.viewport,
-                )));
+                let mut rules = eldur_css::inline_rules(&sheets, &options.viewport);
+                let tags = crate::ua_rules::PossibleTags::new(&doc, &scripts.analysis);
+                rules.retain(|r| !r.user_agent || tags.may_match(&r.selector));
+                decls.push(metadata::inline_rules_decl(&rules));
             }
         }
         root.members.splice(0..0, decls);
@@ -330,18 +331,16 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
             path: PathBuf::from("page.js"),
             contents: js.page_js.into_bytes(),
         });
+        // Shaken once Main.qml is written, against what it and page.js reach.
         files.push(OutputFile {
             path: PathBuf::from("eldur_runtime.js"),
-            contents: eldur_js::RUNTIME_JS.as_bytes().to_vec(),
+            contents: Vec::new(),
         });
     }
 
-    // The font module: every font in the page goes through it.
+    // The font module: every font in the page goes through it. Shaken last,
+    // against everything that imports it.
     qml.import(Import::path("eldur_fonts.js", Some("EldurFonts")));
-    files.push(OutputFile {
-        path: PathBuf::from("eldur_fonts.js"),
-        contents: eldur_js::FONTS_JS.as_bytes().to_vec(),
-    });
 
     // 7: Main.qml.
     let name = std::path::Path::new(&input.url)
@@ -357,127 +356,59 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     qml.root = root;
     crate::emit::name_runs(&mut qml.root);
     let main = qml.to_qml();
-    // A script makes lines of its own; a page without one needs it only if it uses it.
-    if main.contains("EldurLines {")
-        || files
-            .iter()
-            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
+    // The runtime first: what is left of it decides which components it makes.
+    let runtime = if let Some(at) = files
+        .iter()
+        .position(|f| f.path.as_os_str() == "eldur_runtime.js")
     {
-        files.push(OutputFile {
-            path: PathBuf::from("EldurLines.qml"),
-            contents: crate::emit::ELDUR_LINES_QML.as_bytes().to_vec(),
-        });
-        files.push(OutputFile {
-            path: PathBuf::from("EldurRun.qml"),
-            contents: crate::emit::ELDUR_RUN_QML.as_bytes().to_vec(),
-        });
-    }
-    if main.contains("EldurBackgroundLayer {")
-        || files
-            .iter()
-            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
-    {
-        files.push(OutputFile {
-            path: PathBuf::from("EldurBackgroundLayer.qml"),
-            contents: crate::emit::ELDUR_BACKGROUND_LAYER_QML.as_bytes().to_vec(),
-        });
-    }
-    if main.contains("EldurRoundClip {")
-        || files
-            .iter()
-            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
-    {
-        files.push(OutputFile {
-            path: PathBuf::from("EldurRoundClip.qml"),
-            contents: crate::emit::ELDUR_ROUND_CLIP_QML.as_bytes().to_vec(),
-        });
-    }
-    if main.contains("EldurDisclosure {")
-        || files
-            .iter()
-            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
-    {
-        files.push(OutputFile {
-            path: PathBuf::from("EldurDisclosure.qml"),
-            contents: crate::emit::ELDUR_DISCLOSURE_QML.as_bytes().to_vec(),
-        });
-    }
-    // The page's own scroller uses it as well as every box's.
+        let text = if options.whole_runtime {
+            eldur_js::RUNTIME_JS.to_owned()
+        } else {
+            let mut used: std::collections::BTreeSet<String> =
+                options.runtime_uses.iter().cloned().collect();
+            eldur_js::library_names(&main, "Eldur", &mut used);
+            for file in &files {
+                if file.path.extension().is_some_and(|e| e == "js") {
+                    eldur_js::library_names(
+                        &String::from_utf8_lossy(&file.contents),
+                        "Eldur",
+                        &mut used,
+                    );
+                }
+            }
+            eldur_js::shake_library(eldur_js::RUNTIME_JS, used.iter().map(String::as_str))
+        };
+        files[at].contents = text.clone().into_bytes();
+        text
+    } else {
+        String::new()
+    };
+    files.extend(crate::emit::components(&main, &runtime));
+    let fonts = if options.whole_runtime {
+        eldur_js::FONTS_JS.to_owned()
+    } else {
+        let mut used: std::collections::BTreeSet<String> =
+            options.runtime_uses.iter().cloned().collect();
+        eldur_js::library_names(&main, "EldurFonts", &mut used);
+        for file in &files {
+            if file
+                .path
+                .extension()
+                .is_some_and(|e| e == "js" || e == "qml")
+            {
+                eldur_js::library_names(
+                    &String::from_utf8_lossy(&file.contents),
+                    "EldurFonts",
+                    &mut used,
+                );
+            }
+        }
+        eldur_js::shake_library(eldur_js::FONTS_JS, used.iter().map(String::as_str))
+    };
     files.push(OutputFile {
-        path: PathBuf::from("EldurScrollInput.qml"),
-        contents: crate::emit::ELDUR_SCROLL_INPUT_QML.as_bytes().to_vec(),
+        path: PathBuf::from("eldur_fonts.js"),
+        contents: fonts.into_bytes(),
     });
-    if main.contains("EldurSticky {")
-        || files
-            .iter()
-            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
-    {
-        files.push(OutputFile {
-            path: PathBuf::from("EldurSticky.qml"),
-            contents: crate::emit::ELDUR_STICKY_QML.as_bytes().to_vec(),
-        });
-    }
-    if main.contains("EldurScroller {")
-        || files
-            .iter()
-            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
-    {
-        files.push(OutputFile {
-            path: PathBuf::from("EldurScroller.qml"),
-            contents: crate::emit::ELDUR_SCROLLER_QML.as_bytes().to_vec(),
-        });
-    }
-    if main.contains("EldurTextLines {")
-        || files
-            .iter()
-            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
-    {
-        files.push(OutputFile {
-            path: PathBuf::from("EldurTextLines.qml"),
-            contents: crate::emit::ELDUR_TEXT_LINES_QML.as_bytes().to_vec(),
-        });
-    }
-    if main.contains("EldurBorder {")
-        || files
-            .iter()
-            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
-    {
-        files.push(OutputFile {
-            path: PathBuf::from("EldurBorder.qml"),
-            contents: crate::emit::ELDUR_BORDER_QML.as_bytes().to_vec(),
-        });
-    }
-    if main.contains("EldurFilter {")
-        || files
-            .iter()
-            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
-    {
-        files.push(OutputFile {
-            path: PathBuf::from("EldurFilter.qml"),
-            contents: crate::emit::ELDUR_FILTER_QML.as_bytes().to_vec(),
-        });
-        files.push(OutputFile {
-            path: PathBuf::from("eldur_filter.frag.qsb"),
-            contents: crate::emit::ELDUR_FILTER_QSB.to_vec(),
-        });
-    }
-    if main.contains("EldurTextShadow {") {
-        files.push(OutputFile {
-            path: PathBuf::from("EldurTextShadow.qml"),
-            contents: crate::emit::ELDUR_TEXT_SHADOW_QML.as_bytes().to_vec(),
-        });
-    }
-    // The runtime paints the boxes of inline elements it lays out again.
-    if main.contains("EldurInlineBox {")
-        || files
-            .iter()
-            .any(|f| f.path.as_os_str() == "eldur_runtime.js")
-    {
-        files.push(OutputFile {
-            path: PathBuf::from("EldurInlineBox.qml"),
-            contents: crate::emit::ELDUR_INLINE_BOX_QML.as_bytes().to_vec(),
-        });
-    }
     files.insert(
         0,
         OutputFile {

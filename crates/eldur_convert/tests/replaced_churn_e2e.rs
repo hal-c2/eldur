@@ -81,6 +81,16 @@ fn swapped_items_are_not_kept() {
         },
         &Options {
             root: RootKind::Item,
+            // What the test asks the runtime itself.
+            runtime_uses: [
+                "document",
+                "getComputedStyle",
+                "_gReplaced",
+                "_itemMeta",
+                "_unwrap",
+            ]
+            .map(String::from)
+            .to_vec(),
             ..Options::default()
         },
         &mut NoResources,

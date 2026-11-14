@@ -1,0 +1,11 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: file_list(&output)
+---
+EldurLines.qml
+EldurRun.qml
+EldurScrollInput.qml
+EldurTextLines.qml
+Main.qml
+assets/dot.png
+eldur_fonts.js
