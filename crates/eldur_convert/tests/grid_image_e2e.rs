@@ -3,6 +3,10 @@
 //! Its intrinsic width or its own width must not widen the track, or the `fr`
 //! column beside it is squeezed to its narrowest and its text wraps one word
 //! per line. Positions are run in qmltestrunner against Chromium's.
+//!
+//! A percentage is of the item's area, not of the grid: half of a `1fr` of
+//! two is a quarter of the grid. A definite width with no percentage in it
+//! is no share of its area, and is sized as before.
 
 use std::process::Command;
 
@@ -68,6 +72,60 @@ TestCase {
 }
 "##;
 
+/// Two `1fr` columns, then `3fr 1fr` (split into sub-columns, its gap in
+/// the items' margins), each 20 px apart, with an item at half its area;
+/// then a `calc()` width with no percentage.
+const AREAS: &str = r#"<!DOCTYPE html><html><body style="margin:0;font:20px sans-serif">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+<div id="h" style="width:50%;height:20px"></div><div id="h2" style="height:20px"></div>
+</div>
+<div style="display:grid;grid-template-columns:3fr 1fr;gap:20px">
+<div id="q" style="width:50%;height:20px"></div><div id="q2" style="height:20px"></div>
+</div>
+<script>
+var named = ['h', 'h2', 'q', 'q2'].map(function (id) { return document.getElementById(id); });
+</script></body></html>"#;
+
+/// Chromium, `getBoundingClientRect()` at 900×600.
+const AREAS_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 900
+    height: 600
+
+TestCase {
+    name: "GridAreas"
+    when: windowShown
+
+    property var page
+    function check(name, x, width) {
+        const item = findChild(page, name)
+        verify(item, name)
+        const at = item.mapToItem(page, 0, 0).x
+        verify(Math.abs(at - x) <= 1, name + " x " + at + ", Chromium " + x)
+        verify(Math.abs(item.width - width) <= 1, name + " width " + item.width + ", Chromium " + width)
+    }
+
+    function init() {
+        const component = Qt.createComponent("Main.qml")
+        verify(component.status === Component.Ready, component.errorString())
+        page = createTemporaryObject(component, host, { width: 900, height: 600 })
+        waitForRendering(page)
+    }
+
+    function test_a_percentage_is_of_the_area() {
+        check("h", 0, 220)
+        check("h2", 460, 440)
+        check("q", 0, 330)
+        check("q2", 680, 220)
+    }
+}
+}
+"##;
+
 struct Files;
 
 impl Resources for Files {
@@ -79,40 +137,80 @@ impl Resources for Files {
     }
 }
 
-#[test]
-fn a_percentage_width_image_keeps_the_fr_columns() {
+/// Converts `page` and runs `test` against it in qmltestrunner.
+fn run(page: &str, test: &str, name: &str) -> String {
     let options = Options {
         root: RootKind::Item,
         ..Options::default()
     };
     let out = eldur_convert::convert(
         &Input {
-            html: PAGE.to_owned(),
+            html: page.to_owned(),
             url: "/page/index.html".to_owned(),
         },
         &options,
         &mut Files,
     );
-    let dir = std::env::temp_dir().join(format!("eldur-grid-image-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("eldur-{name}-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("temp dir");
     for file in &out.files {
         let path = dir.join(&file.path);
         std::fs::create_dir_all(path.parent().expect("parent")).expect("asset dir");
         std::fs::write(path, &file.contents).expect("write output");
     }
-    std::fs::write(dir.join("tst_grid_image.qml"), TEST).expect("write test");
+    let file = format!("tst_{name}.qml");
+    std::fs::write(dir.join(&file), test).expect("write test");
     let output = Command::new(RUNNER)
         .args(["-platform", "offscreen", "-input"])
-        .arg(dir.join("tst_grid_image.qml"))
+        .arg(dir.join(&file))
         .env("QT_FORCE_STDERR_LOGGING", "1")
         .output()
         .expect("run qmltestrunner");
+    let main = out.main_qml().unwrap_or_default().to_owned();
     let text = format!(
-        "{}\n{}\n{}",
+        "{}\n{}\n{main}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr),
-        out.main_qml().unwrap_or_default()
     );
     std::fs::remove_dir_all(&dir).expect("remove temp dir");
     assert!(output.status.success(), "{text}");
+    main
+}
+
+#[test]
+fn a_percentage_width_image_keeps_the_fr_columns() {
+    run(PAGE, TEST, "grid_image");
+}
+
+#[test]
+fn a_percentage_width_is_of_its_grid_area() {
+    run(AREAS, AREAS_TEST, "grid_areas");
+}
+
+/// `calc(30vw - 10px)` has no percentage: it is a definite width, not a
+/// share of its area capped at a percentage.
+#[test]
+fn a_definite_calc_width_is_not_a_share() {
+    let page = r#"<!DOCTYPE html><html><body style="margin:0">
+<div style="display:grid;grid-template-columns:1fr 1fr"><div></div><div style="width:calc(30vw - 10px);height:20px"></div></div>
+</body></html>"#;
+    let options = Options {
+        root: RootKind::Item,
+        ..Options::default()
+    };
+    let out = eldur_convert::convert_str(page, &options);
+    let main = out.main_qml().unwrap_or_default();
+    // It sizes its track as a px width does, with no share and no keeper.
+    assert!(
+        main.contains("Layout.preferredWidth: Math.max(0, root.width * 0.3 - 10)"),
+        "{main}"
+    );
+    // The layouts around it say they take any width; the item has no cap.
+    assert!(
+        main.lines()
+            .filter(|l| l.contains("Layout.maximumWidth"))
+            .all(|l| l.trim() == "Layout.maximumWidth: Number.POSITIVE_INFINITY"),
+        "{main}"
+    );
+    assert!(!main.contains("gridArea"), "{main}");
 }

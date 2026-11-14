@@ -13,8 +13,8 @@
 use std::collections::{BTreeMap, HashSet};
 
 use eldur_css::{
-    Align, BoxSizing, ComputedStyle, GridLine, Length, LengthPercentage, Size, TextDecorationLine,
-    Track,
+    Align, BoxSizing, CalcNode, ComputedStyle, GridLine, Length, LengthPercentage, Size,
+    TextDecorationLine, Track,
 };
 use eldur_qml::{Member, Object, Value};
 
@@ -1005,11 +1005,27 @@ impl Emitter<'_, '_> {
                 placeholders.push((r, c, false, true));
             }
         }
-        // Qt puts row spacing before the carrier row too, so the row gap
-        // becomes the top margin of what starts in a later row.
-        let gap_margins = (carrier_row || row_slots.is_some()) && row_gap > 0.0;
-        let explicit =
-            !trivial || !placeholders.is_empty() || filler_col || filler_row || row_slots.is_some();
+        // An item whose width is a percentage of its area takes its `fr`
+        // share and stops at its width, found from a keeper: an empty `Item`
+        // that fills the same columns, in a zero-height row of its own after
+        // the others, one per area (Qt's grid holds one item in a cell).
+        // Its maximum is the column's too, so the item's own cap does not
+        // narrow the column.
+        let shares: Vec<bool> = items
+            .iter()
+            .zip(&placement.items)
+            .map(|(child, p)| takes_share(&child.style.width, p, &cols))
+            .collect();
+        let keeps = shares.contains(&true);
+        // Qt puts row spacing before the carrier and keeper rows too, so the
+        // row gap becomes the top margin of what starts in a later row.
+        let gap_margins = (carrier_row || keeps || row_slots.is_some()) && row_gap > 0.0;
+        let explicit = !trivial
+            || !placeholders.is_empty()
+            || filler_col
+            || filler_row
+            || row_slots.is_some()
+            || keeps;
 
         let mut grid = Object::new("GridLayout");
         grid.set(
@@ -1028,12 +1044,14 @@ impl Emitter<'_, '_> {
             && placeholders.is_empty()
             && !gap_margins
             && gap_split.is_none()
+            && !keeps
             && (1..placement.cols).all(|c| cols.props(c, 1, true) == cols.props(0, 1, true))
             && placement.items.iter().enumerate().all(|(i, p)| {
                 p.row_span == 1 && p.col_span == 1 && p.row * placement.cols + p.col == i
             });
         let mut cell_follows = false;
-        for (child, p) in items.iter().zip(&placement.items) {
+        let mut areas: Vec<(usize, usize, String)> = Vec::new();
+        for ((child, p), shares) in items.iter().zip(&placement.items).zip(shares) {
             let stretches = self_alignment(style.align_items, child.style.align_self, false)
                 .is_none()
                 && !matches!(&child.style.height, Size::Length(l) if !matches!(l, Length::Linear(p) if p.percent != 0.0));
@@ -1051,7 +1069,26 @@ impl Emitter<'_, '_> {
                 Given::Stretched
             };
             let mut obj = self.item(child, decoration).obj;
-            self.grid_item(&mut obj, child, style, p, &cols, &rows, explicit);
+            let keeper =
+                shares.then(
+                    || match areas.iter().find(|a| (a.0, a.1) == (p.col, p.col_span)) {
+                        Some(area) => area.2.clone(),
+                        None => {
+                            let id = self.ids.claim("gridArea");
+                            areas.push((p.col, p.col_span, id.clone()));
+                            id
+                        }
+                    },
+                );
+            self.grid_item(
+                &mut obj,
+                child,
+                style,
+                p,
+                (&cols, keeper.as_deref()),
+                &rows,
+                explicit,
+            );
             cell_follows |= flows && (self.hides_items || obj.get("visible").is_some());
             if gap_margins && p.row > 0 {
                 add_margin(&mut obj, "Layout.topMargin", row_gap);
@@ -1129,6 +1166,30 @@ impl Emitter<'_, '_> {
             }
             grid.push_child(ph);
         }
+        // After every item: the item checks below pair the first children
+        // with the items.
+        let keeper_row = placement.rows + usize::from(carrier_row);
+        for (k, (col, span, id)) in areas.iter().enumerate() {
+            let mut keeper = Object::new("Item");
+            keeper.id = Some(id.clone());
+            keeper.set("Layout.row", Value::Number((keeper_row + k) as f64));
+            keeper.set("Layout.column", Value::Number(*col as f64));
+            if *span > 1 {
+                keeper.set("Layout.columnSpan", Value::Number(*span as f64));
+            }
+            keeper.set("Layout.preferredWidth", Value::Number(0.0));
+            keeper.set("Layout.fillWidth", true);
+            if let Some(split) = &gap_split {
+                // The moved gap is no part of the area.
+                let (left, right) = split.margins(*col, col + span);
+                for (name, px) in [("Layout.leftMargin", left), ("Layout.rightMargin", right)] {
+                    if px != 0.0 {
+                        add_margin(&mut keeper, name, px);
+                    }
+                }
+            }
+            grid.push_child(keeper);
+        }
         // Qt caps a row at what its items can take, past an `fr` share.
         let capped_fr = grid.children().zip(&placement.items).any(|(kid, p)| {
             rows.is_fr(p.row)
@@ -1158,7 +1219,7 @@ impl Emitter<'_, '_> {
                 ),
             );
         }
-        let last_row = placement.rows + usize::from(carrier_row);
+        let last_row = keeper_row + areas.len();
         if filler_col {
             let mut f = Object::new("Item");
             f.set("Layout.row", Value::Number(0.0));
@@ -1380,7 +1441,7 @@ impl Emitter<'_, '_> {
         b: &LayoutBox<'_>,
         container: &ComputedStyle,
         p: &Placed,
-        cols: &AxisPlan,
+        (cols, keeper): (&AxisPlan, Option<&str>),
         rows: &AxisPlan,
         explicit: bool,
     ) {
@@ -1461,14 +1522,24 @@ impl Emitter<'_, '_> {
             // area: the item takes its `fr` share like the rest of its tracks and
             // stops at its own width. Given as its preferred width, it would widen
             // its tracks past their share and squeeze the `fr` columns beside them.
-            let shares = horizontal
-                && matches!(size, Size::Length(l) if l.as_px().is_none() && !is_viewport_relative(l))
-                && (start..start + span).all(|t| plan.is_fr(t));
+            // Its percentage is of its area, which the keeper fills.
+            let mut share = match size {
+                Size::Length(l) if horizontal => {
+                    keeper.map(|keeper| length_expr(l, &format!("{keeper}.width")))
+                }
+                _ => None,
+            };
             match (own, align) {
-                (Some(v), align) if shares => {
+                (Some(_), align) if share.is_some() => {
+                    let width = share.take().unwrap_or_default();
+                    let cap = if extra == 0.0 {
+                        Value::Expr(width)
+                    } else {
+                        Value::Expr(format!("{width} + {}", fmt_number(round(extra))))
+                    };
                     obj.set("Layout.preferredWidth", Value::Number(0.0));
                     obj.set("Layout.fillWidth", true);
-                    obj.set("Layout.maximumWidth", v);
+                    obj.set("Layout.maximumWidth", cap);
                     flags.push(align.unwrap_or("Qt.AlignLeft"));
                 }
                 // Its size is no part of what the track is given: all `fr`
@@ -1734,6 +1805,33 @@ impl GapSplit {
         let left = self.track_at[start].map_or(0.0, |t| t as f32 * self.gap - before(start));
         let right = self.track_at[end].map_or(0.0, |t| before(end) - (t as f32 - 1.0) * self.gap);
         (left, right)
+    }
+}
+
+/// Whether an item of `width` at `p` takes its `fr` share of the columns
+/// (see `grid_item`): its width has a percentage of its area in it, short of
+/// `100%`, which is the area itself, and every column it spans is `fr`.
+fn takes_share(width: &Size, p: &Placed, cols: &AxisPlan) -> bool {
+    matches!(width, Size::Length(l) if has_percentage(l)
+        && !matches!(l, Length::Linear(lp) if *lp == LengthPercentage::percent(100.0)))
+        && (p.col..p.col + p.col_span).all(|t| cols.is_fr(t))
+}
+
+/// Whether `length` has a percentage term anywhere, even inside `calc()`.
+fn has_percentage(length: &Length) -> bool {
+    fn node(n: &CalcNode) -> bool {
+        match n {
+            CalcNode::Leaf(l) => l.percent != 0.0,
+            CalcNode::Min(nodes) | CalcNode::Max(nodes) | CalcNode::Sum(nodes) => {
+                nodes.iter().any(node)
+            }
+            CalcNode::Clamp(a, b, c) => node(a) || node(b) || node(c),
+            CalcNode::Product(n, _) => node(n),
+        }
+    }
+    match length {
+        Length::Linear(l) => l.percent != 0.0,
+        Length::Calc(n) => node(n),
     }
 }
 
