@@ -56,7 +56,7 @@ pub fn shake_library<'u>(library: &str, used: impl IntoIterator<Item = &'u str>)
     let scoping = semantic.scoping();
 
     let statements = &program.body;
-    let foreign = foreign_paths(statements);
+    let foreign = foreign_paths(statements, scoping);
     let roles: Vec<Role> = statements
         .iter()
         .map(|s| match role(s, scoping) {
@@ -133,7 +133,10 @@ pub fn shake_library<'u>(library: &str, used: impl IntoIterator<Item = &'u str>)
     // The script's own directives (`"use strict";`) stay whatever goes.
     let mut from = program.directives.last().map_or(0, |d| {
         let end = d.span.end as usize;
-        body[end..].find('\n').map_or(body.len(), |n| end + n + 1)
+        let line_end = body[end..].find('\n').map_or(body.len(), |n| end + n + 1);
+        statements
+            .first()
+            .map_or(line_end, |s| line_end.min(s.span().start as usize))
     });
     out.push_str(&body[..from]);
     // A string statement that comes first once what was before it goes would
@@ -186,7 +189,7 @@ type Step = Option<String>;
 /// an object made elsewhere at (`var P = Promise;` stores at `P`,
 /// `X.prototype = Array.prototype;` at `X.prototype`, `var o = { p: Promise };`
 /// at `o.p`). Filling in anything under such a path changes that object.
-fn foreign_paths(statements: &[Statement<'_>]) -> Vec<Vec<Step>> {
+fn foreign_paths(statements: &[Statement<'_>], scoping: &Scoping) -> Vec<Vec<Step>> {
     let mut found = Vec::new();
     for statement in statements {
         match statement {
@@ -194,7 +197,7 @@ fn foreign_paths(statements: &[Statement<'_>]) -> Vec<Vec<Step>> {
                 for declarator in &v.declarations {
                     match (&declarator.id, &declarator.init) {
                         (BindingPattern::BindingIdentifier(id), Some(init)) => {
-                            stores(vec![Some(id.name.to_string())], init, &mut found);
+                            stores(vec![Some(id.name.to_string())], init, scoping, &mut found);
                         }
                         // `var { Promise: P } = globalThis;`: what each name
                         // gets is read out of an object, so may be anything.
@@ -211,7 +214,7 @@ fn foreign_paths(statements: &[Statement<'_>]) -> Vec<Vec<Step>> {
             Statement::ExpressionStatement(e) => {
                 if let Expression::AssignmentExpression(a) = &e.expression {
                     if let Some(at) = target_path(&a.left) {
-                        stores(at, &a.right, &mut found);
+                        stores(at, &a.right, scoping, &mut found);
                     } else if let Some(pattern) = a.left.as_assignment_target_pattern() {
                         let mut names = Names(Vec::new());
                         names.visit_assignment_target_pattern(pattern);
@@ -226,9 +229,9 @@ fn foreign_paths(statements: &[Statement<'_>]) -> Vec<Vec<Step>> {
 }
 
 /// Adds the paths under `at` where `value` puts an object it does not make.
-fn stores(at: Vec<Step>, value: &Expression<'_>, found: &mut Vec<Vec<Step>>) {
+fn stores(at: Vec<Step>, value: &Expression<'_>, scoping: &Scoping, found: &mut Vec<Vec<Step>>) {
     match value {
-        Expression::ParenthesizedExpression(p) => stores(at, &p.expression, found),
+        Expression::ParenthesizedExpression(p) => stores(at, &p.expression, scoping, found),
         Expression::BooleanLiteral(_)
         | Expression::NullLiteral(_)
         | Expression::NumericLiteral(_)
@@ -242,7 +245,7 @@ fn stores(at: Vec<Step>, value: &Expression<'_>, found: &mut Vec<Vec<Step>>) {
         | Expression::BinaryExpression(_) => {}
         // A built-in made with nothing to wrap is new; `new Object(Promise)`
         // is `Promise`, and any other constructor may return what it likes.
-        Expression::NewExpression(n) if fresh_construction(n) => {}
+        Expression::NewExpression(n) if fresh_construction(n, scoping) => {}
         Expression::ObjectExpression(o) => {
             for property in &o.properties {
                 match property {
@@ -257,7 +260,7 @@ fn stores(at: Vec<Step>, value: &Expression<'_>, found: &mut Vec<Vec<Step>>) {
                     ObjectPropertyKind::ObjectProperty(p) => {
                         let mut under = at.clone();
                         under.push(p.key.static_name().map(|n| n.to_string()));
-                        stores(under, &p.value, found);
+                        stores(under, &p.value, scoping, found);
                     }
                     ObjectPropertyKind::SpreadProperty(_) => {
                         let mut under = at.clone();
@@ -272,7 +275,7 @@ fn stores(at: Vec<Step>, value: &Expression<'_>, found: &mut Vec<Vec<Step>>) {
                 if let Some(e) = element.as_expression() {
                     let mut under = at.clone();
                     under.push(None);
-                    stores(under, e, found);
+                    stores(under, e, scoping, found);
                 }
             }
         }
@@ -366,7 +369,7 @@ fn role(statement: &Statement<'_>, scoping: &Scoping) -> Role {
                 let BindingPattern::BindingIdentifier(id) = &declarator.id else {
                     return Role::Effect;
                 };
-                if declarator.init.as_ref().is_some_and(|e| !pure(e)) {
+                if declarator.init.as_ref().is_some_and(|e| !pure(e, scoping)) {
                     return Role::Effect;
                 }
                 names.push(id.name.to_string());
@@ -385,7 +388,7 @@ fn role(statement: &Statement<'_>, scoping: &Scoping) -> Role {
 fn extends(expression: &Expression<'_>, scoping: &Scoping) -> Option<String> {
     match expression {
         Expression::AssignmentExpression(a) => {
-            if !pure(&a.right) {
+            if !pure(&a.right, scoping) {
                 return None;
             }
             match &a.left {
@@ -395,7 +398,7 @@ fn extends(expression: &Expression<'_>, scoping: &Scoping) -> Option<String> {
                     let object = match member {
                         SimpleAssignmentTarget::StaticMemberExpression(m) => &m.object,
                         SimpleAssignmentTarget::ComputedMemberExpression(m) => {
-                            if !pure(&m.expression) {
+                            if !pure(&m.expression, scoping) {
                                 return None;
                             }
                             &m.object
@@ -421,7 +424,7 @@ fn extends(expression: &Expression<'_>, scoping: &Scoping) -> Option<String> {
                 || call
                     .arguments
                     .iter()
-                    .any(|a| a.as_expression().is_none_or(|e| !pure(e)))
+                    .any(|a| a.as_expression().is_none_or(|e| !pure(e, scoping)))
             {
                 return None;
             }
@@ -439,7 +442,9 @@ fn base(expression: &Expression<'_>, scoping: &Scoping) -> Option<String> {
     match expression {
         Expression::Identifier(id) => top_level(id, scoping),
         Expression::StaticMemberExpression(m) => base(&m.object, scoping),
-        Expression::ComputedMemberExpression(m) if pure(&m.expression) => base(&m.object, scoping),
+        Expression::ComputedMemberExpression(m) if pure(&m.expression, scoping) => {
+            base(&m.object, scoping)
+        }
         _ => None,
     }
 }
@@ -453,7 +458,7 @@ fn top_level(id: &IdentifierReference<'_>, scoping: &Scoping) -> Option<String> 
 /// when nothing names what it declares. A function is pure here, as defining
 /// one runs nothing; a member read is too, since nothing here has getters on
 /// the objects it reads at the top level.
-fn pure(expression: &Expression<'_>) -> bool {
+fn pure(expression: &Expression<'_>, scoping: &Scoping) -> bool {
     match expression {
         Expression::BooleanLiteral(_)
         | Expression::NullLiteral(_)
@@ -464,47 +469,69 @@ fn pure(expression: &Expression<'_>) -> bool {
         | Expression::Identifier(_)
         | Expression::FunctionExpression(_)
         | Expression::ArrowFunctionExpression(_) => true,
-        Expression::TemplateLiteral(t) => t.expressions.iter().all(pure),
-        Expression::StaticMemberExpression(m) => pure(&m.object),
-        Expression::ComputedMemberExpression(m) => pure(&m.object) && pure(&m.expression),
+        Expression::TemplateLiteral(t) => t.expressions.iter().all(|e| pure(e, scoping)),
+        Expression::StaticMemberExpression(m) => pure(&m.object, scoping),
+        Expression::ComputedMemberExpression(m) => {
+            pure(&m.object, scoping) && pure(&m.expression, scoping)
+        }
         Expression::ArrayExpression(a) => a.elements.iter().all(|e| match e {
             ArrayExpressionElement::SpreadElement(_) => false,
             ArrayExpressionElement::Elision(_) => true,
-            other => other.as_expression().is_some_and(pure),
+            other => other.as_expression().is_some_and(|e| pure(e, scoping)),
         }),
         Expression::ObjectExpression(o) => o.properties.iter().all(|p| match p {
             ObjectPropertyKind::ObjectProperty(p) => {
-                pure(&p.value)
+                pure(&p.value, scoping)
                     && match &p.key {
                         PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_) => {
                             true
                         }
-                        key => key.as_expression().is_some_and(pure),
+                        key => key.as_expression().is_some_and(|e| pure(e, scoping)),
                     }
             }
             ObjectPropertyKind::SpreadProperty(_) => false,
         }),
         Expression::UnaryExpression(u) => {
-            u.operator != oxc_syntax::operator::UnaryOperator::Delete && pure(&u.argument)
+            u.operator != oxc_syntax::operator::UnaryOperator::Delete && pure(&u.argument, scoping)
         }
-        Expression::BinaryExpression(b) => pure(&b.left) && pure(&b.right),
-        Expression::LogicalExpression(l) => pure(&l.left) && pure(&l.right),
+        Expression::BinaryExpression(b) => pure(&b.left, scoping) && pure(&b.right, scoping),
+        Expression::LogicalExpression(l) => pure(&l.left, scoping) && pure(&l.right, scoping),
         Expression::ConditionalExpression(c) => {
-            pure(&c.test) && pure(&c.consequent) && pure(&c.alternate)
+            pure(&c.test, scoping) && pure(&c.consequent, scoping) && pure(&c.alternate, scoping)
         }
-        Expression::ParenthesizedExpression(p) => pure(&p.expression),
-        Expression::NewExpression(n) => fresh_construction(n),
+        Expression::ParenthesizedExpression(p) => pure(&p.expression, scoping),
+        Expression::NewExpression(n) => fresh_construction(n, scoping),
         _ => false,
     }
 }
 
 /// A built-in made with no arguments: an empty object, made without running
 /// anyone's code. With arguments, a collection runs their iterators and a
-/// regular expression reads their `Symbol.match` and `toString`.
-fn fresh_construction(n: &oxc_ast::ast::NewExpression<'_>) -> bool {
+/// regular expression reads their `Symbol.match` and `toString`. The name
+/// must still be the built-in: declared nowhere in the script, assigned by
+/// nothing.
+fn fresh_construction(n: &oxc_ast::ast::NewExpression<'_>, scoping: &Scoping) -> bool {
+    let Expression::Identifier(id) = &n.callee else {
+        return false;
+    };
+    let global = id
+        .reference_id
+        .get()
+        .is_some_and(|r| scoping.get_reference(r).symbol_id().is_none());
+    let assigned = scoping
+        .root_unresolved_references()
+        .iter()
+        .any(|(name, refs)| {
+            name.as_str() == id.name.as_str()
+                && refs.iter().any(|r| scoping.get_reference(*r).is_write())
+        });
     n.arguments.is_empty()
-        && matches!(&n.callee, Expression::Identifier(id)
-            if matches!(id.name.as_str(), "Map" | "Set" | "WeakMap" | "WeakSet" | "Object" | "Array" | "RegExp"))
+        && global
+        && !assigned
+        && matches!(
+            id.name.as_str(),
+            "Map" | "Set" | "WeakMap" | "WeakSet" | "Object" | "Array" | "RegExp"
+        )
 }
 
 /// The names an assignment pattern assigns, and any it reads for defaults.
@@ -685,6 +712,31 @@ var _empty = new Set();\n";
             out,
             ";\n\"use strict\";\nfunction used() { return this; }\n"
         );
+        // A statement on the directive's line goes or stays on its own.
+        let out = shake_library(
+            "\"use strict\"; var a = helper;\nfunction helper() {}\nfunction used() {}\n",
+            ["used"],
+        );
+        assert_eq!(out, "\"use strict\"; function used() {}\n");
+        let out = shake_library(
+            "\"use strict\"; var unused = {\n  a: 1\n};\nfunction used() {}\n",
+            ["used"],
+        );
+        assert_eq!(out, "\"use strict\"; function used() {}\n");
+    }
+
+    #[test]
+    fn a_local_constructor_with_a_built_in_name_may_run_code() {
+        let out = shake_library(
+            "function Set() { externalNotify(); }\nvar unused = new Set();\n",
+            [],
+        );
+        assert!(out.contains("var unused = new Set();"), "{out}");
+        let out = shake_library(
+            "Map = function() { externalNotify(); };\nvar unused = new Map();\n",
+            [],
+        );
+        assert!(out.contains("var unused = new Map();"), "{out}");
     }
 
     #[test]
