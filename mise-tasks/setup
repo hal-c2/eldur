@@ -33,7 +33,7 @@ fi
 if have ljos; then
   done_steps+=("ljos found: mise run dev runs pages in Ljós ($(command -v ljos))")
 else
-  skipped+=("ljos not found: mise run dev uses qml6 instead; install it from a ljos-ui checkout with mise run install")
+  skipped+=("ljos not found: mise run dev uses qml6 instead; install it from a ljos-ui checkout with cargo install --path crates/ljos_cli --locked")
 fi
 if have python3 && have node; then
   done_steps+=("python3 and node found (visual harness)")
