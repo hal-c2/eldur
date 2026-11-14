@@ -31,10 +31,18 @@ mapping specifications are in `docs/spec/`.
 
 | Task | Command |
 |---|---|
+| First run: toolchain, crates, report of missing optional tools | `mise run setup` |
+| Convert a page and run it in ljos or qml6 | `mise run dev [page.html] [-o dir] [--runtime auto\|ljos\|qml6\|none]` |
 | Format check, clippy (warnings are errors) | `mise run check` |
-| Rust tests | `mise run test` |
+| Rust tests | `mise run test [-- cargo test args]` |
+| Build the workspace | `mise run build [--release]` |
+| Install the `eldur` CLI from the checkout | `mise run install [--root dir]` |
 | Validate generated QML (qmllint + qml6 off-screen) | `mise run qml:check [dir]` |
-| Convert a page | `cargo run -p eldur_cli -- convert page.html -o out/` |
+| Convert a page | `mise run convert page.html -o out/` |
+| Convert every corpus case | `mise run corpus [out]` |
+| Visual parity harness (Chromium vs qml6) | `mise run visual [-- run.py args]`, `mise run visual test` |
+
+Every task takes `--help`.
 
 ## Conventions
 
