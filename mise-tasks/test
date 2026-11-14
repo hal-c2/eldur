@@ -1,4 +1,20 @@
 #!/usr/bin/env bash
 #MISE description="All Rust tests"
+#USAGE arg "[cargo_args]..." var=#true help="Passed to cargo test, e.g. -p eldur_css; mise eats the first --, so test binary flags need two: mise run test -- -p eldur_css -- --nocapture"
 set -euo pipefail
-cargo test --workspace "$@"
+# No --workspace by default: the root is a virtual workspace, so a bare run
+# already tests every member, and -p in cargo_args can then pick one. Cargo
+# only takes --exclude together with --workspace, so it is added then, unless
+# the caller already wrote --workspace (or its alias --all).
+has_exclude=false
+has_ws=false
+for a in "$@"; do
+  [[ "$a" == "--" ]] && break
+  case "$a" in
+    --exclude | --exclude=*) has_exclude=true ;;
+    --workspace | --all) has_ws=true ;;
+  esac
+done
+args=()
+[[ "$has_exclude" == true && "$has_ws" == false ]] && args=(--workspace)
+cargo test "${args[@]}" "$@"

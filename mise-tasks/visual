@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 #MISE description="Run the HTML-vs-QML visual parity harness (pass 'test' or '--test' for unit tests, '--selftest' for self-test)"
+#USAGE arg "[args]..." var=#true help="'test' runs the harness's unit tests (extra args go to unittest); anything else goes to tools/visual/run.py: --selftest, --cases a,b, --update-baseline, --backend gl|software, --corpus DIR, --out DIR, --width N, --height N (python3 tools/visual/run.py --help)"
 set -euo pipefail
 if [[ "${1:-}" == "test" ]]; then
   shift

@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+#MISE description="Install the eldur CLI from this checkout (cargo install, onto ~/.cargo/bin by default)"
+#USAGE flag "--root <dir>" help="Install under <dir>/bin instead of cargo's default (~/.cargo/bin)"
+set -euo pipefail
+cd "${MISE_PROJECT_ROOT:-.}"
+args=(install --path crates/eldur_cli --locked)
+[[ -n "${usage_root:-}" ]] && args+=(--root "$usage_root")
+cargo "${args[@]}"

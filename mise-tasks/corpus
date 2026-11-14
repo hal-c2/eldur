@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #MISE description="Convert every tests/corpus case into target/corpus/<case>/ (then: mise run qml:check target/corpus)"
+#USAGE arg "[out]" default="target/corpus" help="Directory each case's QML is written under"
 set -euo pipefail
-out="${1:-target/corpus}"
+out="${usage_out:-target/corpus}"
 cargo build -q -p eldur_cli
 for dir in tests/corpus/*/; do
   case=$(basename "$dir")

@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+#MISE description="First run: install the pinned toolchain, fetch crates, and say which optional tools are missing (idempotent)"
+#USAGE flag "--offline" help="Skip cargo fetch (use crates already in the cargo cache)"
+set -euo pipefail
+cd "${MISE_PROJECT_ROOT:-.}"
+
+done_steps=()
+skipped=()
+
+mise install
+done_steps+=("mise install: Rust $(mise exec -- rustc --version | cut -d' ' -f2) with rustfmt and clippy (mise.toml)")
+
+if [[ -f .gitmodules ]]; then
+  git submodule update --init --recursive
+  done_steps+=("git submodules initialised")
+fi
+
+if [[ "${usage_offline:-false}" == "true" ]]; then
+  skipped+=("cargo fetch: --offline")
+else
+  mise exec -- cargo fetch --locked
+  done_steps+=("cargo fetch --locked: every crate in Cargo.lock downloaded")
+fi
+
+# Optional tools are found on PATH, never installed: they are system packages
+# or the user's choice, and the converter itself needs none of them.
+have() { command -v "$1" >/dev/null 2>&1; }
+if have qml6 && have qmllint; then
+  done_steps+=("Qt 6 found: qml6 and qmllint ($(command -v qml6))")
+else
+  skipped+=("Qt 6 (qml6, qmllint) not found: mise run qml:check, eldur check and mise run dev with qml6 won't work; install qt6-declarative (Arch) or qt6-declarative-dev-tools (Debian)")
+fi
+if have ljos; then
+  done_steps+=("ljos found: mise run dev runs pages in Ljós ($(command -v ljos))")
+else
+  skipped+=("ljos not found: mise run dev uses qml6 instead; install it from a ljos-ui checkout with cargo install --path crates/ljos_cli --locked")
+fi
+if have python3 && have node; then
+  done_steps+=("python3 and node found (visual harness)")
+else
+  skipped+=("python3 or node not found: mise run visual won't run")
+fi
+if have playwright || node -e 'require.resolve("playwright")' >/dev/null 2>&1; then
+  done_steps+=("Playwright found (visual harness renders the HTML side in Chromium)")
+else
+  skipped+=("Playwright not found: mise run visual needs it; mise use -g npm:playwright, then playwright install chromium")
+fi
+if have sway; then
+  done_steps+=("sway found (visual harness default GL backend)")
+else
+  skipped+=("sway not found: run mise run visual -- --backend software")
+fi
+
+echo
+echo "setup done:"
+printf '  - %s\n' "${done_steps[@]}"
+if ((${#skipped[@]})); then
+  echo "skipped:"
+  printf '  - %s\n' "${skipped[@]}"
+fi
+echo
+echo "next: mise run dev   (convert a sample page and run it)"

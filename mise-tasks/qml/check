@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #MISE description="qmllint every .qml under a directory (default tests/corpus) and load each Main.qml in qml6 off-screen; fail on any warning"
+#USAGE arg "[dir]" default="tests/corpus" help="Directory searched for .qml files (e.g. target/corpus after mise run corpus)"
 set -euo pipefail
-dir="${1:-tests/corpus}"
+dir="${usage_dir:-tests/corpus}"
 status=0
 quit="$(cd "$(dirname "$0")/../.." && pwd)/tools/qml-check/Quit.qml"
 while IFS= read -r -d '' f; do
