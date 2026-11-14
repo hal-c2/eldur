@@ -214,3 +214,107 @@ fn a_definite_calc_width_is_not_a_share() {
     );
     assert!(!main.contains("gridArea"), "{main}");
 }
+
+/// A test that checks each named item's place and width against
+/// Chromium's (`getBoundingClientRect()` at 900×600), once the page's
+/// scripts have run.
+fn places(name: &str, checks: &str) -> String {
+    format!(
+        r##"
+import QtQuick
+import QtTest
+
+Item {{
+    id: host
+    width: 900
+    height: 600
+
+TestCase {{
+    name: "{name}"
+    when: windowShown
+
+    property var page
+    function check(name, x, y, width) {{
+        const item = findChild(page, name)
+        verify(item, name)
+        const at = item.mapToItem(page, 0, 0)
+        // Where the layout put it, and the grid's other children.
+        const cell = c => (c.objectName || "?") + " at " + c.x + "," + c.y
+            + " " + c.width + "×" + c.height + (c.visible ? "" : " hidden")
+        const why = " (" + Array.from(item.parent.children, cell).join("; ") + ")"
+        verify(Math.abs(at.x - x) <= 1, name + " x " + at.x + ", Chromium " + x + why)
+        verify(Math.abs(at.y - y) <= 1, name + " y " + at.y + ", Chromium " + y + why)
+        verify(Math.abs(item.width - width) <= 1, name + " width " + item.width + ", Chromium " + width + why)
+    }}
+
+    function init() {{
+        const component = Qt.createComponent("Main.qml")
+        verify(component.status === Component.Ready, component.errorString())
+        page = createTemporaryObject(component, host, {{ width: 900, height: 600 }})
+        waitForRendering(page)
+    }}
+
+    function test_places() {{
+{checks}
+    }}
+}}
+}}
+"##
+    )
+}
+
+/// `display: none` takes no cell (CSS Grid 2 §8): with the first item
+/// hidden, the item at half its area moves into the first column and the
+/// third into the second, in the first row, which has no gap above it. The
+/// keeper's row adds no gap below the grid either.
+#[test]
+fn a_hidden_item_leaves_no_cell_before_a_share() {
+    let page = r#"<!DOCTYPE html><html><body style="margin:0">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+<div id="x" style="height:20px"></div><div id="h" style="width:50%;height:20px"></div><div id="y" style="height:20px"></div>
+</div>
+<div id="after" style="height:10px"></div>
+<script>
+var named = ['h', 'y', 'after'].map(function (id) { return document.getElementById(id); });
+document.getElementById('x').style.display = 'none';
+</script></body></html>"#;
+    let checks = r#"        tryVerify(() => findChild(page, "y").mapToItem(page, 0, 0).y < 1, 2000, "y moves up")
+        check("h", 0, 0, 220)
+        check("y", 460, 0, 440)
+        check("after", 0, 20, 900)"#;
+    run(page, &places("HiddenShare", checks), "grid_hidden_share");
+}
+
+/// A class that gives an item half its area keeps the grid's form in both
+/// states: the keeper is there whether or not the class is, so the states
+/// differ only in the item's cap, and the class still applies.
+#[test]
+fn a_share_under_a_class_keeps_the_grid_form() {
+    let page = r#"<!DOCTYPE html><html><body style="margin:0">
+<style>.half { width: 50% }</style>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+<div id="h" style="height:20px"></div><div id="h2" style="height:20px"></div>
+</div>
+<script>
+var named = ['h', 'h2'].map(function (id) { return document.getElementById(id); });
+document.getElementById('h').classList.toggle('half');
+</script></body></html>"#;
+    let out = eldur_convert::convert_str(
+        page,
+        &Options {
+            root: RootKind::Item,
+            ..Options::default()
+        },
+    );
+    assert!(
+        !out.diagnostics
+            .iter()
+            .any(|d| d.to_string().contains("dynamic-form")),
+        "{:?}",
+        out.diagnostics
+    );
+    let checks = r#"        tryVerify(() => findChild(page, "h").width < 300, 2000, "the class applies")
+        check("h", 0, 0, 220)
+        check("h2", 460, 0, 440)"#;
+    run(page, &places("ClassShare", checks), "grid_class_share");
+}

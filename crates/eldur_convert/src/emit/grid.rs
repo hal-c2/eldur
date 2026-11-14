@@ -1010,16 +1010,24 @@ impl Emitter<'_, '_> {
         // that fills the same columns, in a zero-height row of its own after
         // the others, one per area (Qt's grid holds one item in a cell).
         // Its maximum is the column's too, so the item's own cap does not
-        // narrow the column.
-        let shares: Vec<bool> = items
+        // narrow the column. An item that takes a share only under a class
+        // or state has its keeper in every combination: their grids then
+        // differ in the cap alone, not in their children.
+        let shares: Vec<(bool, bool)> = items
             .iter()
             .zip(&placement.items)
-            .map(|(child, p)| takes_share(&child.style.width, p, &cols))
+            .map(|(child, p)| {
+                let fr = (p.col..p.col + p.col_span).all(|t| cols.is_fr(t));
+                let now = fr && is_share(&child.style.width);
+                let some = now || fr && child.node.is_some_and(|n| self.shares.contains(&n));
+                (some, now)
+            })
             .collect();
-        let keeps = shares.contains(&true);
+        let keeps = shares.iter().any(|s| s.0);
         // Qt puts row spacing before the carrier and keeper rows too, so the
         // row gap becomes the top margin of what starts in a later row.
-        let gap_margins = (carrier_row || keeps || row_slots.is_some()) && row_gap > 0.0;
+        let base_gap_margins = (carrier_row || row_slots.is_some()) && row_gap > 0.0;
+        let gap_margins = base_gap_margins || keeps && row_gap > 0.0;
         let explicit = !trivial
             || !placeholders.is_empty()
             || filler_col
@@ -1039,19 +1047,24 @@ impl Emitter<'_, '_> {
         );
         // Only a plain run of same-sized cells can follow its items out of the
         // layout: spans and other tracks would change more than the cell.
+        // Keepers stay in their rows below, and any column's is as wide as
+        // the one an item moves to; the row gap above an item follows its
+        // cell.
         let flows = explicit
             && row_slots.is_none()
             && placeholders.is_empty()
-            && !gap_margins
+            && !base_gap_margins
             && gap_split.is_none()
-            && !keeps
             && (1..placement.cols).all(|c| cols.props(c, 1, true) == cols.props(0, 1, true))
             && placement.items.iter().enumerate().all(|(i, p)| {
                 p.row_span == 1 && p.col_span == 1 && p.row * placement.cols + p.col == i
             });
         let mut cell_follows = false;
         let mut areas: Vec<(usize, usize, String)> = Vec::new();
-        for ((child, p), shares) in items.iter().zip(&placement.items).zip(shares) {
+        // Each item's own top margin, under the row gap that a cell after
+        // the first row adds to it.
+        let mut own_tops = Vec::new();
+        for ((child, p), (kept, shares)) in items.iter().zip(&placement.items).zip(shares) {
             let stretches = self_alignment(style.align_items, child.style.align_self, false)
                 .is_none()
                 && !matches!(&child.style.height, Size::Length(l) if !matches!(l, Length::Linear(p) if p.percent != 0.0));
@@ -1070,7 +1083,7 @@ impl Emitter<'_, '_> {
             };
             let mut obj = self.item(child, decoration).obj;
             let keeper =
-                shares.then(
+                kept.then(
                     || match areas.iter().find(|a| (a.0, a.1) == (p.col, p.col_span)) {
                         Some(area) => area.2.clone(),
                         None => {
@@ -1085,11 +1098,15 @@ impl Emitter<'_, '_> {
                 child,
                 style,
                 p,
-                (&cols, keeper.as_deref()),
+                (&cols, keeper.as_deref().filter(|_| shares)),
                 &rows,
                 explicit,
             );
             cell_follows |= flows && (self.hides_items || obj.get("visible").is_some());
+            own_tops.push(match obj.get("Layout.topMargin") {
+                Some(Value::Number(n)) => *n as f32,
+                _ => 0.0,
+            });
             if gap_margins && p.row > 0 {
                 add_margin(&mut obj, "Layout.topMargin", row_gap);
             }
@@ -1110,10 +1127,21 @@ impl Emitter<'_, '_> {
         }
         if cell_follows {
             let across = placement.cols;
-            for obj in grid.members.iter_mut().filter_map(|m| match m {
+            let objs = grid.members.iter_mut().filter_map(|m| match m {
                 Member::Child(o) => Some(o),
                 _ => None,
-            }) {
+            });
+            for (obj, own) in objs.zip(&own_tops) {
+                if gap_margins {
+                    obj.set(
+                        "Layout.topMargin",
+                        Value::expr(format!(
+                            "parent && parent.eldurCell && parent.eldurCell(this) >= {across} ? {} : {}",
+                            fmt_number(round(own + row_gap)),
+                            fmt_number(round(*own)),
+                        )),
+                    );
+                }
                 obj.set(
                     "Layout.row",
                     Value::expr(format!(
@@ -1166,12 +1194,31 @@ impl Emitter<'_, '_> {
             }
             grid.push_child(ph);
         }
+        // An item that follows its cell can move to any column, away from
+        // its keeper: every column keeps its share. Whether it follows can
+        // differ between combinations; the keepers must not.
+        if flows && !areas.is_empty() {
+            for c in 0..placement.cols {
+                if !areas.iter().any(|a| a.0 == c) {
+                    areas.push((c, 1, self.ids.claim("gridArea")));
+                }
+            }
+        }
         // After every item: the item checks below pair the first children
         // with the items.
         let keeper_row = placement.rows + usize::from(carrier_row);
         for (k, (col, span, id)) in areas.iter().enumerate() {
             let mut keeper = Object::new("Item");
             keeper.id = Some(id.clone());
+            // No free cell for an item the page moves in (the runtime's
+            // `_placeInStaticGrid`).
+            keeper.members.push(Member::PropertyDecl {
+                ty: "bool".to_owned(),
+                name: "eldurKeeper".to_owned(),
+                value: Some(Value::Bool(true)),
+                readonly: true,
+                required: false,
+            });
             keeper.set("Layout.row", Value::Number((keeper_row + k) as f64));
             keeper.set("Layout.column", Value::Number(*col as f64));
             if *span > 1 {
@@ -1808,13 +1855,12 @@ impl GapSplit {
     }
 }
 
-/// Whether an item of `width` at `p` takes its `fr` share of the columns
-/// (see `grid_item`): its width has a percentage of its area in it, short of
-/// `100%`, which is the area itself, and every column it spans is `fr`.
-fn takes_share(width: &Size, p: &Placed, cols: &AxisPlan) -> bool {
+/// Whether an item of `width` takes its `fr` share of the columns it spans,
+/// when they are all `fr` (see `grid_item`): its width has a percentage of
+/// its area in it, short of `100%`, which is the area itself.
+pub(super) fn is_share(width: &Size) -> bool {
     matches!(width, Size::Length(l) if has_percentage(l)
         && !matches!(l, Length::Linear(lp) if *lp == LengthPercentage::percent(100.0)))
-        && (p.col..p.col + p.col_span).all(|t| cols.is_fr(t))
 }
 
 /// Whether `length` has a percentage term anywhere, even inside `calc()`.

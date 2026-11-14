@@ -4134,8 +4134,9 @@ function _placeInStaticGrid(grid) {
     var kids = Array.prototype.filter.call(grid.children, function(kid) {
         return typeof kid.eldurTag === "string";
     });
+    // A keeper holds its columns' width for an item sized by its area.
     var free = Array.prototype.filter.call(grid.children, function(kid) {
-        return typeof kid.eldurTag !== "string" && kid.visible !== false;
+        return typeof kid.eldurTag !== "string" && kid.visible !== false && kid.eldurKeeper !== true;
     });
     if (free.length === 0) {
         return;
