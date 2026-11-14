@@ -254,6 +254,8 @@ TestCase {
 fn run(name: &str, html: &str, spec: &str, snapshot: &str) -> String {
     let options = Options {
         root: RootKind::Item,
+        // What the test asks the runtime itself.
+        runtime_uses: ["document", "getComputedStyle"].map(String::from).to_vec(),
         ..Options::default()
     };
     // The test reads computed styles from outside the script analysis looks at:

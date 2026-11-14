@@ -26,6 +26,8 @@ const PAGE: &str = include_str!("inline_templates/page.html");
 fn check(case: &str, tests: &str) {
     let options = Options {
         root: RootKind::Item,
+        // What the test asks the runtime itself.
+        runtime_uses: ["document"].map(String::from).to_vec(),
         ..Options::default()
     };
     let out = eldur_convert::convert(

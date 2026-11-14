@@ -1,0 +1,12 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: file_list(&output)
+---
+EldurLines.qml
+EldurScrollInput.qml
+Main.qml
+assets/kettle-1.svg
+assets/kettle-2.svg
+assets/kettle-3.svg
+assets/kettle-4.svg
+eldur_fonts.js

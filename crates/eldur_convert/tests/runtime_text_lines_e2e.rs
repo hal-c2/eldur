@@ -85,6 +85,8 @@ fn a_run_time_rules_decoration_keeps_its_style_and_colour() {
         },
         &Options {
             root: RootKind::Item,
+            // What the test asks the runtime itself.
+            runtime_uses: ["document", "getComputedStyle"].map(String::from).to_vec(),
             ..Options::default()
         },
         &mut NoResources,

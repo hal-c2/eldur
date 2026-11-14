@@ -62,7 +62,12 @@ oxc is what ljos-ui already uses.
    `::after` become boxes; list markers are generated.
 5. **Emit QML** (`eldur_convert::emit`): every box chooses a QML form (below).
 6. **Rewrite scripts** (`eldur_js::rewrite`) with the ids chosen in step 5.
-7. **Print** `Main.qml`, `page.js`, `eldur_runtime.js`, `assets/`.
+7. **Print** `Main.qml`, `page.js`, `eldur_runtime.js`, `assets/`. A page gets
+   only what it uses: the browser's rules for elements it has or its scripts
+   can make, the runtime's and the font module's top-level declarations its
+   QML and scripts reach (`eldur_js::shake_library`; `Options::whole_runtime`
+   writes them whole), and the `Eldur*.qml` components its QML or what is left
+   of the runtime makes.
 
 ## Mapping decisions
 
