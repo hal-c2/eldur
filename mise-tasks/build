@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+#MISE description="Build every crate, and the eldur binary into target/<profile>/eldur"
+#USAGE flag "--release" help="Optimised build (target/release)"
+set -euo pipefail
+args=(build --workspace --locked)
+[[ "${usage_release:-false}" == "true" ]] && args+=(--release)
+cargo "${args[@]}"
