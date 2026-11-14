@@ -7,7 +7,9 @@
 //! until nothing more is reached. A statement whose effect can be seen without
 //! being named (a polyfill, an IIFE, a call) is always kept, and so is
 //! everything it refers to. A statement that only fills in a declaration
-//! (`X.prototype.f = function…`, `Object.defineProperty(X, …)`) goes with `X`.
+//! (`X.prototype.f = function…`, `Object.defineProperty(X, …)`) goes with `X`,
+//! unless `X` may be another object under a new name (`var X = Promise;`): then
+//! filling it in changes that object, and the statement is always kept.
 //!
 //! References are resolved with oxc's semantic analysis, so a parameter or
 //! local that shares a top-level name does not keep it.
@@ -53,7 +55,14 @@ pub fn shake_library<'u>(library: &str, used: impl IntoIterator<Item = &'u str>)
     let scoping = semantic.scoping();
 
     let statements = &program.body;
-    let roles: Vec<Role> = statements.iter().map(|s| role(s, scoping)).collect();
+    let aliases = aliases(statements);
+    let roles: Vec<Role> = statements
+        .iter()
+        .map(|s| match role(s, scoping) {
+            Role::Extends(name) if aliases.contains(name.as_str()) => Role::Effect,
+            role => role,
+        })
+        .collect();
     let mut declared_by: HashMap<&str, Vec<usize>> = HashMap::new();
     let mut extended_by: HashMap<&str, Vec<usize>> = HashMap::new();
     for (index, role) in roles.iter().enumerate() {
@@ -145,6 +154,58 @@ fn split_directives(runtime: &str) -> (&str, &str) {
         }
     }
     runtime.split_at(body_start)
+}
+
+/// The top-level names given a value that may be an object made elsewhere
+/// (`var P = Promise;`, `P = a.b || c;`), rather than one made right there.
+fn aliases<'a>(statements: &'a [Statement<'a>]) -> BTreeSet<&'a str> {
+    let mut names = BTreeSet::new();
+    for statement in statements {
+        match statement {
+            Statement::VariableDeclaration(v) => {
+                for declarator in &v.declarations {
+                    if let (BindingPattern::BindingIdentifier(id), Some(init)) =
+                        (&declarator.id, &declarator.init)
+                        && !fresh(init)
+                    {
+                        names.insert(id.name.as_str());
+                    }
+                }
+            }
+            Statement::ExpressionStatement(e) => {
+                if let Expression::AssignmentExpression(a) = &e.expression
+                    && let AssignmentTarget::AssignmentTargetIdentifier(id) = &a.left
+                    && !fresh(&a.right)
+                {
+                    names.insert(id.name.as_str());
+                }
+            }
+            _ => {}
+        }
+    }
+    names
+}
+
+/// Evaluating it makes a new value, never one that already exists.
+fn fresh(expression: &Expression<'_>) -> bool {
+    match expression {
+        Expression::ParenthesizedExpression(p) => fresh(&p.expression),
+        Expression::BooleanLiteral(_)
+        | Expression::NullLiteral(_)
+        | Expression::NumericLiteral(_)
+        | Expression::BigIntLiteral(_)
+        | Expression::RegExpLiteral(_)
+        | Expression::StringLiteral(_)
+        | Expression::TemplateLiteral(_)
+        | Expression::FunctionExpression(_)
+        | Expression::ArrowFunctionExpression(_)
+        | Expression::ObjectExpression(_)
+        | Expression::ArrayExpression(_)
+        | Expression::NewExpression(_)
+        | Expression::UnaryExpression(_)
+        | Expression::BinaryExpression(_) => true,
+        _ => false,
+    }
 }
 
 fn role(statement: &Statement<'_>, scoping: &Scoping) -> Role {
@@ -381,6 +442,28 @@ function registerNow() { return 1; }\n"
         );
         assert!(out.contains("function lonely(helper)"), "{out}");
         assert!(!out.contains("function used()"), "{out}");
+    }
+
+    #[test]
+    fn filling_in_another_name_for_a_built_in_is_kept() {
+        let library = "var _P = Promise;\n\
+_P.prototype.finally = function(f) { return this.then(f); };\n\
+var _Q;\n\
+_Q = Array;\n\
+_Q.prototype.last = function() { return this[this.length - 1]; };\n\
+var _own = {};\n\
+_own.f = function() {};\n\
+function used() {}\n";
+        let out = shake_library(library, ["used"]);
+        assert_eq!(
+            out,
+            "var _P = Promise;\n\
+_P.prototype.finally = function(f) { return this.then(f); };\n\
+var _Q;\n\
+_Q = Array;\n\
+_Q.prototype.last = function() { return this[this.length - 1]; };\n\
+function used() {}\n"
+        );
     }
 
     #[test]
