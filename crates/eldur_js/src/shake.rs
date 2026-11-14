@@ -470,7 +470,7 @@ fn pure(expression: &Expression<'_>, lib: &Library<'_>) -> bool {
         | Expression::Identifier(_)
         | Expression::FunctionExpression(_)
         | Expression::ArrowFunctionExpression(_) => true,
-        Expression::TemplateLiteral(t) => t.expressions.iter().all(|e| pure(e, lib)),
+        Expression::TemplateLiteral(t) => t.expressions.iter().all(|e| quiet(e, lib)),
         Expression::ArrayExpression(a) => a.elements.iter().all(|e| match e {
             ArrayExpressionElement::SpreadElement(_) => false,
             ArrayExpressionElement::Elision(_) => true,
@@ -483,15 +483,30 @@ fn pure(expression: &Expression<'_>, lib: &Library<'_>) -> bool {
                         PropertyKey::StaticIdentifier(_) | PropertyKey::PrivateIdentifier(_) => {
                             true
                         }
-                        key => key.as_expression().is_some_and(|e| pure(e, lib)),
+                        key => key.as_expression().is_some_and(|e| quiet(e, lib)),
                     }
             }
             ObjectPropertyKind::SpreadProperty(_) => false,
         }),
         Expression::UnaryExpression(u) => {
-            u.operator != oxc_syntax::operator::UnaryOperator::Delete && pure(&u.argument, lib)
+            use oxc_syntax::operator::UnaryOperator as U;
+            match u.operator {
+                U::Delete => false,
+                U::Typeof | U::Void | U::LogicalNot => pure(&u.argument, lib),
+                U::UnaryPlus | U::UnaryNegation | U::BitwiseNot => quiet(&u.argument, lib),
+            }
         }
-        Expression::BinaryExpression(b) => pure(&b.left, lib) && pure(&b.right, lib),
+        Expression::BinaryExpression(b) => {
+            use oxc_syntax::operator::BinaryOperator as B;
+            match b.operator {
+                B::StrictEquality | B::StrictInequality => {
+                    pure(&b.left, lib) && pure(&b.right, lib)
+                }
+                // `in` and `instanceof` read the right side's traps and `Symbol.hasInstance`.
+                B::In | B::Instanceof => false,
+                _ => quiet(&b.left, lib) && quiet(&b.right, lib),
+            }
+        }
         Expression::LogicalExpression(l) => pure(&l.left, lib) && pure(&l.right, lib),
         Expression::ConditionalExpression(c) => {
             pure(&c.test, lib) && pure(&c.consequent, lib) && pure(&c.alternate, lib)
@@ -535,6 +550,30 @@ fn fresh_construction(n: &oxc_ast::ast::NewExpression<'_>, lib: &Library<'_>) ->
             id.name.as_str(),
             "Map" | "Set" | "WeakMap" | "WeakSet" | "Object" | "Array" | "RegExp"
         )
+}
+
+/// Whether `expression` is pure and turning it into a primitive runs no code:
+/// an object's `valueOf`, `toString` or `Symbol.toPrimitive` may.
+fn quiet(expression: &Expression<'_>, lib: &Library<'_>) -> bool {
+    primitive(expression) && pure(expression, lib)
+}
+
+/// Whether `expression` always gives a primitive. A name may hold an object.
+fn primitive(expression: &Expression<'_>) -> bool {
+    match expression {
+        Expression::BooleanLiteral(_)
+        | Expression::NullLiteral(_)
+        | Expression::NumericLiteral(_)
+        | Expression::BigIntLiteral(_)
+        | Expression::StringLiteral(_)
+        | Expression::TemplateLiteral(_)
+        | Expression::UnaryExpression(_)
+        | Expression::BinaryExpression(_) => true,
+        Expression::LogicalExpression(l) => primitive(&l.left) && primitive(&l.right),
+        Expression::ConditionalExpression(c) => primitive(&c.consequent) && primitive(&c.alternate),
+        Expression::ParenthesizedExpression(p) => primitive(&p.expression),
+        _ => false,
+    }
 }
 
 /// What the shaker reads a library with.
@@ -724,6 +763,31 @@ _own.f = function() {};\n";
             assert!(out.contains(kept), "{kept} went:\n{out}");
         }
         assert!(!out.contains("_own"), "{out}");
+    }
+
+    #[test]
+    fn turning_an_object_into_a_primitive_may_run_code() {
+        let object = "({ valueOf() { externalNotify(); return 0; }, toString() { externalNotify(); return \"\"; } })";
+        for (i, form) in [
+            format!("{object} + 1"),
+            format!("1 < {object}"),
+            format!("-{object}"),
+            format!("`${{{object}}}`"),
+            format!("{{ [{object}]: 1 }}"),
+            format!("\"a\" in {object}"),
+            "someName + 1".to_owned(),
+        ]
+        .iter()
+        .enumerate()
+        {
+            let out = shake_library(&format!("var unused{i} = {form};\n"), []);
+            assert!(out.contains(&format!("var unused{i} =")), "{form}: {out}");
+        }
+        let out = shake_library(
+            "var a = 1 + 2 * 3;\nvar b = `x${1 + 1}`;\nvar c = typeof someName === \"undefined\";\nvar d = !someName;\n",
+            [],
+        );
+        assert!(out.trim().is_empty(), "{out}");
     }
 
     #[test]
