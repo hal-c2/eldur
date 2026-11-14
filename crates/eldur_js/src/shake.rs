@@ -8,8 +8,9 @@
 //! being named (a polyfill, an IIFE, a call) is always kept, and so is
 //! everything it refers to. A statement that only fills in a declaration
 //! (`X.prototype.f = function…`, `Object.defineProperty(X, …)`) goes with `X`,
-//! unless `X` may be another object under a new name (`var X = Promise;`): then
-//! filling it in changes that object, and the statement is always kept.
+//! unless the object it changes may be one made elsewhere (`var X = Promise;`,
+//! `X.prototype = Array.prototype;`, `var X = { p: Promise };`): then filling
+//! it in changes that object, and the statement is always kept.
 //!
 //! References are resolved with oxc's semantic analysis, so a parameter or
 //! local that shares a top-level name does not keep it.
@@ -55,11 +56,15 @@ pub fn shake_library<'u>(library: &str, used: impl IntoIterator<Item = &'u str>)
     let scoping = semantic.scoping();
 
     let statements = &program.body;
-    let aliases = aliases(statements);
+    let foreign = foreign_paths(statements);
     let roles: Vec<Role> = statements
         .iter()
         .map(|s| match role(s, scoping) {
-            Role::Extends(name) if aliases.contains(name.as_str()) => Role::Effect,
+            Role::Extends(_)
+                if changed_object(s).is_some_and(|object| may_be_foreign(&object, &foreign)) =>
+            {
+                Role::Effect
+            }
             role => role,
         })
         .collect();
@@ -156,40 +161,44 @@ fn split_directives(runtime: &str) -> (&str, &str) {
     runtime.split_at(body_start)
 }
 
-/// The top-level names given a value that may be an object made elsewhere
-/// (`var P = Promise;`, `P = a.b || c;`), rather than one made right there.
-fn aliases<'a>(statements: &'a [Statement<'a>]) -> BTreeSet<&'a str> {
-    let mut names = BTreeSet::new();
+/// A step of a member path: a property name, or `None` for one that is
+/// computed and may be any.
+type Step = Option<String>;
+
+/// The member paths, from a top-level name, that a top-level statement stores
+/// an object made elsewhere at (`var P = Promise;` stores at `P`,
+/// `X.prototype = Array.prototype;` at `X.prototype`, `var o = { p: Promise };`
+/// at `o.p`). Filling in anything under such a path changes that object.
+fn foreign_paths(statements: &[Statement<'_>]) -> Vec<Vec<Step>> {
+    let mut found = Vec::new();
     for statement in statements {
         match statement {
             Statement::VariableDeclaration(v) => {
                 for declarator in &v.declarations {
                     if let (BindingPattern::BindingIdentifier(id), Some(init)) =
                         (&declarator.id, &declarator.init)
-                        && !fresh(init)
                     {
-                        names.insert(id.name.as_str());
+                        stores(vec![Some(id.name.to_string())], init, &mut found);
                     }
                 }
             }
             Statement::ExpressionStatement(e) => {
                 if let Expression::AssignmentExpression(a) = &e.expression
-                    && let AssignmentTarget::AssignmentTargetIdentifier(id) = &a.left
-                    && !fresh(&a.right)
+                    && let Some(at) = target_path(&a.left)
                 {
-                    names.insert(id.name.as_str());
+                    stores(at, &a.right, &mut found);
                 }
             }
             _ => {}
         }
     }
-    names
+    found
 }
 
-/// Evaluating it makes a new value, never one that already exists.
-fn fresh(expression: &Expression<'_>) -> bool {
-    match expression {
-        Expression::ParenthesizedExpression(p) => fresh(&p.expression),
+/// Adds the paths under `at` where `value` puts an object it does not make.
+fn stores(at: Vec<Step>, value: &Expression<'_>, found: &mut Vec<Vec<Step>>) {
+    match value {
+        Expression::ParenthesizedExpression(p) => stores(at, &p.expression, found),
         Expression::BooleanLiteral(_)
         | Expression::NullLiteral(_)
         | Expression::NumericLiteral(_)
@@ -199,13 +208,110 @@ fn fresh(expression: &Expression<'_>) -> bool {
         | Expression::TemplateLiteral(_)
         | Expression::FunctionExpression(_)
         | Expression::ArrowFunctionExpression(_)
-        | Expression::ObjectExpression(_)
-        | Expression::ArrayExpression(_)
         | Expression::NewExpression(_)
         | Expression::UnaryExpression(_)
-        | Expression::BinaryExpression(_) => true,
-        _ => false,
+        | Expression::BinaryExpression(_) => {}
+        Expression::ObjectExpression(o) => {
+            for property in &o.properties {
+                match property {
+                    ObjectPropertyKind::ObjectProperty(p) => {
+                        let mut under = at.clone();
+                        under.push(p.key.static_name().map(|n| n.to_string()));
+                        stores(under, &p.value, found);
+                    }
+                    ObjectPropertyKind::SpreadProperty(_) => {
+                        let mut under = at.clone();
+                        under.push(None);
+                        found.push(under);
+                    }
+                }
+            }
+        }
+        Expression::ArrayExpression(a) => {
+            for element in &a.elements {
+                if let Some(e) = element.as_expression() {
+                    let mut under = at.clone();
+                    under.push(None);
+                    stores(under, e, found);
+                }
+            }
+        }
+        _ => found.push(at),
     }
+}
+
+fn target_path(target: &AssignmentTarget<'_>) -> Option<Vec<Step>> {
+    match target {
+        AssignmentTarget::AssignmentTargetIdentifier(id) => Some(vec![Some(id.name.to_string())]),
+        target => match target.as_simple_assignment_target()? {
+            SimpleAssignmentTarget::StaticMemberExpression(m) => {
+                let mut at = member_path(&m.object)?;
+                at.push(Some(m.property.name.to_string()));
+                Some(at)
+            }
+            SimpleAssignmentTarget::ComputedMemberExpression(m) => {
+                let mut at = member_path(&m.object)?;
+                at.push(computed_step(&m.expression));
+                Some(at)
+            }
+            _ => None,
+        },
+    }
+}
+
+/// `X.a["b"]` as `[X, a, b]`.
+fn member_path(expression: &Expression<'_>) -> Option<Vec<Step>> {
+    match expression {
+        Expression::Identifier(id) => Some(vec![Some(id.name.to_string())]),
+        Expression::ParenthesizedExpression(p) => member_path(&p.expression),
+        Expression::StaticMemberExpression(m) => {
+            let mut at = member_path(&m.object)?;
+            at.push(Some(m.property.name.to_string()));
+            Some(at)
+        }
+        Expression::ComputedMemberExpression(m) => {
+            let mut at = member_path(&m.object)?;
+            at.push(computed_step(&m.expression));
+            Some(at)
+        }
+        _ => None,
+    }
+}
+
+fn computed_step(key: &Expression<'_>) -> Step {
+    match key {
+        Expression::StringLiteral(s) => Some(s.value.to_string()),
+        _ => None,
+    }
+}
+
+/// The path whose object a filling-in statement changes: `X.prototype` for
+/// `X.prototype.f = …` and for `Object.defineProperty(X.prototype, …)`, and
+/// none for `X = …`, which changes no object.
+fn changed_object(statement: &Statement<'_>) -> Option<Vec<Step>> {
+    let Statement::ExpressionStatement(e) = statement else {
+        return None;
+    };
+    match &e.expression {
+        Expression::AssignmentExpression(a) => {
+            let mut at = target_path(&a.left)?;
+            at.pop();
+            (!at.is_empty()).then_some(at)
+        }
+        Expression::CallExpression(call) => member_path(call.arguments.first()?.as_expression()?),
+        _ => None,
+    }
+}
+
+/// Whether `object` may be, or be inside, an object stored at a foreign path.
+fn may_be_foreign(object: &[Step], foreign: &[Vec<Step>]) -> bool {
+    foreign.iter().any(|path| {
+        path.len() <= object.len()
+            && path
+                .iter()
+                .zip(object)
+                .all(|(a, b)| a.is_none() || b.is_none() || a == b)
+    })
 }
 
 fn role(statement: &Statement<'_>, scoping: &Scoping) -> Role {
@@ -451,8 +557,13 @@ _P.prototype.finally = function(f) { return this.then(f); };\n\
 var _Q;\n\
 _Q = Array;\n\
 _Q.prototype.last = function() { return this[this.length - 1]; };\n\
-var _own = {};\n\
-_own.f = function() {};\n\
+var _o = { p: Promise };\n\
+_o.p.prototype.fin = function() {};\n\
+function _X() {}\n\
+_X.prototype = Array.prototype;\n\
+_X.prototype.first = function() { return this[0]; };\n\
+var _own = { a: { b: 1 } };\n\
+_own.a.f = function() {};\n\
 function used() {}\n";
         let out = shake_library(library, ["used"]);
         assert_eq!(
@@ -462,6 +573,11 @@ _P.prototype.finally = function(f) { return this.then(f); };\n\
 var _Q;\n\
 _Q = Array;\n\
 _Q.prototype.last = function() { return this[this.length - 1]; };\n\
+var _o = { p: Promise };\n\
+_o.p.prototype.fin = function() {};\n\
+function _X() {}\n\
+_X.prototype = Array.prototype;\n\
+_X.prototype.first = function() { return this[0]; };\n\
 function used() {}\n"
         );
     }
