@@ -148,7 +148,7 @@ ApplicationWindow {
                                     renderType: Text.NativeRendering
                                 }
                                 objectName: "open"
-                                width: Math.min(implicitWidth, Math.max(blockFlow.width, Math.ceil(Math.max(...open.text.split(/\s+/).map(w => openWords.advanceWidth(w))) * 1) + leftPadding + rightPadding))
+                                width: Math.min(implicitWidth, Math.max(blockFlow.width, Math.ceil((openWords.font, Math.max(...open.text.split(/\s+/).map(w => openWords.advanceWidth(w)))) * 1) + leftPadding + rightPadding))
 
                                 Keys.onPressed: (event) => {
                                     event.accepted = !Eldur.fire(open, "keydown", event);

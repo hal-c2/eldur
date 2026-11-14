@@ -1163,9 +1163,11 @@ impl Emitter<'_, '_> {
         measure.set("font", Value::expr(format!("{id}.font")));
         obj.push_child(measure);
         let scale = text_scale(style);
-        format!(
-            "Math.max({limit}, Math.ceil(Math.max(...{id}.text.split(/\\s+/).map(w => {words}.advanceWidth(w))) * {scale}) + leftPadding + rightPadding)"
-        )
+        let widest = super::measured(
+            &words,
+            &format!("Math.max(...{id}.text.split(/\\s+/).map(w => {words}.advanceWidth(w)))"),
+        );
+        format!("Math.max({limit}, Math.ceil({widest} * {scale}) + leftPadding + rightPadding)")
     }
 
     /// `obj` in its margin box, moved down by `shift`: a Flow places

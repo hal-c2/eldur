@@ -326,7 +326,7 @@ ApplicationWindow {
 
                         Rectangle {
                             readonly property var tableSlot: [0, 0, 2, 1]
-                            readonly property real minContentWidth: tableFont.advanceWidth("Region") + 17
+                            readonly property real minContentWidth: (tableFont.font, tableFont.advanceWidth("Region")) + 17
 
                             color: "#00000000"
                             implicitWidth: thText.implicitWidth + 17
@@ -383,7 +383,7 @@ ApplicationWindow {
 
                         Rectangle {
                             readonly property var tableSlot: [0, 1, 1, 2]
-                            readonly property real minContentWidth: tableFont.advanceWidth("Sales") + 18
+                            readonly property real minContentWidth: (tableFont.font, tableFont.advanceWidth("Sales")) + 18
 
                             color: "#00000000"
                             implicitWidth: thText2.implicitWidth + 18
@@ -448,7 +448,7 @@ ApplicationWindow {
 
                         Rectangle {
                             readonly property var tableSlot: [1, 1, 1, 1]
-                            readonly property real minContentWidth: tableFont.advanceWidth("Units") + 17
+                            readonly property real minContentWidth: (tableFont.font, tableFont.advanceWidth("Units")) + 17
 
                             color: "#00000000"
                             implicitWidth: thText3.implicitWidth + 17
@@ -495,7 +495,7 @@ ApplicationWindow {
 
                         Rectangle {
                             readonly property var tableSlot: [1, 2, 1, 1]
-                            readonly property real minContentWidth: tableFont.advanceWidth("Value") + 18
+                            readonly property real minContentWidth: (tableFont.font, tableFont.advanceWidth("Value")) + 18
 
                             color: "#00000000"
                             implicitWidth: thText4.implicitWidth + 18
@@ -565,7 +565,7 @@ ApplicationWindow {
 
                         Rectangle {
                             readonly property var tableSlot: [2, 0, 1, 1]
-                            readonly property real minContentWidth: tableFont2.advanceWidth("North") + 18
+                            readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("North")) + 18
 
                             color: "#00000000"
                             implicitWidth: tdText.implicitWidth + 18
@@ -611,7 +611,7 @@ ApplicationWindow {
 
                         Rectangle {
                             readonly property var tableSlot: [2, 1, 1, 1]
-                            readonly property real minContentWidth: tableFont2.advanceWidth("12") + 19
+                            readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("12")) + 19
 
                             color: "#00000000"
                             implicitWidth: thickText.implicitWidth + 19
@@ -681,7 +681,7 @@ ApplicationWindow {
 
                         Rectangle {
                             readonly property var tableSlot: [2, 2, 1, 1]
-                            readonly property real minContentWidth: tableFont2.advanceWidth("480") + 19
+                            readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("480")) + 19
 
                             color: "#00000000"
                             implicitWidth: tdText2.implicitWidth + 19
@@ -727,7 +727,7 @@ ApplicationWindow {
 
                         Rectangle {
                             readonly property var tableSlot: [3, 0, 1, 2]
-                            readonly property real minContentWidth: tableFont2.advanceWidth("Subtotal") + 17
+                            readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("Subtotal")) + 17
 
                             color: "#00000000"
                             implicitWidth: tdText3.implicitWidth + 17
@@ -774,7 +774,7 @@ ApplicationWindow {
 
                         Rectangle {
                             readonly property var tableSlot: [3, 2, 1, 1]
-                            readonly property real minContentWidth: tableFont2.advanceWidth("480") + 18
+                            readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("480")) + 18
 
                             color: "#00000000"
                             implicitWidth: tdText4.implicitWidth + 18
@@ -871,7 +871,7 @@ ApplicationWindow {
 
                         Rectangle {
                             readonly property var tableSlot: [0, 0, 1, 1]
-                            readonly property real minContentWidth: tableFont3.advanceWidth("one") + 16
+                            readonly property real minContentWidth: (tableFont3.font, tableFont3.advanceWidth("one")) + 16
 
                             color: "#e6ecf7"
                             implicitWidth: tdText5.implicitWidth + 16
@@ -908,7 +908,7 @@ ApplicationWindow {
 
                         Rectangle {
                             readonly property var tableSlot: [0, 1, 1, 1]
-                            readonly property real minContentWidth: tableFont3.advanceWidth("two") + 16
+                            readonly property real minContentWidth: (tableFont3.font, tableFont3.advanceWidth("two")) + 16
 
                             color: "#e6ecf7"
                             implicitWidth: tdText6.implicitWidth + 16
@@ -945,7 +945,7 @@ ApplicationWindow {
 
                         Rectangle {
                             readonly property var tableSlot: [1, 0, 1, 1]
-                            readonly property real minContentWidth: tableFont3.advanceWidth("three") + 16
+                            readonly property real minContentWidth: (tableFont3.font, tableFont3.advanceWidth("three")) + 16
 
                             color: "#e6ecf7"
                             implicitWidth: tdText7.implicitWidth + 16
@@ -982,7 +982,7 @@ ApplicationWindow {
 
                         Rectangle {
                             readonly property var tableSlot: [1, 1, 1, 1]
-                            readonly property real minContentWidth: tableFont3.advanceWidth("four") + 16
+                            readonly property real minContentWidth: (tableFont3.font, tableFont3.advanceWidth("four")) + 16
 
                             color: "#e6ecf7"
                             implicitWidth: tdText8.implicitWidth + 16
@@ -1079,7 +1079,7 @@ ApplicationWindow {
 
                             Rectangle {
                                 readonly property var tableSlot: [0, 0, 1, 1]
-                                readonly property real minContentWidth: tableFont4.advanceWidth("head") + 17
+                                readonly property real minContentWidth: (tableFont4.font, tableFont4.advanceWidth("head")) + 17
 
                                 color: "#00000000"
                                 implicitWidth: tdText9.implicitWidth + 17
@@ -1133,7 +1133,7 @@ ApplicationWindow {
 
                             Rectangle {
                                 readonly property var tableSlot: [0, 1, 1, 1]
-                                readonly property real minContentWidth: tableFont4.advanceWidth("head") + 17
+                                readonly property real minContentWidth: (tableFont4.font, tableFont4.advanceWidth("head")) + 17
 
                                 color: "#f3e9d2"
                                 implicitWidth: tdText10.implicitWidth + 17
@@ -1187,7 +1187,7 @@ ApplicationWindow {
 
                             Rectangle {
                                 readonly property var tableSlot: [0, 2, 1, 1]
-                                readonly property real minContentWidth: tableFont4.advanceWidth("head") + 18
+                                readonly property real minContentWidth: (tableFont4.font, tableFont4.advanceWidth("head")) + 18
 
                                 color: "#00000000"
                                 implicitWidth: tdText11.implicitWidth + 18
@@ -1249,7 +1249,7 @@ ApplicationWindow {
 
                             Rectangle {
                                 readonly property var tableSlot: [1, 0, 1, 1]
-                                readonly property real minContentWidth: tableFont4.advanceWidth("a") + 17
+                                readonly property real minContentWidth: (tableFont4.font, tableFont4.advanceWidth("a")) + 17
 
                                 color: "#00000000"
                                 implicitWidth: tdText12.implicitWidth + 17
@@ -1303,7 +1303,7 @@ ApplicationWindow {
 
                             Rectangle {
                                 readonly property var tableSlot: [1, 1, 1, 1]
-                                readonly property real minContentWidth: tableFont4.advanceWidth("b") + 17
+                                readonly property real minContentWidth: (tableFont4.font, tableFont4.advanceWidth("b")) + 17
 
                                 color: "#f3e9d2"
                                 implicitWidth: tdText13.implicitWidth + 17
@@ -1357,7 +1357,7 @@ ApplicationWindow {
 
                             Rectangle {
                                 readonly property var tableSlot: [1, 2, 1, 1]
-                                readonly property real minContentWidth: tableFont4.advanceWidth("c") + 18
+                                readonly property real minContentWidth: (tableFont4.font, tableFont4.advanceWidth("c")) + 18
 
                                 color: "#00000000"
                                 implicitWidth: tdText14.implicitWidth + 18
@@ -1419,7 +1419,7 @@ ApplicationWindow {
 
                             Rectangle {
                                 readonly property var tableSlot: [2, 0, 1, 1]
-                                readonly property real minContentWidth: tableFont4.advanceWidth("foot") + 17
+                                readonly property real minContentWidth: (tableFont4.font, tableFont4.advanceWidth("foot")) + 17
 
                                 color: "#00000000"
                                 implicitWidth: tdText15.implicitWidth + 17
@@ -1480,7 +1480,7 @@ ApplicationWindow {
 
                             Rectangle {
                                 readonly property var tableSlot: [2, 1, 1, 1]
-                                readonly property real minContentWidth: tableFont4.advanceWidth("foot") + 17
+                                readonly property real minContentWidth: (tableFont4.font, tableFont4.advanceWidth("foot")) + 17
 
                                 color: "#f3e9d2"
                                 implicitWidth: tdText16.implicitWidth + 17
@@ -1541,7 +1541,7 @@ ApplicationWindow {
 
                             Rectangle {
                                 readonly property var tableSlot: [2, 2, 1, 1]
-                                readonly property real minContentWidth: tableFont4.advanceWidth("foot") + 18
+                                readonly property real minContentWidth: (tableFont4.font, tableFont4.advanceWidth("foot")) + 18
 
                                 color: "#00000000"
                                 implicitWidth: tdText17.implicitWidth + 18
@@ -1663,7 +1663,7 @@ ApplicationWindow {
 
                         Rectangle {
                             readonly property var tableSlot: [0, 0, 1, 1]
-                            readonly property real minContentWidth: tableFont5.advanceWidth("top") + 17
+                            readonly property real minContentWidth: (tableFont5.font, tableFont5.advanceWidth("top")) + 17
 
                             color: "#00000000"
                             implicitWidth: topText.implicitWidth + 17
@@ -1723,7 +1723,7 @@ ApplicationWindow {
 
                         Rectangle {
                             readonly property var tableSlot: [0, 1, 1, 1]
-                            readonly property real minContentWidth: tableFont5.advanceWidth("middle") + 17
+                            readonly property real minContentWidth: (tableFont5.font, tableFont5.advanceWidth("middle")) + 17
 
                             color: "#00000000"
                             implicitWidth: middleText.implicitWidth + 17
@@ -1784,7 +1784,7 @@ ApplicationWindow {
 
                         Rectangle {
                             readonly property var tableSlot: [0, 2, 1, 1]
-                            readonly property real minContentWidth: tableFont5.advanceWidth("bottom") + 18
+                            readonly property real minContentWidth: (tableFont5.font, tableFont5.advanceWidth("bottom")) + 18
 
                             color: "#00000000"
                             implicitWidth: lowText.implicitWidth + 18

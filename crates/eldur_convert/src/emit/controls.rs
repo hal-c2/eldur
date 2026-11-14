@@ -1269,7 +1269,13 @@ impl Emitter<'_, '_> {
         obj.set(
             "implicitWidth",
             Value::expr(format!(
-                "Math.ceil(model.reduce((w, o) => Math.max(w, {metrics}.advanceWidth(o.text)), 0) * {}) + leftPadding + rightPadding - 2",
+                "Math.ceil({} * {}) + leftPadding + rightPadding - 2",
+                super::measured(
+                    &metrics,
+                    &format!(
+                        "model.reduce((w, o) => Math.max(w, {metrics}.advanceWidth(o.text)), 0)"
+                    )
+                ),
                 text_scale(style)
             )),
         );

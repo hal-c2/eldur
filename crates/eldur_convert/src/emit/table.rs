@@ -1736,6 +1736,7 @@ impl<'a> Emitter<'a, '_> {
                 } else {
                     format!("Math.max({})", widths.join(", "))
                 };
+                let widest = super::measured(&metrics, &widest);
                 let insets = round(insets);
                 if insets == 0.0 {
                     widest

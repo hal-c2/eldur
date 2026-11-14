@@ -478,7 +478,7 @@ ApplicationWindow {
                             }
                             implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                             objectName: "after"
-                            width: Math.min(implicitWidth, Math.max(blockFlow2.width, Math.ceil(Math.max(...after.text.split(/\s+/).map(w => afterWords.advanceWidth(w))) * 1.0256385) + leftPadding + rightPadding))
+                            width: Math.min(implicitWidth, Math.max(blockFlow2.width, Math.ceil((afterWords.font, Math.max(...after.text.split(/\s+/).map(w => afterWords.advanceWidth(w)))) * 1.0256385) + leftPadding + rightPadding))
 
                             Keys.onPressed: (event) => {
                                 event.accepted = !Eldur.fire(after, "keydown", event);
