@@ -1,4 +1,19 @@
 #!/usr/bin/env bash
 #MISE description="Convert an HTML5 + CSS + JS page to QML"
+#USAGE arg "<input>" help="Entry HTML document"
+#USAGE flag "-o --output <dir>" help="Output directory (default <input stem>_qml/)"
+#USAGE flag "--viewport <WxH>" help="Conversion viewport in logical pixels (default 1280x800)"
+#USAGE flag "--site-root <dir>" help="Directory root-relative URLs (/css/site.css) resolve under"
+#USAGE flag "--root <kind>" help="Root QML element: window (runnable ApplicationWindow, the default) or item (embeddable Item)" {
+#USAGE   choices "window" "item"
+#USAGE }
+#USAGE flag "--no-comments" help="Omit HTML source comments in the generated QML"
+#USAGE flag "--no-states" help="Ignore dynamic pseudo-class states (:hover, :focus, ...)"
+#USAGE flag "--no-animations" help="Ignore CSS transitions and keyframe animations"
+#USAGE flag "--no-cache" help="Bypass the build cache"
+#USAGE flag "--cache-dir <dir>" help="Build cache directory (default <out>/.eldur-cache)"
+#USAGE flag "-q --quiet" help="Suppress cached / converted timing lines"
 set -euo pipefail
+# The spec above checks and documents the arguments; eldur's own parser reads
+# them, so the two stay one interface.
 cargo run -q -p eldur_cli -- convert "$@"
