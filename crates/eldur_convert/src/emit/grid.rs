@@ -1224,8 +1224,11 @@ impl Emitter<'_, '_> {
             if *span > 1 {
                 keeper.set("Layout.columnSpan", Value::Number(*span as f64));
             }
-            keeper.set("Layout.preferredWidth", Value::Number(0.0));
-            keeper.set("Layout.fillWidth", true);
+            // A share leaves its columns' sizes out, so the keeper carries
+            // them, a `minmax()` minimum among them.
+            for (k, v) in cols.props(*col, *span, false) {
+                keeper.set(&k, v);
+            }
             if let Some(split) = &gap_split {
                 // The moved gap is no part of the area.
                 let (left, right) = split.margins(*col, col + span);
@@ -1250,7 +1253,7 @@ impl Emitter<'_, '_> {
             && !self.row_carriers(
                 &mut grid,
                 &placement,
-                &rows,
+                (&rows, gap_margins),
                 definite,
                 column_gap,
                 gap_split.is_some(),
@@ -1316,7 +1319,7 @@ impl Emitter<'_, '_> {
         &mut self,
         grid: &mut Object,
         placement: &Placement,
-        rows: &AxisPlan,
+        (rows, moved_gap): (&AxisPlan, bool),
         definite: bool,
         column_gap: f32,
         split: bool,
@@ -1359,7 +1362,11 @@ impl Emitter<'_, '_> {
                 Some(Value::Number(n)) => *n,
                 _ => 0.0,
             };
-            let margins = margin("Layout.topMargin") + margin("Layout.bottomMargin");
+            let mut margins = margin("Layout.topMargin") + margin("Layout.bottomMargin");
+            // A row gap moved into the top margins is the carrier's, below.
+            if moved_gap && p.row > 0 {
+                margins -= f64::from(rows.gap);
+            }
             let own = match kid.get("Layout.preferredHeight") {
                 Some(Value::Number(n)) => Some(*n),
                 _ => None,
@@ -1386,6 +1393,13 @@ impl Emitter<'_, '_> {
         if placement.cols == 1 {
             grid.set("columnSpacing", Value::Number(0.0));
         }
+        // With no row spacing, a row's gap is its carrier's top margin, as
+        // it is its items': it is then no part of the row's base or share.
+        let gap_above = |carrier: &mut Object, r: usize| {
+            if moved_gap && r > 0 {
+                add_margin(carrier, "Layout.topMargin", rows.gap);
+            }
+        };
         let mut bases = Vec::new();
         for (r, track) in rows.tracks.iter().enumerate() {
             let fr = match track {
@@ -1403,6 +1417,7 @@ impl Emitter<'_, '_> {
                         fmt_number(f64::from(fr))
                     )),
                 );
+                gap_above(&mut carrier, r);
                 grid.push_child(carrier);
                 continue;
             }
@@ -1436,6 +1451,7 @@ impl Emitter<'_, '_> {
                 carrier.set("Layout.fillHeight", true);
                 carrier.set("Layout.preferredHeight", Value::expr("eldurBase"));
             }
+            gap_above(&mut carrier, r);
             bases.push(format!("{}.eldurBase", carrier.id.clone().expect("set")));
             grid.push_child(carrier);
         }

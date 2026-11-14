@@ -318,3 +318,72 @@ document.getElementById('h').classList.toggle('half');
         check("h2", 460, 0, 440)"#;
     run(page, &places("ClassShare", checks), "grid_class_share");
 }
+
+/// A share takes no part in its track's size, so its keeper carries the
+/// track's `minmax()` minimum: the area keeps its 200 px at 300 px, the
+/// item is half of it, and the track is as wide as a plain item's. (Qt
+/// grows tracks from their preferred widths, so neither grid splits the
+/// rest as Chromium does, 200 and 100 px: that is #31.)
+#[test]
+fn a_share_keeps_its_track_minimum() {
+    let page = r#"<!DOCTYPE html><html><body style="margin:0">
+<div style="display:grid;width:300px;grid-template-columns:minmax(200px,1fr) 1fr">
+<div id="h" style="width:50%;height:20px"></div><div id="k" style="height:20px"></div>
+</div>
+<div style="display:grid;width:300px;grid-template-columns:minmax(200px,1fr) 1fr">
+<div id="p" style="height:20px"></div><div id="q" style="height:20px"></div>
+</div>
+<script>
+var named = ['h', 'k', 'p', 'q'].map(function (id) { return document.getElementById(id); });
+</script></body></html>"#;
+    let checks = r#"        const h = findChild(page, "h")
+        const area = Array.from(h.parent.children).find(c => c.eldurKeeper === true)
+        verify(area, "a keeper for h")
+        verify(area.width >= 200, "h's area " + area.width + " is under its track's 200 px minimum")
+        verify(Math.abs(h.width - area.width / 2) <= 1, "h " + h.width + " is not half its area " + area.width)
+        const plain = findChild(page, "p")
+        verify(Math.abs(area.width - plain.width) <= 1, "h's area " + area.width + ", a plain item's track " + plain.width)"#;
+    run(page, &places("ShareMinimum", checks), "grid_share_minimum");
+}
+
+/// The row gap a keeper moves into the items' top margins is no part of
+/// an `fr` row's share: `1fr 3fr` rows share 200 px less one 10 px gap,
+/// 47.5 and 142.5 px (CSS Grid 2 §12.7).
+#[test]
+fn a_share_keeps_the_fr_rows_shares() {
+    let page = r#"<!DOCTYPE html><html><body style="margin:0">
+<div style="display:grid;height:200px;grid-template-columns:1fr;grid-template-rows:1fr 3fr;row-gap:10px">
+<div id="h" style="width:50%;height:40px"></div><div id="k" style="height:40px"></div>
+</div>
+<div id="after" style="height:10px"></div>
+<script>
+var named = ['h', 'k', 'after'].map(function (id) { return document.getElementById(id); });
+</script></body></html>"#;
+    let checks = r#"        check("h", 0, 0, 450)
+        check("k", 0, 57.5, 900)
+        check("after", 0, 200, 900)"#;
+    run(page, &places("ShareFrRows", checks), "grid_share_fr_rows");
+}
+
+/// That gap is in the rows' heights once, not taken again from the free
+/// height: two `auto` rows of 40 and 100 px share the 50 px that 200 px
+/// leaves after them and the gap, 25 px each (CSS Grid 2 §12.8).
+#[test]
+fn a_share_keeps_the_auto_rows_free_height() {
+    let page = r#"<!DOCTYPE html><html><body style="margin:0">
+<div style="display:grid;height:200px;grid-template-columns:1fr;row-gap:10px">
+<div id="h" style="width:50%;height:40px"></div><div id="k" style="height:100px"></div>
+</div>
+<div id="after" style="height:10px"></div>
+<script>
+var named = ['h', 'k', 'after'].map(function (id) { return document.getElementById(id); });
+</script></body></html>"#;
+    let checks = r#"        check("h", 0, 0, 450)
+        check("k", 0, 75, 900)
+        check("after", 0, 200, 900)"#;
+    run(
+        page,
+        &places("ShareAutoRows", checks),
+        "grid_share_auto_rows",
+    );
+}
