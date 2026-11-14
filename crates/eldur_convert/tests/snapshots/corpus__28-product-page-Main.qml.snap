@@ -882,7 +882,7 @@ ApplicationWindow {
                                                     font.pixelSize: 12
                                                     renderType: Text.NativeRendering
                                                 }
-                                                implicitWidth: Math.ceil(model.reduce((w, o) => Math.max(w, colourMetrics.advanceWidth(o.text)), 0) * 1) + leftPadding + rightPadding - 2
+                                                implicitWidth: Math.ceil((colourMetrics.font, model.reduce((w, o) => Math.max(w, colourMetrics.advanceWidth(o.text)), 0)) * 1) + leftPadding + rightPadding - 2
                                                 Accessible.name: "Colour"
                                                 width: blockFlow2.width * 1 + 0
 

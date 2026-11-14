@@ -235,7 +235,7 @@ ApplicationWindow {
                                                                     wrapMode: Text.WordWrap
                                                                     renderType: Text.NativeRendering
                                                                 }
-                                                                width: Math.min(implicitWidth, Math.max(blockFlow2.width, Math.ceil(Math.max(...buttonControl.text.split(/\s+/).map(w => buttonControlWords.advanceWidth(w))) * 1) + leftPadding + rightPadding))
+                                                                width: Math.min(implicitWidth, Math.max(blockFlow2.width, Math.ceil((buttonControlWords.font, Math.max(...buttonControl.text.split(/\s+/).map(w => buttonControlWords.advanceWidth(w)))) * 1) + leftPadding + rightPadding))
 
                                                                 FontMetrics {
                                                                     id: buttonControlWords

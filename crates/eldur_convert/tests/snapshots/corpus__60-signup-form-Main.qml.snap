@@ -605,7 +605,7 @@ ApplicationWindow {
                                     }
                                     enabled: false
                                     objectName: "send"
-                                    width: Math.min(implicitWidth, Math.max(blockFlow4.width, Math.ceil(Math.max(...send.text.split(/\s+/).map(w => sendWords.advanceWidth(w))) * 1) + leftPadding + rightPadding))
+                                    width: Math.min(implicitWidth, Math.max(blockFlow4.width, Math.ceil((sendWords.font, Math.max(...send.text.split(/\s+/).map(w => sendWords.advanceWidth(w)))) * 1) + leftPadding + rightPadding))
 
                                     onClicked: {
                                         Eldur.fire(form, "submit", null);
@@ -657,7 +657,7 @@ ApplicationWindow {
                                         renderType: Text.NativeRendering
                                     }
                                     objectName: "clear"
-                                    width: Math.min(implicitWidth, Math.max(blockFlow4.width, Math.ceil(Math.max(...clear.text.split(/\s+/).map(w => clearWords.advanceWidth(w))) * 1) + leftPadding + rightPadding))
+                                    width: Math.min(implicitWidth, Math.max(blockFlow4.width, Math.ceil((clearWords.font, Math.max(...clear.text.split(/\s+/).map(w => clearWords.advanceWidth(w)))) * 1) + leftPadding + rightPadding))
 
                                     onClicked: {
                                         user.text = "";

@@ -378,7 +378,7 @@ ApplicationWindow {
                                     Rectangle {
                                         id: sTh
                                         readonly property var tableSlot: [0, 0, 1, 1]
-                                        readonly property real minContentWidth: tableFont.advanceWidth("Name") + 2
+                                        readonly property real minContentWidth: (tableFont.font, tableFont.advanceWidth("Name")) + 2
 
                                         color: "#ccddee"
                                         implicitWidth: sThText.implicitWidth + 2
@@ -423,7 +423,7 @@ ApplicationWindow {
                                     Rectangle {
                                         id: thSticky
                                         readonly property var tableSlot: [0, 1, 1, 1]
-                                        readonly property real minContentWidth: tableFont.advanceWidth("Value") + 2
+                                        readonly property real minContentWidth: (tableFont.font, tableFont.advanceWidth("Value")) + 2
 
                                         color: "#ccddee"
                                         implicitWidth: thText.implicitWidth + 2
@@ -473,7 +473,7 @@ ApplicationWindow {
 
                                     Item {
                                         readonly property var tableSlot: [1, 0, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("a") + 8
+                                        readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("a")) + 8
 
                                         implicitWidth: tdText.implicitWidth + 8
                                         implicitHeight: tdText.implicitHeight + 8
@@ -509,7 +509,7 @@ ApplicationWindow {
 
                                     Item {
                                         readonly property var tableSlot: [1, 1, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("1") + 8
+                                        readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("1")) + 8
 
                                         implicitWidth: tdText2.implicitWidth + 8
                                         implicitHeight: tdText2.implicitHeight + 8
@@ -545,7 +545,7 @@ ApplicationWindow {
 
                                     Item {
                                         readonly property var tableSlot: [2, 0, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("b") + 8
+                                        readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("b")) + 8
 
                                         implicitWidth: tdText3.implicitWidth + 8
                                         implicitHeight: tdText3.implicitHeight + 8
@@ -581,7 +581,7 @@ ApplicationWindow {
 
                                     Item {
                                         readonly property var tableSlot: [2, 1, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("2") + 8
+                                        readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("2")) + 8
 
                                         implicitWidth: tdText4.implicitWidth + 8
                                         implicitHeight: tdText4.implicitHeight + 8
@@ -617,7 +617,7 @@ ApplicationWindow {
 
                                     Item {
                                         readonly property var tableSlot: [3, 0, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("c") + 8
+                                        readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("c")) + 8
 
                                         implicitWidth: tdText5.implicitWidth + 8
                                         implicitHeight: tdText5.implicitHeight + 8
@@ -653,7 +653,7 @@ ApplicationWindow {
 
                                     Item {
                                         readonly property var tableSlot: [3, 1, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("3") + 8
+                                        readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("3")) + 8
 
                                         implicitWidth: tdText6.implicitWidth + 8
                                         implicitHeight: tdText6.implicitHeight + 8
@@ -689,7 +689,7 @@ ApplicationWindow {
 
                                     Item {
                                         readonly property var tableSlot: [4, 0, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("d") + 8
+                                        readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("d")) + 8
 
                                         implicitWidth: tdText7.implicitWidth + 8
                                         implicitHeight: tdText7.implicitHeight + 8
@@ -725,7 +725,7 @@ ApplicationWindow {
 
                                     Item {
                                         readonly property var tableSlot: [4, 1, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("4") + 8
+                                        readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("4")) + 8
 
                                         implicitWidth: tdText8.implicitWidth + 8
                                         implicitHeight: tdText8.implicitHeight + 8
@@ -761,7 +761,7 @@ ApplicationWindow {
 
                                     Item {
                                         readonly property var tableSlot: [5, 0, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("e") + 8
+                                        readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("e")) + 8
 
                                         implicitWidth: tdText9.implicitWidth + 8
                                         implicitHeight: tdText9.implicitHeight + 8
@@ -797,7 +797,7 @@ ApplicationWindow {
 
                                     Item {
                                         readonly property var tableSlot: [5, 1, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("5") + 8
+                                        readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("5")) + 8
 
                                         implicitWidth: tdText10.implicitWidth + 8
                                         implicitHeight: tdText10.implicitHeight + 8
@@ -833,7 +833,7 @@ ApplicationWindow {
 
                                     Item {
                                         readonly property var tableSlot: [6, 0, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("f") + 8
+                                        readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("f")) + 8
 
                                         implicitWidth: tdText11.implicitWidth + 8
                                         implicitHeight: tdText11.implicitHeight + 8
@@ -869,7 +869,7 @@ ApplicationWindow {
 
                                     Item {
                                         readonly property var tableSlot: [6, 1, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("6") + 8
+                                        readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("6")) + 8
 
                                         implicitWidth: tdText12.implicitWidth + 8
                                         implicitHeight: tdText12.implicitHeight + 8
@@ -905,7 +905,7 @@ ApplicationWindow {
 
                                     Item {
                                         readonly property var tableSlot: [7, 0, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("g") + 8
+                                        readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("g")) + 8
 
                                         implicitWidth: tdText13.implicitWidth + 8
                                         implicitHeight: tdText13.implicitHeight + 8
@@ -941,7 +941,7 @@ ApplicationWindow {
 
                                     Item {
                                         readonly property var tableSlot: [7, 1, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("7") + 8
+                                        readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("7")) + 8
 
                                         implicitWidth: tdText14.implicitWidth + 8
                                         implicitHeight: tdText14.implicitHeight + 8
@@ -977,7 +977,7 @@ ApplicationWindow {
 
                                     Item {
                                         readonly property var tableSlot: [8, 0, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("h") + 8
+                                        readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("h")) + 8
 
                                         implicitWidth: tdText15.implicitWidth + 8
                                         implicitHeight: tdText15.implicitHeight + 8
@@ -1013,7 +1013,7 @@ ApplicationWindow {
 
                                     Item {
                                         readonly property var tableSlot: [8, 1, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("8") + 8
+                                        readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("8")) + 8
 
                                         implicitWidth: tdText16.implicitWidth + 8
                                         implicitHeight: tdText16.implicitHeight + 8
@@ -1049,7 +1049,7 @@ ApplicationWindow {
 
                                     Item {
                                         readonly property var tableSlot: [9, 0, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("i") + 8
+                                        readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("i")) + 8
 
                                         implicitWidth: tdText17.implicitWidth + 8
                                         implicitHeight: tdText17.implicitHeight + 8
@@ -1085,7 +1085,7 @@ ApplicationWindow {
 
                                     Item {
                                         readonly property var tableSlot: [9, 1, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("9") + 8
+                                        readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("9")) + 8
 
                                         implicitWidth: tdText18.implicitWidth + 8
                                         implicitHeight: tdText18.implicitHeight + 8
@@ -1121,7 +1121,7 @@ ApplicationWindow {
 
                                     Item {
                                         readonly property var tableSlot: [10, 0, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("j") + 8
+                                        readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("j")) + 8
 
                                         implicitWidth: tdText19.implicitWidth + 8
                                         implicitHeight: tdText19.implicitHeight + 8
@@ -1157,7 +1157,7 @@ ApplicationWindow {
 
                                     Item {
                                         readonly property var tableSlot: [10, 1, 1, 1]
-                                        readonly property real minContentWidth: tableFont2.advanceWidth("10") + 8
+                                        readonly property real minContentWidth: (tableFont2.font, tableFont2.advanceWidth("10")) + 8
 
                                         implicitWidth: tdText20.implicitWidth + 8
                                         implicitHeight: tdText20.implicitHeight + 8

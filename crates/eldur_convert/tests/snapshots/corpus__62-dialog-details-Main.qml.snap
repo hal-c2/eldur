@@ -391,7 +391,7 @@ ApplicationWindow {
                             }
                             implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                             objectName: "ask"
-                            width: Math.min(implicitWidth, Math.max(blockFlow.width, Math.ceil(Math.max(...ask.text.split(/\s+/).map(w => askWords.advanceWidth(w))) * 1.0256385) + leftPadding + rightPadding))
+                            width: Math.min(implicitWidth, Math.max(blockFlow.width, Math.ceil((askWords.font, Math.max(...ask.text.split(/\s+/).map(w => askWords.advanceWidth(w)))) * 1.0256385) + leftPadding + rightPadding))
 
                             FontMetrics {
                                 id: askWords
@@ -613,7 +613,7 @@ ApplicationWindow {
                                 }
                                 implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                                 objectName: "cancel"
-                                width: Math.min(implicitWidth, Math.max(menuFlow.width, Math.ceil(Math.max(...cancel.text.split(/\s+/).map(w => cancelWords.advanceWidth(w))) * 1.0256385) + leftPadding + rightPadding))
+                                width: Math.min(implicitWidth, Math.max(menuFlow.width, Math.ceil((cancelWords.font, Math.max(...cancel.text.split(/\s+/).map(w => cancelWords.advanceWidth(w)))) * 1.0256385) + leftPadding + rightPadding))
 
                                 FontMetrics {
                                     id: cancelWords
@@ -662,7 +662,7 @@ ApplicationWindow {
                                 }
                                 implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                                 objectName: "save"
-                                width: Math.min(implicitWidth, Math.max(menuFlow.width, Math.ceil(Math.max(...save.text.split(/\s+/).map(w => saveWords.advanceWidth(w))) * 1.0256385) + leftPadding + rightPadding))
+                                width: Math.min(implicitWidth, Math.max(menuFlow.width, Math.ceil((saveWords.font, Math.max(...save.text.split(/\s+/).map(w => saveWords.advanceWidth(w)))) * 1.0256385) + leftPadding + rightPadding))
 
                                 FontMetrics {
                                     id: saveWords

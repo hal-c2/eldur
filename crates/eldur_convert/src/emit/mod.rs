@@ -1304,6 +1304,14 @@ impl<'a, 'd> Emitter<'a, 'd> {
 
 /// How many things this object and what it holds draw, as far as two: a group
 /// of one needs no layer to fade.
+/// `expr`, which measures text with the `FontMetrics` `metrics`, as a binding
+/// that runs again when the font changes. `advanceWidth()` is a method, and a
+/// binding that only calls it does not depend on the font: run before the
+/// font is set, it would keep the default font's widths.
+fn measured(metrics: &str, expr: &str) -> String {
+    format!("({metrics}.font, {expr})")
+}
+
 fn paints_count(obj: &Object) -> usize {
     let own = matches!(
         obj.type_name.as_str(),
