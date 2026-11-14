@@ -7,6 +7,7 @@ pub(crate) mod background;
 mod carry;
 mod controls;
 pub(crate) use controls::control_fonts_json;
+mod components;
 mod decoration;
 pub(crate) mod dynamic;
 mod flex;
@@ -16,20 +17,19 @@ mod grid;
 mod ids;
 mod image;
 mod inline;
-pub(crate) use background::ELDUR_BACKGROUND_LAYER_QML;
-pub(crate) use decoration::{
+use background::ELDUR_BACKGROUND_LAYER_QML;
+pub(crate) use components::components;
+use decoration::{
     ELDUR_BORDER_QML, ELDUR_ROUND_CLIP_QML, ELDUR_SCROLL_INPUT_QML, ELDUR_SCROLLER_QML,
     ELDUR_STICKY_QML,
 };
-pub(crate) use lists::ELDUR_DISCLOSURE_QML;
-pub(crate) use text::ELDUR_TEXT_LINES_QML;
-pub(crate) const ELDUR_FILTER_QML: &str = include_str!("EldurFilter.qml");
-pub(crate) const ELDUR_FILTER_QSB: &[u8] = include_bytes!("eldur_filter.frag.qsb");
-pub(crate) const ELDUR_TEXT_SHADOW_QML: &str = include_str!("EldurTextShadow.qml");
-pub(crate) use inline::{
-    ELDUR_INLINE_BOX_QML, ELDUR_LINES_QML, ELDUR_RUN_QML, has_atomic, name_runs,
-    needs_lines_for_boxes,
-};
+use lists::ELDUR_DISCLOSURE_QML;
+use text::ELDUR_TEXT_LINES_QML;
+const ELDUR_FILTER_QML: &str = include_str!("EldurFilter.qml");
+const ELDUR_FILTER_QSB: &[u8] = include_bytes!("eldur_filter.frag.qsb");
+const ELDUR_TEXT_SHADOW_QML: &str = include_str!("EldurTextShadow.qml");
+use inline::{ELDUR_INLINE_BOX_QML, ELDUR_LINES_QML, ELDUR_RUN_QML};
+pub(crate) use inline::{has_atomic, name_runs, needs_lines_for_boxes};
 mod inline_model;
 mod keyframes;
 mod links;

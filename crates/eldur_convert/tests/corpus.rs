@@ -1,5 +1,5 @@
-//! Converts every `tests/corpus/*/index.html` and snapshots its `Main.qml`
-//! and diagnostics. `mise run corpus` writes the same output to
+//! Converts every `tests/corpus/*/index.html` and snapshots its `Main.qml`,
+//! its diagnostics and the list of files it writes. `mise run corpus` writes the same output to
 //! `target/corpus/` for `mise run qml:check target/corpus`.
 
 use std::fs;
@@ -59,8 +59,79 @@ fn corpus_main_qml() {
         );
         let qml = output.main_qml().expect("Main.qml is always produced");
         insta::assert_snapshot!(format!("{name}-Main.qml"), qml);
+        // A page gets the files it uses and no others.
+        insta::assert_snapshot!(format!("{name}-files"), file_list(&output));
         let diagnostics: Vec<String> = output.diagnostics.iter().map(ToString::to_string).collect();
         insta::assert_snapshot!(format!("{name}-diagnostics"), diagnostics.join("\n"));
+    }
+}
+
+fn file_list(output: &eldur_convert::Output) -> String {
+    let mut paths: Vec<String> = output
+        .files
+        .iter()
+        .map(|f| f.path.display().to_string())
+        .collect();
+    paths.sort();
+    paths.join("\n")
+}
+
+/// The minimal output, by hand: a page gets its QML, the font module and the
+/// components its QML makes; a script adds itself, the runtime and the
+/// components the runtime makes for what the page can do.
+#[test]
+fn the_files_a_page_needs() {
+    for (case, expected) in [
+        (
+            "74-tiny",
+            &["EldurScrollInput.qml", "Main.qml", "eldur_fonts.js"][..],
+        ),
+        (
+            "19-article",
+            &[
+                "EldurInlineBox.qml",
+                "EldurLines.qml",
+                "EldurRun.qml",
+                "EldurScrollInput.qml",
+                "Main.qml",
+                "eldur_fonts.js",
+            ][..],
+        ),
+        (
+            // A script can restyle any element, so the runtime's layout reaches
+            // every component it makes; only what nothing makes stays out.
+            "38-app-todo",
+            &[
+                "EldurBackgroundLayer.qml",
+                "EldurBorder.qml",
+                "EldurFilter.qml",
+                "EldurInlineBox.qml",
+                "EldurLines.qml",
+                "EldurRoundClip.qml",
+                "EldurRun.qml",
+                "EldurScrollInput.qml",
+                "EldurScroller.qml",
+                "EldurSticky.qml",
+                "EldurTextLines.qml",
+                "Main.qml",
+                "eldur_filter.frag.qsb",
+                "eldur_fonts.js",
+                "eldur_runtime.js",
+                "page.js",
+            ][..],
+        ),
+    ] {
+        let dir = corpus_dir().join(case);
+        let html = fs::read_to_string(dir.join("index.html")).expect("index.html is readable");
+        let output = eldur_convert::convert(
+            &Input {
+                html,
+                url: "index.html".to_owned(),
+            },
+            &Options::default(),
+            &mut CaseFiles { dir },
+        );
+        assert_eq!(file_list(&output), expected.join("\n"), "{case}");
     }
 }
 

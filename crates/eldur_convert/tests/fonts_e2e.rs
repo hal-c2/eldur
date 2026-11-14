@@ -138,6 +138,8 @@ TestCase {
 fn fonts_match_chromium_at_run_time() {
     let options = Options {
         root: RootKind::Item,
+        // What the test asks the font module itself.
+        runtime_uses: ["extents", "family", "shift"].map(String::from).to_vec(),
         ..Options::default()
     };
     let out = eldur_convert::convert(
