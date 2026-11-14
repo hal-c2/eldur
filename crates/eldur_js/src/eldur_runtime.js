@@ -11609,6 +11609,102 @@ function _vLiveBase(text) {
     };
 }
 
+// What a block hands the elements of its text: each field of a model's `k`
+// that a run inherits through `_vBase`, read from the block's computed style,
+// and for a block of one element how its `Text` shows the field when
+// `_vRender` takes it over. A field is written only when it moved. The
+// decorations are not here: they are drawn through, not inherited, and the
+// model keeps them apart from `k`.
+var _V_BLOCK_LOOK = [
+    {
+        key: "color",
+        read: function(s, was) { return _vColor(s["color"], was); },
+        paint: function(text, v) { _gRepaint(text, "color", _gQtColor(v)); }
+    },
+    {
+        key: "weight",
+        read: function(s) { return _gWeightNumber(s["font-weight"]); },
+        paint: function(text, v) {
+            if (text.font.weight !== v) {
+                text.font.weight = v;
+            }
+        }
+    },
+    {
+        key: "italic",
+        read: function(s) { return /^(italic|oblique)\b/.test(String(s["font-style"])); },
+        paint: function(text, v) {
+            if (text.font.italic !== v) {
+                text.font.italic = v;
+            }
+        }
+    },
+    {
+        key: "size",
+        read: function(s) { return s.fontSize; },
+        paint: function(text, v) {
+            // Qt holds a whole size of at least a pixel and drops a write below
+            // one: what is compared is what is written.
+            var px = Math.max(Math.round(v), 1);
+            if (text.font.pixelSize !== px) {
+                text.font.pixelSize = px;
+            }
+        }
+    },
+    {
+        key: "family",
+        read: function(s) { return _gFamily(s["font-family"]); },
+        same: function(was, now) { return was === now || EldurFonts.family(was) === now; }
+    },
+    {
+        key: "lh",
+        read: function(s) {
+            var line = _gLineHeight(s);
+            return line === null ? undefined : line;
+        }
+    },
+    {
+        key: "lf",
+        read: function(s) { return s.lineFactor === null ? undefined : s.lineFactor; }
+    },
+    {
+        key: "visible",
+        read: function(s) { return s.visibility !== "hidden" && s.visibility !== "collapse"; }
+    }
+];
+
+// The element whose text `model` is: the block itself, or the one an anonymous
+// block's text or a line's run is in.
+function _vBlockOf(model) {
+    var owner = model.text;
+    while (owner && typeof owner.eldurTag !== "string") {
+        owner = owner.parent;
+    }
+    return owner;
+}
+
+// Brings `model.k` to what its block hands it under the rules as they are now.
+function _vTakeBlockLook(model) {
+    var owner = _vBlockOf(model);
+    if (!owner || !_gHasCascade()) {
+        return;
+    }
+    var s = _gStyle(owner);
+    var k = model.k;
+    _V_BLOCK_LOOK.forEach(function(field) {
+        var now = field.read(s, k[field.key]);
+        var same = field.same ? field.same(k[field.key], now) : k[field.key] === now;
+        if (same) {
+            return;
+        }
+        k[field.key] = now;
+        if (field.key === "size") {
+            k.us = now;
+            k.kw = undefined;
+        }
+    });
+}
+
 // What the top of a line inherits: the block as it is now, since a class on
 // the block restyles the `Text`; a `Text` showing one element's style has lost
 // the block's.
@@ -11951,6 +12047,11 @@ function _vStyle(v) {
 
 function _vComputedStyle(v) {
     function read(prop) {
+        // What a script wrote before it asks is in what it reads, as an
+        // element's style is: the root's attributes, say, restyle every run.
+        if (_gHasCascade()) {
+            _layoutForRead();
+        }
         var c = _vStyle(v);
         switch (_kebabToCamel(String(prop))) {
         case "color": return c.color;
@@ -12329,13 +12430,17 @@ var _vRendering = false;
 function _vRender(model) {
     var text = model.text;
     if (model.hoisted) {
-        var k = model.k;
-        text.color = _gQtColor(k.color);
-        text.font.weight = k.weight;
-        text.font.italic = k.italic;
-        text.font.underline = model.underline;
-        text.font.strikeout = model.strike;
-        text.font.pixelSize = k.size;
+        _V_BLOCK_LOOK.forEach(function(field) {
+            if (field.paint) {
+                field.paint(text, model.k[field.key]);
+            }
+        });
+        if (text.font.underline !== Boolean(model.underline)) {
+            text.font.underline = Boolean(model.underline);
+        }
+        if (text.font.strikeout !== Boolean(model.strike)) {
+            text.font.strikeout = Boolean(model.strike);
+        }
         model.hoisted = false;
     }
     // On a line of runs each has its own font; only a background still takes markup.
@@ -12462,6 +12567,39 @@ function _vChanged(model) {
             _vRender(each);
         }
     }
+}
+
+// The root's attributes moved, and with them what every run inherits and what
+// its variables say: what the converter worked out was for the old ones. Each
+// run is styled again, once, and that is what later changes compare with. With
+// `under`, only the blocks it says yes to: those a state moved.
+function _vRescheme(under) {
+    var models = _vModels.filter(function(m) {
+        if (m.select) {
+            return false;
+        }
+        var owner = under ? _vBlockOf(m) : null;
+        return !under || (Boolean(owner) && under(owner));
+    });
+    if (models.length === 0) {
+        return;
+    }
+    models.forEach(function(m) {
+        _vEachElement(m.kids, function(v) { v.sig0 = undefined; });
+        // `k` is what the converter said the block was; a block of one element
+        // paints its `Text` with it as it renders the first time.
+        _vTakeBlockLook(m);
+    });
+    _vChanged(null);
+    models.forEach(function(m) {
+        if (_vModels.indexOf(m) === -1) {
+            return;
+        }
+        _vEachElement(m.kids, function(v) {
+            v.c = _vStyle(v);
+            v.sig0 = _vSig(v);
+        });
+    });
 }
 
 // `v`'s box on a line, for `EldurFonts.placeRun`.
@@ -17752,6 +17890,8 @@ var _gStaticControls = [];
 var _G_MOVES = /^(button|input|textarea|select|img|canvas|video|audio|svg|iframe)$/;
 var _gClosedHidden = null;
 var _gStaticRoot = "";
+// Whether a change of the root's attributes repainted the page's own elements.
+var _gSchemed = false;
 // The items swapped since a read or a settle of its own started, for what took
 // an item before the settles the read asked for. What holds an element for
 // longer holds its record (`_meta`), whose `raw` follows every swap: a page's
@@ -22355,6 +22495,11 @@ function _gLoadStateRules() {
 }
 
 function _gWatch(raw, kind) {
+    // A run is markup in its block's `Text`, with no item of its own to hear
+    // the pointer or take focus: its states are not watched yet.
+    if (_vIsElement(raw)) {
+        return;
+    }
     var m = _meta(raw);
     m.gWatching = m.gWatching || {};
     if (m.gWatching[kind]) {
@@ -23857,66 +24002,92 @@ function _gStaticChanges() {
     var html = _taggedHtml();
     var rootMoved = Boolean(html) && _gRootAttrs(html) !== _gStaticRoot;
     var keep = [];
+    var restyled = [];
     for (var n = 0; n < open.length; ++n) {
         var entry = open[n];
         if (entry.raw.parent === null) {
             continue;
         }
         var sig = _gStaticSig(entry.raw);
-        if (sig !== entry.sig && rootMoved) {
+        // What the root's attributes say reaches an element through what it
+        // inherits as much as through its own rules, which may say the same.
+        if (rootMoved) {
             _gRepaintStatic(entry.raw);
             entry.sig = sig;
             keep.push(entry);
         } else if (sig !== entry.sig && (byRaw.get(entry.raw) === true || causes(entry.raw))) {
             _gAdopt(entry.raw);
         } else {
+            // Once the root's attributes were taken, the colours are these
+            // repaints', not the converter's bindings for `:hover` or `:focus`:
+            // a state that moves an element's rules paints it and what it holds.
+            if (_gSchemed && sig !== entry.sig) {
+                entry.sig = sig;
+                restyled.push(entry.raw);
+            }
             keep.push(entry);
         }
     }
     _gStaticBase = keep;
     if (rootMoved) {
+        _gSchemed = true;
         _gStaticRoot = _gRootAttrs(html);
         _gRepaintCanvas(html);
+        _vRescheme(null);
+    } else if (restyled.length > 0) {
+        var under = function(raw) {
+            for (var p = raw; p; p = _gParent(p)) {
+                if (restyled.indexOf(p) !== -1) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        keep.forEach(function(entry) {
+            if (under(entry.raw)) {
+                _gRepaintStatic(entry.raw);
+            }
+        });
+        _vRescheme(under);
     }
     ++_gGen;
 }
 
 // The root's attributes change what a whole page says, usually its colours. The
 // page keeps the form it was converted to, children, text and all, and takes
-// the new values.
+// the new values. A colour is written only when it changed: a write ends the
+// binding a state (`:hover`, `:focus`) holds on it.
 function _gRepaintStatic(raw) {
     var s = _gStyle(raw);
     if (raw.__eldurInline || s.display === "none") {
         return;
     }
+    var color = _gQtColor(s["color"]);
     var e = _gEdges(raw, s, raw.parent ? raw.parent.width : 0);
     if (raw.background !== undefined && raw.background !== null) {
         if (raw.background.color !== undefined && s.won["background-color"]) {
-            raw.background.color = _gQtColor(s["background-color"]);
+            _gRepaint(raw.background, "color", _gQtColor(s["background-color"]));
         }
         if (raw.background.border !== undefined && s.won["border-top-color"]) {
-            raw.background.border.color = _gQtColor(s["border-top-color"]);
+            _gRepaint(raw.background.border, "color", _gQtColor(s["border-top-color"]));
         }
         if (raw.contentItem && raw.contentItem.color !== undefined) {
-            raw.contentItem.color = _gQtColor(s["color"]);
+            _gRepaint(raw.contentItem, "color", color);
         }
         return;
     }
     if (typeof raw.text === "string" && raw.color !== undefined) {
-        raw.color = _gQtColor(s["color"]);
-        if (raw.linkColor !== undefined) {
-            raw.linkColor = _gLinkColor(raw);
+        _gRepaintText(raw, raw, s);
+        return;
+    }
+    var box = raw.border !== undefined && raw.color !== undefined;
+    if (box) {
+        if (_nodeTag(raw) !== "body" && _nodeTag(raw) !== "html") {
+            _gRepaint(raw, "color", _gQtColor(s["background-color"]));
         }
-        return;
-    }
-    if (raw.border === undefined || raw.color === undefined) {
-        return;
-    }
-    if (_nodeTag(raw) !== "body" && _nodeTag(raw) !== "html") {
-        raw.color = _gQtColor(s["background-color"]);
-    }
-    if (e.bt > 0) {
-        raw.border.color = _gQtColor(s["border-top-color"]);
+        if (e.bt > 0) {
+            _gRepaint(raw.border, "color", _gQtColor(s["border-top-color"]));
+        }
     }
     var kids = raw.children;
     for (var i = 0; i < kids.length; ++i) {
@@ -23924,15 +24095,140 @@ function _gRepaintStatic(raw) {
         if (typeof kid.eldurTag === "string") {
             continue;
         }
-        if (kid.spacing !== undefined) {
+        if (typeof kid.text === "string" && kid.color !== undefined) {
+            // The element's own text, which inherits its colour and font as an
+            // anonymous box does; a box made of a wrapper and its text has them
+            // nowhere else.
+            _gRepaintText(kid, raw, s);
+        } else if (!box) {
+            continue;
+        } else if (kid.spacing !== undefined) {
             _gRepadStatic(raw, kid, e);
         } else if (kid.color !== undefined && kid.children.length === 0) {
             // A strip for one side: which one, its shape and place say.
             var across = kid.width >= kid.height;
             var side = across ? (kid.y > 0 ? "bottom" : "top") : (kid.x > 0 ? "right" : "left");
-            kid.color = _gQtColor(s["border-" + side + "-color"]);
+            _gRepaint(kid, "color", _gQtColor(s["border-" + side + "-color"]));
         }
     }
+    _gRepaintLines(raw, s);
+}
+
+// A script's inline content beside a block's own text takes the text onto
+// anonymous lines (`_textStartsLine`, `_anonTextBecomesLines`), out of reach of
+// the walk over the block's children. The lines and the text on them inherit
+// from the block as the text did; an element on them keeps its own style.
+// Inline runs read their base from the line (`_vBase`), so the line is brought
+// up to date before `_vRescheme` renders them.
+function _gRepaintLines(raw, s) {
+    var holders = [raw];
+    var flow = _meta(raw).flow;
+    if (flow) {
+        holders.push(flow);
+    }
+    for (var i = 0; i < raw.children.length; ++i) {
+        var kid = raw.children[i];
+        if (kid !== flow && typeof kid.spacing === "number" && typeof kid.eldurTag !== "string"
+            && !kid.objectName && !_meta(kid).createdTag) {
+            holders.push(kid);
+        }
+    }
+    var color = _gQtColor(s["color"]);
+    var line = _gLineHeight(s);
+    // The converter's lines are the block's flow itself; a script's sit in it.
+    var found = holders.filter(function(holder) { return holder !== raw && _isAnonLines(holder); });
+    holders.forEach(function(holder) {
+        for (var h = 0; h < holder.children.length; ++h) {
+            if (_isAnonLines(holder.children[h]) && found.indexOf(holder.children[h]) < 0) {
+                found.push(holder.children[h]);
+            }
+        }
+    });
+    // An element that is lines itself has its runs restyled by `_vRescheme`,
+    // which reads their base from it.
+    if (_isLines(raw)) {
+        _gRepaintLine(raw, s, color, line);
+    }
+    found.forEach(function(lines) {
+        _gRepaintLine(lines, s, color, line);
+        for (var k = 0; k < lines.children.length; ++k) {
+            var item = lines.children[k];
+            var made = _meta(item).createdTag;
+            if (typeof item.eldurTag === "string" || (made && made !== "#text")
+                || typeof item.text !== "string" || item.color === undefined) {
+                continue;
+            }
+            _gRepaintText(item, raw, s);
+        }
+    });
+}
+
+// What a line's strut and inherited text take from its block.
+function _gRepaintLine(lines, s, color, line) {
+    _gRepaint(lines, "color", color);
+    _gRepaintFont(lines, s);
+    // The strut is of the CSS size, which the font's whole pixels are not.
+    if (lines.cssSize !== s.fontSize) {
+        lines.cssSize = s.fontSize;
+    }
+    // 0 is `normal` on a line.
+    var want = line === null ? 0 : line;
+    if (lines.lineHeight !== want) {
+        lines.lineHeight = want;
+    }
+}
+
+function _gRepaint(obj, prop, color) {
+    if (!Qt.colorEqual(obj[prop], color)) {
+        obj[prop] = color;
+    }
+}
+
+// `owner` is the element whose style `s` is and `text` shows. Each part of the
+// font is written only when it moved, as the colour is, and what the rules do
+// not say of it (its decorations, its spacing) stays.
+function _gRepaintText(text, owner, s) {
+    _gRepaint(text, "color", _gQtColor(s["color"]));
+    _gRepaintFont(text, s);
+    var line = _gLineHeight(s);
+    if (text.lineHeightMode === 1) { // Text.FixedHeight
+        if (line !== null) {
+            if (text.lineHeight !== line) {
+                text.lineHeight = line;
+            }
+        } else {
+            // A `normal` line is a binding on the font, which follows it; one
+            // the other scheme wrote over is bound again.
+            var size = s.fontSize;
+            if (text.lineHeight !== EldurFonts.normalLine(text.font, size, text.text)) {
+                text.lineHeight = Qt.binding(function() {
+                    return EldurFonts.normalLine(text.font, size, text.text);
+                });
+            }
+        }
+    }
+    if (text.linkColor !== undefined) {
+        var link = _gLinkColor(owner);
+        if (link !== undefined) {
+            _gRepaint(text, "linkColor", link);
+        }
+    }
+}
+
+// Each part of the font is written only when it moved.
+function _gRepaintFont(text, s) {
+    var font = {
+        pixelSize: Math.max(Math.round(s.fontSize), 1),
+        weight: _gWeightNumber(s["font-weight"]),
+        italic: s["font-style"] === "italic",
+        family: _gFamily(s["font-family"])
+    };
+    var had = text.font;
+    Object.keys(font).forEach(function(part) {
+        if (font[part] !== "" && had[part] !== font[part]) {
+            text.font[part] = font[part];
+        }
+    });
 }
 
 function _gRepadStatic(raw, content, e) {
