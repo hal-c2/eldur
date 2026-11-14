@@ -521,9 +521,8 @@ fn pure(expression: &Expression<'_>, lib: &Library<'_>) -> bool {
 /// anyone's code. With arguments, a collection runs their iterators and a
 /// regular expression reads their `Symbol.match` and `toString`. The name
 /// must still be the built-in: declared nowhere in the script, not assigned,
-/// and not written as a property by name (`globalThis.Map = …`,
-/// `Object.defineProperty(self, "Set", …)`). A write through a key computed at
-/// run time (`globalThis[name] = …`) is not followed.
+/// and not written as a property by name (`globalThis.Map = …`; the forms
+/// followed are those [`replaced_names`] lists).
 fn fresh_construction(n: &oxc_ast::ast::NewExpression<'_>, lib: &Library<'_>) -> bool {
     let Expression::Identifier(id) = &n.callee else {
         return false;
@@ -576,6 +575,18 @@ fn primitive(expression: &Expression<'_>) -> bool {
     }
 }
 
+/// The name a key written as a literal stands for.
+fn literal_key(key: &Expression<'_>) -> Option<String> {
+    match key {
+        Expression::StringLiteral(s) => Some(s.value.to_string()),
+        Expression::TemplateLiteral(t) if t.expressions.is_empty() => t
+            .quasis
+            .first()
+            .map(|q| q.value.cooked.unwrap_or(q.value.raw).to_string()),
+        _ => None,
+    }
+}
+
 /// What the shaker reads a library with.
 struct Library<'s> {
     scoping: &'s Scoping,
@@ -583,8 +594,11 @@ struct Library<'s> {
     replaced: BTreeSet<String>,
 }
 
-/// The property names `program` writes by name: `x.N = …`, `x["N"] = …` and
-/// `Object.defineProperty(x, "N", …)` (or `Reflect.defineProperty`).
+/// The property names `program` writes by name: `x.N = …`, `x["N"] = …`,
+/// ``x[`N`] = …``, `Object.defineProperty(x, "N", …)` (or `Reflect`'s), and the
+/// keys of an object literal given to `Object.defineProperties` or
+/// `Object.assign`. A name only known at run time is not followed: a key
+/// computed from a variable, or an object passed by name.
 fn replaced_names(program: &oxc_ast::ast::Program<'_>) -> BTreeSet<String> {
     struct Writes(BTreeSet<String>);
     impl<'a> Visit<'a> for Writes {
@@ -594,21 +608,35 @@ fn replaced_names(program: &oxc_ast::ast::Program<'_>) -> BTreeSet<String> {
                     self.0.insert(m.property.name.to_string());
                 }
                 AssignmentTarget::ComputedMemberExpression(m) => {
-                    if let Expression::StringLiteral(key) = &m.expression {
-                        self.0.insert(key.value.to_string());
-                    }
+                    self.0.extend(literal_key(&m.expression));
                 }
                 _ => {}
             }
             walk::walk_assignment_expression(self, a);
         }
         fn visit_call_expression(&mut self, call: &oxc_ast::ast::CallExpression<'a>) {
-            if let Expression::StaticMemberExpression(callee) = &call.callee
-                && callee.property.name == "defineProperty"
-                && let Some(Expression::StringLiteral(key)) =
-                    call.arguments.get(1).and_then(|a| a.as_expression())
-            {
-                self.0.insert(key.value.to_string());
+            if let Expression::StaticMemberExpression(callee) = &call.callee {
+                let argument = |i: usize| call.arguments.get(i).and_then(|a| a.as_expression());
+                match callee.property.name.as_str() {
+                    "defineProperty" => self.0.extend(argument(1).and_then(literal_key)),
+                    "defineProperties" | "assign" => {
+                        for i in 1..call.arguments.len() {
+                            if let Some(Expression::ObjectExpression(o)) = argument(i) {
+                                for p in &o.properties {
+                                    if let ObjectPropertyKind::ObjectProperty(p) = p {
+                                        self.0.extend(match &p.key {
+                                            PropertyKey::StaticIdentifier(id) => {
+                                                Some(id.name.to_string())
+                                            }
+                                            key => key.as_expression().and_then(literal_key),
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    _ => {}
+                }
             }
             walk::walk_call_expression(self, call);
         }
@@ -859,6 +887,9 @@ var _empty = new Set();\n";
             "globalThis.Map = function() { externalNotify(); };",
             "this[\"Map\"] = function() { externalNotify(); };",
             "Object.defineProperty(globalThis, \"Map\", { value: function() { externalNotify(); } });",
+            "this[`Map`] = function() { externalNotify(); };",
+            "Object.defineProperties(globalThis, { Map: { value: function() { externalNotify(); } } });",
+            "Object.assign(globalThis, { \"Map\": function() { externalNotify(); } });",
         ] {
             let out = shake_library(&format!("{replace}\nvar unused = new Map();\n"), []);
             assert!(out.contains("var unused = new Map();"), "{replace}: {out}");
