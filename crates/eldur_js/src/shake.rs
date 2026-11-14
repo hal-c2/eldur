@@ -130,7 +130,15 @@ pub fn shake_library<'u>(library: &str, used: impl IntoIterator<Item = &'u str>)
     // of the line it ends on, with it.
     let mut out = String::with_capacity(library.len());
     out.push_str(directives);
-    let mut from = 0usize;
+    // The script's own directives (`"use strict";`) stay whatever goes.
+    let mut from = program.directives.last().map_or(0, |d| {
+        let end = d.span.end as usize;
+        body[end..].find('\n').map_or(body.len(), |n| end + n + 1)
+    });
+    out.push_str(&body[..from]);
+    // A string statement that comes first once what was before it goes would
+    // become a directive; an empty statement before it keeps it one.
+    let mut in_prologue = true;
     for (index, statement) in statements.iter().enumerate() {
         let end = statement.span().end as usize;
         let line_end = body[end..].find('\n').map_or(body.len(), |n| end + n + 1);
@@ -139,12 +147,21 @@ pub fn shake_library<'u>(library: &str, used: impl IntoIterator<Item = &'u str>)
             .map_or(body.len(), |s| s.span().start as usize);
         let to = if next_start < line_end { end } else { line_end };
         if kept[index] {
-            out.push_str(&body[from..to]);
+            if in_prologue && is_string_statement(statement) {
+                out.push_str(";\n");
+            }
+            in_prologue = false;
+            out.push_str(&body[from.min(to)..to]);
         }
-        from = to;
+        from = from.max(to);
     }
     out.push_str(&body[from..]);
     out
+}
+
+fn is_string_statement(statement: &Statement<'_>) -> bool {
+    matches!(statement, Statement::ExpressionStatement(e)
+        if matches!(e.expression, Expression::StringLiteral(_)))
 }
 
 /// The leading QML directives (`.pragma`, `.import`) and blank lines, and the
@@ -175,18 +192,31 @@ fn foreign_paths(statements: &[Statement<'_>]) -> Vec<Vec<Step>> {
         match statement {
             Statement::VariableDeclaration(v) => {
                 for declarator in &v.declarations {
-                    if let (BindingPattern::BindingIdentifier(id), Some(init)) =
-                        (&declarator.id, &declarator.init)
-                    {
-                        stores(vec![Some(id.name.to_string())], init, &mut found);
+                    match (&declarator.id, &declarator.init) {
+                        (BindingPattern::BindingIdentifier(id), Some(init)) => {
+                            stores(vec![Some(id.name.to_string())], init, &mut found);
+                        }
+                        // `var { Promise: P } = globalThis;`: what each name
+                        // gets is read out of an object, so may be anything.
+                        (pattern, Some(_)) => found.extend(
+                            pattern
+                                .get_binding_identifiers()
+                                .into_iter()
+                                .map(|id| vec![Some(id.name.to_string())]),
+                        ),
+                        (_, None) => {}
                     }
                 }
             }
             Statement::ExpressionStatement(e) => {
-                if let Expression::AssignmentExpression(a) = &e.expression
-                    && let Some(at) = target_path(&a.left)
-                {
-                    stores(at, &a.right, &mut found);
+                if let Expression::AssignmentExpression(a) = &e.expression {
+                    if let Some(at) = target_path(&a.left) {
+                        stores(at, &a.right, &mut found);
+                    } else if let Some(pattern) = a.left.as_assignment_target_pattern() {
+                        let mut names = Names(Vec::new());
+                        names.visit_assignment_target_pattern(pattern);
+                        found.extend(names.0.into_iter().map(|n| vec![Some(n)]));
+                    }
                 }
             }
             _ => {}
@@ -208,12 +238,22 @@ fn stores(at: Vec<Step>, value: &Expression<'_>, found: &mut Vec<Vec<Step>>) {
         | Expression::TemplateLiteral(_)
         | Expression::FunctionExpression(_)
         | Expression::ArrowFunctionExpression(_)
-        | Expression::NewExpression(_)
         | Expression::UnaryExpression(_)
         | Expression::BinaryExpression(_) => {}
+        // A built-in made with nothing to wrap is new; `new Object(Promise)`
+        // is `Promise`, and any other constructor may return what it likes.
+        Expression::NewExpression(n) if fresh_construction(n) => {}
         Expression::ObjectExpression(o) => {
             for property in &o.properties {
                 match property {
+                    // A getter may return anything.
+                    ObjectPropertyKind::ObjectProperty(p)
+                        if p.kind != oxc_ast::ast::PropertyKind::Init =>
+                    {
+                        let mut under = at.clone();
+                        under.push(p.key.static_name().map(|n| n.to_string()));
+                        found.push(under);
+                    }
                     ObjectPropertyKind::ObjectProperty(p) => {
                         let mut under = at.clone();
                         under.push(p.key.static_name().map(|n| n.to_string()));
@@ -453,16 +493,26 @@ fn pure(expression: &Expression<'_>) -> bool {
             pure(&c.test) && pure(&c.consequent) && pure(&c.alternate)
         }
         Expression::ParenthesizedExpression(p) => pure(&p.expression),
-        // The built-in collections make an empty object and run nothing; a
-        // Proxy's traps run only when the proxy is used, which keeps it.
-        Expression::NewExpression(n) => {
-            matches!(&n.callee, Expression::Identifier(id)
-                if matches!(id.name.as_str(), "Map" | "Set" | "WeakMap" | "WeakSet" | "Object" | "Array" | "RegExp" | "Proxy"))
-                && n.arguments
-                    .iter()
-                    .all(|a| a.as_expression().is_some_and(pure))
-        }
+        Expression::NewExpression(n) => fresh_construction(n),
         _ => false,
+    }
+}
+
+/// A built-in made with no arguments: an empty object, made without running
+/// anyone's code. With arguments, a collection runs their iterators and a
+/// regular expression reads their `Symbol.match` and `toString`.
+fn fresh_construction(n: &oxc_ast::ast::NewExpression<'_>) -> bool {
+    n.arguments.is_empty()
+        && matches!(&n.callee, Expression::Identifier(id)
+            if matches!(id.name.as_str(), "Map" | "Set" | "WeakMap" | "WeakSet" | "Object" | "Array" | "RegExp"))
+}
+
+/// The names an assignment pattern assigns, and any it reads for defaults.
+struct Names(Vec<String>);
+
+impl<'a> Visit<'a> for Names {
+    fn visit_identifier_reference(&mut self, id: &IdentifierReference<'a>) {
+        self.0.push(id.name.to_string());
     }
 }
 
@@ -579,6 +629,61 @@ function _X() {}\n\
 _X.prototype = Array.prototype;\n\
 _X.prototype.first = function() { return this[0]; };\n\
 function used() {}\n"
+        );
+    }
+
+    #[test]
+    fn filling_in_an_object_read_or_wrapped_from_elsewhere_is_kept() {
+        let library = "var { Promise: _P } = globalThis;\n\
+_P.prototype.a = function() {};\n\
+var _Q;\n\
+({ Array: _Q } = globalThis);\n\
+_Q.prototype.b = function() {};\n\
+var _box = { p: Promise.prototype };\n\
+_box.p.c = function() {};\n\
+var _get = { get p() { return Promise; } };\n\
+_get.p.d = function() {};\n\
+var _W = new Object(Promise);\n\
+_W.prototype.e = function() {};\n\
+var _own = new Map();\n\
+_own.f = function() {};\n";
+        let out = shake_library(library, []);
+        for kept in [".a =", ".b =", ".c =", ".d =", ".e ="] {
+            assert!(out.contains(kept), "{kept} went:\n{out}");
+        }
+        assert!(!out.contains("_own"), "{out}");
+    }
+
+    #[test]
+    fn a_constructor_given_arguments_may_run_code() {
+        let library = "var _s = new Set({ [Symbol.iterator]: function() { return [][Symbol.iterator](); } });\n\
+var _r = new RegExp({ toString: function() { return \"x\"; } });\n\
+var _empty = new Set();\n";
+        let out = shake_library(library, []);
+        assert!(
+            out.contains("var _s =") && out.contains("var _r ="),
+            "{out}"
+        );
+        assert!(!out.contains("_empty"), "{out}");
+    }
+
+    #[test]
+    fn a_string_statement_does_not_become_a_directive() {
+        let out = shake_library(
+            "\"use strict\";\nvar unused = 0;\n\"not a directive\";\nfunction used() { return this; }\n",
+            ["used"],
+        );
+        assert_eq!(
+            out,
+            "\"use strict\";\n;\n\"not a directive\";\nfunction used() { return this; }\n"
+        );
+        let out = shake_library(
+            "var unused = 0;\n\"use strict\";\nfunction used() { return this; }\n",
+            ["used"],
+        );
+        assert_eq!(
+            out,
+            ";\n\"use strict\";\nfunction used() { return this; }\n"
         );
     }
 
