@@ -599,9 +599,10 @@ struct Library<'s> {
 /// destructuring pattern, or as a `for`-`in`/`of` target),
 /// `Object.defineProperty(x, "N", …)` (or `Reflect`'s), `Reflect.set(x, "N", …)`,
 /// and the keys of an object literal given to `Object.defineProperties` or
-/// `Object.assign`. Parentheses around a key, an object or a callee are seen
-/// through. A name only known at run time is not followed: a key computed
-/// from a variable, or an object passed by name.
+/// `Object.assign`, each method named by `.m` or a literal `["m"]`. Parentheses
+/// around a key, an object or a callee are seen through. A name only known at
+/// run time is not followed: a key computed from a variable, or an object
+/// passed by name.
 fn replaced_names(program: &oxc_ast::ast::Program<'_>) -> BTreeSet<String> {
     struct Writes(BTreeSet<String>);
     impl<'a> Visit<'a> for Writes {
@@ -620,14 +621,19 @@ fn replaced_names(program: &oxc_ast::ast::Program<'_>) -> BTreeSet<String> {
             walk::walk_simple_assignment_target(self, target);
         }
         fn visit_call_expression(&mut self, call: &oxc_ast::ast::CallExpression<'a>) {
-            if let Expression::StaticMemberExpression(callee) = call.callee.without_parentheses() {
+            let method = match call.callee.without_parentheses() {
+                Expression::StaticMemberExpression(m) => Some(m.property.name.to_string()),
+                Expression::ComputedMemberExpression(m) => literal_key(&m.expression),
+                _ => None,
+            };
+            if let Some(method) = method {
                 let argument = |i: usize| {
                     call.arguments
                         .get(i)
                         .and_then(|a| a.as_expression())
                         .map(Expression::without_parentheses)
                 };
-                match callee.property.name.as_str() {
+                match method.as_str() {
                     "defineProperty" | "set" => self.0.extend(argument(1).and_then(literal_key)),
                     "defineProperties" | "assign" => {
                         for i in 1..call.arguments.len() {
@@ -910,6 +916,8 @@ var _empty = new Set();\n";
             "Object.defineProperty(globalThis, (\"Map\"), { value: function() { externalNotify(); } });",
             "Object.assign(globalThis, ({ Map: function() { externalNotify(); } }));",
             "(Object.assign)(globalThis, { Map: function() { externalNotify(); } });",
+            "Object[\"assign\"](globalThis, { Map: function() { externalNotify(); } });",
+            "Reflect[`set`](globalThis, \"Map\", function() { externalNotify(); });",
         ] {
             let out = shake_library(&format!("{replace}\nvar unused = new Map();\n"), []);
             assert!(out.contains("var unused = new Map();"), "{replace}: {out}");
