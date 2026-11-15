@@ -595,7 +595,8 @@ struct Library<'s> {
 }
 
 /// The property names `program` writes by name: `x.N = …`, `x["N"] = …`,
-/// ``x[`N`] = …``, `Object.defineProperty(x, "N", …)` (or `Reflect`'s), and the
+/// ``x[`N`] = …``, `Object.defineProperty(x, "N", …)` (or `Reflect`'s),
+/// `Reflect.set(x, "N", …)`, and the
 /// keys of an object literal given to `Object.defineProperties` or
 /// `Object.assign`. A name only known at run time is not followed: a key
 /// computed from a variable, or an object passed by name.
@@ -618,7 +619,7 @@ fn replaced_names(program: &oxc_ast::ast::Program<'_>) -> BTreeSet<String> {
             if let Expression::StaticMemberExpression(callee) = &call.callee {
                 let argument = |i: usize| call.arguments.get(i).and_then(|a| a.as_expression());
                 match callee.property.name.as_str() {
-                    "defineProperty" => self.0.extend(argument(1).and_then(literal_key)),
+                    "defineProperty" | "set" => self.0.extend(argument(1).and_then(literal_key)),
                     "defineProperties" | "assign" => {
                         for i in 1..call.arguments.len() {
                             if let Some(Expression::ObjectExpression(o)) = argument(i) {
@@ -890,6 +891,9 @@ var _empty = new Set();\n";
             "this[`Map`] = function() { externalNotify(); };",
             "Object.defineProperties(globalThis, { Map: { value: function() { externalNotify(); } } });",
             "Object.assign(globalThis, { \"Map\": function() { externalNotify(); } });",
+            "Object.assign(globalThis, {}, { Map() { externalNotify(); } });",
+            "Object.defineProperties(self, { [\"Map\"]: { value: function() { externalNotify(); } } });",
+            "Reflect.set(globalThis, \"Map\", function() { externalNotify(); });",
         ] {
             let out = shake_library(&format!("{replace}\nvar unused = new Map();\n"), []);
             assert!(out.contains("var unused = new Map();"), "{replace}: {out}");
