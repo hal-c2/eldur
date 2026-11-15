@@ -594,20 +594,17 @@ struct Library<'s> {
     replaced: BTreeSet<String>,
 }
 
-/// The property names `program` writes by name: a member target `x.N`,
-/// `x["N"]` or ``x[`N`]`` wherever it is assigned (`=`, `+=`, `++`, inside a
-/// destructuring pattern, or as a `for`-`in`/`of` target),
-/// `Object.defineProperty(x, "N", …)` (or `Reflect`'s), `Reflect.set(x, "N", …)`,
-/// and the keys of an object literal given to `Object.defineProperties` or
-/// `Object.assign`, each method named by `.m` or a literal `["m"]`. Parentheses
-/// around a key, an object or a callee are seen through. A name only known at
-/// run time is not followed: a key computed from a variable, or an object
-/// passed by name.
+/// The names `program` may write a property by: the property of any member
+/// it assigns to, also inside destructuring, a `for`-`in`/`of` head or `++`,
+/// and every string, substitution-free template, property key and declared
+/// name it spells, since `Object.assign`, `Object.defineProperty`,
+/// `Reflect.set` and the like take the name that way, even from an object
+/// made elsewhere or a function's `name`, and the name of any binding read
+/// through `.name` (`globalThis[Map.name] = …`). A name built at run time
+/// (`"M" + "ap"`) is not followed.
 fn replaced_names(program: &oxc_ast::ast::Program<'_>) -> BTreeSet<String> {
     struct Writes(BTreeSet<String>);
     impl<'a> Visit<'a> for Writes {
-        // Every place a member is written to reaches here: the left of an
-        // assignment, an update, a destructuring pattern and a for-in/of head.
         fn visit_simple_assignment_target(&mut self, target: &SimpleAssignmentTarget<'a>) {
             match target {
                 SimpleAssignmentTarget::StaticMemberExpression(m) => {
@@ -620,41 +617,41 @@ fn replaced_names(program: &oxc_ast::ast::Program<'_>) -> BTreeSet<String> {
             }
             walk::walk_simple_assignment_target(self, target);
         }
-        fn visit_call_expression(&mut self, call: &oxc_ast::ast::CallExpression<'a>) {
-            let method = match call.callee.without_parentheses() {
-                Expression::StaticMemberExpression(m) => Some(m.property.name.to_string()),
-                Expression::ComputedMemberExpression(m) => literal_key(&m.expression),
-                _ => None,
-            };
-            if let Some(method) = method {
-                let argument = |i: usize| {
-                    call.arguments
-                        .get(i)
-                        .and_then(|a| a.as_expression())
-                        .map(Expression::without_parentheses)
-                };
-                match method.as_str() {
-                    "defineProperty" | "set" => self.0.extend(argument(1).and_then(literal_key)),
-                    "defineProperties" | "assign" => {
-                        for i in 1..call.arguments.len() {
-                            if let Some(Expression::ObjectExpression(o)) = argument(i) {
-                                for p in &o.properties {
-                                    if let ObjectPropertyKind::ObjectProperty(p) = p {
-                                        self.0.extend(match &p.key {
-                                            PropertyKey::StaticIdentifier(id) => {
-                                                Some(id.name.to_string())
-                                            }
-                                            key => key.as_expression().and_then(literal_key),
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    _ => {}
-                }
+        fn visit_string_literal(&mut self, s: &oxc_ast::ast::StringLiteral<'a>) {
+            self.0.insert(s.value.to_string());
+        }
+        fn visit_template_literal(&mut self, t: &oxc_ast::ast::TemplateLiteral<'a>) {
+            if t.expressions.is_empty()
+                && let Some(q) = t.quasis.first()
+            {
+                self.0
+                    .insert(q.value.cooked.unwrap_or(q.value.raw).to_string());
             }
-            walk::walk_call_expression(self, call);
+            walk::walk_template_literal(self, t);
+        }
+        fn visit_member_expression(&mut self, m: &oxc_ast::ast::MemberExpression<'a>) {
+            let reads_name = match m {
+                oxc_ast::ast::MemberExpression::StaticMemberExpression(m) => {
+                    m.property.name == "name"
+                }
+                oxc_ast::ast::MemberExpression::ComputedMemberExpression(m) => {
+                    literal_key(&m.expression).as_deref() == Some("name")
+                }
+                oxc_ast::ast::MemberExpression::PrivateFieldExpression(_) => false,
+            };
+            if reads_name && let Expression::Identifier(id) = m.object().without_parentheses() {
+                self.0.insert(id.name.to_string());
+            }
+            walk::walk_member_expression(self, m);
+        }
+        fn visit_binding_identifier(&mut self, id: &oxc_ast::ast::BindingIdentifier<'a>) {
+            self.0.insert(id.name.to_string());
+        }
+        fn visit_property_key(&mut self, key: &PropertyKey<'a>) {
+            if let PropertyKey::StaticIdentifier(id) = key {
+                self.0.insert(id.name.to_string());
+            }
+            walk::walk_property_key(self, key);
         }
     }
     let mut writes = Writes(BTreeSet::new());
@@ -906,17 +903,29 @@ var _empty = new Set();\n";
             "this[`Map`] = function() { externalNotify(); };",
             "Object.defineProperties(globalThis, { Map: { value: function() { externalNotify(); } } });",
             "Object.assign(globalThis, { \"Map\": function() { externalNotify(); } });",
-            "Object.assign(globalThis, {}, { Map() { externalNotify(); } });",
-            "Object.defineProperties(self, { [\"Map\"]: { value: function() { externalNotify(); } } });",
-            "Reflect.set(globalThis, \"Map\", function() { externalNotify(); });",
-            "[globalThis.Map] = [function() { externalNotify(); }];",
-            "({ x: globalThis[\"Map\"] } = { x: function() { externalNotify(); } });",
-            "for (globalThis.Map of [function() { externalNotify(); }]) {}",
-            "for (this[`Map`] in { a: 1 }) {}",
-            "Object.defineProperty(globalThis, (\"Map\"), { value: function() { externalNotify(); } });",
+            "Object.assign(globalThis, { [\"Map\"]: function() { externalNotify(); } });",
+            "Object.assign(globalThis, { [`Map`]: function() { externalNotify(); } });",
+            "(function() { var Map = function() { externalNotify(); }; Object.assign(globalThis, { Map }); })();",
+            "Object.assign(globalThis, { get Map() { externalNotify(); return Set; } });",
             "Object.assign(globalThis, ({ Map: function() { externalNotify(); } }));",
+            "Object.defineProperties(globalThis, ({ Map: { value: function() { externalNotify(); } } }));",
+            "globalThis[(`Map`)] = function() { externalNotify(); };",
+            "Object.defineProperty(globalThis, (\"Map\"), { value: function() { externalNotify(); } });",
             "(Object.assign)(globalThis, { Map: function() { externalNotify(); } });",
             "Object[\"assign\"](globalThis, { Map: function() { externalNotify(); } });",
+            "Reflect.set(globalThis, \"Map\", function() { externalNotify(); });",
+            "[globalThis.Map] = [function() { externalNotify(); }];",
+            "({ a: globalThis.Map } = { a: function() { externalNotify(); } });",
+            "for (globalThis.Map of [function() { externalNotify(); }]) {}",
+            "var replacements = { Map: function() { externalNotify(); } };\nObject.assign(globalThis, replacements);",
+            "(function() { function Map() { externalNotify(); } globalThis[Map.name] = Map; })();",
+            "(function() { var C = class Map { constructor() { externalNotify(); } }; globalThis[C.name] = C; })();",
+            "globalThis[Map.name] = function() { externalNotify(); };",
+            "globalThis[Map[\"name\"]] = function() { externalNotify(); };",
+            "Object.assign(globalThis, {}, { Map() { externalNotify(); } });",
+            "Object.defineProperties(self, { [\"Map\"]: { value: function() { externalNotify(); } } });",
+            "({ x: globalThis[\"Map\"] } = { x: function() { externalNotify(); } });",
+            "for (this[`Map`] in { a: 1 }) {}",
             "Reflect[`set`](globalThis, \"Map\", function() { externalNotify(); });",
         ] {
             let out = shake_library(&format!("{replace}\nvar unused = new Map();\n"), []);
