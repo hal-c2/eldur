@@ -542,13 +542,7 @@ fn fresh_construction(n: &oxc_ast::ast::NewExpression<'_>, lib: &Library<'_>) ->
                         .iter()
                         .any(|r| lib.scoping.get_reference(*r).is_write())
             });
-    n.arguments.is_empty()
-        && global
-        && !assigned
-        && matches!(
-            id.name.as_str(),
-            "Map" | "Set" | "WeakMap" | "WeakSet" | "Object" | "Array" | "RegExp"
-        )
+    n.arguments.is_empty() && global && !assigned && FRESH.contains(&id.name.as_str())
 }
 
 /// Whether `expression` is pure and turning it into a primitive runs no code:
@@ -575,6 +569,11 @@ fn primitive(expression: &Expression<'_>) -> bool {
     }
 }
 
+/// The built-ins whose `new X()` with no arguments runs no code.
+const FRESH: [&str; 7] = [
+    "Map", "Set", "WeakMap", "WeakSet", "Object", "Array", "RegExp",
+];
+
 /// What the shaker reads a library with.
 struct Library<'s> {
     scoping: &'s Scoping,
@@ -587,8 +586,11 @@ struct Library<'s> {
 /// a binding or a reference. Only the callee of `new Map()` does not count. A
 /// library that mentions `Map` anywhere else may hand its value to
 /// `Object.assign`, `Reflect.set`, `.name`, `String(Map)` or a call that reads
-/// it, so following each of those is not attempted. A name built at run time
-/// (`"M" + "ap"`) from no mention of it is not followed.
+/// it, so following each of those is not attempted. A value's `constructor`
+/// or `Symbol.toStringTag` gives a built-in's name without spelling it, even
+/// for `[]` or `{}`, and `eval` or `Function` may spell it in a string: a
+/// library that spells one of those may replace every built-in. A name built
+/// from characters (`"M" + "ap"`, `String.fromCharCode(…)`) is not followed.
 fn replaced_names(program: &oxc_ast::ast::Program<'_>) -> BTreeSet<String> {
     struct Spelled(BTreeSet<String>);
     impl<'a> Visit<'a> for Spelled {
@@ -624,7 +626,14 @@ fn replaced_names(program: &oxc_ast::ast::Program<'_>) -> BTreeSet<String> {
     }
     let mut names = Spelled(BTreeSet::new());
     names.visit_program(program);
-    names.0
+    let mut names = names.0;
+    if ["constructor", "toStringTag", "eval", "Function"]
+        .iter()
+        .any(|n| names.contains(*n))
+    {
+        names.extend(FRESH.iter().map(|n| (*n).to_owned()));
+    }
+    names
 }
 
 /// The names an assignment pattern assigns, and any it reads for defaults.
@@ -800,6 +809,19 @@ _own.f = function() {};\n";
     }
 
     #[test]
+    fn a_literal_gives_its_constructor_name() {
+        for (built_in, literal) in [("Array", "[]"), ("Object", "({})"), ("RegExp", "/x/")] {
+            let out = shake_library(
+                &format!(
+                    "globalThis[{literal}.constructor.name] = function() {{ externalNotify(); }};\nvar unused = new {built_in}();\n"
+                ),
+                [],
+            );
+            assert!(out.contains("var unused ="), "{built_in}: {out}");
+        }
+    }
+
+    #[test]
     fn a_member_read_may_run_a_getter() {
         let out = shake_library(
             "var unused = ({ get value() { externalNotify(); return 0; } }).value;\n\
@@ -900,6 +922,10 @@ var _empty = new Set();\n";
             "globalThis[Reflect.get(Map, `name`)] = function() { externalNotify(); };",
             "globalThis[globalThis.Map.name] = function() { externalNotify(); };",
             "globalThis[String(Map).slice(9, 12)] = function() { externalNotify(); };",
+            "globalThis[new Map().constructor.name] = function() { externalNotify(); };",
+            "globalThis[new Set()[Symbol.toStringTag].slice(0, 0) + \"Map\"] = function() { externalNotify(); };",
+            "eval(\"globalThis.M\" + \"ap = function() { externalNotify(); }\");",
+            "Function(\"globalThis.M\" + \"ap = function() { externalNotify(); }\")();",
         ] {
             let out = shake_library(&format!("{replace}\nvar unused = new Map();\n"), []);
             assert!(out.contains("var unused = new Map();"), "{replace}: {out}");
