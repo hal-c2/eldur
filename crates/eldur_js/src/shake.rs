@@ -577,7 +577,7 @@ fn primitive(expression: &Expression<'_>) -> bool {
 
 /// The name a key written as a literal stands for.
 fn literal_key(key: &Expression<'_>) -> Option<String> {
-    match key {
+    match key.without_parentheses() {
         Expression::StringLiteral(s) => Some(s.value.to_string()),
         Expression::TemplateLiteral(t) if t.expressions.is_empty() => t
             .quasis
@@ -594,30 +594,39 @@ struct Library<'s> {
     replaced: BTreeSet<String>,
 }
 
-/// The property names `program` writes by name: `x.N = …`, `x["N"] = …`,
-/// ``x[`N`] = …``, `Object.defineProperty(x, "N", …)` (or `Reflect`'s),
-/// `Reflect.set(x, "N", …)`, and the
-/// keys of an object literal given to `Object.defineProperties` or
-/// `Object.assign`. A name only known at run time is not followed: a key
-/// computed from a variable, or an object passed by name.
+/// The property names `program` writes by name: a member target `x.N`,
+/// `x["N"]` or ``x[`N`]`` wherever it is assigned (`=`, `+=`, `++`, inside a
+/// destructuring pattern, or as a `for`-`in`/`of` target),
+/// `Object.defineProperty(x, "N", …)` (or `Reflect`'s), `Reflect.set(x, "N", …)`,
+/// and the keys of an object literal given to `Object.defineProperties` or
+/// `Object.assign`. Parentheses around a key, an object or a callee are seen
+/// through. A name only known at run time is not followed: a key computed
+/// from a variable, or an object passed by name.
 fn replaced_names(program: &oxc_ast::ast::Program<'_>) -> BTreeSet<String> {
     struct Writes(BTreeSet<String>);
     impl<'a> Visit<'a> for Writes {
-        fn visit_assignment_expression(&mut self, a: &oxc_ast::ast::AssignmentExpression<'a>) {
-            match &a.left {
-                AssignmentTarget::StaticMemberExpression(m) => {
+        // Every place a member is written to reaches here: the left of an
+        // assignment, an update, a destructuring pattern and a for-in/of head.
+        fn visit_simple_assignment_target(&mut self, target: &SimpleAssignmentTarget<'a>) {
+            match target {
+                SimpleAssignmentTarget::StaticMemberExpression(m) => {
                     self.0.insert(m.property.name.to_string());
                 }
-                AssignmentTarget::ComputedMemberExpression(m) => {
+                SimpleAssignmentTarget::ComputedMemberExpression(m) => {
                     self.0.extend(literal_key(&m.expression));
                 }
                 _ => {}
             }
-            walk::walk_assignment_expression(self, a);
+            walk::walk_simple_assignment_target(self, target);
         }
         fn visit_call_expression(&mut self, call: &oxc_ast::ast::CallExpression<'a>) {
-            if let Expression::StaticMemberExpression(callee) = &call.callee {
-                let argument = |i: usize| call.arguments.get(i).and_then(|a| a.as_expression());
+            if let Expression::StaticMemberExpression(callee) = call.callee.without_parentheses() {
+                let argument = |i: usize| {
+                    call.arguments
+                        .get(i)
+                        .and_then(|a| a.as_expression())
+                        .map(Expression::without_parentheses)
+                };
                 match callee.property.name.as_str() {
                     "defineProperty" | "set" => self.0.extend(argument(1).and_then(literal_key)),
                     "defineProperties" | "assign" => {
@@ -894,6 +903,13 @@ var _empty = new Set();\n";
             "Object.assign(globalThis, {}, { Map() { externalNotify(); } });",
             "Object.defineProperties(self, { [\"Map\"]: { value: function() { externalNotify(); } } });",
             "Reflect.set(globalThis, \"Map\", function() { externalNotify(); });",
+            "[globalThis.Map] = [function() { externalNotify(); }];",
+            "({ x: globalThis[\"Map\"] } = { x: function() { externalNotify(); } });",
+            "for (globalThis.Map of [function() { externalNotify(); }]) {}",
+            "for (this[`Map`] in { a: 1 }) {}",
+            "Object.defineProperty(globalThis, (\"Map\"), { value: function() { externalNotify(); } });",
+            "Object.assign(globalThis, ({ Map: function() { externalNotify(); } }));",
+            "(Object.assign)(globalThis, { Map: function() { externalNotify(); } });",
         ] {
             let out = shake_library(&format!("{replace}\nvar unused = new Map();\n"), []);
             assert!(out.contains("var unused = new Map();"), "{replace}: {out}");
