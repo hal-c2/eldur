@@ -575,18 +575,6 @@ fn primitive(expression: &Expression<'_>) -> bool {
     }
 }
 
-/// The name a key written as a literal stands for.
-fn literal_key(key: &Expression<'_>) -> Option<String> {
-    match key.without_parentheses() {
-        Expression::StringLiteral(s) => Some(s.value.to_string()),
-        Expression::TemplateLiteral(t) if t.expressions.is_empty() => t
-            .quasis
-            .first()
-            .map(|q| q.value.cooked.unwrap_or(q.value.raw).to_string()),
-        _ => None,
-    }
-}
-
 /// What the shaker reads a library with.
 struct Library<'s> {
     scoping: &'s Scoping,
@@ -594,28 +582,32 @@ struct Library<'s> {
     replaced: BTreeSet<String>,
 }
 
-/// The names `program` may write a property by: the property of any member
-/// it assigns to, also inside destructuring, a `for`-`in`/`of` head or `++`,
-/// and every string, substitution-free template, property key and declared
-/// name it spells, since `Object.assign`, `Object.defineProperty`,
-/// `Reflect.set` and the like take the name that way, even from an object
-/// made elsewhere or a function's `name`, and the name of any binding read
-/// through `.name` (`globalThis[Map.name] = …`). A name built at run time
-/// (`"M" + "ap"`) is not followed.
+/// The names `program` may replace a built-in by: every name it spells, as a
+/// string, a substitution-free template, a property key, a member's property,
+/// a binding or a reference. Only the callee of `new Map()` does not count. A
+/// library that mentions `Map` anywhere else may hand its value to
+/// `Object.assign`, `Reflect.set`, `.name`, `String(Map)` or a call that reads
+/// it, so following each of those is not attempted. A name built at run time
+/// (`"M" + "ap"`) from no mention of it is not followed.
 fn replaced_names(program: &oxc_ast::ast::Program<'_>) -> BTreeSet<String> {
-    struct Writes(BTreeSet<String>);
-    impl<'a> Visit<'a> for Writes {
-        fn visit_simple_assignment_target(&mut self, target: &SimpleAssignmentTarget<'a>) {
-            match target {
-                SimpleAssignmentTarget::StaticMemberExpression(m) => {
-                    self.0.insert(m.property.name.to_string());
-                }
-                SimpleAssignmentTarget::ComputedMemberExpression(m) => {
-                    self.0.extend(literal_key(&m.expression));
-                }
-                _ => {}
+    struct Spelled(BTreeSet<String>);
+    impl<'a> Visit<'a> for Spelled {
+        fn visit_new_expression(&mut self, n: &oxc_ast::ast::NewExpression<'a>) {
+            if !matches!(n.callee, Expression::Identifier(_)) {
+                self.visit_expression(&n.callee);
             }
-            walk::walk_simple_assignment_target(self, target);
+            for argument in &n.arguments {
+                self.visit_argument(argument);
+            }
+        }
+        fn visit_identifier_reference(&mut self, id: &IdentifierReference<'a>) {
+            self.0.insert(id.name.to_string());
+        }
+        fn visit_binding_identifier(&mut self, id: &oxc_ast::ast::BindingIdentifier<'a>) {
+            self.0.insert(id.name.to_string());
+        }
+        fn visit_identifier_name(&mut self, id: &oxc_ast::ast::IdentifierName<'a>) {
+            self.0.insert(id.name.to_string());
         }
         fn visit_string_literal(&mut self, s: &oxc_ast::ast::StringLiteral<'a>) {
             self.0.insert(s.value.to_string());
@@ -629,34 +621,10 @@ fn replaced_names(program: &oxc_ast::ast::Program<'_>) -> BTreeSet<String> {
             }
             walk::walk_template_literal(self, t);
         }
-        fn visit_member_expression(&mut self, m: &oxc_ast::ast::MemberExpression<'a>) {
-            let reads_name = match m {
-                oxc_ast::ast::MemberExpression::StaticMemberExpression(m) => {
-                    m.property.name == "name"
-                }
-                oxc_ast::ast::MemberExpression::ComputedMemberExpression(m) => {
-                    literal_key(&m.expression).as_deref() == Some("name")
-                }
-                oxc_ast::ast::MemberExpression::PrivateFieldExpression(_) => false,
-            };
-            if reads_name && let Expression::Identifier(id) = m.object().without_parentheses() {
-                self.0.insert(id.name.to_string());
-            }
-            walk::walk_member_expression(self, m);
-        }
-        fn visit_binding_identifier(&mut self, id: &oxc_ast::ast::BindingIdentifier<'a>) {
-            self.0.insert(id.name.to_string());
-        }
-        fn visit_property_key(&mut self, key: &PropertyKey<'a>) {
-            if let PropertyKey::StaticIdentifier(id) = key {
-                self.0.insert(id.name.to_string());
-            }
-            walk::walk_property_key(self, key);
-        }
     }
-    let mut writes = Writes(BTreeSet::new());
-    writes.visit_program(program);
-    writes.0
+    let mut names = Spelled(BTreeSet::new());
+    names.visit_program(program);
+    names.0
 }
 
 /// The names an assignment pattern assigns, and any it reads for defaults.
@@ -927,6 +895,11 @@ var _empty = new Set();\n";
             "({ x: globalThis[\"Map\"] } = { x: function() { externalNotify(); } });",
             "for (this[`Map`] in { a: 1 }) {}",
             "Reflect[`set`](globalThis, \"Map\", function() { externalNotify(); });",
+            "var { name } = Map; globalThis[name] = function() { externalNotify(); };",
+            "var M = Map; globalThis[M.name] = function() { externalNotify(); };",
+            "globalThis[Reflect.get(Map, `name`)] = function() { externalNotify(); };",
+            "globalThis[globalThis.Map.name] = function() { externalNotify(); };",
+            "globalThis[String(Map).slice(9, 12)] = function() { externalNotify(); };",
         ] {
             let out = shake_library(&format!("{replace}\nvar unused = new Map();\n"), []);
             assert!(out.contains("var unused = new Map();"), "{replace}: {out}");
