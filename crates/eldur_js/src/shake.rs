@@ -56,11 +56,8 @@ pub fn shake_library<'u>(library: &str, used: impl IntoIterator<Item = &'u str>)
     let scoping = semantic.scoping();
 
     let statements = &program.body;
-    let lib = Library {
-        scoping,
-        replaced: replaced_names(&program),
-    };
-    let foreign = foreign_paths(statements, &lib);
+    let lib = Library { scoping };
+    let foreign = foreign_paths(statements);
     let roles: Vec<Role> = statements
         .iter()
         .map(|s| match role(s, &lib) {
@@ -193,7 +190,7 @@ type Step = Option<String>;
 /// an object made elsewhere at (`var P = Promise;` stores at `P`,
 /// `X.prototype = Array.prototype;` at `X.prototype`, `var o = { p: Promise };`
 /// at `o.p`). Filling in anything under such a path changes that object.
-fn foreign_paths(statements: &[Statement<'_>], lib: &Library<'_>) -> Vec<Vec<Step>> {
+fn foreign_paths(statements: &[Statement<'_>]) -> Vec<Vec<Step>> {
     let mut found = Vec::new();
     for statement in statements {
         match statement {
@@ -201,7 +198,7 @@ fn foreign_paths(statements: &[Statement<'_>], lib: &Library<'_>) -> Vec<Vec<Ste
                 for declarator in &v.declarations {
                     match (&declarator.id, &declarator.init) {
                         (BindingPattern::BindingIdentifier(id), Some(init)) => {
-                            stores(vec![Some(id.name.to_string())], init, lib, &mut found);
+                            stores(vec![Some(id.name.to_string())], init, &mut found);
                         }
                         // `var { Promise: P } = globalThis;`: what each name
                         // gets is read out of an object, so may be anything.
@@ -218,7 +215,7 @@ fn foreign_paths(statements: &[Statement<'_>], lib: &Library<'_>) -> Vec<Vec<Ste
             Statement::ExpressionStatement(e) => {
                 if let Expression::AssignmentExpression(a) = &e.expression {
                     if let Some(at) = target_path(&a.left) {
-                        stores(at, &a.right, lib, &mut found);
+                        stores(at, &a.right, &mut found);
                     } else if let Some(pattern) = a.left.as_assignment_target_pattern() {
                         let mut names = Names(Vec::new());
                         names.visit_assignment_target_pattern(pattern);
@@ -233,9 +230,9 @@ fn foreign_paths(statements: &[Statement<'_>], lib: &Library<'_>) -> Vec<Vec<Ste
 }
 
 /// Adds the paths under `at` where `value` puts an object it does not make.
-fn stores(at: Vec<Step>, value: &Expression<'_>, lib: &Library<'_>, found: &mut Vec<Vec<Step>>) {
+fn stores(at: Vec<Step>, value: &Expression<'_>, found: &mut Vec<Vec<Step>>) {
     match value {
-        Expression::ParenthesizedExpression(p) => stores(at, &p.expression, lib, found),
+        Expression::ParenthesizedExpression(p) => stores(at, &p.expression, found),
         Expression::BooleanLiteral(_)
         | Expression::NullLiteral(_)
         | Expression::NumericLiteral(_)
@@ -247,9 +244,6 @@ fn stores(at: Vec<Step>, value: &Expression<'_>, lib: &Library<'_>, found: &mut 
         | Expression::ArrowFunctionExpression(_)
         | Expression::UnaryExpression(_)
         | Expression::BinaryExpression(_) => {}
-        // A built-in made with nothing to wrap is new; `new Object(Promise)`
-        // is `Promise`, and any other constructor may return what it likes.
-        Expression::NewExpression(n) if fresh_construction(n, lib) => {}
         Expression::ObjectExpression(o) => {
             for property in &o.properties {
                 match property {
@@ -264,7 +258,7 @@ fn stores(at: Vec<Step>, value: &Expression<'_>, lib: &Library<'_>, found: &mut 
                     ObjectPropertyKind::ObjectProperty(p) => {
                         let mut under = at.clone();
                         under.push(p.key.static_name().map(|n| n.to_string()));
-                        stores(under, &p.value, lib, found);
+                        stores(under, &p.value, found);
                     }
                     ObjectPropertyKind::SpreadProperty(_) => {
                         let mut under = at.clone();
@@ -279,7 +273,7 @@ fn stores(at: Vec<Step>, value: &Expression<'_>, lib: &Library<'_>, found: &mut 
                 if let Some(e) = element.as_expression() {
                     let mut under = at.clone();
                     under.push(None);
-                    stores(under, e, lib, found);
+                    stores(under, e, found);
                 }
             }
         }
@@ -512,37 +506,12 @@ fn pure(expression: &Expression<'_>, lib: &Library<'_>) -> bool {
             pure(&c.test, lib) && pure(&c.consequent, lib) && pure(&c.alternate, lib)
         }
         Expression::ParenthesizedExpression(p) => pure(&p.expression, lib),
-        Expression::NewExpression(n) => fresh_construction(n, lib),
+        // `new` runs a constructor, and `Map` may not be the built-in: a
+        // library can replace it by a name it builds at run time (`"" + {}`,
+        // `Object.getOwnPropertyNames(globalThis)`, `eval`, an HTML handler),
+        // so no form of it is taken as pure.
         _ => false,
     }
-}
-
-/// A built-in made with no arguments: an empty object, made without running
-/// anyone's code. With arguments, a collection runs their iterators and a
-/// regular expression reads their `Symbol.match` and `toString`. The name
-/// must still be the built-in: declared nowhere in the script, not assigned,
-/// and not written as a property by name (`globalThis.Map = …`; the forms
-/// followed are those [`replaced_names`] lists).
-fn fresh_construction(n: &oxc_ast::ast::NewExpression<'_>, lib: &Library<'_>) -> bool {
-    let Expression::Identifier(id) = &n.callee else {
-        return false;
-    };
-    let global = id
-        .reference_id
-        .get()
-        .is_some_and(|r| lib.scoping.get_reference(r).symbol_id().is_none());
-    let assigned = lib.replaced.contains(id.name.as_str())
-        || lib
-            .scoping
-            .root_unresolved_references()
-            .iter()
-            .any(|(name, refs)| {
-                name.as_str() == id.name.as_str()
-                    && refs
-                        .iter()
-                        .any(|r| lib.scoping.get_reference(*r).is_write())
-            });
-    n.arguments.is_empty() && global && !assigned && FRESH.contains(&id.name.as_str())
 }
 
 /// Whether `expression` is pure and turning it into a primitive runs no code:
@@ -569,71 +538,9 @@ fn primitive(expression: &Expression<'_>) -> bool {
     }
 }
 
-/// The built-ins whose `new X()` with no arguments runs no code.
-const FRESH: [&str; 7] = [
-    "Map", "Set", "WeakMap", "WeakSet", "Object", "Array", "RegExp",
-];
-
 /// What the shaker reads a library with.
 struct Library<'s> {
     scoping: &'s Scoping,
-    /// Property names written anywhere in the library by name.
-    replaced: BTreeSet<String>,
-}
-
-/// The names `program` may replace a built-in by: every name it spells, as a
-/// string, a substitution-free template, a property key, a member's property,
-/// a binding or a reference. Only the callee of `new Map()` does not count. A
-/// library that mentions `Map` anywhere else may hand its value to
-/// `Object.assign`, `Reflect.set`, `.name`, `String(Map)` or a call that reads
-/// it, so following each of those is not attempted. A value's `constructor`
-/// or `Symbol.toStringTag` gives a built-in's name without spelling it, even
-/// for `[]` or `{}`, and `eval` or `Function` may spell it in a string: a
-/// library that spells one of those may replace every built-in. A name built
-/// from characters (`"M" + "ap"`, `String.fromCharCode(…)`) is not followed.
-fn replaced_names(program: &oxc_ast::ast::Program<'_>) -> BTreeSet<String> {
-    struct Spelled(BTreeSet<String>);
-    impl<'a> Visit<'a> for Spelled {
-        fn visit_new_expression(&mut self, n: &oxc_ast::ast::NewExpression<'a>) {
-            if !matches!(n.callee, Expression::Identifier(_)) {
-                self.visit_expression(&n.callee);
-            }
-            for argument in &n.arguments {
-                self.visit_argument(argument);
-            }
-        }
-        fn visit_identifier_reference(&mut self, id: &IdentifierReference<'a>) {
-            self.0.insert(id.name.to_string());
-        }
-        fn visit_binding_identifier(&mut self, id: &oxc_ast::ast::BindingIdentifier<'a>) {
-            self.0.insert(id.name.to_string());
-        }
-        fn visit_identifier_name(&mut self, id: &oxc_ast::ast::IdentifierName<'a>) {
-            self.0.insert(id.name.to_string());
-        }
-        fn visit_string_literal(&mut self, s: &oxc_ast::ast::StringLiteral<'a>) {
-            self.0.insert(s.value.to_string());
-        }
-        fn visit_template_literal(&mut self, t: &oxc_ast::ast::TemplateLiteral<'a>) {
-            if t.expressions.is_empty()
-                && let Some(q) = t.quasis.first()
-            {
-                self.0
-                    .insert(q.value.cooked.unwrap_or(q.value.raw).to_string());
-            }
-            walk::walk_template_literal(self, t);
-        }
-    }
-    let mut names = Spelled(BTreeSet::new());
-    names.visit_program(program);
-    let mut names = names.0;
-    if ["constructor", "toStringTag", "eval", "Function"]
-        .iter()
-        .any(|n| names.contains(*n))
-    {
-        names.extend(FRESH.iter().map(|n| (*n).to_owned()));
-    }
-    names
 }
 
 /// The names an assignment pattern assigns, and any it reads for defaults.
@@ -773,14 +680,11 @@ _box.p.c = function() {};\n\
 var _get = { get p() { return Promise; } };\n\
 _get.p.d = function() {};\n\
 var _W = new Object(Promise);\n\
-_W.prototype.e = function() {};\n\
-var _own = new Map();\n\
-_own.f = function() {};\n";
+_W.prototype.e = function() {};\n";
         let out = shake_library(library, []);
         for kept in [".a =", ".b =", ".c =", ".d =", ".e ="] {
             assert!(out.contains(kept), "{kept} went:\n{out}");
         }
-        assert!(!out.contains("_own"), "{out}");
     }
 
     #[test]
@@ -810,14 +714,20 @@ _own.f = function() {};\n";
 
     #[test]
     fn a_literal_gives_its_constructor_name() {
-        for (built_in, literal) in [("Array", "[]"), ("Object", "({})"), ("RegExp", "/x/")] {
+        for (built_in, name) in [
+            ("Array", "[].constructor.name"),
+            ("Object", "({}).constructor.name"),
+            ("RegExp", "/x/.constructor.name"),
+            ("Array", "({}).toString.call([]).slice(8, -1)"),
+            ("Object", "(\"\" + {}).slice(8, -1)"),
+        ] {
             let out = shake_library(
                 &format!(
-                    "globalThis[{literal}.constructor.name] = function() {{ externalNotify(); }};\nvar unused = new {built_in}();\n"
+                    "globalThis[{name}] = function() {{ externalNotify(); }};\nvar unused = new {built_in}();\n"
                 ),
                 [],
             );
-            assert!(out.contains("var unused ="), "{built_in}: {out}");
+            assert!(out.contains("var unused ="), "{name}: {out}");
         }
     }
 
@@ -835,16 +745,14 @@ var _k = { a: 1 }[\"a\"];\n",
     }
 
     #[test]
-    fn a_constructor_given_arguments_may_run_code() {
+    fn a_constructor_may_run_code() {
         let library = "var _s = new Set({ [Symbol.iterator]: function() { return [][Symbol.iterator](); } });\n\
 var _r = new RegExp({ toString: function() { return \"x\"; } });\n\
 var _empty = new Set();\n";
         let out = shake_library(library, []);
-        assert!(
-            out.contains("var _s =") && out.contains("var _r ="),
-            "{out}"
-        );
-        assert!(!out.contains("_empty"), "{out}");
+        for kept in ["var _s =", "var _r =", "var _empty ="] {
+            assert!(out.contains(kept), "{kept} went:\n{out}");
+        }
     }
 
     #[test]
@@ -926,6 +834,9 @@ var _empty = new Set();\n";
             "globalThis[new Set()[Symbol.toStringTag].slice(0, 0) + \"Map\"] = function() { externalNotify(); };",
             "eval(\"globalThis.M\" + \"ap = function() { externalNotify(); }\");",
             "Function(\"globalThis.M\" + \"ap = function() { externalNotify(); }\")();",
+            "new Function(\"globalThis.M\" + \"ap = function() { externalNotify(); }\")();",
+            "setTimeout(\"globalThis.M\" + \"ap = function() { externalNotify(); }\");",
+            "Object.getOwnPropertyNames(globalThis).forEach(function(k) { if (k.length === 3) globalThis[k] = function() { externalNotify(); }; });",
         ] {
             let out = shake_library(&format!("{replace}\nvar unused = new Map();\n"), []);
             assert!(out.contains("var unused = new Map();"), "{replace}: {out}");
