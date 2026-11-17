@@ -45,7 +45,12 @@ const casesFile = path.join(here, "cases.json");
 writeRecording(casesFile, `${JSON.stringify(cases, null, 1)}\n`);
 
 const out = {};
-const lines = execFileSync("node", [path.join(tools, "computed.mjs"), casesFile], { encoding: "utf8" });
+// The cases as made here: with ELDUR_RECORDING_DIR set, the file above is not
+// where `writeRecording` put them.
+const lines = execFileSync("node", [path.join(tools, "computed.mjs")], {
+  encoding: "utf8",
+  input: JSON.stringify(cases),
+});
 for (const line of lines.split("\n").filter(Boolean)) {
   const { name, ...values } = JSON.parse(line);
   out[name] = values;
