@@ -4,7 +4,10 @@
  * they do for a user.
  *
  * Steps: {"eval": js} {"click": sel} {"hover": sel} {"focus": sel}
- *        {"type": [sel, text]} {"wait": ms}
+ *        {"press": sel} {"type": [sel, text]} {"wait": ms}
+ *
+ * `press` puts the pointer on the element and holds the button down, for
+ * `:active`.
  */
 export async function runSteps(page, steps) {
   for (const step of steps ?? []) {
@@ -19,6 +22,10 @@ export async function runSteps(page, steps) {
         break;
       case "hover":
         await page.hover(arg);
+        break;
+      case "press":
+        await page.hover(arg);
+        await page.mouse.down();
         break;
       case "focus":
         await page.focus(arg);

@@ -12636,6 +12636,94 @@ function _vWatchStates(model) {
             }
         }
     }
+    // And `.c a:hover`, on an element of the line itself.
+    _vEachElement(model.kids, function(v) {
+        for (var r = 0; r < rules.length; ++r) {
+            var matches = false;
+            try {
+                matches = _matchesList(v, rules[r].list);
+            } catch (e) {
+                matches = false;
+            }
+            if (matches) {
+                rules[r].kinds.forEach(function(kind) { _vWatchNode(v, kind); });
+            }
+        }
+    });
+}
+
+// An element of a line has no item to hear the pointer: the line's `Text`
+// hears it for all of them, and its twin says which element is under the
+// point. That element and the ones around it in the line are hovered (or,
+// with the button held, active) until the pointer leaves their glyphs.
+// Focus is not here: a run takes no focus, so `:focus` on one never matches.
+var _V_POINTER_STATES = {
+    hover: { flag: "gHover", handler: "HoverHandler { blocking: false }", on: "hovered" },
+    active: { flag: "gPress", handler: "TapHandler { gesturePolicy: TapHandler.DragThreshold }", on: "pressed" }
+};
+
+function _vWatchNode(v, kind) {
+    var state = _V_POINTER_STATES[kind];
+    if (!state) {
+        return;
+    }
+    // A piece of an element can be in another run's `Text`, which hears its own.
+    _vPieces(v).forEach(function(model) {
+        if (model.text && !model.select) {
+            _vWatchText(model.text, kind, state);
+        }
+    });
+}
+
+function _vWatchText(text, kind, state) {
+    var tm = _meta(text);
+    tm.vStates = tm.vStates || {};
+    if (tm.vStates[kind]) {
+        return;
+    }
+    var handler = Qt.createQmlObject("import QtQuick; " + state.handler, text, "eldur_vstate");
+    // What this `Text` marks: another run's `Text` can mark the same element,
+    // which stays in the state while either holds it.
+    var held = [];
+    tm.vStates[kind] = handler;
+    var update = function() {
+        var model = _vModelOf(text);
+        var now = [];
+        if (model && handler[state.on]) {
+            var p = handler.point.position;
+            for (var at = _vHitAt(model, p.x, p.y); at; at = at.vparent) {
+                now.push(at);
+            }
+        }
+        var changed = false;
+        held.forEach(function(n) {
+            if (now.indexOf(n) === -1) {
+                var by = _meta(n).vStateBy;
+                by[kind] = (by[kind] || 1) - 1;
+                _meta(n)[state.flag] = by[kind] > 0;
+                changed = true;
+            }
+        });
+        now.forEach(function(n) {
+            if (held.indexOf(n) === -1) {
+                var m = _meta(n);
+                m.vStateBy = m.vStateBy || {};
+                m.vStateBy[kind] = (m.vStateBy[kind] || 0) + 1;
+                m[state.flag] = true;
+                changed = true;
+            }
+        });
+        held = now;
+        if (changed && model) {
+            _gTouch();
+            _vChanged(model);
+        }
+    };
+    handler[state.on + "Changed"].connect(update);
+    // Along the line the pointer moves from one element to the next.
+    if (kind === "hover") {
+        handler.pointChanged.connect(update);
+    }
 }
 
 // After any write a selector could notice. A `Text` nothing touched keeps
@@ -22596,9 +22684,10 @@ function _gLoadStateRules() {
 }
 
 function _gWatch(raw, kind) {
-    // A run is markup in its block's `Text`, with no item of its own to hear
-    // the pointer or take focus: its states are not watched yet.
+    // A run is markup in its block's `Text`, with no item of its own: the
+    // line hears the pointer for it.
     if (_vIsElement(raw)) {
+        _vWatchNode(raw, kind);
         return;
     }
     var m = _meta(raw);

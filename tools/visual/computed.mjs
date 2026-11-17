@@ -20,7 +20,8 @@
  * Playwright's real input (so :hover, :focus and transitions behave as for a
  * user):
  *   {"eval": "<js>"}  {"click": "<sel>"}  {"hover": "<sel>"}
- *   {"focus": "<sel>"}  {"type": ["<sel>", "<text>"]}  {"wait": <ms>}
+ *   {"focus": "<sel>"}  {"press": "<sel>"} (button held, for :active)
+ *   {"type": ["<sel>", "<text>"]}  {"wait": <ms>}
  * Optional `after` is milliseconds to wait once the steps are done, to read a
  * value mid-transition or after it. The page's own timers and frames due by
  * the end of that wait have run before reading, however loaded the machine:
