@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+#MISE description="Build the API docs of every crate (cargo doc) and print where to open them"
+#USAGE flag "--open" help="Open the docs in a browser when built"
+set -euo pipefail
+task_name="docs"
+# shellcheck source=mise-tasks/_lib/common.sh
+. "$(dirname "$0")/_lib/common.sh"
+cd "$root"
+args=(doc --no-deps --workspace --locked)
+[[ "${usage_open:-false}" == "true" ]] && args+=(--open)
+cargo "${args[@]}"
+index="$(target_dir)/doc/eldur_convert/index.html"
+[[ -f "$index" ]] || die "cargo doc finished but wrote no $index"
+echo "docs: open $index (each crate has its own <target>/doc/<crate>/index.html)"

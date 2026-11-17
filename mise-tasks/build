@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
-#MISE description="Build every crate, and the eldur binary into target/<profile>/eldur"
-#USAGE flag "--release" help="Optimised build (target/release)"
+#MISE description="Build every crate, and the eldur binary (its path is printed at the end)"
+#USAGE flag "--release" help="Optimised build"
 set -euo pipefail
+task_name="build"
+# shellcheck source=mise-tasks/_lib/common.sh
+. "$(dirname "$0")/_lib/common.sh"
+cd "$root"
 args=(build --workspace --locked)
-[[ "${usage_release:-false}" == "true" ]] && args+=(--release)
+profile=debug
+if [[ "${usage_release:-false}" == "true" ]]; then
+  args+=(--release)
+  profile=release
+fi
 cargo "${args[@]}"
+echo "build: eldur is $(target_dir)/$profile/eldur"

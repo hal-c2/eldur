@@ -14,6 +14,13 @@
 #USAGE flag "--cache-dir <dir>" help="Build cache directory (default <out>/.eldur-cache)"
 #USAGE flag "-q --quiet" help="Suppress cached / converted timing lines"
 set -euo pipefail
+task_name="convert"
+# shellcheck source=mise-tasks/_lib/common.sh
+. "$(dirname "$0")/_lib/common.sh"
 # The spec above checks and documents the arguments; eldur's own parser reads
-# them, so the two stay one interface.
-cargo run -q -p eldur_cli -- convert "$@"
+# them, so the two stay one interface. eldur runs where mise was run, so the
+# paths in the arguments mean what the caller typed.
+cargo build -q --locked --manifest-path "$root/Cargo.toml" -p eldur_cli
+eldur="$(target_dir)/debug/eldur"
+cd "${MISE_ORIGINAL_CWD:-$root}"
+exec "$eldur" convert "$@"

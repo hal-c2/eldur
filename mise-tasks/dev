@@ -1,23 +1,27 @@
 #!/usr/bin/env bash
 #MISE description="Convert a page to QML and run it in ljos or qml6, whichever is found"
-#USAGE arg "[page]" default="tests/corpus/17-landing-page/index.html" help="HTML file to convert"
-#USAGE flag "-o --out <dir>" default="target/dev" help="Directory the QML is written to"
+#USAGE arg "[page]" help="HTML file to convert (default tests/corpus/17-landing-page/index.html)"
+#USAGE flag "-o --out <dir>" help="Directory the QML is written to (default <cargo target dir>/dev)"
 #USAGE flag "--runtime <runtime>" default="auto" help="QML runtime to run Main.qml in; auto tries ljos, then qml6; none only converts" {
 #USAGE   choices "auto" "ljos" "qml6" "none"
 #USAGE }
 #USAGE flag "--viewport <WxH>" help="Conversion viewport, e.g. 375x667 (default 1280x800)"
 set -euo pipefail
-cd "${MISE_PROJECT_ROOT:-.}"
+task_name="dev"
+# shellcheck source=mise-tasks/_lib/common.sh
+. "$(dirname "$0")/_lib/common.sh"
+cd "$root"
 
-page="${usage_page:-tests/corpus/17-landing-page/index.html}"
-out="${usage_out:-target/dev}"
+if [[ -n "${usage_page:-}" ]]; then
+  page="$(from_caller "$usage_page")"
+else
+  page="$root/tests/corpus/17-landing-page/index.html"
+fi
+[[ -f "$page" ]] || die "no page at $page"
 runtime="${usage_runtime:-auto}"
 
-args=(convert "$page" -o "$out")
-[[ -n "${usage_viewport:-}" ]] && args+=(--viewport "$usage_viewport")
-cargo run -q -p eldur_cli -- "${args[@]}"
-
 have() { command -v "$1" >/dev/null 2>&1; }
+# Decided before converting, so a missing runtime is said before any build.
 if [[ "$runtime" == "auto" ]]; then
   if have ljos; then
     runtime=ljos
@@ -25,16 +29,27 @@ if [[ "$runtime" == "auto" ]]; then
     echo "dev: ljos not found on PATH; running in qml6" >&2
     runtime=qml6
   else
-    echo "dev: neither ljos nor qml6 found; skipped running $out/Main.qml" >&2
-    echo "dev: install ljos (mise run install in a ljos-ui checkout) or Qt 6 (qt6-declarative)" >&2
-    exit 0
+    die "neither ljos nor qml6 is on PATH to run the page: install ljos (mise run install in a ljos-ui checkout) or Qt 6 (qt6-declarative), or pass --runtime none to only convert"
   fi
 fi
+case "$runtime" in
+  ljos) have ljos || die "ljos not found on PATH: install it with mise run install in a ljos-ui checkout" ;;
+  qml6) have qml6 || die "qml6 not found on PATH: $qt6_install_hint" ;;
+esac
+
+cargo build -q --locked -p eldur_cli
+target="$(target_dir)"
+if [[ -n "${usage_out:-}" ]]; then
+  out="$(from_caller "$usage_out")"
+else
+  out="$target/dev"
+fi
+args=(convert "$page" -o "$out")
+[[ -n "${usage_viewport:-}" ]] && args+=(--viewport "$usage_viewport")
+"$target/debug/eldur" "${args[@]}"
 
 case "$runtime" in
   none) echo "dev: converted to $out/Main.qml; --runtime none, not running it" ;;
-  ljos) have ljos || { echo "dev: ljos not found on PATH" >&2; exit 1; }
-        cd "$out" && exec ljos run Main.qml ;;
-  qml6) have qml6 || { echo "dev: qml6 not found on PATH" >&2; exit 1; }
-        cd "$out" && exec qml6 Main.qml ;;
+  ljos) cd "$out" && exec ljos run Main.qml ;;
+  qml6) cd "$out" && exec qml6 Main.qml ;;
 esac
