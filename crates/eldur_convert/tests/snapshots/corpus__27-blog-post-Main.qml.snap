@@ -189,7 +189,7 @@ ApplicationWindow {
                         }
 
                         Item {
-                            id: item
+                            id: item_
                             property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                             Layout.fillWidth: true
@@ -404,7 +404,7 @@ ApplicationWindow {
                             implicitWidth: tocContent.implicitWidth + 48
                             implicitHeight: tocContent.implicitHeight + 32
                             Layout.fillWidth: true
-                            Layout.topMargin: 24 - item.eldurCarry
+                            Layout.topMargin: 24 - item_.eldurCarry
                             Layout.preferredHeight: implicitHeight - li4.eldurCarry
                             antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
@@ -453,7 +453,7 @@ ApplicationWindow {
                                         Layout.maximumWidth: Number.POSITIVE_INFINITY
 
                                         Text {
-                                            id: text
+                                            id: text_
                                             property real eldurCarry: Math.ceil(Layout.topMargin + Math.ceil(implicitHeight)) - Layout.topMargin - implicitHeight + 0.000001
 
                                             text: "<b><font color=\"#c9533b\">1. </font></b>The dark months"
@@ -480,7 +480,7 @@ ApplicationWindow {
                                             implicitWidth: olContent.implicitWidth + 24
                                             implicitHeight: olContent.implicitHeight
                                             Layout.fillWidth: true
-                                            Layout.topMargin: -text.eldurCarry
+                                            Layout.topMargin: -text_.eldurCarry
 
                                             ColumnLayout {
                                                 id: olContent

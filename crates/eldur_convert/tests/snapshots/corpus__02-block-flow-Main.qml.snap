@@ -700,7 +700,7 @@ ApplicationWindow {
 
                         // <footer class="footer">
                         Rectangle {
-                            id: footer
+                            id: footer_
                             property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                             color: "#00000000"

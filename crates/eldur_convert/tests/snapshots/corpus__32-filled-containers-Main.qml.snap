@@ -8,7 +8,6 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import "eldur_fonts.js" as EldurFonts
-import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
 ApplicationWindow {
@@ -19,7 +18,7 @@ ApplicationWindow {
     property string eldurPaintValues: "{}"
     property string eldurCascadeRules: "[{\"decls\":[[\"display\",\"none\",false]],\"sel\":\"head\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"none\",false]],\"sel\":\"meta\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"none\",false]],\"sel\":\"script\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"none\",false]],\"sel\":\"style\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"none\",false]],\"sel\":\"title\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"none\",false]],\"sel\":\"[hidden]:not([hidden=\\\"until-found\\\" i])\",\"spec\":[0,2,0],\"ua\":true},{\"decls\":[[\"display\",\"none\",false],[\"position\",\"fixed\",false],[\"left\",\"0\",false],[\"right\",\"0\",false],[\"top\",\"0\",false],[\"bottom\",\"0\",false],[\"width\",\"fit-content\",false],[\"height\",\"fit-content\",false],[\"margin-top\",\"auto\",false],[\"margin-right\",\"auto\",false],[\"margin-bottom\",\"auto\",false],[\"margin-left\",\"auto\",false],[\"border-top-width\",\"medium\",false],[\"border-top-style\",\"solid\",false],[\"border-top-color\",\"currentcolor\",false],[\"border-right-width\",\"medium\",false],[\"border-right-style\",\"solid\",false],[\"border-right-color\",\"currentcolor\",false],[\"border-bottom-width\",\"medium\",false],[\"border-bottom-style\",\"solid\",false],[\"border-bottom-color\",\"currentcolor\",false],[\"border-left-width\",\"medium\",false],[\"border-left-style\",\"solid\",false],[\"border-left-color\",\"currentcolor\",false],[\"padding-top\",\"0.25em\",false],[\"padding-right\",\"0.25em\",false],[\"padding-bottom\",\"0.25em\",false],[\"padding-left\",\"0.25em\",false],[\"color\",\"black\",false],[\"background-color\",\"white\",false]],\"sel\":\"[popover]:not(:popover-open)\",\"spec\":[0,2,0],\"ua\":true},{\"decls\":[[\"display\",\"block\",false]],\"sel\":\"html\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"block\",false]],\"sel\":\"body\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"margin-top\",\"8px\",false],[\"margin-right\",\"8px\",false],[\"margin-bottom\",\"8px\",false],[\"margin-left\",\"8px\",false]],\"sel\":\"body\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"block\",false]],\"sel\":\"div\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"block\",false]],\"sel\":\"ul\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"block\",false],[\"font-size\",\"1.5em\",false],[\"margin-top\",\"0.83em\",false],[\"margin-bottom\",\"0.83em\",false],[\"margin-left\",\"0\",false],[\"margin-right\",\"0\",false],[\"font-weight\",\"bold\",false]],\"sel\":\"h2\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"margin-top\",\"1em\",false],[\"margin-bottom\",\"1em\",false],[\"padding-left\",\"40px\",false]],\"sel\":\"ul\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"list-item\",false]],\"sel\":\"li\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"margin-top\",\"0\",false],[\"margin-bottom\",\"0\",false]],\"sel\":\":is(dir, dl, menu, ol, ul) :is(dir, menu, ol, ul)\",\"spec\":[0,0,2],\"ua\":true},{\"decls\":[[\"display\",\"inline-block\",false],[\"font-size\",\"13.3333px\",false],[\"font-family\",\"Arial\",false],[\"font-weight\",\"normal\",false],[\"font-style\",\"normal\",false],[\"line-height\",\"normal\",false],[\"color\",\"black\",false],[\"text-align\",\"start\",false]],\"sel\":\"button\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"text-align\",\"center\",false],[\"box-sizing\",\"border-box\",false],[\"border-top-width\",\"2px\",false],[\"border-top-style\",\"outset\",false],[\"border-top-color\",\"black\",false],[\"border-right-width\",\"2px\",false],[\"border-right-style\",\"outset\",false],[\"border-right-color\",\"black\",false],[\"border-bottom-width\",\"2px\",false],[\"border-bottom-style\",\"outset\",false],[\"border-bottom-color\",\"black\",false],[\"border-left-width\",\"2px\",false],[\"border-left-style\",\"outset\",false],[\"border-left-color\",\"black\",false],[\"padding-top\",\"1px\",false],[\"padding-right\",\"6px\",false],[\"padding-bottom\",\"1px\",false],[\"padding-left\",\"6px\",false],[\"background-color\",\"#efefef\",false]],\"sel\":\"button\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"inline\",false]],\"sel\":\"img\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"margin-top\",\"0\",false],[\"margin-right\",\"0\",false],[\"margin-bottom\",\"0\",false],[\"margin-left\",\"0\",false],[\"font-style\",\"normal\",false],[\"font-weight\",\"normal\",false],[\"font-size\",\"16px\",false],[\"line-height\",\"20px\",false],[\"font-family\",\"sans-serif\",false],[\"color\",\"#223\",false]],\"sel\":\"body\",\"spec\":[0,0,1],\"ua\":false},{\"decls\":[[\"font-style\",\"normal\",false],[\"font-weight\",\"normal\",false],[\"font-size\",\"14px\",false],[\"line-height\",\"20px\",false],[\"font-family\",\"sans-serif\",false]],\"sel\":\"button\",\"spec\":[0,0,1],\"ua\":false},{\"decls\":[[\"margin-top\",\"12px\",false],[\"margin-right\",\"0\",false],[\"margin-bottom\",\"4px\",false],[\"margin-left\",\"0\",false],[\"font-size\",\"18px\",false]],\"sel\":\"h2\",\"spec\":[0,0,1],\"ua\":false},{\"decls\":[[\"height\",\"30px\",false],[\"background-image\",\"none\",false],[\"background-position-x\",\"0%\",false],[\"background-position-y\",\"0%\",false],[\"background-size\",\"auto\",false],[\"background-repeat\",\"repeat\",false],[\"background-attachment\",\"scroll\",false],[\"background-origin\",\"padding-box\",false],[\"background-clip\",\"border-box\",false],[\"background-color\",\"#def\",false],[\"border-bottom-width\",\"1px\",false],[\"border-bottom-style\",\"solid\",false],[\"border-bottom-color\",\"#9ab\",false],[\"padding-left\",\"8px\",false],[\"line-height\",\"30px\",false]],\"sel\":\".row\",\"spec\":[0,1,0],\"ua\":false},{\"decls\":[[\"display\",\"flex\",false],[\"row-gap\",\"8px\",false],[\"column-gap\",\"8px\",false]],\"sel\":\"#tags\",\"spec\":[1,0,0],\"ua\":false},{\"decls\":[[\"width\",\"60px\",false],[\"height\",\"28px\",false],[\"background-image\",\"none\",false],[\"background-position-x\",\"0%\",false],[\"background-position-y\",\"0%\",false],[\"background-size\",\"auto\",false],[\"background-repeat\",\"repeat\",false],[\"background-attachment\",\"scroll\",false],[\"background-origin\",\"padding-box\",false],[\"background-clip\",\"border-box\",false],[\"background-color\",\"#fd9\",false]],\"sel\":\".tag\",\"spec\":[0,1,0],\"ua\":false},{\"decls\":[[\"display\",\"grid\",false],[\"grid-template-columns\",\"90px 90px 90px\",false],[\"row-gap\",\"6px\",false],[\"column-gap\",\"6px\",false]],\"sel\":\"#cells\",\"spec\":[1,0,0],\"ua\":false},{\"decls\":[[\"height\",\"24px\",false],[\"background-image\",\"none\",false],[\"background-position-x\",\"0%\",false],[\"background-position-y\",\"0%\",false],[\"background-size\",\"auto\",false],[\"background-repeat\",\"repeat\",false],[\"background-attachment\",\"scroll\",false],[\"background-origin\",\"padding-box\",false],[\"background-clip\",\"border-box\",false],[\"background-color\",\"#cec\",false]],\"sel\":\".cell\",\"spec\":[0,1,0],\"ua\":false},{\"decls\":[[\"text-align\",\"center\",false]],\"sel\":\"#centred\",\"spec\":[1,0,0],\"ua\":false}]"
     property string eldurInlineRules: "[{\"decls\":[[\"display\",\"none\",false]],\"sel\":\"head\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"none\",false]],\"sel\":\"meta\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"none\",false]],\"sel\":\"script\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"none\",false]],\"sel\":\"style\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"none\",false]],\"sel\":\"title\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"none\",false]],\"sel\":\"[hidden]:not([hidden=\\\"until-found\\\" i])\",\"spec\":[0,2,0],\"ua\":true},{\"decls\":[[\"display\",\"none\",false],[\"margin-right\",\"auto\",false],[\"margin-left\",\"auto\",false],[\"border-top-width\",\"medium\",false],[\"border-top-style\",\"solid\",false],[\"border-top-color\",\"currentcolor\",false],[\"border-right-width\",\"medium\",false],[\"border-right-style\",\"solid\",false],[\"border-right-color\",\"currentcolor\",false],[\"border-bottom-width\",\"medium\",false],[\"border-bottom-style\",\"solid\",false],[\"border-bottom-color\",\"currentcolor\",false],[\"border-left-width\",\"medium\",false],[\"border-left-style\",\"solid\",false],[\"border-left-color\",\"currentcolor\",false],[\"padding-top\",\"0.25em\",false],[\"padding-right\",\"0.25em\",false],[\"padding-bottom\",\"0.25em\",false],[\"padding-left\",\"0.25em\",false],[\"color\",\"black\",false],[\"background-color\",\"white\",false]],\"sel\":\"[popover]:not(:popover-open)\",\"spec\":[0,2,0],\"ua\":true},{\"decls\":[[\"display\",\"block\",false]],\"sel\":\"html\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"block\",false]],\"sel\":\"body\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"margin-right\",\"8px\",false],[\"margin-left\",\"8px\",false]],\"sel\":\"body\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"block\",false]],\"sel\":\"div\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"block\",false]],\"sel\":\"ul\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"block\",false],[\"font-size\",\"1.5em\",false],[\"margin-left\",\"0\",false],[\"margin-right\",\"0\",false],[\"font-weight\",\"bold\",false]],\"sel\":\"h2\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"padding-left\",\"40px\",false]],\"sel\":\"ul\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"list-item\",false]],\"sel\":\"li\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"inline-block\",false],[\"font-size\",\"13.3333px\",false],[\"font-family\",\"Arial\",false],[\"font-weight\",\"normal\",false],[\"font-style\",\"normal\",false],[\"line-height\",\"normal\",false],[\"color\",\"black\",false]],\"sel\":\"button\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"border-top-width\",\"2px\",false],[\"border-top-style\",\"outset\",false],[\"border-top-color\",\"black\",false],[\"border-right-width\",\"2px\",false],[\"border-right-style\",\"outset\",false],[\"border-right-color\",\"black\",false],[\"border-bottom-width\",\"2px\",false],[\"border-bottom-style\",\"outset\",false],[\"border-bottom-color\",\"black\",false],[\"border-left-width\",\"2px\",false],[\"border-left-style\",\"outset\",false],[\"border-left-color\",\"black\",false],[\"padding-top\",\"1px\",false],[\"padding-right\",\"6px\",false],[\"padding-bottom\",\"1px\",false],[\"padding-left\",\"6px\",false],[\"background-color\",\"#efefef\",false]],\"sel\":\"button\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"display\",\"inline\",false]],\"sel\":\"img\",\"spec\":[0,0,1],\"ua\":true},{\"decls\":[[\"margin-right\",\"0\",false],[\"margin-left\",\"0\",false],[\"font-style\",\"normal\",false],[\"font-weight\",\"normal\",false],[\"font-size\",\"16px\",false],[\"line-height\",\"20px\",false],[\"font-family\",\"sans-serif\",false],[\"color\",\"#223\",false]],\"sel\":\"body\",\"spec\":[0,0,1],\"ua\":false},{\"decls\":[[\"font-style\",\"normal\",false],[\"font-weight\",\"normal\",false],[\"font-size\",\"14px\",false],[\"line-height\",\"20px\",false],[\"font-family\",\"sans-serif\",false]],\"sel\":\"button\",\"spec\":[0,0,1],\"ua\":false},{\"decls\":[[\"margin-right\",\"0\",false],[\"margin-left\",\"0\",false],[\"font-size\",\"18px\",false]],\"sel\":\"h2\",\"spec\":[0,0,1],\"ua\":false},{\"decls\":[[\"background-color\",\"#def\",false],[\"border-bottom-width\",\"1px\",false],[\"border-bottom-style\",\"solid\",false],[\"border-bottom-color\",\"#9ab\",false],[\"padding-left\",\"8px\",false],[\"line-height\",\"30px\",false]],\"sel\":\".row\",\"spec\":[0,1,0],\"ua\":false},{\"decls\":[[\"display\",\"flex\",false]],\"sel\":\"#tags\",\"spec\":[1,0,0],\"ua\":false},{\"decls\":[[\"background-color\",\"#fd9\",false]],\"sel\":\".tag\",\"spec\":[0,1,0],\"ua\":false},{\"decls\":[[\"display\",\"grid\",false]],\"sel\":\"#cells\",\"spec\":[1,0,0],\"ua\":false},{\"decls\":[[\"background-color\",\"#cec\",false]],\"sel\":\".cell\",\"spec\":[0,1,0],\"ua\":false}]"
-    readonly property var eldurTemplates: ({ "div.row@rows": eldurT_div_0, "div.row@note": eldurT_div_0, "li@items": eldurT_li_1, "div.tag@tags": eldurT_div_2, "div.cell@cells": eldurT_div_3, "div.row@markup": eldurT_div_0, "div.row@*": eldurT_div_0, "li@*": eldurT_li_1, "div.tag@*": eldurT_div_4, "div.cell@*": eldurT_div_5 })
+    readonly property var eldurTemplates: ({ "div.row@rows_": eldurT_div_0, "div.row@note": eldurT_div_0, "li@items": eldurT_li_1, "div.tag@tags": eldurT_div_2, "div.cell@cells": eldurT_div_3, "div.row@markup": eldurT_div_0, "div.row@*": eldurT_div_0, "li@*": eldurT_li_1, "div.tag@*": eldurT_div_4, "div.cell@*": eldurT_div_5 })
 
     visible: true
     color: "#ffffff"
@@ -78,7 +77,7 @@ ApplicationWindow {
 
                     // <button id="first">
                     Button {
-                        id: first
+                        id: first_
                         property string eldurTag: "button"
                         property string eldurWs: "\n"
 
@@ -97,22 +96,23 @@ ApplicationWindow {
                         rightPadding: 8
                         bottomPadding: 3
                         leftPadding: 8
-                        implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 20
+                        implicitHeight: topPadding + bottomPadding + Math.max(1, firstLabel.lineCount) * 20
                         contentItem: Text {
-                            text: first.text
-                            font: first.font
-                            color: first.palette.buttonText
+                            id: firstLabel
+                            text: first_.text
+                            font: first_.font
+                            color: first_.palette.buttonText
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
                             wrapMode: Text.WordWrap
                             renderType: Text.NativeRendering
                         }
                         objectName: "first"
-                        width: Math.min(implicitWidth, Math.max(blockFlow.width, Math.ceil((firstWords.font, Math.max(...first.text.split(/\s+/).map(w => firstWords.advanceWidth(w)))) * 1) + leftPadding + rightPadding))
+                        width: Math.min(implicitWidth, Math.max(blockFlow.width, Math.ceil((firstWords.font && (Math.max(...first_.text.split(/\s+/).map(w => firstWords.advanceWidth(w))))) * 1) + leftPadding + rightPadding))
 
                         FontMetrics {
                             id: firstWords
-                            font: first.font
+                            font: first_.font
                         }
                     }
                 }
@@ -162,8 +162,9 @@ ApplicationWindow {
                             rightPadding: 8
                             bottomPadding: 3
                             leftPadding: 8
-                            implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 20
+                            implicitHeight: topPadding + bottomPadding + Math.max(1, secondLabel.lineCount) * 20
                             contentItem: Text {
+                                id: secondLabel
                                 text: second.text
                                 font: second.font
                                 color: second.palette.buttonText
@@ -173,7 +174,7 @@ ApplicationWindow {
                                 renderType: Text.NativeRendering
                             }
                             objectName: "second"
-                            width: Math.min(implicitWidth, Math.max(divFlow.width, Math.ceil((secondWords.font, Math.max(...second.text.split(/\s+/).map(w => secondWords.advanceWidth(w)))) * 1) + leftPadding + rightPadding))
+                            width: Math.min(implicitWidth, Math.max(divFlow.width, Math.ceil((secondWords.font && (Math.max(...second.text.split(/\s+/).map(w => secondWords.advanceWidth(w))))) * 1) + leftPadding + rightPadding))
 
                             FontMetrics {
                                 id: secondWords
@@ -210,21 +211,21 @@ ApplicationWindow {
 
                 // <div id="rows">
                 Item {
-                    id: rows
+                    id: rows_
                     property string eldurTag: "div"
-                    property string eldurKey: "rows"
+                    property string eldurKey: "rows_"
                     property string eldurWs: "\n"
                     property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : h2.eldurCarry
 
-                    implicitWidth: Math.max(rowsText.implicitWidth, divFlow2.implicitWidth) + 0
-                    implicitHeight: (rowsText.text === "" ? 0 : rowsText.implicitHeight) + divFlow2.implicitHeight + 0
+                    implicitWidth: Math.max(rows_Text.implicitWidth, divFlow2.implicitWidth) + 0
+                    implicitHeight: (rows_Text.text === "" ? 0 : rows_Text.implicitHeight) + divFlow2.implicitHeight + 0
                     objectName: "rows"
                     Layout.fillWidth: true
                     Layout.topMargin: 4 - h2.eldurCarry
                     Layout.preferredHeight: implicitHeight
 
                     Text {
-                        id: rowsText
+                        id: rows_Text
                         text: ""
                         textFormat: Text.PlainText
                         color: "#222233"
@@ -248,7 +249,7 @@ ApplicationWindow {
                         id: divFlow2
                         spacing: 0
                         x: 0
-                        y: (rowsText.text === "" ? 0 : rowsText.implicitHeight) + 0
+                        y: (rows_Text.text === "" ? 0 : rows_Text.implicitHeight) + 0
                         width: parent.width - 0
                     }
                 }
@@ -258,7 +259,7 @@ ApplicationWindow {
                     id: h22
                     property string eldurTag: "h2"
                     property string eldurWs: "\n"
-                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : rows.eldurCarry
+                    property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : rows_.eldurCarry
 
                     text: "Text, then a block"
                     textFormat: Text.PlainText
@@ -274,7 +275,7 @@ ApplicationWindow {
                     bottomPadding: EldurFonts.slack(font, lineHeight)
                     wrapMode: Text.WordWrap
                     Layout.fillWidth: true
-                    Layout.topMargin: 12 - rows.eldurCarry
+                    Layout.topMargin: 12 - rows_.eldurCarry
                     renderType: Text.NativeRendering
                 }
 
@@ -538,7 +539,7 @@ ApplicationWindow {
         }
     }
 
-    // <div class="row"> created by a script, in rows
+    // <div class="row"> created by a script, in rows_
     Component {
         id: eldurT_div_0
 
@@ -677,14 +678,14 @@ ApplicationWindow {
         id: eldurT_div_3
 
         Rectangle {
-            id: cell
+            id: cell_
             property string eldurTag: "div"
             property string eldurClasses: ""
             property string eldurTemplate: "eldurT_div_3"
 
             color: "#cceecc"
-            implicitWidth: cellText.implicitWidth
-            implicitHeight: (cellText.text === "" ? 0 : cellText.implicitHeight)
+            implicitWidth: cell_Text.implicitWidth
+            implicitHeight: (cell_Text.text === "" ? 0 : cell_Text.implicitHeight)
             Layout.row: 0
             Layout.column: 0
             Layout.preferredWidth: 90
@@ -694,7 +695,7 @@ ApplicationWindow {
             Layout.alignment: Qt.AlignTop
 
             Text {
-                id: cellText
+                id: cell_Text
                 text: ""
                 textFormat: Text.PlainText
                 color: "#222233"

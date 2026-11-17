@@ -633,7 +633,7 @@ ApplicationWindow {
 
                     // <p id="status" class="status">
                     Rectangle {
-                        id: status
+                        id: status_
                         property string eldurTag: "p"
                         property string eldurClasses: "status"
                         property bool cls_ok: false
@@ -641,8 +641,8 @@ ApplicationWindow {
                         property string eldurWs: "\n\n"
 
                         color: "#ffffff"
-                        implicitWidth: statusText.implicitWidth + 28
-                        implicitHeight: statusText.implicitHeight + 20
+                        implicitWidth: status_Text.implicitWidth + 28
+                        implicitHeight: status_Text.implicitHeight + 20
                         objectName: "status"
                         Layout.preferredWidth: 448
                         Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
@@ -650,10 +650,10 @@ ApplicationWindow {
                         Layout.bottomMargin: panel.cls_d_none ? ((panel.visible ? 0 : 20)) : 0
 
                         Text {
-                            id: statusText
+                            id: status_Text
                             text: "Status"
                             textFormat: Text.PlainText
-                            color: status.cls_ok ? (status.cls_warn ? "#e67700" : "#2b8a3e") : (status.cls_warn ? "#e67700" : "#1f2430")
+                            color: status_.cls_ok ? (status_.cls_warn ? "#e67700" : "#2b8a3e") : (status_.cls_warn ? "#e67700" : "#1f2430")
                             font.family: EldurFonts.family("sans-serif")
                             font.pixelSize: 16
                             lineHeight: EldurFonts.normalLine(font)

@@ -148,7 +148,7 @@ ApplicationWindow {
 
                             TapHandler {
                                 onTapped: (eventPoint, button) => {
-                                    if (name.enabled) Eldur.afterTap(eventPoint, function () { Eldur.labelled(name); });
+                                    if (name_.enabled) Eldur.afterTap(eventPoint, function () { Eldur.labelled(name_); });
                                 }
                             }
                         }
@@ -166,7 +166,7 @@ ApplicationWindow {
 
                             // <input id="name">
                             TextField {
-                                id: name
+                                id: name_
                                 property var eldurAttrs: ({ "type": "text", "required": "" })
                                 property string eldurTag: "input"
                                 property string eldurWs: "\n    "
@@ -653,8 +653,9 @@ ApplicationWindow {
                             rightPadding: 20
                             bottomPadding: 10
                             leftPadding: 20
-                            implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 16
+                            implicitHeight: topPadding + bottomPadding + Math.max(1, goLabel.lineCount) * 16
                             contentItem: Text {
+                                id: goLabel
                                 text: go.text
                                 font: go.font
                                 color: go.palette.buttonText
@@ -664,7 +665,7 @@ ApplicationWindow {
                                 renderType: Text.NativeRendering
                             }
                             objectName: "go"
-                            width: Math.min(implicitWidth, Math.max(blockFlow5.width, Math.ceil((goWords.font, Math.max(...go.text.split(/\s+/).map(w => goWords.advanceWidth(w)))) * 1) + leftPadding + rightPadding))
+                            width: Math.min(implicitWidth, Math.max(blockFlow5.width, Math.ceil((goWords.font && (Math.max(...go.text.split(/\s+/).map(w => goWords.advanceWidth(w))))) * 1) + leftPadding + rightPadding))
 
                             onClicked: {
                                 Eldur.fire(signup, "submit", null);

@@ -684,7 +684,6 @@ impl Emitter<'_, '_> {
                     wrapper.push_child(shape);
                 }
                 None if holds => {
-                    self.imports.insert("QtQuick.Effects");
                     let mut mask = Object::new("EldurRoundClip");
                     self.radius(&mut mask, style, line);
                     wrapper.set("layer.enabled", true);
@@ -712,8 +711,8 @@ impl Emitter<'_, '_> {
     /// draws under the parent's own paint), the first in CSS on top. The
     /// software renderer does not draw them.
     fn shadows(&mut self, wrapper: &mut Object, style: &ComputedStyle, line: Option<u32>) {
-        self.imports.insert("QtQuick.Effects");
         for s in style.box_shadow.iter().rev().filter(|s| !s.inset) {
+            self.imports.insert("QtQuick.Effects");
             let mut shadow = Object::new("RectangularShadow");
             shadow.set("anchors.fill", Value::expr("parent"));
             shadow.set("z", -1.0);

@@ -1,6 +1,7 @@
 //! The QML components a page ships: those its `Main.qml`, its runtime or
 //! another shipped component makes.
 
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 use crate::OutputFile;
@@ -80,6 +81,29 @@ const COMPONENTS: &[Component] = &[
         )],
     },
 ];
+
+/// The names of the properties the shipped components declare, which an id
+/// read inside one of them would hide.
+pub(crate) fn property_names() -> HashSet<String> {
+    let mut names = HashSet::new();
+    for (path, bytes) in COMPONENTS.iter().flat_map(|c| c.files) {
+        if !path.ends_with(".qml") {
+            continue;
+        }
+        for line in String::from_utf8_lossy(bytes).lines() {
+            let mut words = line
+                .split_whitespace()
+                .skip_while(|w| matches!(*w, "readonly" | "required" | "default" | "final"));
+            if words.next() == Some("property") {
+                // `property <type> <name>`, maybe followed by `:`.
+                if let Some(name) = words.nth(1) {
+                    names.insert(name.trim_end_matches(':').to_owned());
+                }
+            }
+        }
+    }
+    names
+}
 
 /// Whether `text` makes `name`: as an object (`EldurLines {`) in QML or in a
 /// string given to `Qt.createQmlObject`, or by file (`"EldurLines.qml"`) for

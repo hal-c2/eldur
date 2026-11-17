@@ -8,7 +8,6 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import "eldur_fonts.js" as EldurFonts
-import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
 ApplicationWindow {
@@ -626,7 +625,7 @@ ApplicationWindow {
 
                     // <p id="opened">
                     Text {
-                        id: opened
+                        id: opened_
                         property string eldurTag: "p"
                         property string eldurWs: "\n"
 

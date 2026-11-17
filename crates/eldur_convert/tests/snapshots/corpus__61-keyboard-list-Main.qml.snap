@@ -401,20 +401,20 @@ ApplicationWindow {
 
                     // <div id="state">
                     Item {
-                        id: state
+                        id: state_
                         property string eldurTag: "div"
                         property string eldurWs: "\n"
                         property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + 20) - Layout.topMargin - 20 + 0.000001) : list.eldurCarry
 
-                        implicitWidth: stateText.implicitWidth
-                        implicitHeight: stateText.implicitHeight
+                        implicitWidth: state_Text.implicitWidth
+                        implicitHeight: state_Text.implicitHeight
                         objectName: "state"
                         Layout.fillWidth: true
                         Layout.preferredHeight: 20
                         Layout.topMargin: 12 - list.eldurCarry
 
                         Text {
-                            id: stateText
+                            id: state_Text
                             text: "Nothing picked"
                             textFormat: Text.PlainText
                             color: "#222222"
@@ -442,7 +442,7 @@ ApplicationWindow {
                         font.family: EldurFonts.family("Arial, sans-serif")
                         font.pixelSize: 16
                         Layout.fillWidth: true
-                        Layout.topMargin: -state.eldurCarry
+                        Layout.topMargin: -state_.eldurCarry
                         Layout.preferredHeight: implicitHeight
 
                         // <button id="after">
@@ -466,8 +466,9 @@ ApplicationWindow {
                             rightPadding: 8
                             bottomPadding: 3
                             leftPadding: 8
-                            implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 15
+                            implicitHeight: topPadding + bottomPadding + Math.max(1, afterLabel.lineCount) * 15
                             contentItem: Text {
+                                id: afterLabel
                                 text: after.text
                                 font: after.font
                                 color: after.palette.buttonText
@@ -478,7 +479,7 @@ ApplicationWindow {
                             }
                             implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                             objectName: "after"
-                            width: Math.min(implicitWidth, Math.max(blockFlow2.width, Math.ceil((afterWords.font, Math.max(...after.text.split(/\s+/).map(w => afterWords.advanceWidth(w)))) * 1.0256385) + leftPadding + rightPadding))
+                            width: Math.min(implicitWidth, Math.max(blockFlow2.width, Math.ceil((afterWords.font && (Math.max(...after.text.split(/\s+/).map(w => afterWords.advanceWidth(w))))) * 1.0256385) + leftPadding + rightPadding))
 
                             Keys.onPressed: (event) => {
                                 event.accepted = !Eldur.fire(after, "keydown", event);

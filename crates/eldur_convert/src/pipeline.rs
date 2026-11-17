@@ -199,6 +199,11 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
             &mut diags,
         ) {
             gated |= added.gated;
+            // A template's Behavior reads `root`, an id outside its Component;
+            // under Bound such a read is checked against the page it is in.
+            if added.gated {
+                qml.pragmas.push("ComponentBehavior: Bound".to_owned());
+            }
             extra_imports.extend(added.imports);
         }
         let mut decls = vec![
@@ -355,6 +360,18 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     }
     qml.root = root;
     crate::emit::name_runs(&mut qml.root);
+    // A library of the converter's own (`eldur_*.js`) that Main.qml does not
+    // read is left out, as qmllint reports an unused import. Nothing is lost:
+    // the runtime is only imported beside page.js, which imports it itself,
+    // and the font table is data. The page's own script stays even when
+    // unread, as its top level may have effects.
+    let body = qml.to_qml();
+    qml.imports.retain(|i| {
+        !i.uri.starts_with("\"eldur_")
+            || i.alias
+                .as_ref()
+                .is_none_or(|alias| body.contains(&format!("{alias}.")))
+    });
     let main = qml.to_qml();
     // The runtime first: what is left of it decides which components it makes.
     let runtime = if let Some(at) = files

@@ -117,7 +117,7 @@ ApplicationWindow {
 
                             // <button id="open" class="btn">
                             Button {
-                                id: open
+                                id: open_
                                 property string eldurTag: "button"
                                 property string eldurClasses: "btn"
                                 property string eldurWs: "\n  "
@@ -137,26 +137,27 @@ ApplicationWindow {
                                 rightPadding: 17
                                 bottomPadding: 9
                                 leftPadding: 17
-                                implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 16
+                                implicitHeight: topPadding + bottomPadding + Math.max(1, openLabel.lineCount) * 16
                                 contentItem: Text {
-                                    text: open.text
-                                    font: open.font
-                                    color: open.palette.buttonText
+                                    id: openLabel
+                                    text: open_.text
+                                    font: open_.font
+                                    color: open_.palette.buttonText
                                     horizontalAlignment: Text.AlignHCenter
                                     verticalAlignment: Text.AlignVCenter
                                     wrapMode: Text.WordWrap
                                     renderType: Text.NativeRendering
                                 }
                                 objectName: "open"
-                                width: Math.min(implicitWidth, Math.max(blockFlow.width, Math.ceil((openWords.font, Math.max(...open.text.split(/\s+/).map(w => openWords.advanceWidth(w)))) * 1) + leftPadding + rightPadding))
+                                width: Math.min(implicitWidth, Math.max(blockFlow.width, Math.ceil((openWords.font && (Math.max(...open_.text.split(/\s+/).map(w => openWords.advanceWidth(w))))) * 1) + leftPadding + rightPadding))
 
                                 Keys.onPressed: (event) => {
-                                    event.accepted = !Eldur.fire(open, "keydown", event);
+                                    event.accepted = !Eldur.fire(open_, "keydown", event);
                                 }
 
                                 FontMetrics {
                                     id: openWords
-                                    font: open.font
+                                    font: open_.font
                                 }
                             }
                         }
@@ -266,7 +267,7 @@ ApplicationWindow {
 
                     // <h2 id="title">
                     Text {
-                        id: title
+                        id: title_
                         property string eldurTag: "h2"
                         property string eldurWs: "\n    "
 

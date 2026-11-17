@@ -176,14 +176,14 @@ ApplicationWindow {
 
                                         TapHandler {
                                             onTapped: (eventPoint, button) => {
-                                                if (name.enabled) { name.forceActiveFocus(); }
+                                                if (name_.enabled) { name_.forceActiveFocus(); }
                                             }
                                         }
                                     }
 
                                     // <input id="name" class="input">
                                     TextField {
-                                        id: name
+                                        id: name_
                                         property string name: "name"
                                         property real eldurCarry: Math.ceil(Layout.topMargin + 41) - Layout.topMargin - 41 + 0.000001
 
@@ -195,7 +195,7 @@ ApplicationWindow {
                                             color: "#ffffff"
                                             radius: 8
                                             border.width: 1
-                                            border.color: name.activeFocus ? "#3b6fe0" : "#cfd6e4"
+                                            border.color: name_.activeFocus ? "#3b6fe0" : "#cfd6e4"
                                             antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                             RectangularShadow {
@@ -203,9 +203,9 @@ ApplicationWindow {
                                                 z: -1
                                                 offset: Qt.vector2d(0, 0)
                                                 blur: 0
-                                                color: name.activeFocus ? "#333b6fe0" : "#00000000"
+                                                color: name_.activeFocus ? "#333b6fe0" : "#00000000"
                                                 radius: 8
-                                                spread: name.activeFocus ? 3 : 0
+                                                spread: name_.activeFocus ? 3 : 0
                                             }
                                         }
                                         topPadding: 10
@@ -238,7 +238,7 @@ ApplicationWindow {
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
                                     Layout.fillHeight: false
                                     Layout.maximumHeight: Number.POSITIVE_INFINITY
-                                    Layout.topMargin: -name.eldurCarry
+                                    Layout.topMargin: -name_.eldurCarry
 
                                     // <label class="field__label">
                                     Text {
@@ -494,7 +494,7 @@ ApplicationWindow {
                                             font.pixelSize: 12
                                             renderType: Text.NativeRendering
                                         }
-                                        implicitWidth: Math.ceil((teamMetrics.font, model.reduce((w, o) => Math.max(w, teamMetrics.advanceWidth(o.text)), 0)) * 1) + leftPadding + rightPadding - 2
+                                        implicitWidth: Math.ceil((teamMetrics.font && (model.reduce((w, o) => Math.max(w, teamMetrics.advanceWidth(o.text)), 0))) * 1) + leftPadding + rightPadding - 2
                                         Accessible.name: "Team size"
                                         Layout.preferredWidth: parent.width
                                         Layout.alignment: Qt.AlignLeft
@@ -562,6 +562,7 @@ ApplicationWindow {
                                         Layout.topMargin: 5 - fieldLabel5.eldurCarry
 
                                         TextArea {
+                                            id: bioArea
                                             property string name: "bio"
 
                                             color: "#1d2433"
@@ -1253,11 +1254,11 @@ ApplicationWindow {
                                         hoverEnabled: true
 
                                         onClicked: {
-                                            name.text = "";
+                                            name_.text = "";
                                             email.text = "";
                                             password.text = "";
                                             team.currentIndex = 1;
-                                            bio.text = "";
+                                            bioArea.text = "";
                                             plan.checked = true;
                                             plan2.checked = false;
                                             plan3.checked = false;
@@ -1307,7 +1308,7 @@ ApplicationWindow {
                     }
 
                     Item {
-                        id: item
+                        id: item_
                         property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
 
                         Layout.fillWidth: true

@@ -9,7 +9,6 @@ import QtQuick.Controls.Basic
 import QtQuick.Effects
 import QtQuick.Layouts
 import "eldur_fonts.js" as EldurFonts
-import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
 ApplicationWindow {
@@ -172,6 +171,7 @@ ApplicationWindow {
                                         leftPadding: 12
                                         implicitHeight: Math.max(15, contentItem.implicitHeight) + 16
                                         contentItem: Text {
+                                            id: btnLabel
                                             text: btn.text
                                             font: btn.font
                                             color: btn.palette.buttonText
@@ -182,7 +182,7 @@ ApplicationWindow {
                                         }
                                         implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                                         objectName: "btn"
-                                        width: Math.min(implicitWidth, Math.max(blockFlow.width, Math.ceil((btnWords.font, Math.max(...btn.text.split(/\s+/).map(w => btnWords.advanceWidth(w)))) * 1.0256385) + leftPadding + rightPadding))
+                                        width: Math.min(implicitWidth, Math.max(blockFlow.width, Math.ceil((btnWords.font && (Math.max(...btn.text.split(/\s+/).map(w => btnWords.advanceWidth(w))))) * 1.0256385) + leftPadding + rightPadding))
 
                                         FontMetrics {
                                             id: btnWords
@@ -435,7 +435,7 @@ ApplicationWindow {
 
                         // <p id="status">
                         Text {
-                            id: status
+                            id: status_
                             property string eldurTag: "p"
                             property string eldurWs: "\n  "
 

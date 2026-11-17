@@ -388,7 +388,7 @@ ApplicationWindow {
 
                 // <label>
                 Text {
-                    id: label
+                    id: label_
                     property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                     text: "Email"

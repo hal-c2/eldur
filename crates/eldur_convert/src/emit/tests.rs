@@ -1996,8 +1996,9 @@ fn a_hidden_item_passes_the_carry_on() {
         "{x:?}"
     );
     let b = own_lines(object_after(&qml, r#"<p id="b">"#));
+    // `x` is every Item's property, so the id is `x_`.
     assert!(
-        b.contains(&"Layout.topMargin: 13.3 - x.eldurCarry"),
+        b.contains(&"Layout.topMargin: 13.3 - x_.eldurCarry"),
         "{b:?}"
     );
 }
@@ -2407,4 +2408,23 @@ fn a_button_with_a_drawn_icon_wraps_only_a_text_label() {
     let own = content.split("EldurLines {").next().unwrap_or_default();
     assert!(!own.contains("wrapMode"), "{button}");
     assert!(!button.contains("contentItem.lineCount"), "{button}");
+}
+
+#[test]
+fn a_form_reset_writes_a_scrolled_textarea_s_own_text() {
+    // The TextArea sits in a ScrollView that takes the element's id, and a
+    // ScrollView has no `text` to reset.
+    let (qml, _) = convert(&page(
+        "",
+        "<form><textarea id=bio>hi</textarea><button type=reset>Clear</button></form>",
+    ));
+    assert!(qml.contains("ScrollView {\n"), "{qml}");
+    assert!(!qml.contains("bio.text ="), "{qml}");
+    let area = &qml[qml.find("TextArea {").expect("textarea")..];
+    let id = area
+        .lines()
+        .nth(1)
+        .and_then(|l| l.trim().strip_prefix("id: "))
+        .expect("the TextArea has its own id");
+    assert!(qml.contains(&format!("{id}.text = \"hi\";")), "{qml}");
 }

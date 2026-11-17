@@ -141,7 +141,7 @@ ApplicationWindow {
 
                             // <div id="count" class="display">
                             Text {
-                                id: count
+                                id: count_
                                 property var eldurAttrs: ({ "aria-live": "polite" })
                                 property string eldurTag: "div"
                                 property string eldurClasses: "display"
@@ -150,7 +150,7 @@ ApplicationWindow {
 
                                 text: "0"
                                 textFormat: Text.PlainText
-                                color: count.cls_negative ? "#d62828" : "#1d4ed8"
+                                color: count_.cls_negative ? "#d62828" : "#1d4ed8"
                                 font.family: EldurFonts.family("sans-serif")
                                 font.pixelSize: 96
                                 font.weight: 800
@@ -643,7 +643,7 @@ ApplicationWindow {
                     }
 
                     Item {
-                        id: item
+                        id: item_
                         property real eldurCarry: (h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children).filter(k => k.visible).map(k => k.implicitHeight))) + 0.000001
 
                         Layout.fillWidth: true
