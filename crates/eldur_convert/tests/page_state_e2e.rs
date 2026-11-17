@@ -11,8 +11,10 @@ mod support;
 
 use eldur_convert::{Input, NoResources, Options, RootKind};
 
-const PAGE: &str = r#"<!doctype html><html><head><meta charset="utf-8"></head><body>
-<p id="out">ready</p>
+const PAGE: &str = r#"<!doctype html><html><head><meta charset="utf-8">
+<style>#mark.on { color: rgb(220, 0, 0) }</style>
+</head><body>
+<p id="out">ready, <em id="mark">marked</em> in its line</p>
 <script>
 var keys = 0, resized = 0;
 function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
@@ -23,6 +25,14 @@ window.addEventListener("keydown", function(e) {
   if (e.key === "t") { L("window key", keys); }
 });
 document.onclick = function() { L("document click"); };
+// Restyles the page from its own rules: the earlier page, the document again,
+// must still have them, and its items.
+document.addEventListener("keydown", function(e) {
+  if (e.key === "r") {
+    document.getElementById("mark").classList.add("on");
+    L("restyled", getComputedStyle(document.getElementById("mark")).color);
+  }
+});
 setTimeout(function() { L("timer"); }, 0);
 // Due after the first page is gone: it must not run in the next one.
 setTimeout(function() { L("late timer"); }, 400);
@@ -104,6 +114,23 @@ TestCase {
         keyClick(Qt.Key_T)
         mouseClick(first, 400, 300)
         wait(600)
+        keyClick(Qt.Key_R)
+        wait(100)
+        console.log("LC drawn red " + red(first))
+    }
+
+    // Whether any of the page's pixels are drawn in `#mark.on`'s colour.
+    function red(page) {
+        const image = grabImage(page)
+        for (let y = 0; y < 60; ++y) {
+            for (let x = 0; x < 300; ++x) {
+                const p = image.pixel(x, y)
+                if (p.r > 0.7 && p.g < 0.3 && p.b < 0.3) {
+                    return true
+                }
+            }
+        }
+        return false
     }
 }
 }
@@ -193,6 +220,11 @@ const WANT: &[&str] = &[
     "LC window key 3",
     "LC window key 2",
     "LC document click",
+    // And restyles from its own rules, in its own line's model. Page 6's
+    // listener is still on the shared document, so it logs too.
+    "LC restyled rgb(220, 0, 0)",
+    "LC restyled rgb(220, 0, 0)",
+    "LC drawn red true",
 ];
 
 // Each test, by the line it starts with, and how many late timers run in it:
