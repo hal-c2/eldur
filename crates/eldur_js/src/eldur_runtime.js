@@ -524,6 +524,9 @@ function init(rootItem, baseUrl, documentUrl) {
             _resetPageState();
         } else if (_live(_root)) {
             _pageCaches.set(_root, _pageCacheSave());
+            // The elements showing generated text are the earlier page's: this
+            // page's rules must not take it off them.
+            _pseudoShown = new Set();
         }
         _roots.push(rootItem);
     }
@@ -1008,6 +1011,9 @@ function _pageCacheSave() {
     }
     return {
         explicitBaseUrl: _explicitBaseUrl, explicitDocumentUrl: _explicitDocumentUrl, loc: loc,
+        // The history is shared, but the entry the page is on holds its
+        // address, which the next page's `init` writes over.
+        entryIndex: _historyIndex, entryUrl: _historyEntries[_historyIndex].url,
         warnedMissingTemplates: _warnedMissingTemplates, componentProbeCache: _componentProbeCache,
         pseudoRules: _pseudoRules, pseudoShown: _pseudoShown, counterRules: _counterRules,
         tableHosts: _tableHosts,
@@ -1024,6 +1030,10 @@ function _pageCacheLoad(c) {
     // In place: what holds `_locState` sees the page's address.
     for (var key in c.loc) {
         _locState[key] = c.loc[key];
+    }
+    var entry = _historyEntries[c.entryIndex];
+    if (entry) {
+        _historyEntries[c.entryIndex] = { state: entry.state, url: c.entryUrl };
     }
     _warnedMissingTemplates = c.warnedMissingTemplates; _componentProbeCache = c.componentProbeCache;
     _pseudoRules = c.pseudoRules; _pseudoShown = c.pseudoShown; _counterRules = c.counterRules;
