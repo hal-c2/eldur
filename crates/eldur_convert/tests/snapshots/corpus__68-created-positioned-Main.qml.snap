@@ -8,7 +8,6 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import "eldur_fonts.js" as EldurFonts
-import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
 ApplicationWindow {
@@ -420,8 +419,9 @@ ApplicationWindow {
                             rightPadding: 8
                             bottomPadding: 3
                             leftPadding: 8
-                            implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 15
+                            implicitHeight: topPadding + bottomPadding + Math.max(1, goLabel.lineCount) * 15
                             contentItem: Text {
+                                id: goLabel
                                 text: go.text
                                 font: go.font
                                 color: go.palette.buttonText
@@ -432,7 +432,7 @@ ApplicationWindow {
                             }
                             implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                             objectName: "go"
-                            width: Math.min(implicitWidth, Math.max(blockFlow.width - 12, Math.ceil((goWords.font, Math.max(...go.text.split(/\s+/).map(w => goWords.advanceWidth(w)))) * 1.0256385) + leftPadding + rightPadding))
+                            width: Math.min(implicitWidth, Math.max(blockFlow.width - 12, Math.ceil((goWords.font && (Math.max(...go.text.split(/\s+/).map(w => goWords.advanceWidth(w))))) * 1.0256385) + leftPadding + rightPadding))
                             x: 6
                             y: 6
 

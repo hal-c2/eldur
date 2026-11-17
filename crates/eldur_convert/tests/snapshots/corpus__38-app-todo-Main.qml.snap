@@ -175,7 +175,7 @@ ApplicationWindow {
 
                             // <button id="add">
                             Button {
-                                id: add
+                                id: add_
                                 property var eldurAttrs: ({ "type": "submit" })
                                 property string eldurTag: "button"
                                 property string eldurWs: "\n    "
@@ -195,9 +195,9 @@ ApplicationWindow {
                                 leftPadding: 12
                                 implicitHeight: 31
                                 contentItem: Text {
-                                    text: add.text
-                                    font: add.font
-                                    color: add.palette.buttonText
+                                    text: add_.text
+                                    font: add_.font
+                                    color: add_.palette.buttonText
                                     horizontalAlignment: Text.AlignHCenter
                                     verticalAlignment: Text.AlignVCenter
                                     renderType: Text.NativeRendering
@@ -274,7 +274,7 @@ ApplicationWindow {
 
                             // <span id="count">
                             Text {
-                                id: count
+                                id: count_
                                 property string eldurTag: "span"
                                 property string eldurWs: "\n    "
 
@@ -350,8 +350,9 @@ ApplicationWindow {
                                         rightPadding: 7
                                         bottomPadding: 3
                                         leftPadding: 7
-                                        implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 15
+                                        implicitHeight: topPadding + bottomPadding + Math.max(1, fAllLabel.lineCount) * 15
                                         contentItem: Text {
+                                            id: fAllLabel
                                             text: fAll.text
                                             font: fAll.font
                                             color: fAll.palette.buttonText
@@ -362,7 +363,7 @@ ApplicationWindow {
                                         }
                                         implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                                         objectName: "f-all"
-                                        width: Math.min(implicitWidth, Math.max(filtersFlow.width, Math.ceil((fAllWords.font, Math.max(...fAll.text.split(/\s+/).map(w => fAllWords.advanceWidth(w)))) * 1.0256385) + leftPadding + rightPadding))
+                                        width: Math.min(implicitWidth, Math.max(filtersFlow.width, Math.ceil((fAllWords.font && (Math.max(...fAll.text.split(/\s+/).map(w => fAllWords.advanceWidth(w))))) * 1.0256385) + leftPadding + rightPadding))
 
                                         FontMetrics {
                                             id: fAllWords
@@ -400,8 +401,9 @@ ApplicationWindow {
                                         rightPadding: 7
                                         bottomPadding: 3
                                         leftPadding: 7
-                                        implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 15
+                                        implicitHeight: topPadding + bottomPadding + Math.max(1, fActiveLabel.lineCount) * 15
                                         contentItem: Text {
+                                            id: fActiveLabel
                                             text: fActive.text
                                             font: fActive.font
                                             color: fActive.palette.buttonText
@@ -412,7 +414,7 @@ ApplicationWindow {
                                         }
                                         implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                                         objectName: "f-active"
-                                        width: Math.min(implicitWidth, Math.max(filtersFlow.width, Math.ceil((fActiveWords.font, Math.max(...fActive.text.split(/\s+/).map(w => fActiveWords.advanceWidth(w)))) * 1.0256385) + leftPadding + rightPadding))
+                                        width: Math.min(implicitWidth, Math.max(filtersFlow.width, Math.ceil((fActiveWords.font && (Math.max(...fActive.text.split(/\s+/).map(w => fActiveWords.advanceWidth(w))))) * 1.0256385) + leftPadding + rightPadding))
 
                                         FontMetrics {
                                             id: fActiveWords
@@ -450,8 +452,9 @@ ApplicationWindow {
                                         rightPadding: 7
                                         bottomPadding: 3
                                         leftPadding: 7
-                                        implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 15
+                                        implicitHeight: topPadding + bottomPadding + Math.max(1, fDoneLabel.lineCount) * 15
                                         contentItem: Text {
+                                            id: fDoneLabel
                                             text: fDone.text
                                             font: fDone.font
                                             color: fDone.palette.buttonText
@@ -462,7 +465,7 @@ ApplicationWindow {
                                         }
                                         implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                                         objectName: "f-done"
-                                        width: Math.min(implicitWidth, Math.max(filtersFlow.width, Math.ceil((fDoneWords.font, Math.max(...fDone.text.split(/\s+/).map(w => fDoneWords.advanceWidth(w)))) * 1.0256385) + leftPadding + rightPadding))
+                                        width: Math.min(implicitWidth, Math.max(filtersFlow.width, Math.ceil((fDoneWords.font && (Math.max(...fDone.text.split(/\s+/).map(w => fDoneWords.advanceWidth(w))))) * 1.0256385) + leftPadding + rightPadding))
 
                                         FontMetrics {
                                             id: fDoneWords

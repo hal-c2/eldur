@@ -8,7 +8,6 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import QtQuick.Shapes
-import "eldur_fonts.js" as EldurFonts
 
 ApplicationWindow {
     id: root
@@ -153,7 +152,7 @@ ApplicationWindow {
 
                     // <div id="length">
                     Item {
-                        id: length
+                        id: length_
                         implicitWidth: 0
                         implicitHeight: 0
                         Layout.row: 0
@@ -276,7 +275,7 @@ ApplicationWindow {
 
                     // <div id="offset">
                     Item {
-                        id: offset
+                        id: offset_
                         implicitWidth: 0
                         implicitHeight: 0
                         Layout.row: 1

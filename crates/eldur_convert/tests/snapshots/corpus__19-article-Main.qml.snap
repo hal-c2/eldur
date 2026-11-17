@@ -755,8 +755,8 @@ ApplicationWindow {
                                     Rectangle {
                                         color: "#1f1d1a"
                                         radius: 14
-                                        implicitWidth: text.implicitWidth
-                                        implicitHeight: text.implicitHeight
+                                        implicitWidth: text_.implicitWidth
+                                        implicitHeight: text_.implicitHeight
                                         width: 28
                                         height: 28
                                         x: 0
@@ -764,7 +764,7 @@ ApplicationWindow {
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                         Text {
-                                            id: text
+                                            id: text_
                                             text: "1"
                                             textFormat: Text.PlainText
                                             color: "#fbf9f4"
@@ -774,7 +774,7 @@ ApplicationWindow {
                                             lineHeight: 23.8
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: EldurFonts.shift("sans-serif", 13.6, 700, false, 23.8) + (text.height - text.lineCount * text.lineHeight) / 2
+                                                y: EldurFonts.shift("sans-serif", 13.6, 700, false, 23.8) + (text_.height - text_.lineCount * text_.lineHeight) / 2
                                             }
                                             bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap

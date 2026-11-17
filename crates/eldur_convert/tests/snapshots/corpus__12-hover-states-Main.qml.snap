@@ -993,7 +993,7 @@ ApplicationWindow {
 
                                     // <li class="item">
                                     Rectangle {
-                                        id: item
+                                        id: item_
                                         color: itemHover.hovered ? "#f1f5ff" : "#00000000"
                                         radius: 8
                                         implicitWidth: itemContent.implicitWidth + 24

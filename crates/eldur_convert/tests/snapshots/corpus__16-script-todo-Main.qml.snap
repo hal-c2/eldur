@@ -483,7 +483,7 @@ ApplicationWindow {
             property string eldurTag: "span"
             property string eldurClasses: ""
             property string eldurTemplate: "eldurT_span_2"
-            property Item eldurUp1: null
+            property var eldurUp1: null
 
             text: ""
             textFormat: Text.PlainText

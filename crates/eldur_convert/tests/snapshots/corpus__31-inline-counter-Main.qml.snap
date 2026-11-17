@@ -8,7 +8,6 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import "eldur_fonts.js" as EldurFonts
-import "eldur_runtime.js" as Eldur
 import "page.js" as Page
 
 ApplicationWindow {
@@ -93,13 +92,13 @@ ApplicationWindow {
 
                 // <p id="status">
                 Text {
-                    id: status
+                    id: status_
                     property string eldurTag: "p"
                     readonly property string eldurInline: "{\"bare\":false,\"hoisted\":false,\"html\":false,\"k\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(34, 34, 34)\",\"display\":\"block\",\"family\":\"sans-serif\",\"italic\":false,\"size\":18.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"Status: \"},{\"attrs\":[[\"id\",\"state\"],[\"class\",\"warn\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(190, 30, 30)\",\"display\":\"inline\",\"family\":\"sans-serif\",\"italic\":true,\"size\":18.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"waiting\"}],\"tag\":\"span\"},{\"text\":\", \"},{\"attrs\":[],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(34, 34, 34)\",\"display\":\"inline\",\"family\":\"sans-serif\",\"italic\":true,\"size\":18.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"as usual\"}],\"tag\":\"em\"},{\"text\":\" \"},{\"attrs\":[[\"id\",\"gone\"]],\"c\":{\"bg\":\"rgba(0, 0, 0, 0)\",\"color\":\"rgb(34, 34, 34)\",\"display\":\"inline\",\"family\":\"sans-serif\",\"italic\":false,\"size\":18.0,\"strike\":false,\"underline\":false,\"visible\":true,\"weight\":400},\"kids\":[{\"text\":\"removed text\"}],\"tag\":\"span\"}],\"pre\":false,\"strike\":false,\"underline\":false}"
                     property bool cls_on: false
                     property string eldurWs: "\n"
 
-                    text: status.cls_on ? "Status: <i><font color=\"#be1e1e\">waiting</font></i>, <i><font color=\"#0000c8\">as usual</font></i> removed text" : "Status: <i><font color=\"#be1e1e\">waiting</font></i>, <i>as usual</i> removed text"
+                    text: status_.cls_on ? "Status: <i><font color=\"#be1e1e\">waiting</font></i>, <i><font color=\"#0000c8\">as usual</font></i> removed text" : "Status: <i><font color=\"#be1e1e\">waiting</font></i>, <i>as usual</i> removed text"
                     textFormat: Text.StyledText
                     color: "#222222"
                     font.family: EldurFonts.family("sans-serif")
@@ -221,8 +220,9 @@ ApplicationWindow {
                         rightPadding: 8
                         bottomPadding: 3
                         leftPadding: 8
-                        implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 15
+                        implicitHeight: topPadding + bottomPadding + Math.max(1, bLabel.lineCount) * 15
                         contentItem: Text {
+                            id: bLabel
                             text: b.text
                             font: b.font
                             color: b.palette.buttonText
@@ -233,7 +233,7 @@ ApplicationWindow {
                         }
                         implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                         objectName: "b"
-                        width: Math.min(implicitWidth, Math.max(blockFlow.width, Math.ceil((bWords.font, Math.max(...b.text.split(/\s+/).map(w => bWords.advanceWidth(w)))) * 1.0256385) + leftPadding + rightPadding))
+                        width: Math.min(implicitWidth, Math.max(blockFlow.width, Math.ceil((bWords.font && (Math.max(...b.text.split(/\s+/).map(w => bWords.advanceWidth(w))))) * 1.0256385) + leftPadding + rightPadding))
 
                         FontMetrics {
                             id: bWords

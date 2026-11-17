@@ -225,8 +225,9 @@ ApplicationWindow {
                                                                 rightPadding: 18
                                                                 bottomPadding: 10
                                                                 leftPadding: 18
-                                                                implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 18
+                                                                implicitHeight: topPadding + bottomPadding + Math.max(1, buttonControlLabel.lineCount) * 18
                                                                 contentItem: Text {
+                                                                    id: buttonControlLabel
                                                                     text: buttonControl.text
                                                                     font: buttonControl.font
                                                                     color: buttonControl.palette.buttonText
@@ -235,7 +236,7 @@ ApplicationWindow {
                                                                     wrapMode: Text.WordWrap
                                                                     renderType: Text.NativeRendering
                                                                 }
-                                                                width: Math.min(implicitWidth, Math.max(blockFlow2.width, Math.ceil((buttonControlWords.font, Math.max(...buttonControl.text.split(/\s+/).map(w => buttonControlWords.advanceWidth(w)))) * 1) + leftPadding + rightPadding))
+                                                                width: Math.min(implicitWidth, Math.max(blockFlow2.width, Math.ceil((buttonControlWords.font && (Math.max(...buttonControl.text.split(/\s+/).map(w => buttonControlWords.advanceWidth(w))))) * 1) + leftPadding + rightPadding))
 
                                                                 FontMetrics {
                                                                     id: buttonControlWords
@@ -310,8 +311,8 @@ ApplicationWindow {
                                     Rectangle {
                                         color: "#e74c3c"
                                         radius: 13
-                                        implicitWidth: text.implicitWidth
-                                        implicitHeight: text.implicitHeight
+                                        implicitWidth: text_.implicitWidth
+                                        implicitHeight: text_.implicitHeight
                                         width: 26
                                         height: 26
                                         anchors.right: parent.right
@@ -320,7 +321,7 @@ ApplicationWindow {
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                         Text {
-                                            id: text
+                                            id: text_
                                             text: "3"
                                             textFormat: Text.PlainText
                                             color: "#ffffff"
@@ -330,7 +331,7 @@ ApplicationWindow {
                                             lineHeight: EldurFonts.normalLine(font)
                                             lineHeightMode: Text.FixedHeight
                                             transform: Translate {
-                                                y: EldurFonts.shift("sans-serif", 13, 700, false, 0) + (text.height - text.lineCount * text.lineHeight) / 2
+                                                y: EldurFonts.shift("sans-serif", 13, 700, false, 0) + (text_.height - text_.lineCount * text_.lineHeight) / 2
                                             }
                                             bottomPadding: EldurFonts.slack(font, lineHeight)
                                             wrapMode: Text.WordWrap

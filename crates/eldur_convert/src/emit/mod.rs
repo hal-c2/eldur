@@ -17,6 +17,7 @@ mod grid;
 mod ids;
 mod image;
 mod inline;
+mod qt_members;
 use background::ELDUR_BACKGROUND_LAYER_QML;
 pub(crate) use components::components;
 use decoration::{
@@ -1305,9 +1306,11 @@ impl<'a, 'd> Emitter<'a, 'd> {
 /// `expr`, which measures text with the `FontMetrics` `metrics`, as a binding
 /// that runs again when the font changes. `advanceWidth()` is a method, and a
 /// binding that only calls it does not depend on the font: run before the
-/// font is set, it would keep the default font's widths.
+/// font is set, it would keep the default font's widths. The font, a value
+/// type, is always truthy, so `&&` reads it and yields `expr`; a comma
+/// expression would do the same, but qmllint rejects those.
 fn measured(metrics: &str, expr: &str) -> String {
-    format!("({metrics}.font, {expr})")
+    format!("({metrics}.font && ({expr}))")
 }
 
 /// How many things this object and what it holds draw, as far as two: a group

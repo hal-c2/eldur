@@ -419,8 +419,9 @@ ApplicationWindow {
                                 rightPadding: 13
                                 bottomPadding: 7
                                 leftPadding: 13
-                                implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 15
+                                implicitHeight: topPadding + bottomPadding + Math.max(1, compactLabel.lineCount) * 15
                                 contentItem: Text {
+                                    id: compactLabel
                                     text: compact.text
                                     font: compact.font
                                     color: compact.palette.buttonText
@@ -431,7 +432,7 @@ ApplicationWindow {
                                 }
                                 implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                                 objectName: "compact"
-                                width: Math.min(implicitWidth, Math.max(divFlow.width, Math.ceil((compactWords.font, Math.max(...compact.text.split(/\s+/).map(w => compactWords.advanceWidth(w)))) * 1.0256385) + leftPadding + rightPadding))
+                                width: Math.min(implicitWidth, Math.max(divFlow.width, Math.ceil((compactWords.font && (Math.max(...compact.text.split(/\s+/).map(w => compactWords.advanceWidth(w))))) * 1.0256385) + leftPadding + rightPadding))
 
                                 onClicked: {
                                     Page.__eldur_on_click_compact(Eldur.event("click", compact, null));
@@ -471,8 +472,9 @@ ApplicationWindow {
                                 rightPadding: 13
                                 bottomPadding: 7
                                 leftPadding: 13
-                                implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 15
+                                implicitHeight: topPadding + bottomPadding + Math.max(1, toggleLabel.lineCount) * 15
                                 contentItem: Text {
+                                    id: toggleLabel
                                     text: toggle.text
                                     font: toggle.font
                                     color: toggle.palette.buttonText
@@ -483,7 +485,7 @@ ApplicationWindow {
                                 }
                                 implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                                 objectName: "toggle"
-                                width: Math.min(implicitWidth, Math.max(divFlow.width, Math.ceil((toggleWords.font, Math.max(...toggle.text.split(/\s+/).map(w => toggleWords.advanceWidth(w)))) * 1.0256385) + leftPadding + rightPadding))
+                                width: Math.min(implicitWidth, Math.max(divFlow.width, Math.ceil((toggleWords.font && (Math.max(...toggle.text.split(/\s+/).map(w => toggleWords.advanceWidth(w))))) * 1.0256385) + leftPadding + rightPadding))
 
                                 onClicked: {
                                     Page.__eldur_on_click_toggle(Eldur.event("click", toggle, null));

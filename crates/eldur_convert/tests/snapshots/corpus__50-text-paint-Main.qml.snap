@@ -246,7 +246,7 @@ ApplicationWindow {
 
                     // <p id="first">
                     Item {
-                        id: first
+                        id: first_
                         implicitWidth: pFlow.implicitWidth
                         implicitHeight: pFlow.implicitHeight
                         Layout.row: 1
@@ -842,7 +842,7 @@ ApplicationWindow {
 
                             // <div id="x-scale" class="box">
                             Rectangle {
-                                id: xScale
+                                id: xScale_
                                 color: "#3b82f6"
                                 implicitWidth: 0
                                 implicitHeight: 0
@@ -850,8 +850,8 @@ ApplicationWindow {
                                 transform: Scale {
                                     xScale: 1.5
                                     yScale: 1.5
-                                    origin.x: xScale.width * 0.5
-                                    origin.y: xScale.height * 0.5
+                                    origin.x: xScale_.width * 0.5
+                                    origin.y: xScale_.height * 0.5
                                 }
                                 Layout.preferredWidth: 80
                                 Layout.preferredHeight: 80

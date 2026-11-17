@@ -1140,19 +1140,29 @@ impl Emitter<'_, '_> {
                 && label.type_name == "Text"
             {
                 label.set("wrapMode", Value::expr("Text.WordWrap"));
-                stretch = Some(());
+                // `contentItem` is typed Item, which has no `lineCount`; the
+                // label's own id is typed Text.
+                let label_id = match &label.id {
+                    Some(label_id) => label_id.clone(),
+                    None => {
+                        let claimed = self.ids.claim(&format!("{id} label"));
+                        label.id = Some(claimed.clone());
+                        claimed
+                    }
+                };
+                stretch = Some(label_id);
             }
         }
-        if stretch.is_none() {
+        let Some(label_id) = stretch else {
             return limit;
-        }
+        };
         if matches!(obj.get("implicitHeight"), Some(Value::Number(_)))
             && !matches!(style.height, Size::Length(_))
         {
             obj.set(
                 "implicitHeight",
                 Value::expr(format!(
-                    "topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * {}",
+                    "topPadding + bottomPadding + Math.max(1, {label_id}.lineCount) * {}",
                     fmt_number(round(line_box(style).unwrap_or_else(|| normal_line(style))))
                 )),
             );

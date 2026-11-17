@@ -1035,8 +1035,11 @@ pub(crate) fn add(
         strip_whitespace(obj);
         let mut decls = vec![decl("string", "eldurTemplate", Value::string(""), false)];
         for d in &ups[i] {
+            // `var`: the ancestor is a template's instance, whose class and
+            // state properties no declared type has. A destroyed one still
+            // reads as null.
             decls.push(decl(
-                "Item",
+                "var",
                 &format!("eldurUp{d}"),
                 Value::expr("null"),
                 false,

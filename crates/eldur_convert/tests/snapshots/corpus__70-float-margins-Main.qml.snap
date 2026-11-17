@@ -86,7 +86,7 @@ ApplicationWindow {
                     }
 
                     Item {
-                        id: item
+                        id: item_
                         property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                         Layout.fillWidth: true
@@ -201,7 +201,7 @@ ApplicationWindow {
                     spacing: 0
                     Layout.fillWidth: true
                     Layout.maximumWidth: Number.POSITIVE_INFINITY
-                    Layout.topMargin: 14 - item.eldurCarry
+                    Layout.topMargin: 14 - item_.eldurCarry
 
                     Item {
                         id: item2
@@ -443,7 +443,7 @@ ApplicationWindow {
 
                 // <footer>
                 Rectangle {
-                    id: footer
+                    id: footer_
                     property real eldurCarry: Math.ceil(Layout.topMargin + 12) - Layout.topMargin - 12 + 0.000001
 
                     color: "#333333"

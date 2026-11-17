@@ -593,8 +593,9 @@ ApplicationWindow {
                                     rightPadding: 16
                                     bottomPadding: 8
                                     leftPadding: 16
-                                    implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 16
+                                    implicitHeight: topPadding + bottomPadding + Math.max(1, sendLabel.lineCount) * 16
                                     contentItem: Text {
+                                        id: sendLabel
                                         text: send.text
                                         font: send.font
                                         color: send.palette.buttonText
@@ -605,7 +606,7 @@ ApplicationWindow {
                                     }
                                     enabled: false
                                     objectName: "send"
-                                    width: Math.min(implicitWidth, Math.max(blockFlow4.width, Math.ceil((sendWords.font, Math.max(...send.text.split(/\s+/).map(w => sendWords.advanceWidth(w)))) * 1) + leftPadding + rightPadding))
+                                    width: Math.min(implicitWidth, Math.max(blockFlow4.width, Math.ceil((sendWords.font && (Math.max(...send.text.split(/\s+/).map(w => sendWords.advanceWidth(w))))) * 1) + leftPadding + rightPadding))
 
                                     onClicked: {
                                         Eldur.fire(form, "submit", null);
@@ -646,8 +647,9 @@ ApplicationWindow {
                                     rightPadding: 18
                                     bottomPadding: 10
                                     leftPadding: 18
-                                    implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 16
+                                    implicitHeight: topPadding + bottomPadding + Math.max(1, clearLabel.lineCount) * 16
                                     contentItem: Text {
+                                        id: clearLabel
                                         text: clear.text
                                         font: clear.font
                                         color: clear.palette.buttonText
@@ -657,7 +659,7 @@ ApplicationWindow {
                                         renderType: Text.NativeRendering
                                     }
                                     objectName: "clear"
-                                    width: Math.min(implicitWidth, Math.max(blockFlow4.width, Math.ceil((clearWords.font, Math.max(...clear.text.split(/\s+/).map(w => clearWords.advanceWidth(w)))) * 1) + leftPadding + rightPadding))
+                                    width: Math.min(implicitWidth, Math.max(blockFlow4.width, Math.ceil((clearWords.font && (Math.max(...clear.text.split(/\s+/).map(w => clearWords.advanceWidth(w))))) * 1) + leftPadding + rightPadding))
 
                                     onClicked: {
                                         user.text = "";

@@ -379,8 +379,9 @@ ApplicationWindow {
                             rightPadding: 8
                             bottomPadding: 3
                             leftPadding: 8
-                            implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 15
+                            implicitHeight: topPadding + bottomPadding + Math.max(1, askLabel.lineCount) * 15
                             contentItem: Text {
+                                id: askLabel
                                 text: ask.text
                                 font: ask.font
                                 color: ask.palette.buttonText
@@ -391,7 +392,7 @@ ApplicationWindow {
                             }
                             implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                             objectName: "ask"
-                            width: Math.min(implicitWidth, Math.max(blockFlow.width, Math.ceil((askWords.font, Math.max(...ask.text.split(/\s+/).map(w => askWords.advanceWidth(w)))) * 1.0256385) + leftPadding + rightPadding))
+                            width: Math.min(implicitWidth, Math.max(blockFlow.width, Math.ceil((askWords.font && (Math.max(...ask.text.split(/\s+/).map(w => askWords.advanceWidth(w))))) * 1.0256385) + leftPadding + rightPadding))
 
                             FontMetrics {
                                 id: askWords
@@ -529,14 +530,14 @@ ApplicationWindow {
 
                                 TapHandler {
                                     onTapped: (eventPoint, button) => {
-                                        if (text.enabled) Eldur.afterTap(eventPoint, function () { Eldur.labelled(text); });
+                                        if (text_.enabled) Eldur.afterTap(eventPoint, function () { Eldur.labelled(text_); });
                                     }
                                 }
                             }
 
                             // <input id="text">
                             TextField {
-                                id: text
+                                id: text_
                                 property var eldurAttrs: ({ "name": "text", "required": "" })
                                 property string eldurTag: "input"
                                 property string name: "text"
@@ -601,8 +602,9 @@ ApplicationWindow {
                                 rightPadding: 8
                                 bottomPadding: 3
                                 leftPadding: 8
-                                implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 15
+                                implicitHeight: topPadding + bottomPadding + Math.max(1, cancelLabel.lineCount) * 15
                                 contentItem: Text {
+                                    id: cancelLabel
                                     text: cancel.text
                                     font: cancel.font
                                     color: cancel.palette.buttonText
@@ -613,7 +615,7 @@ ApplicationWindow {
                                 }
                                 implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                                 objectName: "cancel"
-                                width: Math.min(implicitWidth, Math.max(menuFlow.width, Math.ceil((cancelWords.font, Math.max(...cancel.text.split(/\s+/).map(w => cancelWords.advanceWidth(w)))) * 1.0256385) + leftPadding + rightPadding))
+                                width: Math.min(implicitWidth, Math.max(menuFlow.width, Math.ceil((cancelWords.font && (Math.max(...cancel.text.split(/\s+/).map(w => cancelWords.advanceWidth(w))))) * 1.0256385) + leftPadding + rightPadding))
 
                                 FontMetrics {
                                     id: cancelWords
@@ -650,8 +652,9 @@ ApplicationWindow {
                                 rightPadding: 8
                                 bottomPadding: 3
                                 leftPadding: 8
-                                implicitHeight: topPadding + bottomPadding + Math.max(1, contentItem.lineCount) * 15
+                                implicitHeight: topPadding + bottomPadding + Math.max(1, saveLabel.lineCount) * 15
                                 contentItem: Text {
+                                    id: saveLabel
                                     text: save.text
                                     font: save.font
                                     color: save.palette.buttonText
@@ -662,7 +665,7 @@ ApplicationWindow {
                                 }
                                 implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
                                 objectName: "save"
-                                width: Math.min(implicitWidth, Math.max(menuFlow.width, Math.ceil((saveWords.font, Math.max(...save.text.split(/\s+/).map(w => saveWords.advanceWidth(w)))) * 1.0256385) + leftPadding + rightPadding))
+                                width: Math.min(implicitWidth, Math.max(menuFlow.width, Math.ceil((saveWords.font && (Math.max(...save.text.split(/\s+/).map(w => saveWords.advanceWidth(w))))) * 1.0256385) + leftPadding + rightPadding))
 
                                 FontMetrics {
                                     id: saveWords
