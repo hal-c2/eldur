@@ -3,19 +3,23 @@
 #USAGE flag "--list" help="Print the table of tasks and how each is smoke-tested, and run nothing"
 #USAGE flag "--only <task>" help="Smoke-test this one task"
 set -euo pipefail
-root="$(cd "$(dirname "$0")/../.." && pwd)"
+task_name="tasks:smoke"
+# shellcheck source=mise-tasks/_lib/common.sh
+. "$(dirname "$0")/../_lib/common.sh"
 cd "$root"
 
 # task | mode | arguments | needs | why it is only a dry run
 #   run: a real, quick, non-interactive run of `mise run <task> <arguments>`
 #   dry: `mise run -n <task> <arguments>` (usage and depends resolve) and bash -n
 # @tmp@ in the arguments is a scratch directory removed at the end. A run
-# whose needs (commands) are not all on PATH becomes a dry run, and the
-# summary says which was missing: CI installs no Qt, Playwright or sway.
-# Adding or removing a task without changing this table fails the smoke test.
-# tasks:smoke tests only its own --list, so it never recurses. Order matters:
-# qml:check checks the one page convert wrote (all of corpus's pages take
-# qml6 many minutes).
+# whose needs are not all found becomes a dry run, and the summary says which
+# was missing: CI installs no Qt, Playwright or sway. A need is a command on
+# PATH, or qt6:<tool> for Qt 6's tool as the tasks find it (Arch's plain
+# qmllint is Qt 5's). Adding or removing a task without changing this table
+# fails the smoke test. tasks:smoke tests only its own --list, so it never
+# recurses. qml:check checks a committed page rather than converter output,
+# so it needs no other row and tests the task alone (all of corpus's pages
+# take qml6 many minutes).
 table() {
   cat <<'EOF_TABLE'
 setup|run|--offline||
@@ -26,7 +30,7 @@ test|run|-p eldur_cache||
 docs|run|||
 convert|run|tests/corpus/01-typography/index.html -o @tmp@/convert||
 corpus|run|@tmp@/corpus||
-qml:check|run|@tmp@/convert|qml6|
+qml:check|run|tools/qml-check/smoke|qt6:qmllint qml6|
 dev|run|--runtime none -o @tmp@/dev||
 install|run|--root @tmp@/install||
 visual|run|--selftest --backend software --out @tmp@/visual|node qml6|
@@ -36,9 +40,9 @@ EOF_TABLE
 }
 
 if [ "${usage_list:-}" = true ]; then
-  printf '%-12s %-4s %-50s %-12s %s\n' TASK MODE ARGUMENTS NEEDS "WHY DRY"
+  printf '%-12s %-4s %-50s %-20s %s\n' TASK MODE ARGUMENTS NEEDS "WHY DRY"
   table | while IFS='|' read -r task mode args needs why; do
-    printf '%-12s %-4s %-50s %-12s %s\n' "$task" "$mode" "${args:--}" "${needs:--}" "$why"
+    printf '%-12s %-4s %-50s %-20s %s\n' "$task" "$mode" "${args:--}" "${needs:--}" "$why"
   done
   exit 0
 fi
@@ -118,7 +122,11 @@ while IFS='|' read -r task mode args needs why; do
   note=""
   if [ "$mode" = run ]; then
     for n in $needs; do
-      if ! command -v "$n" >/dev/null 2>&1; then
+      case "$n" in
+        qt6:*) found="$(qt6_tool "${n#qt6:}")" ;;
+        *) found="$(command -v "$n" || true)" ;;
+      esac
+      if [ -z "$found" ]; then
         mode=dry
         note="dry: no $n"
         break
