@@ -14,7 +14,8 @@ cd "$root"
 # summary says which was missing: CI installs no Qt, Playwright or sway.
 # Adding or removing a task without changing this table fails the smoke test.
 # tasks:smoke tests only its own --list, so it never recurses. Order matters:
-# qml:check checks what corpus wrote.
+# qml:check checks the one page convert wrote (all of corpus's pages take
+# qml6 many minutes).
 table() {
   cat <<'EOF_TABLE'
 setup|run|--offline||
@@ -25,7 +26,7 @@ test|run|-p eldur_cache||
 docs|run|||
 convert|run|tests/corpus/01-typography/index.html -o @tmp@/convert||
 corpus|run|@tmp@/corpus||
-qml:check|run|@tmp@/corpus|qml6 qmllint|
+qml:check|run|@tmp@/convert|qml6|
 dev|run|--runtime none -o @tmp@/dev||
 install|run|--root @tmp@/install||
 visual|run|--selftest --backend software --out @tmp@/visual|node qml6|
