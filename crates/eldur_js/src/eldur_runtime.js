@@ -22359,6 +22359,10 @@ function _aSample() {
         return;
     }
     _aBusy = true;
+    // An element that went with its page ends its animations: one left here
+    // would keep the ticker going for a page still up.
+    _aAll = _aAll.filter(function(a) { return !a._raw || _live(a._raw); });
+    _aMoved = _aMoved.filter(_live);
     var byItem = new Map();
     var done = [];
     // Web Animations §5.4: transitions under CSS animations under scripts'.
