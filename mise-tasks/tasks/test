@@ -64,7 +64,7 @@ expect() {
   fi
 }
 
-for c in newer pinned installer env-newer qt5 qml-newer linked unknown lint-only bare; do
+for c in newer pinned installer env-newer qt5 qml-newer linked unknown lint-only bare qt5-lint missing; do
   stub "$c" rustup ""
   stub "$c" rustc "rustc 1.98.1 (stand-in)"
 done
@@ -118,6 +118,17 @@ ln -s "$scratch/qt-newer/qmltestrunner" "$scratch/bare/qmltestrunner"
 ln -s "$scratch/qt-pinned/qml" "$scratch/bare/qml6"
 expect bare 1 "qmltestrunner (qmltestrunner) is Qt $newer.1, not the pinned Qt $qt_pinned" \
   QMLTESTRUNNER=qmltestrunner QMLLINT="$scratch/qt-pinned/qmllint"
+# A qmllint that says it is Qt 5 is Qt 5, whatever Qt 6 tools are beside it.
+stub qt5-lint qmllint "qmllint 5.15.2"
+stub qt5-lint qmllint6 "qmllint $qt_pinned.2"
+expect qt5-lint 1 "qmllint ($scratch/qt5-lint/qmllint) is Qt 5.15.2, not the pinned Qt $qt_pinned" \
+  QMLTESTRUNNER="$scratch/qt-pinned/qmltestrunner" QMLLINT="$scratch/qt5-lint/qmllint"
+# A bare name that is not on PATH is said to be missing; nothing in the
+# current directory is run in its place.
+mkdir -p "$scratch/missing"
+ln -s "$scratch/qt-pinned/qml" "$scratch/missing/qml6"
+expect missing 1 "qmltestrunner (qmltestrunner-typo) is not on PATH" \
+  QMLTESTRUNNER=qmltestrunner-typo QMLLINT="$scratch/qt-pinned/qmllint"
 
 [ "$failed" = 0 ] || die "a case above failed"
 echo "tasks:test: every case passed"

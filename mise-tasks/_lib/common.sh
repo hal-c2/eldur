@@ -103,13 +103,16 @@ qt_pinned="6.11"
 # `qt_version_of <tool>`: the Qt version the Qt tool at path <tool> belongs
 # to, or nothing. qmllint and qml answer --version themselves; qmltestrunner
 # does not, so the Qt tools beside it are asked (Qt's installers ship them
-# unsuffixed). Qt 5's tools answer too, so only an answer of 6 counts.
+# unsuffixed). A tool's own answer is its version, whatever the major; of
+# the tools beside it only an answer of 6 counts, because Qt 5's unsuffixed
+# tools can share a directory with Qt 6's.
 qt_version_of() {
   local tool="$1" real link dir ask out
   # QMLTESTRUNNER may be a bare name; its Qt is beside the one PATH finds.
   case "$tool" in
     */*) real="$tool" ;;
-    *) real="$(command -v "$tool" || printf '%s' "$tool")" ;;
+    # Not on PATH, it is not there to ask, and its directory is not ".".
+    *) real="$(command -v "$tool")" || return 0 ;;
   esac
   # A link on PATH (~/bin/qmltestrunner6 -> ~/Qt/6.12.0/gcc_64/bin/...) has
   # no Qt beside it; the file it names does. readlink -f is not on every
@@ -129,7 +132,7 @@ qt_version_of() {
     qml | qml6) out="$(QT_QPA_PLATFORM=offscreen "$tool" --version 2>/dev/null || true)" ;;
     *) out="" ;;
   esac
-  if [[ "$out" =~ (^|[^0-9])(6\.[0-9]+\.[0-9]+) ]]; then
+  if [[ "$out" =~ (^|[^0-9])([0-9]+\.[0-9]+\.[0-9]+) ]]; then
     printf '%s\n' "${BASH_REMATCH[2]}"
     return
   fi
@@ -174,9 +177,18 @@ qt_pin_mismatches() {
         ;;
     esac
     [ -n "$path" ] || continue
+    case "$path" in
+      */*) ;;
+      *)
+        if ! command -v "$path" >/dev/null 2>&1; then
+          echo "$name ($path) is not on PATH, so $use nothing: install Qt $qt_pinned (Qt's online installer, or aqt install-qt) and $fix"
+          continue
+        fi
+        ;;
+    esac
     version="$(qt_version_of "$path")"
     if [ -z "$version" ]; then
-      echo "$name ($path) answers no Qt 6 version, and no qtpaths or qmake beside it does, so $use it on a Qt that may not be the pinned $qt_pinned: install Qt $qt_pinned (Qt's online installer, or aqt install-qt) and $fix"
+      echo "$name ($path) answers no Qt 6 version, and no Qt tool beside it does, so $use it on a Qt that may not be the pinned $qt_pinned: install Qt $qt_pinned (Qt's online installer, or aqt install-qt) and $fix"
       continue
     fi
     case "$version" in "$qt_pinned".*) continue ;; esac
