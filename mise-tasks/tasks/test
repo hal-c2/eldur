@@ -64,7 +64,7 @@ expect() {
   fi
 }
 
-for c in newer pinned installer env-newer qt5 qml-newer linked unknown; do
+for c in newer pinned installer env-newer qt5 qml-newer linked unknown lint-only bare; do
   stub "$c" rustup ""
   stub "$c" rustc "rustc 1.98.1 (stand-in)"
 done
@@ -100,12 +100,24 @@ ln -s "$scratch/qt-pinned/qmllint" "$scratch/linked/qmllint6"
 ln -s "$scratch/qt-pinned/qml" "$scratch/linked/qml6"
 expect linked 1 "qmltestrunner ($scratch/linked/qmltestrunner6) is Qt $newer.1, not the pinned Qt $qt_pinned"
 # A runner with nothing beside it that answers is not passed unseen.
-stub unknown qmltestrunner6 "Unknown option: '--version'"
+stub unknown-runner qmltestrunner6 "Unknown option: '--version'"
 ln -s "$scratch/qt-pinned/qmllint" "$scratch/unknown/qmllint6"
 ln -s "$scratch/qt-pinned/qml" "$scratch/unknown/qml6"
-expect unknown 1 "qmltestrunner ($scratch/unknown/qmltestrunner6) answers no Qt 6 version"
+expect unknown 1 "qmltestrunner ($scratch/unknown-runner/qmltestrunner6) answers no Qt 6 version" \
+  QMLTESTRUNNER="$scratch/unknown-runner/qmltestrunner6"
 stub qml-newer qml6 "Qml Runtime $newer.0"
 expect qml-newer 1 "qml6 ($scratch/qml-newer/qml6) is Qt $newer.0, not the pinned Qt $qt_pinned" "${pinned_env[@]}"
+# A distribution's declarative tools alone: no qtpaths or qmake, but the
+# qmllint beside the runner is of its Qt.
+stub lint-only qmltestrunner6 "Unknown option: '--version'"
+stub lint-only qmllint6 "qmllint $qt_pinned.2"
+stub lint-only qml6 "Qml Runtime $qt_pinned.2"
+expect lint-only 0 ""
+# QMLTESTRUNNER as a bare name: its Qt is the one beside it on PATH.
+ln -s "$scratch/qt-newer/qmltestrunner" "$scratch/bare/qmltestrunner"
+ln -s "$scratch/qt-pinned/qml" "$scratch/bare/qml6"
+expect bare 1 "qmltestrunner (qmltestrunner) is Qt $newer.1, not the pinned Qt $qt_pinned" \
+  QMLTESTRUNNER=qmltestrunner QMLLINT="$scratch/qt-pinned/qmllint"
 
 [ "$failed" = 0 ] || die "a case above failed"
 echo "tasks:test: every case passed"
