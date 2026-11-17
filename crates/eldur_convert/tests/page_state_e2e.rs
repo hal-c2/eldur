@@ -49,6 +49,17 @@ document.addEventListener("keydown", function(e) {
   if (e.key === "b") {
     document.getElementById("tbl").classList.add("on");
   }
+  // The timeline moves only while the runtime ticks for an animation; a
+  // finished one's `currentTime` reads it. Nothing of this page is moving, so
+  // two reads apart must agree: an animation left from a gone page would keep
+  // the ticker, and the time, going.
+  if (e.key === "c") {
+    var probe = document.getElementById("gen").animate([{ opacity: 1 }, { opacity: 1 }], { duration: 1 });
+    setTimeout(function() {
+      var then = probe.currentTime;
+      setTimeout(function() { L("timeline still", probe.currentTime === then); }, 300);
+    }, 200);
+  }
 });
 // A frame asked for from the timer: HTML orders a 0 ms timer and the next
 // frame by nothing, so the page's own frame is checked after its timer ran.
@@ -79,8 +90,8 @@ L("loaded");
 </body></html>"#;
 
 // Another page, made beside the first: generated content of its own, none of
-// the first's rules, an address and a history entry of its own. It uses only
-// what the first
+// the first's rules, an address and a history entry of its own, and an
+// animation still running when it goes. It uses only what the first
 // page's runtime has, which both share.
 const OTHER: &str = r#"<!doctype html><html><head><meta charset="utf-8">
 <style>#own::before { content: "OWN " }</style>
@@ -88,7 +99,9 @@ const OTHER: &str = r#"<!doctype html><html><head><meta charset="utf-8">
 <p id="own">other</p>
 <script>
 console.log("LC other at " + location.href.slice(location.href.lastIndexOf("/") + 1));
-// An entry of its own on top of the shared history.
+// Still running when the page goes, and an entry of its own on top of the
+// shared history.
+document.getElementById("own").animate([{ opacity: 0 }, { opacity: 1 }], { duration: 100000 });
 history.pushState({ other: 1 }, '', '#other');
 </script>
 </body></html>"#;
@@ -175,6 +188,8 @@ TestCase {
         keyClick(Qt.Key_B)
         wait(100)
         console.log("LC column drawn " + blue(first))
+        keyClick(Qt.Key_C)
+        wait(700)
     }
 
     // Whether some `Text` under `item` shows `text`.
@@ -327,6 +342,7 @@ const WANT: &[&str] = &[
     "LC forward to Main.qml#seen",
     "LC generated drawn true",
     "LC column drawn true",
+    "LC timeline still true",
 ];
 
 // Each test, by the line it starts with, and how many late timers run in it:
