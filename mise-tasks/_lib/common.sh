@@ -18,20 +18,40 @@ from_caller() {
   esac
 }
 
+# `json_string <key>`: the string <key> on the last stdin line that has it,
+# decoded. Cargo writes JSON on one line per message; a path can hold a quote
+# or a backslash, which it escapes. The other escapes are control characters,
+# which no path here holds, so they fail instead of being guessed at.
+json_string() {
+  local raw bs='\' q='"' slash='/' mark=$'\001'
+  raw="$(sed -nE 's/.*"'"$1"'":"(([^"\\]|\\.)*)".*/\1/p' | tail -n 1)"
+  raw="${raw//"$bs$bs"/$mark}"
+  raw="${raw//"$bs$q"/$q}"
+  raw="${raw//"$bs$slash"/$slash}"
+  case "$raw" in *"$bs"*) die "cargo's $1 has an escape this script cannot decode: $raw" ;; esac
+  printf '%s\n' "${raw//$mark/$bs}"
+}
+
 # Cargo's target directory as cargo resolves it: CARGO_TARGET_DIR, a
 # machine-local .cargo/config.toml, or <root>/target.
 target_dir() {
-  cargo metadata --format-version 1 --no-deps --manifest-path "$root/Cargo.toml" |
-    sed -n 's/.*"target_directory":"\([^"]*\)".*/\1/p'
+  local meta dir
+  meta="$(cargo metadata --format-version 1 --no-deps --manifest-path "$root/Cargo.toml")" ||
+    die "cargo metadata failed, so the target directory is unknown"
+  dir="$(printf '%s\n' "$meta" | json_string target_directory)"
+  [[ -n "$dir" ]] || die "cargo metadata named no target directory"
+  printf '%s\n' "$dir"
 }
 
 # `build_eldur [cargo flags]`: builds the eldur binary and prints its path, as
 # cargo reports it: a build target (CARGO_BUILD_TARGET) or profile moves it.
+# Callers run it in $(...), where bash drops `set -e`, so cargo's failure is
+# checked here.
 build_eldur() {
-  local exe
-  exe="$(cargo build -q --locked --manifest-path "$root/Cargo.toml" -p eldur_cli --bin eldur \
-    --message-format=json-render-diagnostics "$@" |
-    sed -n 's/.*"executable":"\([^"]*\)".*/\1/p' | tail -n 1)"
+  local out exe
+  out="$(cargo build -q --locked --manifest-path "$root/Cargo.toml" -p eldur_cli --bin eldur \
+    --message-format=json-render-diagnostics "$@")" || die "cargo could not build eldur_cli"
+  exe="$(printf '%s\n' "$out" | json_string executable)"
   [[ -n "$exe" ]] || die "cargo built eldur_cli but named no eldur executable"
   printf '%s\n' "$exe"
 }
