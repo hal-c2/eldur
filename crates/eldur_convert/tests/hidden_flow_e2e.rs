@@ -2,13 +2,11 @@
 //! invisible. The margins around it must be right both while it is hidden
 //! and once shown; positions are run in qmltestrunner against Chromium's.
 
+mod support;
+
 use std::path::Path;
-use std::process::Command;
 
 use eldur_convert::{Options, RootKind, convert_str};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const PAGE: &str = r#"<!doctype html><html><body style="margin:0;font:16px/20px sans-serif">
 <div id=w1 style="padding:10px"><p id=a style="margin:0 0 16px">a</p><p id=x hidden style="margin:4px 0 30px">x</p><p id=b style="margin:8px 0 0">b</p></div>
@@ -77,6 +75,9 @@ TestCase {
 
 #[test]
 fn hidden_box_margins_match_chromium() {
+    if support::no_qt() {
+        return;
+    }
     let options = Options {
         root: RootKind::Item,
         ..Options::default()
@@ -86,7 +87,7 @@ fn hidden_box_margins_match_chromium() {
     std::fs::create_dir_all(&dir).expect("temp dir");
     write(&dir, &out);
     std::fs::write(dir.join("tst_hidden.qml"), TEST).expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_hidden.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")

@@ -3,13 +3,11 @@
 //! aspect ratio, percentage widths, and padding and borders around the
 //! image. Sizes are run in qmltestrunner against Chromium's.
 
+mod support;
+
 use std::path::Path;
-use std::process::Command;
 
 use eldur_convert::{Input, Options, Resource, Resources, RootKind};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const SVG: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" width="320" height="220" viewBox="0 0 320 220"><rect width="320" height="220" fill="#9cc3d5"/></svg>"##;
 
@@ -147,6 +145,9 @@ fn image_is_copied_to_assets() {
 
 #[test]
 fn image_sizes_match_chromium() {
+    if support::no_qt() {
+        return;
+    }
     let out = convert();
     let dir = std::env::temp_dir().join(format!("eldur-image-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("temp dir");
@@ -156,7 +157,7 @@ fn image_sizes_match_chromium() {
         std::fs::write(path, &file.contents).expect("write output");
     }
     std::fs::write(dir.join("tst_image.qml"), TEST).expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_image.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")

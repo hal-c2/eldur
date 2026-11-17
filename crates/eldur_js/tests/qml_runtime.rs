@@ -105,6 +105,8 @@ fn run_qml6_offscreen(main_qml: &PathBuf, timeout: Duration) -> String {
     let mut child = Command::new("qml6")
         .arg(main_qml)
         .env("QT_QPA_PLATFORM", "offscreen")
+        // A desktop platform theme (gtk3) needs a display and exits without one.
+        .env_remove("QT_QPA_PLATFORMTHEME")
         .env("QT_FORCE_STDERR_LOGGING", "1")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

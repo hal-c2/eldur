@@ -8,18 +8,20 @@
 //! recorded in `tests/dynamic/chromium.json` by
 //! `node crates/eldur_convert/tests/dynamic/gen.mjs`.
 
+mod support;
+
 use std::process::Command;
 
 use eldur_convert::{Input, NoResources, Options, RootKind};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const CHROMIUM: &str = include_str!("dynamic/chromium.json");
 
 /// Converts the corpus page `case` and runs `tests` (TestCase functions) on
 /// it in qml6, with the helpers in [`TEST`].
 fn check(case: &str, html: &str, tests: &str) {
+    if support::no_qt() {
+        return;
+    }
     let options = Options {
         root: RootKind::Item,
         ..Options::default()
@@ -41,7 +43,7 @@ fn check(case: &str, html: &str, tests: &str) {
         .replace("@CHROMIUM@", CHROMIUM)
         .replace("@TESTS@", tests);
     std::fs::write(dir.join("tst_dynamic.qml"), test).expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_dynamic.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")

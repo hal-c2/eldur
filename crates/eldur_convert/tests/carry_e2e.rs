@@ -10,12 +10,11 @@
 //! recorded in `tests/carry/chromium.json` by
 //! `node crates/eldur_convert/tests/carry/gen.mjs`.
 
+mod support;
+
 use std::process::Command;
 
 use eldur_convert::{Input, NoResources, Options, RootKind};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const PAGE: &str = include_str!("carry/page.html");
 const CHROMIUM: &str = include_str!("carry/chromium.json");
@@ -101,6 +100,9 @@ TestCase {
 
 #[test]
 fn fractional_blocks_keep_chromium_positions() {
+    if support::no_qt() {
+        return;
+    }
     let options = Options {
         root: RootKind::Item,
         ..Options::default()
@@ -123,7 +125,7 @@ fn fractional_blocks_keep_chromium_positions() {
         TEST.replace("@CHROMIUM@", CHROMIUM),
     )
     .expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_carry.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")

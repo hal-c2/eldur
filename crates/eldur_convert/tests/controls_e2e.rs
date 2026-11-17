@@ -2,13 +2,11 @@
 //! the tests go from HTML to a signal firing in Qt, with nothing in between
 //! mocked.
 
+mod support;
+
 use std::path::Path;
-use std::process::Command;
 
 use eldur_convert::{Options, RootKind, convert_str};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const PAGE: &str = r#"<!doctype html><html><body>
 <form id="f">
@@ -177,6 +175,9 @@ TestCase {
 
 #[test]
 fn converted_controls_respond_to_real_input() {
+    if support::no_qt() {
+        return;
+    }
     let options = Options {
         root: RootKind::Item,
         ..Options::default()
@@ -197,7 +198,7 @@ fn converted_controls_respond_to_real_input() {
     );
     std::fs::write(&main, patched).expect("write");
     std::fs::write(dir.join("tst_controls.qml"), TEST).expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_controls.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")

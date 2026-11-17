@@ -4,12 +4,11 @@
 //! not depend on the fonts: the expected edges are Chromium's layout text
 //! (DOMSnapshot) for the same page.
 
+mod support;
+
 use std::process::Command;
 
 use eldur_convert::{Input, NoResources, Options, RootKind};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const PAGE: &str = r#"<!DOCTYPE html><html><head><style>
 body{margin:0;font:16px/20px sans-serif}
@@ -93,6 +92,9 @@ TestCase {
 
 #[test]
 fn lines_wrap_beside_floats_as_in_chromium() {
+    if support::no_qt() {
+        return;
+    }
     let options = Options {
         root: RootKind::Item,
         ..Options::default()
@@ -111,7 +113,7 @@ fn lines_wrap_beside_floats_as_in_chromium() {
         std::fs::write(dir.join(&file.path), &file.contents).expect("write output");
     }
     std::fs::write(dir.join("tst_float.qml"), TEST).expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_float.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")

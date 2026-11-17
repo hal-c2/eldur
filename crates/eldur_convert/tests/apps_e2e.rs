@@ -15,14 +15,13 @@
 //! [`KNOWN`] lists what does not match yet, with why. A difference not on it fails
 //! the page, and so does an entry that no longer differs, so the list stays true.
 
+mod support;
+
 use std::path::Path;
 use std::process::Command;
 
 use eldur_convert::{Options, RootKind, convert_str};
 use serde_json::Value;
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 /// Pixels a box may be off: glyph widths and line metrics differ a little
 /// between the two text engines.
@@ -282,7 +281,7 @@ fn run(name: &str, html: &str, spec: &str, snapshot: &str) -> String {
         .replace("SPEC", spec)
         .replace("SHOT", &shot);
     std::fs::write(dir.join("tst_app.qml"), test).expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-maxwarnings", "0", "-input"])
         .arg(dir.join("tst_app.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")
@@ -328,6 +327,8 @@ fn parse(text: &str) -> (Vec<Value>, Vec<String>) {
             log.push(Value::String(said.to_owned()));
         }
     }
+    // Nothing kept, only the runner's whole output when it stopped early.
+    trouble.extend(support::problem_lines(text, |_| false));
     (steps, trouble)
 }
 
@@ -420,6 +421,9 @@ fn matches_known(difference: &str, pattern: &str) -> bool {
 }
 
 fn page(name: &str) {
+    if support::no_qt() {
+        return;
+    }
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/apps");
     let read = |file: String| std::fs::read_to_string(dir.join(file)).expect("a test file");
     let chromium: Value = serde_json::from_str(&read("chromium.json".to_owned())).expect("json");
@@ -817,6 +821,9 @@ fn scroll_more() {
 /// there is no recording to compare with, only that it moved and said so.
 #[test]
 fn drags_move_scrollers() {
+    if support::no_qt() {
+        return;
+    }
     let html = r#"<!DOCTYPE html><html><head><style>
 .port { height: 200px; width: 400px; overflow: auto; }
 .tall { height: 900px; background: #cde; }

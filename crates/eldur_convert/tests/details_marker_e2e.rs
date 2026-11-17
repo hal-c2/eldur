@@ -3,12 +3,11 @@
 //! with no script, a closed page and an open one. `details_marker/gen.mjs` records
 //! Chromium's ink for the same page and the same presses on each marker.
 
+mod support;
+
 use std::process::Command;
 
 use eldur_convert::{Input, NoResources, Options, RootKind};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const PAGE: &str = include_str!("details_marker/page.html");
 const CHROMIUM: &str = include_str!("details_marker/chromium.json");
@@ -113,6 +112,9 @@ TestCase {
 "###;
 
 fn run(name: &str, script: &str) {
+    if support::no_qt() {
+        return;
+    }
     let html = PAGE.replace("</body>", &format!("{script}</body>"));
     let options = Options {
         root: RootKind::Item,
@@ -136,7 +138,7 @@ fn run(name: &str, script: &str) {
         TEST.replace("CHROMIUM_JSON", CHROMIUM),
     )
     .expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_marker.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")

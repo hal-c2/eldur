@@ -3,12 +3,11 @@
 //! Whether a list's items are native depends on where the script inserts them,
 //! and a template does not know that when it is emitted.
 
+mod support;
+
 use std::process::Command;
 
 use eldur_convert::{Input, NoResources, Options, RootKind};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const PAGE: &str = r#"<!doctype html><html><head><style>
 .item { color: #123456; }
@@ -79,6 +78,9 @@ TestCase {
 
 #[test]
 fn templates_and_text_runs_follow_where_they_are_inserted() {
+    if support::no_qt() {
+        return;
+    }
     let options = Options {
         root: RootKind::Item,
         ..Options::default()
@@ -102,7 +104,7 @@ fn templates_and_text_runs_follow_where_they_are_inserted() {
         "the page should make a text run template"
     );
     std::fs::write(dir.join("tst_native.qml"), TEST).expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_native.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")

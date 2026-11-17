@@ -2,13 +2,11 @@
 //! along the line and wraps when one does not fit. Positions are run in
 //! qmltestrunner against Chromium's.
 
+mod support;
+
 use std::path::Path;
-use std::process::Command;
 
 use eldur_convert::{Options, RootKind, convert_str};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const PAGE: &str = r#"<!doctype html><html><body style="margin:0;font:16px/20px sans-serif">
 <div id=row style="overflow:hidden;width:500px;padding:4px"><div id=a style="float:left;width:150px;height:40px;margin:5px">a</div><div id=b style="float:left;width:30%;height:60px;margin:0 10px">b</div><div id=c style="float:left;width:200px;height:20px">c</div></div>
@@ -78,6 +76,9 @@ TestCase {
 
 #[test]
 fn float_runs_match_chromium() {
+    if support::no_qt() {
+        return;
+    }
     let options = Options {
         root: RootKind::Item,
         ..Options::default()
@@ -87,7 +88,7 @@ fn float_runs_match_chromium() {
     std::fs::create_dir_all(&dir).expect("temp dir");
     write(&dir, &out);
     std::fs::write(dir.join("tst_float.qml"), TEST).expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_float.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")

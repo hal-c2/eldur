@@ -10,18 +10,20 @@
 //! script logged about the DOM (lines starting `LC `). A QML warning fails the
 //! page, and an element Chromium does not have must not be showing.
 
+mod support;
+
 use std::path::Path;
 use std::process::Command;
 
 use eldur_convert::{Options, RootKind, Severity, convert_str};
 
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
-
 const CHROMIUM: &str = include_str!("absolute/chromium.json");
 
 /// Runs one page; `Err` has what went wrong.
 fn run(name: &str, html: &str) -> Result<(), String> {
+    if support::no_qt() {
+        return Ok(());
+    }
     let options = Options {
         root: RootKind::Item,
         ..Options::default()
@@ -42,7 +44,7 @@ fn run(name: &str, html: &str) -> Result<(), String> {
     }
     let test = TEST.replace("@CHROMIUM@", CHROMIUM).replace("@CASE@", name);
     std::fs::write(dir.join("tst_absolute.qml"), test).expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_absolute.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")
@@ -55,15 +57,16 @@ fn run(name: &str, html: &str) -> Result<(), String> {
     );
     std::fs::remove_dir_all(&dir).expect("remove temp dir");
     if !output.status.success() || text.contains("Warning:") || text.contains("QWARN") {
-        let lines: Vec<_> = text
-            .lines()
-            .filter(|l| {
-                l.contains("FAIL!")
-                    || l.contains("Actual")
-                    || l.contains("Warning:")
-                    || l.contains("QWARN")
-            })
-            .collect();
+        let mut lines = support::problem_lines(&text, |l| {
+            l.contains("FAIL!")
+                || l.contains("Actual")
+                || l.contains("Warning:")
+                || l.contains("QWARN")
+        });
+        // A failed run that names no failure still says why somewhere.
+        if lines.is_empty() {
+            lines.push(text.trim().to_owned());
+        }
         return Err(format!("{name}: {}", lines.join("\n  ")));
     }
     let logged: Vec<_> = text

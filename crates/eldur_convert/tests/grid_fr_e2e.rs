@@ -2,13 +2,11 @@
 //! must fall only between the real tracks, not between the sub-columns of
 //! one. Positions are run in qmltestrunner against Chromium's.
 
+mod support;
+
 use std::path::Path;
-use std::process::Command;
 
 use eldur_convert::{Options, RootKind, convert_str};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const PAGE: &str = r#"<!doctype html><html><head><style>
 body { margin: 0 }
@@ -77,6 +75,9 @@ TestCase {
 
 #[test]
 fn unequal_fr_columns_match_chromium() {
+    if support::no_qt() {
+        return;
+    }
     let options = Options {
         root: RootKind::Item,
         ..Options::default()
@@ -86,7 +87,7 @@ fn unequal_fr_columns_match_chromium() {
     std::fs::create_dir_all(&dir).expect("temp dir");
     write(&dir, &out);
     std::fs::write(dir.join("tst_grid_fr.qml"), TEST).expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_grid_fr.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")

@@ -7,13 +7,12 @@
 //! `node crates/eldur_convert/tests/live_lookups/gen.mjs`. A QML warning or an
 //! uncaught script error fails the page.
 
+mod support;
+
 use std::path::Path;
 use std::process::Command;
 
 use eldur_convert::{Options, RootKind, convert_str};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const TEST: &str = r##"
 import QtQuick
@@ -45,6 +44,9 @@ TestCase {
 
 /// Runs one page; `Err` has what went wrong.
 fn run(name: &str, html: &str, want: &[&str]) -> Result<(), String> {
+    if support::no_qt() {
+        return Ok(());
+    }
     let options = Options {
         root: RootKind::Item,
         ..Options::default()
@@ -56,7 +58,7 @@ fn run(name: &str, html: &str, want: &[&str]) -> Result<(), String> {
         std::fs::write(dir.join(&file.path), &file.contents).expect("write output");
     }
     std::fs::write(dir.join("tst_live.qml"), TEST).expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_live.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")
@@ -68,16 +70,9 @@ fn run(name: &str, html: &str, want: &[&str]) -> Result<(), String> {
         String::from_utf8_lossy(&output.stderr),
     );
     std::fs::remove_dir_all(&dir).expect("remove temp dir");
-    let mut problems: Vec<String> = text
-        .lines()
-        .filter(|l| {
-            l.contains("FAIL!")
-                || l.contains("Warning:")
-                || l.contains("QWARN")
-                || l.contains("Error:")
-        })
-        .map(str::to_owned)
-        .collect();
+    let mut problems: Vec<String> = support::problem_lines(&text, |l| {
+        l.contains("FAIL!") || l.contains("Warning:") || l.contains("QWARN") || l.contains("Error:")
+    });
     let logged: Vec<_> = text
         .lines()
         .filter_map(|l| l.find("LC ").map(|at| &l[at..]))

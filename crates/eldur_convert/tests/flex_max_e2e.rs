@@ -3,12 +3,11 @@
 //! space that drifts into the cells. Positions are run in qmltestrunner
 //! against Chromium's.
 
+mod support;
+
 use std::process::Command;
 
 use eldur_convert::{Options, RootKind, convert_str};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const PAGE: &str = r#"<!doctype html><html><head><style>
 body { margin: 0 }
@@ -89,6 +88,9 @@ TestCase {
 
 #[test]
 fn capped_flex_items_match_chromium() {
+    if support::no_qt() {
+        return;
+    }
     let options = Options {
         root: RootKind::Item,
         ..Options::default()
@@ -100,7 +102,7 @@ fn capped_flex_items_match_chromium() {
         std::fs::write(dir.join(&file.path), &file.contents).expect("write output");
     }
     std::fs::write(dir.join("tst_flex_max.qml"), TEST).expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_flex_max.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")
