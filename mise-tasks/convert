@@ -20,7 +20,6 @@ task_name="convert"
 # The spec above checks and documents the arguments; eldur's own parser reads
 # them, so the two stay one interface. eldur runs where mise was run, so the
 # paths in the arguments mean what the caller typed.
-cargo build -q --locked --manifest-path "$root/Cargo.toml" -p eldur_cli
-eldur="$(target_dir)/debug/eldur"
+eldur="$(build_eldur)"
 cd "${MISE_ORIGINAL_CWD:-$root}"
 exec "$eldur" convert "$@"

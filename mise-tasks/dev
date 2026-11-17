@@ -37,7 +37,7 @@ case "$runtime" in
   qml6) have qml6 || die "qml6 not found on PATH: $qt6_install_hint" ;;
 esac
 
-cargo build -q --locked -p eldur_cli
+eldur="$(build_eldur)"
 target="$(target_dir)"
 if [[ -n "${usage_out:-}" ]]; then
   out="$(from_caller "$usage_out")"
@@ -46,7 +46,7 @@ else
 fi
 args=(convert "$page" -o "$out")
 [[ -n "${usage_viewport:-}" ]] && args+=(--viewport "$usage_viewport")
-"$target/debug/eldur" "${args[@]}"
+"$eldur" "${args[@]}"
 
 case "$runtime" in
   none) echo "dev: converted to $out/Main.qml; --runtime none, not running it" ;;
