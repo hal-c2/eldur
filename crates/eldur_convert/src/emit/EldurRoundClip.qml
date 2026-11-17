@@ -4,7 +4,7 @@ import QtQuick
 import QtQuick.Effects
 
 MultiEffect {
-    id: clip
+    id: rounded
 
     property real radius: 0
     property real topLeftRadius: radius
@@ -20,12 +20,12 @@ MultiEffect {
     Rectangle {
         id: shape
         visible: false
-        width: clip.width
-        height: clip.height
-        topLeftRadius: clip.topLeftRadius
-        topRightRadius: clip.topRightRadius
-        bottomRightRadius: clip.bottomRightRadius
-        bottomLeftRadius: clip.bottomLeftRadius
+        width: rounded.width
+        height: rounded.height
+        topLeftRadius: rounded.topLeftRadius
+        topRightRadius: rounded.topRightRadius
+        bottomRightRadius: rounded.bottomRightRadius
+        bottomLeftRadius: rounded.bottomLeftRadius
         layer.enabled: true
         layer.smooth: true
     }

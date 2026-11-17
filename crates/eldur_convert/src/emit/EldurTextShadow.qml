@@ -1,4 +1,5 @@
 // One `text-shadow`: the text again, behind itself.
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Effects
 

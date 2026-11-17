@@ -12,6 +12,8 @@ Canvas {
     property string lineStyle: "solid"
     property color lineColor: "black"
     property var rowWidths: []
+    // The Text this decorates, typed so its text members can be read.
+    readonly property Text host: parent as Text
 
     function place(line) {
         const widths = rowWidths.slice(0, line.number);
@@ -34,18 +36,18 @@ Canvas {
 
     Text {
         visible: false
-        text: lines.parent.text
-        font: lines.parent.font
-        width: lines.parent.width
-        wrapMode: lines.parent.wrapMode
-        textFormat: lines.parent.textFormat
+        text: lines.host.text
+        font: lines.host.font
+        width: lines.host.width
+        wrapMode: lines.host.wrapMode
+        textFormat: lines.host.textFormat
         onLineLaidOut: (line) => lines.place(line)
     }
 
     FontMetrics {
         id: metrics
 
-        font: lines.parent.font
+        font: lines.host.font
     }
 
     function drawLine(ctx, x0, x1, y, t) {
@@ -91,7 +93,7 @@ Canvas {
         const ctx = getContext("2d");
         ctx.reset();
         ctx.translate(0, headroom);
-        const text = parent;
+        const text = host;
         const t = Math.max(1, Math.round(metrics.lineWidth));
         const rowHeight = text.lineHeightMode === Text.FixedHeight
             ? text.lineHeight : metrics.lineSpacing;

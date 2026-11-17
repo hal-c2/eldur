@@ -2,6 +2,7 @@
 // behind the run of text that is its content. EldurLines says where the run's
 // lines are; each line holds one fragment, cut where the line breaks
 // (box-decoration-break: slice, CSS Fragmentation 3 §5.4).
+pragma ComponentBehavior: Bound
 import QtQuick
 import "eldur_fonts.js" as EldurFonts
 
