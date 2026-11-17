@@ -249,7 +249,7 @@ fn paint_control() {
 /// when the box was first placed, and the box kept those 16 lines.
 #[test]
 fn width_late() {
-    if support::no_qt() {
+    if support::no_qt() || support::missing(&["qml6", "timeout"]) {
         return;
     }
     use std::io::{BufRead, BufReader};

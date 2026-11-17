@@ -25,9 +25,21 @@ target_dir() {
     sed -n 's/.*"target_directory":"\([^"]*\)".*/\1/p'
 }
 
+# `build_eldur [cargo flags]`: builds the eldur binary and prints its path, as
+# cargo reports it: a build target (CARGO_BUILD_TARGET) or profile moves it.
+build_eldur() {
+  local exe
+  exe="$(cargo build -q --locked --manifest-path "$root/Cargo.toml" -p eldur_cli --bin eldur \
+    --message-format=json-render-diagnostics "$@" |
+    sed -n 's/.*"executable":"\([^"]*\)".*/\1/p' | tail -n 1)"
+  [[ -n "$exe" ]] || die "cargo built eldur_cli but named no eldur executable"
+  printf '%s\n' "$exe"
+}
+
 # `qt6_tool <name>`: the path of Qt 6's <name> (qmllint, qmltestrunner), or
 # nothing. Arch's /usr/bin/qmllint and /usr/bin/qmltestrunner are Qt 5's, so
-# the plain name on PATH is the last resort, taken only when it is Qt 6's.
+# the plain name on PATH is the last resort, taken only when it is known to be
+# Qt 6's.
 # An environment variable named after the tool (QMLLINT, QMLTESTRUNNER) wins.
 qt6_tool() {
   local name="$1" var dir bins
@@ -50,9 +62,11 @@ qt6_tool() {
       return
     fi
   done
+  # Qt 5's qtpaths has no --query, but both answer --qt-version. With no
+  # answer the tool may be Qt 5's, so it is not taken.
   if command -v "$name" >/dev/null 2>&1; then
-    case "$(qtpaths --query QT_VERSION 2>/dev/null)" in
-      "" | 6*) command -v "$name" ;;
+    case "$(qtpaths --qt-version 2>/dev/null)" in
+      6.*) command -v "$name" ;;
     esac
   fi
 }
