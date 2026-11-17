@@ -10,5 +10,7 @@ release=()
 [[ "${usage_release:-false}" == "true" ]] && release=(--release)
 cargo build --workspace --locked ${release[@]+"${release[@]}"}
 # Asked of cargo, which knows where a build target or profile puts it; the
-# build above already made it, so this builds nothing.
-echo "build: eldur is $(build_eldur ${release[@]+"${release[@]}"})"
+# build above already made it, so this builds nothing. Assigned first, as an
+# argument to echo would hide its failure from set -e.
+eldur="$(build_eldur ${release[@]+"${release[@]}"})"
+echo "build: eldur is $eldur"
