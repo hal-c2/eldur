@@ -1,7 +1,18 @@
 #!/usr/bin/env bash
-#MISE description="All Rust tests"
+#MISE description="All Rust tests (the end-to-end tests that run QML in Qt 6's qmltestrunner skip, saying so, when Qt 6 is missing)"
 #USAGE arg "[cargo_args]..." var=#true help="Passed to cargo test, e.g. -p eldur_css; mise eats the first --, so test binary flags need two: mise run test -- -p eldur_css -- --nocapture"
 set -euo pipefail
+task_name="test"
+# shellcheck source=mise-tasks/_lib/common.sh
+. "$(dirname "$0")/_lib/common.sh"
+cd "$root"
+# A skipped test passes, so the skip is said once here, where it is seen.
+# QMLTESTRUNNER is exported so the tests take the runner this found.
+if runner="$(qt6_tool qmltestrunner)" && [[ -n "$runner" ]]; then
+  export QMLTESTRUNNER="$runner"
+else
+  echo "test: Qt 6's qmltestrunner not found, so the end-to-end tests that run QML skip (set QMLTESTRUNNER, or $qt6_install_hint)" >&2
+fi
 # No --workspace by default: the root is a virtual workspace, so a bare run
 # already tests every member, and -p in cargo_args can then pick one. Cargo
 # only takes --exclude together with --workspace, so it is added then, unless
@@ -17,4 +28,4 @@ for a in "$@"; do
 done
 args=()
 [[ "$has_exclude" == true && "$has_ws" == false ]] && args=(--workspace)
-cargo test "${args[@]}" "$@"
+cargo test ${args[@]+"${args[@]}"} "$@"

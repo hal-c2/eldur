@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+#MISE description="Format every crate in place (mise run check only checks)"
+set -euo pipefail
+cd "$(dirname "$0")/.."
+cargo fmt --all

@@ -1,11 +1,41 @@
 #!/usr/bin/env bash
-#MISE description="Convert every tests/corpus case into target/corpus/<case>/ (then: mise run qml:check target/corpus)"
-#USAGE arg "[out]" default="target/corpus" help="Directory each case's QML is written under"
+#MISE description="Convert every tests/corpus case into <target>/corpus/<case>/ and fail if any case fails (then: mise run qml:check <that dir>)"
+#USAGE arg "[out]" help="Directory each case's QML is written under (default <cargo target dir>/corpus)"
 set -euo pipefail
-out="${usage_out:-target/corpus}"
-cargo build -q -p eldur_cli
+task_name="corpus"
+# shellcheck source=mise-tasks/_lib/common.sh
+. "$(dirname "$0")/_lib/common.sh"
+cd "$root"
+cargo build -q --locked -p eldur_cli
+target="$(target_dir)"
+eldur="$target/debug/eldur"
+if [[ -n "${usage_out:-}" ]]; then
+  out="$(from_caller "$usage_out")"
+else
+  out="$target/corpus"
+fi
+mkdir -p "$out"
+
+cases=0
+failed=()
+log="$(mktemp "${TMPDIR:-/tmp}/eldur-corpus.XXXXXX")"
+trap 'rm -f "$log"' EXIT
 for dir in tests/corpus/*/; do
   case=$(basename "$dir")
+  cases=$((cases + 1))
   rm -rf "${out:?}/$case"
-  cargo run -q -p eldur_cli -- convert -q "$dir/index.html" -o "$out/$case" 2>/dev/null
+  # A case's warnings are the converter's notes on what it could not map;
+  # they are shown only when the case fails, with its error.
+  if ! "$eldur" convert -q "$dir/index.html" -o "$out/$case" >"$log" 2>&1; then
+    echo "corpus: $case failed:" >&2
+    sed 's/^/  /' "$log" >&2
+    failed+=("$case")
+  fi
 done
+
+if ((${#failed[@]})); then
+  echo "corpus: ${#failed[@]} of $cases cases failed to convert: ${failed[*]}" >&2
+  exit 1
+fi
+echo "corpus: converted $cases cases into $out"
+echo "next: mise run qml:check $out"
