@@ -4,6 +4,8 @@ use std::collections::HashSet;
 use std::sync::OnceLock;
 
 use super::qt_members::QT_MEMBERS;
+#[cfg(test)]
+use super::qt_members::QT_TYPES;
 
 #[derive(Debug, Default)]
 pub(crate) struct Ids {
@@ -63,12 +65,15 @@ mod tests {
     #[test]
     fn qt_members_are_sorted_for_binary_search() {
         assert!(QT_MEMBERS.windows(2).all(|w| w[0] < w[1]));
+        assert!(QT_TYPES.windows(2).all(|w| w[0] < w[1]));
     }
 
     #[test]
     fn every_qt_type_the_emitters_write_is_in_the_member_list() {
         // A type left out of tools/qt-members/generate.py would let an id
-        // take one of its property names.
+        // take one of its property names. Every string literal in the
+        // emitters that names a Qt type counts, as a type can reach
+        // `Object::new` through a variable (`Object::new(kind)`).
         let generator = include_str!("../../../../tools/qt-members/generate.py");
         let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
         let mut missing = Vec::new();
@@ -80,15 +85,19 @@ mod tests {
                     dirs.push(path);
                     continue;
                 }
-                if path.extension().is_none_or(|e| e != "rs") {
+                if path.extension().is_none_or(|e| e != "rs") || path.ends_with("qt_members.rs") {
                     continue;
                 }
                 let text = std::fs::read_to_string(&path).expect("source");
-                for (at, _) in text.match_indices("Object::new(\"") {
-                    let rest = &text[at + "Object::new(\"".len()..];
-                    let name = &rest[..rest.find('"').expect("closing quote")];
-                    if !name.starts_with("Eldur") && !generator.contains(&format!("\"{name}\"")) {
-                        missing.push(name.to_owned());
+                // Every run between two quotes, not only every other one: an
+                // escaped quote or a char literal would put the pairs out of step.
+                for literal in text.split('"') {
+                    // `Page` is page.js's import alias, not the Controls type.
+                    if literal != "Page"
+                        && QT_TYPES.binary_search(&literal).is_ok()
+                        && !generator.contains(&format!("\"{literal}\""))
+                    {
+                        missing.push(literal.to_owned());
                     }
                 }
             }
