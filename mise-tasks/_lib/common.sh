@@ -100,34 +100,60 @@ qt6_install_hint="install Qt 6's QML tools: qt6-declarative (Arch), qt6-declarat
 # JavaScript differently, so a pass or failure there says nothing about 6.11.
 qt_pinned="6.11"
 
-# `qt6_version`: "<version> <tool>" for the Qt 6 on PATH, or nothing. Qt 5's
-# unsuffixed qtpaths and qmake answer too, so theirs counts only when it is 6.
-qt6_version() {
-  local ask tool out
-  for ask in "qtpaths6 --qt-version" "qmake6 -query QT_VERSION" "qml6 --version" \
-    "qtpaths --qt-version" "qmake -query QT_VERSION"; do
-    tool="${ask%% *}"
-    command -v "$tool" >/dev/null 2>&1 || continue
-    # shellcheck disable=SC2086 # the tool and its flags are a word list
-    out="$($ask 2>/dev/null)" || continue
-    [[ "$out" =~ ([0-9]+\.[0-9]+\.[0-9]+) ]] || continue
-    case "${BASH_REMATCH[1]}" in
-      6.*)
-        printf '%s %s\n' "${BASH_REMATCH[1]}" "$tool"
-        return
-        ;;
-    esac
+# `qt_version_of <tool>`: the Qt version the Qt tool at path <tool> belongs
+# to, or nothing. qmllint and qml answer --version themselves; qmltestrunner
+# does not, so the Qt tools beside it are asked (Qt's installers ship them
+# unsuffixed). Qt 5's tools answer too, so only an answer of 6 counts.
+qt_version_of() {
+  local tool="$1" dir ask out
+  dir="$(dirname "$tool")"
+  case "${tool##*/}" in
+    qmllint* | qml | qml6) out="$("$tool" --version 2>/dev/null || true)" ;;
+    *) out="" ;;
+  esac
+  if [[ "$out" =~ (^|[^0-9])(6\.[0-9]+\.[0-9]+) ]]; then
+    printf '%s\n' "${BASH_REMATCH[2]}"
+    return
+  fi
+  for ask in "qtpaths6 --qt-version" "qmake6 -query QT_VERSION" "qtpaths --qt-version" "qmake -query QT_VERSION"; do
+    [ -x "$dir/${ask%% *}" ] || continue
+    # shellcheck disable=SC2086 # the flags are a word list
+    out="$("$dir/${ask%% *}" ${ask#* } 2>/dev/null || true)"
+    if [[ "$out" =~ (^|[^0-9])(6\.[0-9]+\.[0-9]+) ]]; then
+      printf '%s\n' "${BASH_REMATCH[2]}"
+      return
+    fi
   done
 }
 
-# `qt_pin_mismatch`: one line saying the Qt 6 found is not the pinned minor
-# and how to fix that, or nothing when it is (or when there is no Qt 6).
-qt_pin_mismatch() {
-  local found version tool
-  found="$(qt6_version)"
-  [ -n "$found" ] || return 0
-  version="${found%% *}"
-  tool="${found#* }"
-  case "$version" in "$qt_pinned".*) return 0 ;; esac
-  echo "Qt $version ($(command -v "$tool")) is not the pinned Qt $qt_pinned, so the QML end-to-end tests and qml:check measure another Qt; install Qt $qt_pinned (Qt's online installer, or aqt install-qt) and put its bin directory first on PATH"
+# `qt_pin_mismatches`: a line for each Qt tool the tasks run (found as they
+# find it) that belongs to another Qt than the pinned minor, with what to set
+# so the tasks take a pinned one instead. Nothing when all are pinned, or for
+# a tool that is not there.
+qt_pin_mismatches() {
+  local name path version use fix
+  for name in qmltestrunner qmllint qml6; do
+    case "$name" in
+      qml6)
+        path="$(command -v qml6 || true)"
+        use="mise run qml:check, dev and visual run"
+        fix="put Qt $qt_pinned's qml first on PATH as qml6"
+        ;;
+      qmltestrunner)
+        path="$(qt6_tool qmltestrunner)"
+        use="mise run test's QML end-to-end tests run"
+        fix="set QMLTESTRUNNER to its qmltestrunner"
+        ;;
+      qmllint)
+        path="$(qt6_tool qmllint)"
+        use="mise run qml:check runs"
+        fix="set QMLLINT to its qmllint"
+        ;;
+    esac
+    [ -n "$path" ] || continue
+    version="$(qt_version_of "$path")"
+    [ -n "$version" ] || continue
+    case "$version" in "$qt_pinned".*) continue ;; esac
+    echo "$name ($path) is Qt $version, not the pinned Qt $qt_pinned, and $use it: install Qt $qt_pinned (Qt's online installer, or aqt install-qt) and $fix"
+  done
 }
