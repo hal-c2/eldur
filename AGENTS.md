@@ -31,7 +31,7 @@ mapping specifications are in `docs/spec/`.
 
 | Task | Command |
 |---|---|
-| First run: toolchain (needs rustup), crates, report of missing optional tools | `mise run setup [--offline]` |
+| First run: toolchain (needs rustup), crates, report of missing optional tools; `--check` installs nothing and fails on a Rust or Qt that is not the pinned one (Qt 6.11) | `mise run setup [--offline] [--check]` |
 | Convert a page and run it in ljos or qml6 (fails if neither is found) | `mise run dev [page.html] [-o dir] [--runtime auto\|ljos\|qml6\|none] [--viewport WxH]` |
 | Format every crate in place | `mise run fmt` |
 | Format check, clippy (warnings are errors) | `mise run check` |
@@ -45,6 +45,7 @@ mapping specifications are in `docs/spec/`.
 | Visual parity harness (Chromium vs qml6; needs Playwright's Chromium, and sway unless `--backend software`) | `mise run visual [-- run.py args]` |
 | The visual harness's own tests | `mise run visual:test` |
 | Run every task quickly, as CI does | `mise run tasks:smoke [--list] [--only task]` |
+| The tasks' own tests, with stand-in tools (setup's Qt pin) | `mise run tasks:test` |
 
 Every task takes `--help`. Paths you pass are relative to the directory you
 run mise in. Outputs go under cargo's target directory (`CARGO_TARGET_DIR` is

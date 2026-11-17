@@ -36,6 +36,7 @@ install|run|--root @tmp@/install||
 visual|run|--selftest --backend software --out @tmp@/visual|node qml6|
 visual:test|run||python3|
 tasks:smoke|run|--list||
+tasks:test|run|||
 EOF_TABLE
 }
 

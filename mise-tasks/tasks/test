@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+#MISE description="Test the tasks' own logic with stand-in tools: setup --check against the pinned Qt and the next minor"
+set -euo pipefail
+task_name="tasks:test"
+# shellcheck source=mise-tasks/_lib/common.sh
+. "$(dirname "$0")/../_lib/common.sh"
+cd "$root"
+
+scratch="$(mktemp -d "${TMPDIR:-/tmp}/eldur-tasks-test.XXXXXX")"
+trap 'rm -rf "$scratch"' EXIT
+
+# PATH holds only the stand-ins and the few system commands setup calls, so
+# the machine's own Qt, Rust and optional tools never answer for them.
+sys="$scratch/sys"
+mkdir -p "$sys"
+for cmd in bash cut dirname tr; do
+  ln -s "$(command -v "$cmd")" "$sys/$cmd"
+done
+
+# `stub <case> <name> <output>`: a tool that prints <output> and succeeds.
+stub() {
+  mkdir -p "$scratch/$1"
+  printf '#!/bin/sh\necho "%s"\n' "$3" >"$scratch/$1/$2"
+  chmod +x "$scratch/$1/$2"
+}
+
+failed=0
+# `expect <case> <exit code> <text>`: setup --check, with that case's tools,
+# exits with <exit code> and prints <text>.
+expect() {
+  local out code=0
+  out="$(env -i HOME="$scratch" PATH="$scratch/$1:$sys" RUSTUP_TOOLCHAIN=1.98.1 \
+    usage_check=true bash mise-tasks/setup 2>&1)" || code=$?
+  if [ "$code" != "$2" ] || [[ "$out" != *"$3"* ]]; then
+    echo "tasks:test: $1: setup --check exited $code, wanted $2 and '$3'; it said:" >&2
+    printf '%s\n' "$out" | sed 's/^/    /' >&2
+    failed=1
+  else
+    echo "ok: $1"
+  fi
+}
+
+# The stand-ins follow the pin, so moving it needs no change here.
+minor="${qt_pinned#6.}"
+newer="6.$((minor + 1))"
+
+for c in newer pinned qt5-only qml-only; do
+  stub "$c" rustup ""
+  stub "$c" rustc "rustc 1.98.1 (stand-in)"
+done
+stub newer qmake6 "$newer.1"
+stub newer qml6 "Qml Runtime $newer.1"
+stub pinned qmake6 "$qt_pinned.2"
+stub pinned qml6 "Qml Runtime $qt_pinned.2"
+# Qt 5's qtpaths answers 5.15, which is no Qt 6 and so no mismatch.
+stub qt5-only qtpaths "5.15.19"
+stub qml-only qml6 "Qml Runtime $newer.0"
+
+expect newer 1 "Qt $newer.1 ($scratch/newer/qmake6) is not the pinned Qt $qt_pinned"
+expect pinned 0 "setup --check:"
+expect qt5-only 0 "setup --check:"
+expect qml-only 1 "Qt $newer.0 ($scratch/qml-only/qml6) is not the pinned Qt $qt_pinned"
+
+[ "$failed" = 0 ] || die "a case above failed"
+echo "tasks:test: every case passed"

@@ -94,3 +94,40 @@ qt6_tool() {
 # How to get Qt 6's QML tools, for the messages that say one is missing.
 # shellcheck disable=SC2034 # read by the tasks that source this file
 qt6_install_hint="install Qt 6's QML tools: qt6-declarative (Arch), qt6-declarative-dev-tools and qml6-module-qtquick (Debian/Ubuntu), or qt (Homebrew)"
+
+# The Qt minor that the QML end-to-end tests, qml:check and docs/spec/ measure
+# (AGENTS.md, docs/ARCHITECTURE.md). Another minor lays out, lints and runs
+# JavaScript differently, so a pass or failure there says nothing about 6.11.
+qt_pinned="6.11"
+
+# `qt6_version`: "<version> <tool>" for the Qt 6 on PATH, or nothing. Qt 5's
+# unsuffixed qtpaths and qmake answer too, so theirs counts only when it is 6.
+qt6_version() {
+  local ask tool out
+  for ask in "qtpaths6 --qt-version" "qmake6 -query QT_VERSION" "qml6 --version" \
+    "qtpaths --qt-version" "qmake -query QT_VERSION"; do
+    tool="${ask%% *}"
+    command -v "$tool" >/dev/null 2>&1 || continue
+    # shellcheck disable=SC2086 # the tool and its flags are a word list
+    out="$($ask 2>/dev/null)" || continue
+    [[ "$out" =~ ([0-9]+\.[0-9]+\.[0-9]+) ]] || continue
+    case "${BASH_REMATCH[1]}" in
+      6.*)
+        printf '%s %s\n' "${BASH_REMATCH[1]}" "$tool"
+        return
+        ;;
+    esac
+  done
+}
+
+# `qt_pin_mismatch`: one line saying the Qt 6 found is not the pinned minor
+# and how to fix that, or nothing when it is (or when there is no Qt 6).
+qt_pin_mismatch() {
+  local found version tool
+  found="$(qt6_version)"
+  [ -n "$found" ] || return 0
+  version="${found%% *}"
+  tool="${found#* }"
+  case "$version" in "$qt_pinned".*) return 0 ;; esac
+  echo "Qt $version ($(command -v "$tool")) is not the pinned Qt $qt_pinned, so the QML end-to-end tests and qml:check measure another Qt; install Qt $qt_pinned (Qt's online installer, or aqt install-qt) and put its bin directory first on PATH"
+}

@@ -1,21 +1,28 @@
 #!/usr/bin/env bash
 #MISE description="First run: install the pinned toolchain, fetch crates, and say which optional tools are missing (idempotent)"
 #USAGE flag "--offline" help="Skip cargo fetch (use crates already in the cargo cache)"
+#USAGE flag "--check" help="Install and fetch nothing; report what is found, and fail if Rust or Qt is not the pinned version"
 set -euo pipefail
 task_name="setup"
 # shellcheck source=mise-tasks/_lib/common.sh
 . "$(dirname "$0")/_lib/common.sh"
 cd "$root"
 
+check="${usage_check:-false}"
 done_steps=()
 skipped=()
+mismatched=()
 
 # mise installs mise.toml's Rust through rustup; without it `mise install`
 # fails with a message about the backend, not about what to install.
 command -v rustup >/dev/null 2>&1 ||
   die "rustup not found: mise installs mise.toml's Rust through it; install rustup (https://rustup.rs, or your package manager's rustup), then mise run setup again"
-mise install
-done_steps+=("mise install: Rust $(mise exec -- rustc --version | cut -d' ' -f2) with rustfmt and clippy (mise.toml)")
+if [ "$check" = true ]; then
+  done_steps+=("--check: nothing installed or fetched")
+else
+  mise install
+  done_steps+=("mise install: Rust $(mise exec -- rustc --version | cut -d' ' -f2) with rustfmt and clippy (mise.toml)")
+fi
 
 # mise.toml's activate_aggressive puts rustup's proxies first on PATH, so
 # tasks build with the pinned Rust even with a system Rust installed. If a
@@ -23,22 +30,28 @@ done_steps+=("mise install: Rust $(mise exec -- rustc --version | cut -d' ' -f2)
 # pin either way, so PATH is asked), every build differs from CI's: setup
 # fails and says how to fix it.
 pinned="${RUSTUP_TOOLCHAIN:-}"
-have="$(rustc --version | cut -d' ' -f2)"
 wrong_rust=""
-if [ -n "$pinned" ] && [ "$have" != "$pinned" ]; then
+if ! command -v rustc >/dev/null 2>&1; then
+  have=""
+  wrong_rust="rustc not found on PATH: mise run setup installs mise.toml's Rust"
+else
+  have="$(rustc --version | cut -d' ' -f2)"
+fi
+if [ -n "$pinned" ] && [ -n "$have" ] && [ "$have" != "$pinned" ]; then
   wrong_rust="rustc on PATH is $have ($(command -v rustc)), not mise.toml's $pinned: tasks build with it; put rustup's ~/.cargo/bin before it, or remove the system Rust"
 fi
 
-if [[ -f .gitmodules ]]; then
-  git submodule update --init --recursive
-  done_steps+=("git submodules initialised")
-fi
-
-if [[ "${usage_offline:-false}" == "true" ]]; then
-  skipped+=("cargo fetch: --offline")
-else
-  mise exec -- cargo fetch --locked
-  done_steps+=("cargo fetch --locked: every crate in Cargo.lock downloaded")
+if [ "$check" != true ]; then
+  if [[ -f .gitmodules ]]; then
+    git submodule update --init --recursive
+    done_steps+=("git submodules initialised")
+  fi
+  if [[ "${usage_offline:-false}" == "true" ]]; then
+    skipped+=("cargo fetch: --offline")
+  else
+    mise exec -- cargo fetch --locked
+    done_steps+=("cargo fetch --locked: every crate in Cargo.lock downloaded")
+  fi
 fi
 
 # Optional tools are found on PATH, never installed: they are system packages
@@ -51,6 +64,8 @@ if have qml6 && [ -n "$qmllint" ] && [ -n "$runner" ]; then
 else
   skipped+=("Qt 6 (qml6, qmllint, qmltestrunner) not all found: mise run qml:check and mise run dev with qml6 won't work, and mise run test skips the end-to-end tests that run QML; $qt6_install_hint")
 fi
+wrong_qt="$(qt_pin_mismatch)"
+[ -z "$wrong_qt" ] || mismatched+=("$wrong_qt")
 if have ljos; then
   done_steps+=("ljos found: mise run dev runs pages in Ljós ($(command -v ljos))")
 else
@@ -73,14 +88,28 @@ else
 fi
 
 echo
-echo "setup done:"
+if [ "$check" = true ]; then
+  echo "setup --check:"
+  done_steps+=("rustc ${have:-missing} on PATH; mise.toml pins ${pinned:-(RUSTUP_TOOLCHAIN unset)}")
+else
+  echo "setup done:"
+fi
 printf '  - %s\n' "${done_steps[@]}"
 if ((${#skipped[@]})); then
   echo "skipped:"
   printf '  - %s\n' "${skipped[@]}"
 fi
+if ((${#mismatched[@]})); then
+  echo "not the pinned version:"
+  printf '  - %s\n' "${mismatched[@]}"
+fi
 echo
 if [ -n "$wrong_rust" ]; then
   die "$wrong_rust"
+fi
+# Qt is optional, so plain setup only reports a Qt of another minor; --check
+# is the question "is this machine what CI and the specs assume?".
+if [ "$check" = true ] && ((${#mismatched[@]})); then
+  die "${mismatched[0]}"
 fi
 echo "next: mise run dev   (convert a sample page and run it)"
