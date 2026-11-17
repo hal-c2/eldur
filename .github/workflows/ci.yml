@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  tasks:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: jdx/mise-action@v3
+      # No Qt here: the end-to-end tests pin Qt 6.11's behaviour and Ubuntu
+      # 24.04 ships Qt 6.4, so mise run test skips the tests that run QML in
+      # qmltestrunner (it says so in the log), and tasks:smoke dry-runs
+      # qml:check and visual. No Playwright or sway either, for the same
+      # reason. numpy and Pillow are for visual:test, whose tests that need
+      # Qt, node's Playwright or sway skip.
+      - name: Install the visual harness's Python modules
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends python3-numpy python3-pil shellcheck
+      - run: mise run setup
+      - run: mise run check
+      - run: mise run test
+      - run: mise run tasks:smoke
