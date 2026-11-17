@@ -11,12 +11,11 @@
 //! steps, recorded in `tests/inline_templates/chromium.json` by
 //! `node crates/eldur_convert/tests/inline_templates/gen.mjs`.
 
+mod support;
+
 use std::process::Command;
 
 use eldur_convert::{Input, NoResources, Options, RootKind};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const CHROMIUM: &str = include_str!("inline_templates/chromium.json");
 const PAGE: &str = include_str!("inline_templates/page.html");
@@ -24,6 +23,9 @@ const PAGE: &str = include_str!("inline_templates/page.html");
 /// Converts the page and runs `tests` (TestCase functions) on it in qml6,
 /// with the helpers in [`TEST`]. Any QML or runtime warning fails the test.
 fn check(case: &str, tests: &str) {
+    if support::no_qt() {
+        return;
+    }
     let options = Options {
         root: RootKind::Item,
         // What the test asks the runtime itself.
@@ -47,7 +49,7 @@ fn check(case: &str, tests: &str) {
         .replace("@CHROMIUM@", CHROMIUM)
         .replace("@TESTS@", tests);
     std::fs::write(dir.join("tst_inline.qml"), test).expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_inline.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")

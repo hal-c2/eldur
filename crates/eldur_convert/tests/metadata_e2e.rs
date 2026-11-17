@@ -7,12 +7,11 @@
 //! page, recorded in `tests/metadata/chromium.json` by
 //! `node crates/eldur_convert/tests/metadata/chromium.mjs`.
 
+mod support;
+
 use std::process::Command;
 
 use eldur_convert::{Input, NoResources, Options, RootKind};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const CHROMIUM: &str = include_str!("metadata/chromium.json");
 const HTTPS: &str = "https://example.com/docs/guide/index.html";
@@ -22,6 +21,9 @@ const HTTPS: &str = "https://example.com/docs/guide/index.html";
 /// directory of the page; `rename` maps Chromium values that differ by
 /// design to the converted app's.
 fn check(case: &str, html: &str, url: &str, rename: &[(&str, &str)]) {
+    if support::no_qt() {
+        return;
+    }
     let options = Options {
         root: RootKind::Item,
         ..Options::default()
@@ -58,7 +60,7 @@ fn check(case: &str, html: &str, url: &str, rename: &[(&str, &str)]) {
         .replace("@CASE@", case)
         .replace("@RENAME@", &renames.join(", "));
     std::fs::write(dir.join("tst_metadata.qml"), test).expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_metadata.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")

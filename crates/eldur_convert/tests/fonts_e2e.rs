@@ -6,12 +6,11 @@
 //! `node crates/eldur_convert/tests/fonts/gen.mjs`. They hold for the fonts of
 //! the machine they were recorded on.
 
+mod support;
+
 use std::process::Command;
 
 use eldur_convert::{Input, NoResources, Options, RootKind};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const PAGE: &str = include_str!("fonts/page.html");
 const CHROMIUM: &str = include_str!("fonts/chromium.json");
@@ -136,6 +135,9 @@ TestCase {
 
 #[test]
 fn fonts_match_chromium_at_run_time() {
+    if support::no_qt() {
+        return;
+    }
     let options = Options {
         root: RootKind::Item,
         // What the test asks the font module itself.
@@ -161,7 +163,7 @@ fn fonts_match_chromium_at_run_time() {
             .replace("@SHIFTS@", &format!("{SHIFTS:?}")),
     )
     .expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_fonts.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")

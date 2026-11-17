@@ -2,12 +2,11 @@
 //! made through what a script still holds, and the runtime keeps nothing of
 //! the items it swapped out.
 
+mod support;
+
 use std::process::Command;
 
 use eldur_convert::{Input, NoResources, Options, RootKind};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const PAGE: &str = r##"<!DOCTYPE html><html><head><style>
 body{margin:8px;font:14px Arial}
@@ -74,6 +73,9 @@ TestCase {
 
 #[test]
 fn swapped_items_are_not_kept() {
+    if support::no_qt() {
+        return;
+    }
     let out = eldur_convert::convert(
         &Input {
             html: PAGE.to_owned(),
@@ -101,7 +103,7 @@ fn swapped_items_are_not_kept() {
         std::fs::write(dir.join(&file.path), &file.contents).expect("write output");
     }
     std::fs::write(dir.join("tst_churn.qml"), TEST).expect("write test");
-    let run = Command::new(RUNNER)
+    let run = support::qmltestrunner()
         .args(["-input", "tst_churn.qml"])
         .current_dir(&dir)
         .env("QT_QPA_PLATFORM", "offscreen")

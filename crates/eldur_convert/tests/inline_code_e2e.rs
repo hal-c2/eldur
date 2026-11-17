@@ -4,12 +4,11 @@
 //! Chromium's `getBoundingClientRect()` for the same page; the code is
 //! 14px so that Qt's whole-pixel font sizes are not what is measured.
 
+mod support;
+
 use std::process::Command;
 
 use eldur_convert::{Input, NoResources, Options, RootKind};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const PAGE: &str = r##"<!DOCTYPE html><html><head><style>
 body{margin:0;font-family:sans-serif;font-size:16px;line-height:1.6}
@@ -115,6 +114,9 @@ fn inline_code_keeps_its_font_background_and_padding() {
 
 #[test]
 fn inline_code_measures_as_in_chromium() {
+    if support::no_qt() {
+        return;
+    }
     let out = convert();
     let dir = std::env::temp_dir().join(format!("eldur-code-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("temp dir");
@@ -122,7 +124,7 @@ fn inline_code_measures_as_in_chromium() {
         std::fs::write(dir.join(&file.path), &file.contents).expect("write output");
     }
     std::fs::write(dir.join("tst_code.qml"), TEST).expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_code.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")

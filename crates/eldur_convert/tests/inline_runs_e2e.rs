@@ -7,14 +7,13 @@
 //! `node crates/eldur_convert/tests/inline_runs/gen.mjs`. They hold for the fonts
 //! of the machine they were recorded on.
 
+mod support;
+
 use std::collections::BTreeMap;
 use std::process::Command;
 
 use eldur_convert::{Options, RootKind, convert_str};
 use serde_json::Value;
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const CHROMIUM: &str = include_str!("inline_runs/chromium.json");
 const CLOSED: &str = include_str!("inline_runs/closed.html");
@@ -93,7 +92,7 @@ fn run(name: &str, html: &str, count: usize) -> (Vec<String>, Vec<String>) {
         TEST.replace("@COUNT@", &count.to_string()),
     )
     .expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_runs.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")
@@ -105,16 +104,9 @@ fn run(name: &str, html: &str, count: usize) -> (Vec<String>, Vec<String>) {
         String::from_utf8_lossy(&output.stderr),
     );
     std::fs::remove_dir_all(&dir).expect("remove temp dir");
-    let problems = text
-        .lines()
-        .filter(|l| {
-            l.contains("FAIL!")
-                || l.contains("Warning:")
-                || l.contains("QWARN")
-                || l.contains("Error:")
-        })
-        .map(str::to_owned)
-        .collect();
+    let problems = support::problem_lines(&text, |l| {
+        l.contains("FAIL!") || l.contains("Warning:") || l.contains("QWARN") || l.contains("Error:")
+    });
     let logged = text
         .lines()
         .filter_map(|l| l.find("LC ").map(|at| l[at + 3..].to_owned()))
@@ -232,6 +224,9 @@ const KNOWN_CHANGES: &[(&str, &str)] = &[];
 
 #[test]
 fn closed_paragraphs_are_where_chromium_has_them() {
+    if support::no_qt() {
+        return;
+    }
     let chromium = chromium();
     let cases = chromium["cases"].as_array().expect("cases");
     let want: BTreeMap<&str, Value> = lines(&chromium, "open")
@@ -274,6 +269,9 @@ fn closed_paragraphs_are_where_chromium_has_them() {
 }
 
 fn compare_log(name: &str, html: &str, key: &str, known_cases: &[(&str, &str)]) {
+    if support::no_qt() {
+        return;
+    }
     let chromium = chromium();
     let want = lines(&chromium, key);
     // A script Chromium cannot parse records nothing, and nothing equals nothing.

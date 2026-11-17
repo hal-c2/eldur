@@ -2,13 +2,12 @@
 //! in qmltestrunner against Chromium's `scrollY` after clicking each link
 //! (`tools/visual/geometry.mjs --click`).
 
+mod support;
+
 use std::path::Path;
 use std::process::Command;
 
 use eldur_convert::{Options, RootKind, convert_str};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const PAGE: &str = r##"<!doctype html><html><body style="margin:0">
 <p style="margin:0;height:20px"><a href="#b">b</a> <a href="#last">last</a> <a href="#end">end</a> <a href="#nope">nope</a> <a href="#top">top</a></p>
@@ -137,6 +136,9 @@ fn encoded_and_unknown_fragments_like_chromium() {
 }
 
 fn run(name: &str, page: &str, test: &str) {
+    if support::no_qt() {
+        return;
+    }
     let options = Options {
         root: RootKind::Item,
         ..Options::default()
@@ -146,7 +148,7 @@ fn run(name: &str, page: &str, test: &str) {
     std::fs::create_dir_all(&dir).expect("temp dir");
     write(&dir, &out);
     std::fs::write(dir.join("tst_fragment.qml"), test).expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_fragment.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")

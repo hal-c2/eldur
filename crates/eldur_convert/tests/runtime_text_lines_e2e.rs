@@ -1,12 +1,11 @@
 //! `text-decoration` style and colour from a rule a script's element matches.
 //! The computed values are Chromium's for this page.
 
+mod support;
+
 use std::process::Command;
 
 use eldur_convert::{Input, NoResources, Options, RootKind};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const PAGE: &str = r##"<!DOCTYPE html><html><head><style>
 body{margin:20px;font:20px/30px sans-serif}
@@ -78,6 +77,9 @@ TestCase {
 
 #[test]
 fn a_run_time_rules_decoration_keeps_its_style_and_colour() {
+    if support::no_qt() {
+        return;
+    }
     let out = eldur_convert::convert(
         &Input {
             html: PAGE.to_owned(),
@@ -97,7 +99,7 @@ fn a_run_time_rules_decoration_keeps_its_style_and_colour() {
         std::fs::write(dir.join(&file.path), &file.contents).expect("write output");
     }
     std::fs::write(dir.join("tst_lines.qml"), TEST).expect("write test");
-    let run = Command::new(RUNNER)
+    let run = support::qmltestrunner()
         .args(["-input", "tst_lines.qml"])
         .current_dir(&dir)
         .env("QT_QPA_PLATFORM", "offscreen")

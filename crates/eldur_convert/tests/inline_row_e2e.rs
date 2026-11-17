@@ -3,12 +3,9 @@
 //! page: `.a` puts the line's top at 0.8, which Chromium rounds up with the
 //! text's baseline; `code` is 85% of 16, 13.6px, where Qt can only draw 14.
 
-use std::process::Command;
+mod support;
 
 use eldur_convert::{Input, NoResources, Options, RootKind};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const PAGE: &str = r##"<!DOCTYPE html><html><head><style>
 body{margin:0;font-family:sans-serif;font-size:16px;line-height:1.6}
@@ -101,6 +98,9 @@ TestCase {
 "##;
 
 fn run(tag: &str, page: &str, test: &str) {
+    if support::no_qt() {
+        return;
+    }
     let out = eldur_convert::convert(
         &Input {
             html: page.to_owned(),
@@ -118,7 +118,7 @@ fn run(tag: &str, page: &str, test: &str) {
         std::fs::write(dir.join(&file.path), &file.contents).expect("write output");
     }
     std::fs::write(dir.join("tst_row.qml"), test).expect("write test");
-    let run = Command::new(RUNNER)
+    let run = support::qmltestrunner()
         .args(["-input", "tst_row.qml"])
         .current_dir(&dir)
         .env("QT_QPA_PLATFORM", "offscreen")

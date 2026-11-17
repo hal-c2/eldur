@@ -8,12 +8,11 @@
 //! two is a quarter of the grid. A definite width with no percentage in it
 //! is no share of its area, and is sized as before.
 
+mod support;
+
 use std::process::Command;
 
 use eldur_convert::{Input, Options, Resource, Resources, RootKind};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 /// Wider than it is tall, so that its `height` attribute gives an intrinsic
 /// width (896) past the grid's.
@@ -139,6 +138,9 @@ impl Resources for Files {
 
 /// Converts `page` and runs `test` against it in qmltestrunner.
 fn run(page: &str, test: &str, name: &str) -> String {
+    if support::no_qt() {
+        return String::new();
+    }
     let options = Options {
         root: RootKind::Item,
         ..Options::default()
@@ -160,7 +162,7 @@ fn run(page: &str, test: &str, name: &str) -> String {
     }
     let file = format!("tst_{name}.qml");
     std::fs::write(dir.join(&file), test).expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join(&file))
         .env("QT_FORCE_STDERR_LOGGING", "1")

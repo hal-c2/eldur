@@ -8,12 +8,9 @@
 //! Chromium's, recorded in `tests/table_widths/chromium.json` by
 //! `node crates/eldur_convert/tests/table_widths/gen.mjs`.
 
-use std::process::Command;
+mod support;
 
 use eldur_convert::{Input, NoResources, Options, RootKind};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const PAGE: &str = include_str!("table_widths/page.html");
 const CHROMIUM: &str = include_str!("table_widths/chromium.json");
@@ -139,6 +136,9 @@ fn live_table_columns_have_chromium_widths() {
 }
 
 fn columns_match(page: &str, live: bool, name: &str) {
+    if support::no_qt() {
+        return;
+    }
     let options = Options {
         root: RootKind::Item,
         ..Options::default()
@@ -163,7 +163,7 @@ fn columns_match(page: &str, live: bool, name: &str) {
             .replace("@LIVE@", if live { "true" } else { "false" }),
     )
     .expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_table_widths.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")

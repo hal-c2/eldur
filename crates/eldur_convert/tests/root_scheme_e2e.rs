@@ -14,12 +14,11 @@
 //! expected colours are what Chromium computes for the same page after the
 //! same steps.
 
+mod support;
+
 use std::process::Command;
 
 use eldur_convert::{Options, RootKind, convert_str};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const PAGE: &str = r##"<!DOCTYPE html>
 <html><head><style>
@@ -409,6 +408,9 @@ TestCase {
 
 #[test]
 fn a_root_attribute_repaints_inherited_text() {
+    if support::no_qt() {
+        return;
+    }
     let options = Options {
         root: RootKind::Item,
         ..Options::default()
@@ -420,7 +422,7 @@ fn a_root_attribute_repaints_inherited_text() {
         std::fs::write(dir.join(&file.path), &file.contents).expect("write output");
     }
     std::fs::write(dir.join("tst_scheme.qml"), TEST).expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_scheme.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")

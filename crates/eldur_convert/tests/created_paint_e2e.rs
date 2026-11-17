@@ -9,13 +9,12 @@
 //! values alone once hid a box painted black. A QML warning or an uncaught
 //! script error fails the page.
 
+mod support;
+
 use std::path::Path;
 use std::process::Command;
 
 use eldur_convert::{Options, RootKind, convert_str};
-
-/// `/usr/bin/qmltestrunner` can be Qt 5's.
-const RUNNER: &str = "/usr/lib/qt6/bin/qmltestrunner";
 
 const TEST: &str = r##"
 import QtQuick
@@ -86,7 +85,7 @@ fn run(name: &str, html: &str, data: &serde_json::Value) -> String {
         TEST.replace("DATA", &data.to_string()),
     )
     .expect("write test");
-    let output = Command::new(RUNNER)
+    let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_created.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")
@@ -102,6 +101,9 @@ fn run(name: &str, html: &str, data: &serde_json::Value) -> String {
 }
 
 fn page(name: &str) {
+    if support::no_qt() {
+        return;
+    }
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/created_paint");
     let chromium: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(dir.join("chromium.json")).expect("json"))
@@ -114,17 +116,13 @@ fn page(name: &str) {
         .map(|l| l.as_str().expect("a line"))
         .collect();
     let text = run(name, &html, &chromium[name]);
-    let mut problems: Vec<String> = text
-        .lines()
-        .filter(|l| {
-            l.contains("FAIL!")
-                || l.contains("MISMATCH")
-                || l.contains("Warning:")
-                || l.contains("QWARN")
-                || l.contains("Error:")
-        })
-        .map(str::to_owned)
-        .collect();
+    let mut problems: Vec<String> = support::problem_lines(&text, |l| {
+        l.contains("FAIL!")
+            || l.contains("MISMATCH")
+            || l.contains("Warning:")
+            || l.contains("QWARN")
+            || l.contains("Error:")
+    });
     let logged: Vec<_> = text
         .lines()
         .filter_map(|l| l.find("CS ").map(|at| &l[at..]))
@@ -185,6 +183,9 @@ fn computed_static() {
 /// What cannot be painted is said, naming the element and the property.
 #[test]
 fn unpaintable_warns() {
+    if support::no_qt() {
+        return;
+    }
     let html = r#"<!doctype html><html><head><style>
 .f{height:20px;filter:url(#none)}
 .a{height:20px;animation:spin 1s}
@@ -248,6 +249,9 @@ fn paint_control() {
 /// when the box was first placed, and the box kept those 16 lines.
 #[test]
 fn width_late() {
+    if support::no_qt() {
+        return;
+    }
     use std::io::{BufRead, BufReader};
     let html = std::fs::read_to_string(
         Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/created_paint/width_late.html"),
@@ -285,6 +289,8 @@ fn width_late() {
         ])
         .current_dir(&dir)
         .env("QT_FORCE_STDERR_LOGGING", "1")
+        // See support::qmltestrunner: a desktop theme needs a display.
+        .env_remove("QT_QPA_PLATFORMTHEME")
         .stderr(std::process::Stdio::piped())
         .spawn()
         .expect("run qml6");
