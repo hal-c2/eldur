@@ -751,11 +751,20 @@ impl Emitter<'_, '_> {
             obj.set("implicitHeight", number(h));
         }
         if let Some(form) = form {
+            // Unless scripts want it, the TextArea sits in a ScrollView that
+            // takes `id`; a reset writes the TextArea's own text.
+            let target = if self.wanted.contains(&node) {
+                id.to_owned()
+            } else {
+                let inner = self.ids.claim(&format!("{id} area"));
+                obj.id = Some(inner.clone());
+                inner
+            };
             self.forms
                 .entry(form)
                 .or_default()
                 .reset
-                .push(format!("{id}.text = {};", js_string(&value)));
+                .push(format!("{target}.text = {};", js_string(&value)));
         }
         obj
     }
