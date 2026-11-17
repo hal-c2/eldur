@@ -154,6 +154,10 @@ fn run_qml6_offscreen(
         .current_dir(work_dir)
         .arg(file_name)
         .env("QT_QPA_PLATFORM", "offscreen")
+        // A desktop's platform theme (QT_QPA_PLATFORMTHEME=gtk3 is common)
+        // loads GTK, which exits with "cannot open display" when there is
+        // none, so every page would fail; off-screen needs no theme.
+        .env_remove("QT_QPA_PLATFORMTHEME")
         // With a piped stderr Qt logs to the systemd journal instead, so a page
         // that throws at load would pass the check silently.
         .env("QT_FORCE_STDERR_LOGGING", "1")

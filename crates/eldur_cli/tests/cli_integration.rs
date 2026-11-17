@@ -686,12 +686,13 @@ fn check_runs_qmllint_and_offscreen_qml6_failing_on_any_output() {
     let mock_qmllint = bin_dir.join("mock_qmllint");
     let mock_qml6 = bin_dir.join("mock_qml6");
 
-    // Clean run: qmllint silent, qml6 verifies QT_QPA_PLATFORM=offscreen and
+    // Clean run: qmllint silent, qml6 verifies QT_QPA_PLATFORM=offscreen, and
+    // that no desktop platform theme (which needs a display) reached it, then
     // sleeps until killed by timeout without printing anything.
     write_executable(&mock_qmllint, "#!/usr/bin/env bash\nexit 0\n");
     write_executable(
         &mock_qml6,
-        "#!/usr/bin/env bash\nif [[ \"${QT_QPA_PLATFORM:-}\" != \"offscreen\" ]]; then\n  echo \"missing offscreen\"\n  exit 1\nfi\nif [[ \"$1\" != \"Main.qml\" || ! -f \"Main.qml\" ]]; then\n  echo \"wrong cwd or arg: $1\"\n  exit 1\nfi\nexec sleep 5\n",
+        "#!/usr/bin/env bash\nif [[ \"${QT_QPA_PLATFORM:-}\" != \"offscreen\" ]]; then\n  echo \"missing offscreen\"\n  exit 1\nfi\nif [[ -n \"${QT_QPA_PLATFORMTHEME+set}\" ]]; then\n  echo \"platform theme $QT_QPA_PLATFORMTHEME\"\n  exit 1\nfi\nif [[ \"$1\" != \"Main.qml\" || ! -f \"Main.qml\" ]]; then\n  echo \"wrong cwd or arg: $1\"\n  exit 1\nfi\nexec sleep 5\n",
     );
 
     let tools = QmlTools {
