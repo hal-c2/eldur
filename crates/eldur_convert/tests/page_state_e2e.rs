@@ -12,12 +12,15 @@ mod support;
 use eldur_convert::{Input, NoResources, Options, RootKind};
 
 const PAGE: &str = r#"<!doctype html><html><head><meta charset="utf-8">
-<style>#mark.on { color: rgb(220, 0, 0) } #gen.on::before { content: "GEN " } #pre::before { content: "PRE " }</style>
+<style>#mark.on { color: rgb(220, 0, 0) } #gen.on::before { content: "GEN " } #pre::before { content: "PRE " } #tbl.on col { background: rgb(0, 0, 220) }</style>
 </head><body>
 <p id="out">ready, <em id="mark">marked</em> in its line</p>
 <p id="gen">tail</p>
 <p id="pre">first</p>
+<table id="tbl"><colgroup><col></colgroup><tr><td>cell</td></tr></table>
 <script>
+// A script that reaches the table makes it live: the runtime lays it out.
+document.querySelectorAll("table").forEach(function(t) { t.dataset.seen = "1"; });
 var keys = 0, resized = 0;
 function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
 document.addEventListener("keydown", function(e) {
@@ -41,13 +44,21 @@ document.addEventListener("keydown", function(e) {
     history.forward();
     L("forward to", location.href.slice(location.href.lastIndexOf("/") + 1));
   }
+  // A column's background is painted on its cells by the page's tables.
+  if (e.key === "b") {
+    document.getElementById("tbl").classList.add("on");
+  }
 });
-setTimeout(function() { L("timer"); }, 0);
+// A frame asked for from the timer: HTML orders a 0 ms timer and the next
+// frame by nothing, so the page's own frame is checked after its timer ran.
+setTimeout(function() {
+  L("timer");
+  requestAnimationFrame(function() { L("frame"); });
+}, 0);
 // Due after the first page is gone: it must not run in the next one.
 setTimeout(function() { L("late timer"); }, 400);
 var ticks = 0;
 var tick = setInterval(function() { if (++ticks === 2) { L("interval"); } }, 30);
-requestAnimationFrame(function() { L("frame"); });
 // A custom element is the document's: defining it again is the new page's first.
 // A page up beside another shares its document, where a second `define` throws.
 L("defined before", customElements.get("x-note") !== undefined);
@@ -157,6 +168,9 @@ TestCase {
         keyClick(Qt.Key_G)
         wait(100)
         console.log("LC generated drawn " + shows(first, "GEN tail"))
+        keyClick(Qt.Key_B)
+        wait(100)
+        console.log("LC column drawn " + blue(first))
     }
 
     // Whether some `Text` under `item` shows `text`.
@@ -173,6 +187,18 @@ TestCase {
     }
 
     // Whether any of the page's pixels are drawn in `#mark.on`'s colour.
+    function blue(page) {
+        const image = grabImage(page)
+        for (let y = 0; y < 400; ++y) {
+            for (let x = 0; x < 600; ++x) {
+                const p = image.pixel(x, y)
+                if (p.b > 0.7 && p.r < 0.3 && p.g < 0.3) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
     function red(page) {
         const image = grabImage(page)
         for (let y = 0; y < 60; ++y) {
@@ -295,6 +321,7 @@ const WANT: &[&str] = &[
     "LC generated at Main.qml#seen",
     "LC forward to Main.qml#seen",
     "LC generated drawn true",
+    "LC column drawn true",
 ];
 
 // Each test, by the line it starts with, and how many late timers run in it:
