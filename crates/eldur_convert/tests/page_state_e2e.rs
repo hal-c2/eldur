@@ -30,8 +30,15 @@ var ticks = 0;
 var tick = setInterval(function() { if (++ticks === 2) { L("interval"); } }, 30);
 requestAnimationFrame(function() { L("frame"); });
 // A custom element is the document's: defining it again is the new page's first.
+// A page up beside another shares its document, where a second `define` throws.
 L("defined before", customElements.get("x-note") !== undefined);
-customElements.define("x-note", class extends HTMLElement {});
+if (!customElements.get("x-note")) {
+  customElements.define("x-note", class extends HTMLElement {});
+}
+// What a page did to its title and its address is the page's.
+L("title", JSON.stringify(document.title), "history", history.length);
+document.title = "set";
+history.pushState(null, '', '#seen');
 L("loaded");
 </script>
 </body></html>"#;
@@ -60,6 +67,7 @@ TestCase {
         keyClick(Qt.Key_T)
         mouseClick(page, 400, 300)
         wait(50)
+        return page
     }
 
     function test_1_first() {
@@ -71,6 +79,15 @@ TestCase {
         // Longer than the first page's late timer had left.
         wait(500)
     }
+
+    // A page made while another is still up stops nothing of the first: its
+    // late timer still runs, and so does the second's.
+    function test_3_side_by_side() {
+        const first = makePage("page 3")
+        makePage("page 4")
+        wait(500)
+        console.log("LC first still up " + (first.width === 800))
+    }
 }
 }
 "##;
@@ -78,6 +95,7 @@ TestCase {
 const WANT: &[&str] = &[
     "LC page 1",
     "LC defined before false",
+    "LC title \"\" history 1",
     "LC loaded",
     "LC timer",
     "LC frame",
@@ -87,6 +105,7 @@ const WANT: &[&str] = &[
     "LC document click",
     "LC page 2",
     "LC defined before false",
+    "LC title \"\" history 1",
     "LC loaded",
     "LC timer",
     "LC frame",
@@ -95,6 +114,33 @@ const WANT: &[&str] = &[
     "LC window key 1",
     "LC document click",
     "LC late timer",
+    "LC page 3",
+    "LC defined before false",
+    "LC title \"\" history 1",
+    "LC loaded",
+    "LC timer",
+    "LC frame",
+    "LC interval",
+    "LC document key 1",
+    "LC window key 1",
+    "LC document click",
+    // Up beside page 3, page 4 shares its `document`: its custom elements, and
+    // a key or a click there is heard by both pages' listeners.
+    "LC page 4",
+    "LC defined before true",
+    "LC title \"set\" history 2",
+    "LC loaded",
+    "LC timer",
+    "LC frame",
+    "LC interval",
+    "LC document key 2",
+    "LC document key 1",
+    "LC window key 2",
+    "LC window key 1",
+    "LC document click",
+    "LC late timer",
+    "LC late timer",
+    "LC first still up true",
 ];
 
 #[test]
