@@ -10786,7 +10786,15 @@ function wrap(rawItem) {
                 }
             }
             _wsEnd(rawItem).length = 0;
+            // The text the converter wrote on the element (`<p>pending</p>`) is a
+            // child node too, and goes with the others.
+            if (getText(rawItem) !== "") {
+                setText(rawItem, "");
+            }
             var rawNodes = _expandInsertRawNodes(arguments);
+            if (_vTryInsert(rawItem, rawNodes, null)) {
+                return;
+            }
             _insertChildren(rawItem, rawNodes, null);
         },
         cloneNode: function(deep) {

@@ -780,6 +780,15 @@
   ],
   "clicks": []
  },
+ "replace": {
+  "log": [
+   "LC repl ran 1 SPAN 1",
+   "LC mixed aB 1 2 3",
+   "LC empty  0 0",
+   "LC append base+ 1 2 3"
+  ],
+  "clicks": []
+ },
  "writes": {
   "log": [
    "LC text 12 Count: 12 and other end 12",
