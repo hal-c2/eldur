@@ -13,10 +13,12 @@ python3 tools/visual/run.py --selftest
 mise run visual -- --selftest
 
 # Run the unit and integration test suite:
-mise run visual test
-mise run visual -- --test
+mise run visual:test
+python3 tools/visual/run.py --test
 
-# Score the converter on tests/corpus/ -> target/visual/report.{md,json}:
+# Score the converter on tests/corpus/ -> <cargo target dir>/visual/report.{md,json}
+# (python3 run.py's own default is target/visual). The task checks Playwright's
+# Chromium, qml6 and sway first, and exits 1 when any case is left unscored.
 mise run visual
 python3 tools/visual/run.py --corpus tests/corpus --out target/visual
 

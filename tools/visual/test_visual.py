@@ -531,6 +531,8 @@ class RenderQmlSettleTests(unittest.TestCase):
                 QT_QUICK_BACKEND="software",
                 QT_FORCE_STDERR_LOGGING="1",
             )
+            # As render_qml does: a desktop platform theme (gtk3) needs a display.
+            env.pop("QT_QPA_PLATFORMTHEME", None)
             proc = subprocess.run(
                 ["qml6", "--software", str(render_qml.SHOT_QML), "--",
                  (tmp_dir / "Main.qml").as_uri(), "60", "40", str(out_png), "50", "2000", "gl"],
@@ -831,7 +833,8 @@ color = Path(sys.argv[4]).read_text().strip() if len(sys.argv) > 4 else "#2563eb
                 f"{sys.executable} {converter} {{input}} -o {{output}} {color_cfg}"
             )
 
-            with redirect_stdout(io.StringIO()):
+            err_buf1 = io.StringIO()
+            with redirect_stdout(io.StringIO()), redirect_stderr(err_buf1):
                 rc1 = visual_run.main(
                     [
                         "--backend",
@@ -851,7 +854,10 @@ color = Path(sys.argv[4]).read_text().strip() if len(sys.argv) > 4 else "#2563eb
                         "120",
                     ]
                 )
-            self.assertEqual(rc1, 0)
+            # The other cases still run and the baseline is still written, but
+            # a case that was never scored fails the run.
+            self.assertEqual(rc1, 1)
+            self.assertIn("broken_convert (convert_failed)", err_buf1.getvalue())
             self.assertTrue(baseline.is_file())
             self.assertTrue((out_dir / "report.md").is_file())
             report1 = json.loads((out_dir / "report.json").read_text(encoding="utf-8"))
@@ -942,7 +948,8 @@ out_dir.mkdir(parents=True, exist_ok=True)
                         ]
                     )
 
-            self.assertEqual(rc, 0)
+            # The reports are written either way; an unscored case fails the run.
+            self.assertEqual(rc, 1)
             self.assertTrue((out_dir / "report.md").is_file())
             report = json.loads((out_dir / "report.json").read_text(encoding="utf-8"))
             self.assertEqual(report["summary"]["compare_failed"], 1)
@@ -1067,7 +1074,7 @@ out_dir.mkdir(parents=True, exist_ok=True)
                 json.dumps({"alpha": "#2563eb", "beta": "FAIL"}),
                 encoding="utf-8",
             )
-            with redirect_stdout(io.StringIO()):
+            with redirect_stdout(io.StringIO()), redirect_stderr(io.StringIO()):
                 rc_fail_keep = visual_run.main(
                     [
                         "--backend",
@@ -1087,7 +1094,8 @@ out_dir.mkdir(parents=True, exist_ok=True)
                         "80",
                     ]
                 )
-            self.assertEqual(rc_fail_keep, 0)
+            # beta was not scored, so the run fails, but its baseline is kept.
+            self.assertEqual(rc_fail_keep, 1)
             b3 = json.loads(baseline.read_text(encoding="utf-8"))
             self.assertEqual(sorted(b3["cases"].keys()), ["alpha", "beta"])
             self.assertEqual(b3["cases"]["alpha"]["score"], 100.0)

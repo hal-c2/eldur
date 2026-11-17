@@ -14,7 +14,8 @@ For each case directory containing `index.html`:
   1. Renders `index.html` in headless Playwright Chromium (`render_html.mjs`).
   2. Converts `index.html` to QML via `--convert-cmd` (unless `--selftest`, where
      hand-written `Main.qml` sits alongside `index.html`). Conversion failures are
-     recorded as `convert_failed` and execution continues.
+     recorded as `convert_failed` and execution continues; the run then exits 1,
+     as it does for any case left without a score.
   3. Renders `Main.qml` in `qml6` (`render_qml.py` + `Shot.qml`). Under
      `--strict` (the default), any QML runtime/binding warnings mark the case
      `qml_warnings` in the report. `--backend gl` (the default) uses OpenGL,
@@ -858,6 +859,20 @@ def main(argv: list[str] | None = None) -> int:
 
         if any(r["status"] == "html_render_failed" for r in report["cases"]):
             print("run.py: error: one or more HTML renders failed", file=sys.stderr)
+            return 1
+
+        # A case that never got a score is a failed run, not a low score: the
+        # report would otherwise read as green with cases missing from it.
+        unscored = [
+            f'{r["case"]} ({r["status"]})'
+            for r in report["cases"]
+            if r["status"] in ("convert_failed", "qml_render_failed", "compare_failed")
+        ]
+        if unscored:
+            print(
+                f"run.py: error: {len(unscored)} case(s) were not scored: {', '.join(unscored)}",
+                file=sys.stderr,
+            )
             return 1
 
     except HarnessError as exc:

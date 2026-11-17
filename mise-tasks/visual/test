@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#MISE description="The visual harness's own unit and integration tests (tools/visual/test_*.py); tests that need sway, qml6 or node skip without them"
+#USAGE arg "[args]..." var=#true help="Passed to python3 -m unittest, e.g. -k compare"
+set -euo pipefail
+task_name="visual:test"
+# shellcheck source=mise-tasks/_lib/common.sh
+. "$(dirname "$0")/../_lib/common.sh"
+# shellcheck source=mise-tasks/_lib/python.sh
+. "$(dirname "$0")/../_lib/python.sh"
+need_python
+exec python3 -m unittest discover -s "$root/tools/visual" -p "test_*.py" -v "$@"
