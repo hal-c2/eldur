@@ -365,7 +365,10 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     // the runtime is only imported beside page.js, which imports it itself,
     // and the font table is data. The page's own script stays even when
     // unread, as its top level may have effects.
+    // Judged on the code, not the header comment, which names the page file.
+    let header = std::mem::take(&mut qml.header);
     let body = qml.to_qml();
+    qml.header = header;
     qml.imports.retain(|i| {
         !i.uri.starts_with("\"eldur_")
             || i.alias
