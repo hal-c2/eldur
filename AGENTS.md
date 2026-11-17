@@ -23,9 +23,9 @@ mapping specifications are in `docs/spec/`.
    it pass, never hard-code an expected output in the implementation, never
    leave `unimplemented!()`/`todo!()` in code you report as done. Report
    what does not work.
-6. **Generated QML must be valid.** Every snapshot in `tests/corpus/` must
-   pass `qmllint` and load in `qml6` off-screen without warnings
-   (`mise run qml:check`).
+6. **Generated QML must be valid.** The QML of every `tests/corpus/` case
+   must pass `qmllint` and load in `qml6` off-screen without warnings
+   (`mise run corpus`, then `mise run qml:check`).
 
 ## Commands
 
@@ -41,7 +41,7 @@ mapping specifications are in `docs/spec/`.
 | Install the `eldur` CLI from the checkout | `mise run install [--root dir]` |
 | Convert a page | `mise run convert page.html -o out/` |
 | Convert every corpus case (default `<cargo target dir>/corpus`) | `mise run corpus [out]` |
-| Validate QML (qmllint + qml6 off-screen; default `tests/corpus`) | `mise run qml:check [dir]` |
+| Validate QML (qmllint + qml6 off-screen; default: what `mise run corpus` wrote) | `mise run qml:check [dir]` |
 | Visual parity harness (Chromium vs qml6; needs Playwright's Chromium, and sway unless `--backend software`) | `mise run visual [-- run.py args]` |
 | The visual harness's own tests | `mise run visual:test` |
 | Run every task quickly, as CI does | `mise run tasks:smoke [--list] [--only task]` |
