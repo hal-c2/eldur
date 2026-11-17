@@ -30,6 +30,21 @@ pub fn no_qt() -> bool {
     true
 }
 
+/// True, after printing why, when a command the test starts besides
+/// `qmltestrunner` is not on PATH, as for [`no_qt`].
+pub fn missing(commands: &[&str]) -> bool {
+    let absent: Vec<&str> = commands
+        .iter()
+        .copied()
+        .filter(|name| on_path(name).is_none())
+        .collect();
+    if absent.is_empty() {
+        return false;
+    }
+    eprintln!("skipped: not on PATH: {}", absent.join(", "));
+    true
+}
+
 /// `qmltestrunner`, ready for the caller's arguments. Callers check
 /// [`no_qt`] first.
 pub fn qmltestrunner() -> Command {
@@ -62,7 +77,8 @@ pub fn problem_lines(text: &str, keep: impl Fn(&str) -> bool) -> Vec<String> {
 
 fn find() -> Option<PathBuf> {
     if let Some(set) = env::var_os("QMLTESTRUNNER").filter(|s| !s.is_empty()) {
-        let path = PathBuf::from(set);
+        // Absolute, as the tests start it from their own working directories.
+        let path = std::path::absolute(PathBuf::from(&set)).expect("the working directory");
         assert!(
             path.is_file(),
             "QMLTESTRUNNER is {}, which is not a file",
@@ -98,11 +114,13 @@ fn find() -> Option<PathBuf> {
             return Some(path);
         }
     }
-    // Last, and only if it is Qt 6's: on macOS and in Qt's own installers the
-    // plain name is Qt 6's.
+    // Last, and only when it is known to be Qt 6's: on macOS and in Qt's own
+    // installers the plain name is. Qt 5's qtpaths has no --query, but both
+    // answer --qt-version; with no answer the runner may be Qt 5's, which
+    // fails on Qt 6 imports instead of skipping.
     let plain = on_path("qmltestrunner")?;
-    let version = query("qtpaths", &["--query", "QT_VERSION"]).unwrap_or_default();
-    (version.is_empty() || version.starts_with('6')).then_some(plain)
+    let version = query("qtpaths", &["--qt-version"])?;
+    version.starts_with("6.").then_some(plain)
 }
 
 fn on_path(name: &str) -> Option<PathBuf> {
