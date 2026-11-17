@@ -13,7 +13,8 @@ import sys
 from pathlib import Path
 
 # The Qt types the converter writes (`grep -ho '[A-Z][A-Za-z]* {'` over the
-# corpus output), by module. Controls come from QtQuick.Templates, which the
+# corpus output), by module; ids.rs's tests check that every `Object::new` type
+# in the emitters is here. Controls come from QtQuick.Templates, which the
 # Basic style's types derive from without adding properties of their own.
 TYPES = {
     "QtQuick": ["Item", "Text", "Rectangle", "Image", "Flickable", "Flow", "Repeater",
@@ -27,7 +28,8 @@ TYPES = {
     "QML": ["QtObject", "Component"],
     "QtQml": ["Connections", "Timer"],
     "QtQuick.Layouts": ["ColumnLayout", "RowLayout", "GridLayout"],
-    "QtQuick.Shapes": ["Shape", "ShapePath"],
+    "QtQuick.Shapes": ["Shape", "ShapePath", "LinearGradient", "RadialGradient",
+                       "ConicalGradient"],
     "QtQuick.Effects": ["MultiEffect", "RectangularShadow"],
     "QtQuick.Templates": ["ApplicationWindow", "Button", "TextField", "TextArea",
                           "CheckBox", "RadioButton", "ProgressBar", "SpinBox",

@@ -66,6 +66,42 @@ mod tests {
     }
 
     #[test]
+    fn every_qt_type_the_emitters_write_is_in_the_member_list() {
+        // A type left out of tools/qt-members/generate.py would let an id
+        // take one of its property names.
+        let generator = include_str!("../../../../tools/qt-members/generate.py");
+        let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut missing = Vec::new();
+        let mut dirs = vec![src];
+        while let Some(dir) = dirs.pop() {
+            for entry in std::fs::read_dir(dir).expect("src").flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    dirs.push(path);
+                    continue;
+                }
+                if path.extension().is_none_or(|e| e != "rs") {
+                    continue;
+                }
+                let text = std::fs::read_to_string(&path).expect("source");
+                for (at, _) in text.match_indices("Object::new(\"") {
+                    let rest = &text[at + "Object::new(\"".len()..];
+                    let name = &rest[..rest.find('"').expect("closing quote")];
+                    if !name.starts_with("Eldur") && !generator.contains(&format!("\"{name}\"")) {
+                        missing.push(name.to_owned());
+                    }
+                }
+            }
+        }
+        missing.sort();
+        missing.dedup();
+        assert!(
+            missing.is_empty(),
+            "add to generate.py's TYPES and regenerate: {missing:?}"
+        );
+    }
+
+    #[test]
     fn an_id_never_shadows_a_property() {
         let mut ids = Ids::default();
         assert_eq!(ids.claim("state"), "state_");
