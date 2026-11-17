@@ -75,6 +75,20 @@ pub fn problem_lines(text: &str, keep: impl Fn(&str) -> bool) -> Vec<String> {
     lines
 }
 
+/// Qt 6's `qmllint`: `QMLLINT` when set, else the one beside the
+/// `qmltestrunner` found (Arch's plain `qmllint` is Qt 5's, which cannot
+/// judge Qt 6 QML).
+pub fn qmllint() -> Option<PathBuf> {
+    if let Some(set) = env::var_os("QMLLINT").filter(|s| !s.is_empty()) {
+        return Some(std::path::absolute(PathBuf::from(set)).expect("the working directory"));
+    }
+    let beside = runner()?.with_file_name("qmllint");
+    if beside.is_file() {
+        return Some(beside);
+    }
+    on_path("qmllint6")
+}
+
 fn find() -> Option<PathBuf> {
     if let Some(set) = env::var_os("QMLTESTRUNNER").filter(|s| !s.is_empty()) {
         // Absolute, as the tests start it from their own working directories.
