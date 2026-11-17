@@ -12,9 +12,10 @@ mod support;
 use eldur_convert::{Input, NoResources, Options, RootKind};
 
 const PAGE: &str = r#"<!doctype html><html><head><meta charset="utf-8">
-<style>#mark.on { color: rgb(220, 0, 0) }</style>
+<style>#mark.on { color: rgb(220, 0, 0) } #gen.on::before { content: "GEN " }</style>
 </head><body>
 <p id="out">ready, <em id="mark">marked</em> in its line</p>
+<p id="gen">tail</p>
 <script>
 var keys = 0, resized = 0;
 function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
@@ -31,6 +32,10 @@ document.addEventListener("keydown", function(e) {
   if (e.key === "r") {
     document.getElementById("mark").classList.add("on");
     L("restyled", getComputedStyle(document.getElementById("mark")).color);
+  }
+  if (e.key === "g") {
+    document.getElementById("gen").classList.add("on");
+    L("generated at", location.href.slice(location.href.lastIndexOf("/") + 1));
   }
 });
 setTimeout(function() { L("timer"); }, 0);
@@ -54,6 +59,15 @@ history.back();
 L("back to", opened.slice(opened.lastIndexOf("/") + 1), location.href === opened);
 history.forward();
 L("loaded");
+</script>
+</body></html>"#;
+
+// Another page, made beside the first: no generated content, an address of
+// its own. It uses only what the first page's runtime has, which both share.
+const OTHER: &str = r#"<!doctype html><html><head><meta charset="utf-8"></head><body>
+<p>other</p>
+<script>
+console.log("LC other at " + location.href.slice(location.href.lastIndexOf("/") + 1));
 </script>
 </body></html>"#;
 
@@ -117,6 +131,35 @@ TestCase {
         keyClick(Qt.Key_R)
         wait(100)
         console.log("LC drawn red " + red(first))
+    }
+
+    // A page different from the earlier one going leaves the earlier one with
+    // its own generated-content rules and its own address.
+    function test_5_other_page_goes_first() {
+        const first = makePage("page 7")
+        const component = Qt.createComponent("Other.qml")
+        verify(component.status === Component.Ready, component.errorString())
+        const other = createTemporaryObject(component, host, { width: 800, height: 600 })
+        waitForRendering(other)
+        other.destroy()
+        wait(300)
+        first.forceActiveFocus()
+        keyClick(Qt.Key_G)
+        wait(100)
+        console.log("LC generated drawn " + shows(first, "GEN tail"))
+    }
+
+    // Whether some `Text` under `item` shows `text`.
+    function shows(item, text) {
+        if (typeof item.text === "string" && item.text.indexOf(text) >= 0) {
+            return true
+        }
+        for (let i = 0; i < item.children.length; ++i) {
+            if (shows(item.children[i], text)) {
+                return true
+            }
+        }
+        return false
     }
 
     // Whether any of the page's pixels are drawn in `#mark.on`'s colour.
@@ -225,6 +268,21 @@ const WANT: &[&str] = &[
     "LC restyled rgb(220, 0, 0)",
     "LC restyled rgb(220, 0, 0)",
     "LC drawn red true",
+    "LC page 7",
+    "LC defined before false",
+    "LC title \"\" history 1",
+    "LC back to Main.qml true",
+    "LC loaded",
+    "LC timer",
+    "LC frame",
+    "LC interval",
+    "LC document key 1",
+    "LC window key 1",
+    "LC document click",
+    "LC other at Other.qml",
+    // Page 7 is the document again: at its own address, with its own rules.
+    "LC generated at Main.qml#seen",
+    "LC generated drawn true",
 ];
 
 // Each test, by the line it starts with, and how many late timers run in it:
@@ -234,6 +292,7 @@ const LATE: &[(&str, usize)] = &[
     ("LC page 2", 1),
     ("LC page 3", 2),
     ("LC page 5", 2),
+    ("LC page 7", 1),
 ];
 
 #[test]
@@ -257,6 +316,30 @@ fn a_page_made_again_in_one_engine_hears_only_its_own_listeners() {
     std::fs::create_dir_all(&dir).expect("temp dir");
     for file in &out.files {
         std::fs::write(dir.join(&file.path), &file.contents).expect("write output");
+    }
+    // The other page shares the first one's runtime file, and so its state.
+    let other = eldur_convert::convert(
+        &Input {
+            html: OTHER.to_owned(),
+            url: "other/index.html".to_owned(),
+        },
+        &options,
+        &mut NoResources,
+    );
+    for file in &other.files {
+        let name = file.path.to_string_lossy();
+        let contents = String::from_utf8_lossy(&file.contents);
+        match name.as_ref() {
+            "Main.qml" => std::fs::write(
+                dir.join("Other.qml"),
+                contents
+                    .replace("\"page.js\"", "\"other_page.js\"")
+                    .replace("Main.qml", "Other.qml"),
+            ),
+            "page.js" => std::fs::write(dir.join("other_page.js"), &file.contents),
+            _ => Ok(()),
+        }
+        .expect("write other page");
     }
     std::fs::write(dir.join("tst_page_state.qml"), TEST).expect("write test");
     let output = support::qmltestrunner()
