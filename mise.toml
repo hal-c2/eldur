@@ -6,7 +6,9 @@ rust = { version = "1.98.1", components = "rustfmt,clippy" }
 # Rust in /usr/bin, or a shell that already carries mise state, would otherwise
 # come first on PATH, and tasks would build with that version instead of the
 # pin. Aggressive activation puts the pinned tools' directories before
-# everything else. A [settings] table needs no `mise trust`.
+# everything else. This table and [env] make mise.toml need trust, which
+# `mise run` grants itself; before the first run, `mise tasks` or a shell
+# with mise activated asks for `mise trust`.
 [settings]
 activate_aggressive = true
 
