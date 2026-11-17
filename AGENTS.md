@@ -31,18 +31,25 @@ mapping specifications are in `docs/spec/`.
 
 | Task | Command |
 |---|---|
-| First run: toolchain, crates, report of missing optional tools | `mise run setup` |
-| Convert a page and run it in ljos or qml6 | `mise run dev [page.html] [-o dir] [--runtime auto\|ljos\|qml6\|none]` |
+| First run: toolchain (needs rustup), crates, report of missing optional tools | `mise run setup [--offline]` |
+| Convert a page and run it in ljos or qml6 (fails if neither is found) | `mise run dev [page.html] [-o dir] [--runtime auto\|ljos\|qml6\|none] [--viewport WxH]` |
+| Format every crate in place | `mise run fmt` |
 | Format check, clippy (warnings are errors) | `mise run check` |
-| Rust tests | `mise run test [-- cargo test args]` |
-| Build the workspace | `mise run build [--release]` |
+| Rust tests; the QML end-to-end tests skip, saying so, without Qt 6's qmltestrunner | `mise run test [-- cargo test args]` |
+| Build the workspace and print the `eldur` binary's path | `mise run build [--release]` |
+| API docs of every crate | `mise run docs [--open]` |
 | Install the `eldur` CLI from the checkout | `mise run install [--root dir]` |
-| Validate generated QML (qmllint + qml6 off-screen) | `mise run qml:check [dir]` |
 | Convert a page | `mise run convert page.html -o out/` |
-| Convert every corpus case | `mise run corpus [out]` |
-| Visual parity harness (Chromium vs qml6) | `mise run visual [-- run.py args]`, `mise run visual test` |
+| Convert every corpus case (default `<cargo target dir>/corpus`) | `mise run corpus [out]` |
+| Validate QML (qmllint + qml6 off-screen; default `tests/corpus`) | `mise run qml:check [dir]` |
+| Visual parity harness (Chromium vs qml6; needs Playwright's Chromium, and sway unless `--backend software`) | `mise run visual [-- run.py args]` |
+| The visual harness's own tests | `mise run visual:test` |
+| Run every task quickly, as CI does | `mise run tasks:smoke [--list] [--only task]` |
 
-Every task takes `--help`.
+Every task takes `--help`. Paths you pass are relative to the directory you
+run mise in. Outputs go under cargo's target directory (`CARGO_TARGET_DIR` is
+respected). CI (`.github/workflows/ci.yml`) runs `setup`, `check`, `test` and
+`tasks:smoke`, without Qt, so the QML end-to-end tests skip there.
 
 ## Conventions
 
