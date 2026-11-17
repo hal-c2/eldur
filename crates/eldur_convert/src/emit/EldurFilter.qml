@@ -1,6 +1,7 @@
 // The effect of a layer for a CSS `filter`. The shader is eldur_filter.frag:
 //   qsb --glsl "100 es,120,150" --hlsl 50 --msl 12 -o eldur_filter.frag.qsb eldur_filter.frag
 // Blur and shadow come after the colours whatever order the CSS has them in.
+pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Effects
 

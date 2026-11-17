@@ -6,7 +6,7 @@ import QtQuick
 import QtQuick.Shapes
 
 Item {
-    id: layer
+    id: background
 
     property url source
     // A gradient, drawn into one tile.
@@ -46,7 +46,7 @@ Item {
 
     property point windowAt: Qt.point(0, 0)
     function findWindowAt() {
-        windowAt = layer.mapToItem(null, 0, 0)
+        windowAt = background.mapToItem(null, 0, 0)
     }
     Component.onCompleted: if (fixedToWindow) Qt.callLater(findWindowAt)
 
@@ -127,57 +127,57 @@ Item {
     Item {
         id: cell
         visible: false
-        width: layer.stepX
-        height: layer.stepY
-        layer.enabled: layer.isGradient || layer.spaced
+        width: background.stepX
+        height: background.stepY
+        layer.enabled: background.isGradient || background.spaced
         layer.smooth: true
         layer.wrapMode: ShaderEffectSource.Repeat
 
         Item {
             id: gradientBox
-            width: layer.tileWidth
-            height: layer.tileHeight
+            width: background.tileWidth
+            height: background.tileHeight
         }
         Image {
             id: spacedPicture
-            source: layer.spaced ? layer.source : ""
-            width: layer.tileWidth
-            height: layer.tileHeight
+            source: background.spaced ? background.source : ""
+            width: background.tileWidth
+            height: background.tileHeight
         }
     }
     Image {
         id: picture
         visible: false
-        source: layer.source
-        width: layer.tileWidth
-        height: layer.tileHeight
+        source: background.source
+        width: background.tileWidth
+        height: background.tileHeight
         smooth: true
         // Only a repeat needs a texture that wraps; one tile draws the file's.
-        layer.enabled: !layer.isGradient && !layer.spaced && (layer.tilesX || layer.tilesY)
+        layer.enabled: !background.isGradient && !background.spaced && (background.tilesX || background.tilesY)
         layer.smooth: true
         layer.wrapMode: ShaderEffectSource.Repeat
     }
     Shape {
         anchors.fill: parent
         preferredRendererType: Shape.CurveRenderer
-        visible: layer.paintRight > layer.paintLeft && layer.paintBottom > layer.paintTop
+        visible: background.paintRight > background.paintLeft && background.paintBottom > background.paintTop
         ShapePath {
             strokeWidth: -1
-            fillItem: layer.isGradient || layer.spaced ? cell : picture
+            fillItem: background.isGradient || background.spaced ? cell : picture
             // A layer's texture is the tile already; the file's is its own size.
-            fillTransform: Qt.matrix4x4(layer.fileScaleX, 0, 0, layer.tileX,
-                                        0, layer.fileScaleY, 0, layer.tileY,
+            fillTransform: Qt.matrix4x4(background.fileScaleX, 0, 0, background.tileX,
+                                        0, background.fileScaleY, 0, background.tileY,
                                         0, 0, 1, 0,
                                         0, 0, 0, 1)
             PathRectangle {
-                x: layer.paintLeft
-                y: layer.paintTop
-                width: layer.paintRight - layer.paintLeft
-                height: layer.paintBottom - layer.paintTop
-                topLeftRadius: layer.atLeft && layer.atTop ? layer.topLeftRadius : 0
-                topRightRadius: layer.atRight && layer.atTop ? layer.topRightRadius : 0
-                bottomRightRadius: layer.atRight && layer.atBottom ? layer.bottomRightRadius : 0
-                bottomLeftRadius: layer.atLeft && layer.atBottom ? layer.bottomLeftRadius : 0
+                x: background.paintLeft
+                y: background.paintTop
+                width: background.paintRight - background.paintLeft
+                height: background.paintBottom - background.paintTop
+                topLeftRadius: background.atLeft && background.atTop ? background.topLeftRadius : 0
+                topRightRadius: background.atRight && background.atTop ? background.topRightRadius : 0
+                bottomRightRadius: background.atRight && background.atBottom ? background.bottomRightRadius : 0
+                bottomLeftRadius: background.atLeft && background.atBottom ? background.bottomLeftRadius : 0
             }
         }
     }

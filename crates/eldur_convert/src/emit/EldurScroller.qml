@@ -5,7 +5,7 @@ import QtQuick.Controls.Basic
 // take no layout width, as they do in the browser the pages are compared with;
 // Basic shows them while the box scrolls.
 Flickable {
-    id: scroller
+    id: scrollBox
 
     // Whether an axis's overflow can be scrolled by the user.
     property bool eldurSmooth: false
@@ -30,28 +30,28 @@ Flickable {
         : scrollsX ? Flickable.HorizontalFlick : Flickable.VerticalFlick
     ScrollBar.vertical: ScrollBar {
         readonly property bool eldurChrome: true
-        enabled: scroller.scrollsY
-        visible: scroller.userScrolls
-        parent: scroller.overlaidOn ?? scroller
-        z: scroller.overlaidOn ? 1000 : 0
-        x: scroller.overlaidOn ? scroller.x + scroller.width - width : 0
-        y: scroller.overlaidOn ? scroller.y : 0
-        height: scroller.height
+        enabled: scrollBox.scrollsY
+        visible: scrollBox.userScrolls
+        parent: scrollBox.overlaidOn ?? scrollBox
+        z: scrollBox.overlaidOn ? 1000 : 0
+        x: scrollBox.overlaidOn ? scrollBox.x + scrollBox.width - width : 0
+        y: scrollBox.overlaidOn ? scrollBox.y : 0
+        height: scrollBox.height
     }
     ScrollBar.horizontal: ScrollBar {
         readonly property bool eldurChrome: true
-        enabled: scroller.scrollsX
-        visible: scroller.userScrolls
-        parent: scroller.overlaidOn ?? scroller
-        z: scroller.overlaidOn ? 1000 : 0
-        x: scroller.overlaidOn ? scroller.x : 0
-        y: scroller.overlaidOn ? scroller.y + scroller.height - height : 0
-        width: scroller.width
+        enabled: scrollBox.scrollsX
+        visible: scrollBox.userScrolls
+        parent: scrollBox.overlaidOn ?? scrollBox
+        z: scrollBox.overlaidOn ? 1000 : 0
+        x: scrollBox.overlaidOn ? scrollBox.x : 0
+        y: scrollBox.overlaidOn ? scrollBox.y + scrollBox.height - height : 0
+        width: scrollBox.width
     }
 
     EldurScrollInput {
-        scroller: scroller
-        enabled: scroller.userScrolls
-        overlaidOn: scroller.overlaidOn
+        scroller: scrollBox
+        enabled: scrollBox.userScrolls
+        overlaidOn: scrollBox.overlaidOn
     }
 }
