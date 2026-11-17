@@ -5,8 +5,6 @@
 
 mod support;
 
-use std::process::Command;
-
 use eldur_convert::{Input, NoResources, Options, RootKind};
 
 const PAGE: &str = r#"<!doctype html><html><head><style>

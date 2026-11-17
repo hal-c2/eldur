@@ -16,8 +16,6 @@
 
 mod support;
 
-use std::process::Command;
-
 use eldur_convert::{Options, RootKind, convert_str};
 
 const PAGE: &str = r##"<!DOCTYPE html>

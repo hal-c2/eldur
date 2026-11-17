@@ -16,8 +16,6 @@
 
 mod support;
 
-use std::process::Command;
-
 use eldur_convert::{Input, NoResources, Options, RootKind};
 
 const CHROMIUM: &str = include_str!("templates/chromium.json");

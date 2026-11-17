@@ -13,7 +13,6 @@
 mod support;
 
 use std::path::Path;
-use std::process::Command;
 
 use eldur_convert::{Options, RootKind, Severity, convert_str};
 

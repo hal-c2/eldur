@@ -10,7 +10,6 @@
 mod support;
 
 use std::collections::BTreeMap;
-use std::process::Command;
 
 use eldur_convert::{Options, RootKind, convert_str};
 use serde_json::Value;
