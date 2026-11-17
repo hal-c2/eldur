@@ -502,6 +502,10 @@ var _warnedMissingTemplates = {};
 var _componentProbeCache = new Map();
 
 function init(rootItem, baseUrl, documentUrl) {
+    // A page's start hooks may each call init; only a new root is a new page.
+    if (rootItem && rootItem !== _root) {
+        _resetPageState();
+    }
     if (rootItem) {
         _root = rootItem;
     }
@@ -563,6 +567,94 @@ function init(rootItem, baseUrl, documentUrl) {
         });
         _tableSetUp();
         _pseudoLoad();
+    }
+}
+
+// This file is one library per QML engine, so every page made in the engine
+// shares its module state; in a browser each page has a `document` and a
+// `window` of its own. A new root is a new page: what the last one listened to,
+// the timers and frames it asked for, its custom elements, the rules read from
+// its root and the helper objects made on it (gone with it) all go. Every
+// module-level variable that belongs to a page is reset here.
+// Two pages alive at once in one engine still share one `document`.
+function _resetPageState() {
+    _dropHelper(_timerWake);
+    _dropHelper(_rafAnim);
+    _dropHelper(_aTicker);
+    _dropHelper(_tableMetrics);
+    _dropHelper(_gGrave);
+    _dropHelper(_gMarginHelper);
+    _dropHelper(_gLayoutReader);
+    _timerWake = null;
+    _rafAnim = null;
+    _aTicker = null;
+    _tableMetrics = null;
+    _gGrave = null;
+    _gMarginHelper = null;
+    _gLayoutReader = null;
+    _timers = [];
+    _timerTurnQueued = false;
+    _rafQueue = [];
+    _scrollEvents = [];
+    _documentListeners = { listeners: {}, onceListeners: {}, onHandlers: {} };
+    _windowListeners = { listeners: {}, onceListeners: {}, onHandlers: {} };
+    _keyHeard = {};
+    _controlEvents = {};
+    _activeElement = null;
+    _focusHeld = null;
+    _focusQueue = [];
+    _focusLooked = false;
+    _tap = null;
+    _in = null;
+    _dialogs = [];
+    _dialogs.moved = 0;
+    _ce.defs = {};
+    _ce.waiting = {};
+    _ce.upgrading = null;
+    _ce.making = false;
+    _ce.any = false;
+    _linesKnown = null;
+    _linesLaidOut = false;
+    _layoutDirty = [];
+    _tableHosts = [];
+    _pseudoRules = null;
+    _pseudoPending = false;
+    _counterRules = [];
+    _pseudoShown = new Set();
+    _pseudoBoxKnown = null;
+    _pseudoBoxItems = null;
+    _vKeyed = {};
+    _gDirty = false;
+    _gLive = [];
+    _gLiveTemplates = [];
+    _gMetricsCache = {};
+    _gStaticBase = null;
+    _gStaticControls = [];
+    _gClosedHidden = null;
+    _gStaticRoot = "";
+    _gSchemed = false;
+    _gReplaced = new Map();
+    _gAdopted = new Map();
+    _gNamedWords = new Map();
+    _gWidthMoved = false;
+    _aAll = [];
+    _aEvents = [];
+    _aDirty = false;
+    _aScanned = false;
+    _aMoved = [];
+    _aKeyframeRules = null;
+    _aRulesMove = null;
+    _aInlineMoves = false;
+}
+
+// A helper made on the last page's root went with it; one on a root still
+// alive would go on running for a page that is no longer the document's.
+function _dropHelper(obj) {
+    if (obj && typeof obj.destroy === "function") {
+        if (typeof obj.running === "boolean") {
+            obj.running = false;
+        }
+        obj.destroy();
     }
 }
 
