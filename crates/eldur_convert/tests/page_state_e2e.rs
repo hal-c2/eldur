@@ -12,10 +12,11 @@ mod support;
 use eldur_convert::{Input, NoResources, Options, RootKind};
 
 const PAGE: &str = r#"<!doctype html><html><head><meta charset="utf-8">
-<style>#mark.on { color: rgb(220, 0, 0) } #gen.on::before { content: "GEN " }</style>
+<style>#mark.on { color: rgb(220, 0, 0) } #gen.on::before { content: "GEN " } #pre::before { content: "PRE " }</style>
 </head><body>
 <p id="out">ready, <em id="mark">marked</em> in its line</p>
 <p id="gen">tail</p>
+<p id="pre">first</p>
 <script>
 var keys = 0, resized = 0;
 function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
@@ -36,6 +37,9 @@ document.addEventListener("keydown", function(e) {
   if (e.key === "g") {
     document.getElementById("gen").classList.add("on");
     L("generated at", location.href.slice(location.href.lastIndexOf("/") + 1));
+    history.back();
+    history.forward();
+    L("forward to", location.href.slice(location.href.lastIndexOf("/") + 1));
   }
 });
 setTimeout(function() { L("timer"); }, 0);
@@ -62,10 +66,13 @@ L("loaded");
 </script>
 </body></html>"#;
 
-// Another page, made beside the first: no generated content, an address of
-// its own. It uses only what the first page's runtime has, which both share.
-const OTHER: &str = r#"<!doctype html><html><head><meta charset="utf-8"></head><body>
-<p>other</p>
+// Another page, made beside the first: generated content of its own, none of
+// the first's rules, an address of its own. It uses only what the first
+// page's runtime has, which both share.
+const OTHER: &str = r#"<!doctype html><html><head><meta charset="utf-8">
+<style>#own::before { content: "OWN " }</style>
+</head><body>
+<p id="own">other</p>
 <script>
 console.log("LC other at " + location.href.slice(location.href.lastIndexOf("/") + 1));
 </script>
@@ -143,6 +150,9 @@ TestCase {
         waitForRendering(other)
         other.destroy()
         wait(300)
+        // What the first page showed before the other came is still there,
+        // before anything of its own redraws it.
+        console.log("LC kept generated " + shows(first, "PRE first"))
         first.forceActiveFocus()
         keyClick(Qt.Key_G)
         wait(100)
@@ -280,8 +290,10 @@ const WANT: &[&str] = &[
     "LC window key 1",
     "LC document click",
     "LC other at Other.qml",
+    "LC kept generated true",
     // Page 7 is the document again: at its own address, with its own rules.
     "LC generated at Main.qml#seen",
+    "LC forward to Main.qml#seen",
     "LC generated drawn true",
 ];
 
