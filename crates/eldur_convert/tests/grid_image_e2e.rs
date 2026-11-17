@@ -10,8 +10,6 @@
 
 mod support;
 
-use std::process::Command;
-
 use eldur_convert::{Input, Options, Resource, Resources, RootKind};
 
 /// Wider than it is tall, so that its `height` attribute gives an intrinsic

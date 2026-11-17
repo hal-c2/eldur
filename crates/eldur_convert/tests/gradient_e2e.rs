@@ -6,7 +6,6 @@
 mod support;
 
 use std::path::Path;
-use std::process::Command;
 
 use eldur_convert::{Options, RootKind, convert_str};
 
