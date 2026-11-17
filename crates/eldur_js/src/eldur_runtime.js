@@ -493,6 +493,10 @@ var _root = null;
 var _roots = [];
 // Each page's input layer, by its root: the layer is made on the root.
 var _inLayers = new Map();
+// What `init` worked out for a page's own items (its rules, models, statics),
+// by its root, kept while a later page is the document: when that one goes,
+// the earlier is the document again with what it had.
+var _pageCaches = new Map();
 var _holder = null;
 var _startTime = Date.now();
 var _fallbackTitle = "";
@@ -517,6 +521,8 @@ function init(rootItem, baseUrl, documentUrl) {
         _roots = _roots.filter(function(r) { return _live(r) && r !== rootItem; });
         if (_roots.length === 0) {
             _resetPageState();
+        } else if (_live(_root)) {
+            _pageCaches.set(_root, _pageCacheSave());
         }
         _roots.push(rootItem);
     }
@@ -625,6 +631,7 @@ function _resetPageState() {
     _tap = null;
     _in = null;
     _inLayers = new Map();
+    _pageCaches = new Map();
     _dialogs = [];
     _dialogs.moved = 0;
     _ce.defs = {};
@@ -987,19 +994,46 @@ function _helperParent() {
 // `_root` is gone. With an earlier page still up, that page is the document
 // again, with its input layer; with none, the pages' timers, frames and
 // listeners go with them.
+// The state `init` derives from a page's own items, which a later page's
+// `init` overwrites.
+function _pageCacheSave() {
+    return {
+        vModels: _vModels, vRules: _vRules, vStateRules: _vStateRules,
+        gCascadeRules: _gCascadeRules, gPaintTable: _gPaintTable, gWarned: _gWarned,
+        gStateRules: _gStateRules, gLive: _gLive, gLiveTemplates: _gLiveTemplates,
+        gStaticBase: _gStaticBase, gStaticControls: _gStaticControls,
+        gClosedHidden: _gClosedHidden, gStaticRoot: _gStaticRoot, gSchemed: _gSchemed
+    };
+}
+
+function _pageCacheLoad(c) {
+    _vModels = c.vModels; _vRules = c.vRules; _vStateRules = c.vStateRules;
+    _gCascadeRules = c.gCascadeRules; _gPaintTable = c.gPaintTable; _gWarned = c.gWarned;
+    _gStateRules = c.gStateRules; _gLive = c.gLive; _gLiveTemplates = c.gLiveTemplates;
+    _gStaticBase = c.gStaticBase; _gStaticControls = c.gStaticControls;
+    _gClosedHidden = c.gClosedHidden; _gStaticRoot = c.gStaticRoot; _gSchemed = c.gSchemed;
+}
+
 function _pageGone() {
     if (!_root || _live(_root)) {
         return false;
     }
     _roots = _roots.filter(_live);
-    _inLayers.forEach(function(layer, root) {
-        if (!_live(root)) {
-            _inLayers.delete(root);
-        }
+    [_inLayers, _pageCaches].forEach(function(byRoot) {
+        byRoot.forEach(function(value, root) {
+            if (!_live(root)) {
+                byRoot.delete(root);
+            }
+        });
     });
     if (_roots.length > 0) {
         _root = _roots[_roots.length - 1];
         _in = _inLayers.get(_root) || null;
+        var kept = _pageCaches.get(_root);
+        if (kept) {
+            _pageCacheLoad(kept);
+            _pageCaches.delete(_root);
+        }
         return false;
     }
     _resetPageState();
@@ -1048,6 +1082,9 @@ function _timerTurn() {
 
 function _timerRunOne() {
     _timerTurnQueued = false;
+    if (_pageGone()) {
+        return;
+    }
     _microDrain();
     var t = _timers[0];
     if (!t || t.due > Date.now()) {
@@ -15154,13 +15191,18 @@ function _inHasTabIndex(item) {
 }
 
 function _inKeyGate(qtEv) {
-    _pageGone();
+    // With no layer the runtime heard nothing: the scroller moves as without it.
+    if (_pageGone() || !_in) {
+        return !qtEv.accepted;
+    }
     _inKeyed(qtEv, true);
     return !qtEv.accepted;
 }
 
 function _inKeyUpGate(qtEv) {
-    _pageGone();
+    if (_pageGone() || !_in) {
+        return;
+    }
     _inKeyed(qtEv, false);
 }
 
