@@ -29,6 +29,51 @@ import render_qml  # noqa: E402
 import run as visual_run  # noqa: E402
 
 
+# The integration tests start qml6, sway and Playwright's Chromium. A test
+# that needs one skips, naming it, when it is missing (CI has none of them),
+# and `mise run visual:test` says up front which are missing.
+def _chromium_missing() -> str | None:
+    if shutil.which("node") is None:
+        return "node is not installed"
+    # The lookup render_html.mjs makes, then the browser itself.
+    probe = subprocess.run(
+        [
+            "node",
+            "--input-type=module",
+            "-e",
+            "const {pathToFileURL} = await import('node:url');"
+            "const fs = await import('node:fs');"
+            "let pw;"
+            "try { pw = await (await import(pathToFileURL(process.argv[1]).href)).loadPlaywright(); }"
+            "catch { console.log('Playwright is not installed'); process.exit(0); }"
+            "if (!fs.existsSync(pw.chromium.executablePath()))"
+            " console.log('Playwright has no Chromium');",
+            str(SCRIPT_DIR / "playwright.mjs"),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    if probe.returncode != 0:
+        return f"node failed to look for Playwright: {probe.stderr.strip()}"
+    return probe.stdout.strip() or None
+
+
+CHROMIUM_MISSING = _chromium_missing()
+needs_chromium = unittest.skipIf(CHROMIUM_MISSING is not None, CHROMIUM_MISSING or "")
+needs_qml6 = unittest.skipUnless(shutil.which("qml6"), "qml6 is not installed")
+needs_sway = unittest.skipUnless(shutil.which("sway"), "sway is not installed")
+
+for _missing in (
+    CHROMIUM_MISSING,
+    None if shutil.which("qml6") else "qml6 is not installed",
+    None if shutil.which("sway") else "sway is not installed",
+):
+    if _missing:
+        print(f"test_visual: {_missing}, so the tests that need it skip", file=sys.stderr)
+
+
 class CompareMetricsTests(unittest.TestCase):
     def test_identical_images_score_100(self) -> None:
         arr = np.zeros((64, 96, 3), dtype=np.uint8)
@@ -131,6 +176,7 @@ class CompareMetricsTests(unittest.TestCase):
                 compare.compare_images(p_tiny, p_tiny)
 
 
+@needs_qml6
 class RenderQmlTests(unittest.TestCase):
     def test_renders_both_application_window_and_item_roots(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -369,6 +415,9 @@ def _assert_delayed_final_state(test: unittest.TestCase, png: Path) -> None:
     test.assertEqual(arr[80, 165].tolist(), [255, 255, 255], "bar is wider than its final width")
 
 
+@needs_chromium
+@needs_qml6
+@needs_sway
 class PaintRegionTests(unittest.TestCase):
     """Each paint feature's own pixels against Chromium's (`regions.py`): a layout
     test cannot see paint, nor a page's score one wrong box."""
@@ -386,6 +435,8 @@ class PaintRegionTests(unittest.TestCase):
                 self.assertEqual(bad, [])
 
 
+@needs_qml6
+@needs_sway
 class PaintSnapTests(unittest.TestCase):
     """A conversion of paint/page.html paints as Chromium did (layout.md §1.2).
 
@@ -482,6 +533,7 @@ class PaintSnapTests(unittest.TestCase):
         self.assertEqual(wrong, self.KNOWN_ROWS)
 
 
+@needs_qml6
 class RenderQmlSettleTests(unittest.TestCase):
     def test_software_capture_waits_for_delayed_changes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -494,7 +546,7 @@ class RenderQmlSettleTests(unittest.TestCase):
             self.assertEqual(warnings, [])
             _assert_delayed_final_state(self, out_png)
 
-    @unittest.skipUnless(shutil.which("sway"), "sway is not installed")
+    @needs_sway
     def test_gl_capture_waits_for_delayed_changes(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_dir = Path(tmp)
@@ -568,6 +620,8 @@ class RenderQmlBackendTests(unittest.TestCase):
             self.assertFalse(hasattr(args, "gl_text"))
         self.assertEqual(render_qml.DEFAULT_BACKEND, "gl")
 
+    @needs_qml6
+    @needs_sway
     def test_gl_draws_the_glyphs_the_output_asks_for(self) -> None:
         # An inherited switch must not score something users never see.
         qml = """import QtQuick
@@ -668,7 +722,8 @@ Item {
         started[0].stop.assert_called_once()
 
 
-@unittest.skipUnless(shutil.which("sway"), "sway is not installed")
+@needs_qml6
+@needs_sway
 class RenderQmlGlTests(unittest.TestCase):
     def test_gl_renders_exact_size_and_stops_sway(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -748,6 +803,7 @@ Item {
 
 
 class RenderHtmlAndRunnerTests(unittest.TestCase):
+    @needs_chromium
     def test_render_html_disables_animations_and_matches_viewport(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_dir = Path(tmp)
@@ -792,6 +848,8 @@ class RenderHtmlAndRunnerTests(unittest.TestCase):
             self.assertNotEqual(bad_proc.returncode, 0)
             self.assertIn("does not exist", bad_proc.stderr)
 
+    @needs_chromium
+    @needs_qml6
     def test_corpus_runner_convert_failed_and_baseline_regression(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_dir = Path(tmp)
@@ -895,6 +953,8 @@ color = Path(sys.argv[4]).read_text().strip() if len(sys.argv) > 4 else "#2563eb
             self.assertEqual(rc2, 1)
             self.assertIn("good_case", err_buf.getvalue())
 
+    @needs_chromium
+    @needs_qml6
     def test_compare_error_records_compare_failed_and_writes_reports(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_dir = Path(tmp)
@@ -959,6 +1019,8 @@ out_dir.mkdir(parents=True, exist_ok=True)
             self.assertEqual(by_case["case_ok"]["status"], "ok")
             self.assertEqual(by_case["case_ok"]["score"], 100.0)
 
+    @needs_chromium
+    @needs_qml6
     def test_update_baseline_merges_subset_and_refuses_selftest(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_dir = Path(tmp)
@@ -1144,6 +1206,8 @@ out_dir.mkdir(parents=True, exist_ok=True)
             self.assertIn("160x120", err_buf.getvalue())
             self.assertIn("320x240", err_buf.getvalue())
 
+    @needs_chromium
+    @needs_qml6
     def test_runner_strict_default_marks_qml_warnings(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             tmp_dir = Path(tmp)

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="The visual harness's own unit and integration tests (tools/visual/test_*.py); tests that need sway, qml6 or node skip without them"
+#MISE description="The visual harness's own unit and integration tests (tools/visual/test_*.py); tests that need qml6, sway or Playwright's Chromium skip without them, and it says which"
 #USAGE arg "[args]..." var=#true help="Passed to python3 -m unittest, e.g. -k compare"
 set -euo pipefail
 task_name="visual:test"
