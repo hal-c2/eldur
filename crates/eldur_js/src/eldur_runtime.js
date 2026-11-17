@@ -23845,6 +23845,10 @@ function _gSnapshotStatics() {
     var html = _taggedHtml();
     _gStaticRoot = html ? _gRootAttrs(html) : "";
     _walkItems(_root, function(item) {
+        // A run of a line is markup its model restyles, with no item to compare.
+        if (item.__eldurInline) {
+            return false;
+        }
         if (typeof item.eldurTag === "string" && _G_MOVES.test(item.eldurTag) && item.eldurSlot === undefined && !_meta(item).createdTag) {
             _gStaticControls.push(item);
         }
