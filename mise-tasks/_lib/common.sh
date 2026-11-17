@@ -105,7 +105,12 @@ qt_pinned="6.11"
 # does not, so the Qt tools beside it are asked (Qt's installers ship them
 # unsuffixed). Qt 5's tools answer too, so only an answer of 6 counts.
 qt_version_of() {
-  local tool="$1" real="$1" link dir ask out
+  local tool="$1" real link dir ask out
+  # QMLTESTRUNNER may be a bare name; its Qt is beside the one PATH finds.
+  case "$tool" in
+    */*) real="$tool" ;;
+    *) real="$(command -v "$tool" || printf '%s' "$tool")" ;;
+  esac
   # A link on PATH (~/bin/qmltestrunner6 -> ~/Qt/6.12.0/gcc_64/bin/...) has
   # no Qt beside it; the file it names does. readlink -f is not on every
   # macOS, so each hop is followed by hand.
@@ -128,10 +133,14 @@ qt_version_of() {
     printf '%s\n' "${BASH_REMATCH[2]}"
     return
   fi
-  for ask in "qtpaths6 --qt-version" "qmake6 -query QT_VERSION" "qtpaths --qt-version" "qmake -query QT_VERSION"; do
+  # qtpaths and qmake come with Qt's base development tools, which a
+  # distribution's declarative tools do not pull in; the qmllint and qml
+  # installed beside the runner are of its Qt too.
+  for ask in "qtpaths6 --qt-version" "qmake6 -query QT_VERSION" "qtpaths --qt-version" "qmake -query QT_VERSION" \
+    "qmllint6 --version" "qmllint --version" "qml6 --version" "qml --version"; do
     [ -x "$dir/${ask%% *}" ] || continue
     # shellcheck disable=SC2086 # the flags are a word list
-    out="$("$dir/${ask%% *}" ${ask#* } 2>/dev/null || true)"
+    out="$(QT_QPA_PLATFORM=offscreen "$dir/${ask%% *}" ${ask#* } 2>/dev/null || true)"
     if [[ "$out" =~ (^|[^0-9])(6\.[0-9]+\.[0-9]+) ]]; then
       printf '%s\n' "${BASH_REMATCH[2]}"
       return
