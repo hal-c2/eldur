@@ -16,7 +16,7 @@
  * `--run '<json>'` (or `--run @steps.json`) takes the same `run` step list as
  * computed.mjs, executed before measuring (after --click):
  *   --run '[{"eval":"document.body.append(document.createElement(\"p\"))"}]'
- * Steps: eval, click, hover, focus, type [sel, text], wait ms.
+ * Steps: eval, click, hover, focus, press (hover, button held), type [sel, text], wait ms.
  * `--after ms` waits that long after the steps, before measuring; the page's
  * own timers and frames due by then have run, however loaded the machine.
  *

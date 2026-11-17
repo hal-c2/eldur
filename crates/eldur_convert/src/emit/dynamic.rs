@@ -881,8 +881,17 @@ impl Dynamic<'_, '_> {
             .map(|c| u16::try_from(c).expect("conditions fit u16"))
             .collect();
         for &c in &unmarked {
-            // The runtime styles a node's classes itself, by the page's rules.
-            if let Condition::Class { node, .. } = &self.conds[usize::from(c)].cond
+            // The runtime styles a node's classes itself, by the page's rules,
+            // and watches the pointer over its glyphs for `:hover` and `:active`.
+            let drawn_by_runtime = match &self.conds[usize::from(c)].cond {
+                Condition::Class { node, .. } => Some(node),
+                Condition::State {
+                    node,
+                    state: PseudoState::Hover | PseudoState::Active,
+                } => Some(node),
+                _ => None,
+            };
+            if let Some(node) = drawn_by_runtime
                 && self.cx.runtime_dom
                 && inline_covered.contains(node)
             {

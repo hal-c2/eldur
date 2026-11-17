@@ -1,0 +1,52 @@
+{
+ "initial link": {
+  "color": "rgb(0, 0, 238)"
+ },
+ "initial em": {
+  "color": "rgb(0, 0, 0)"
+ },
+ "hover link": {
+  "color": "rgb(255, 0, 0)"
+ },
+ "hover link em": {
+  "color": "rgb(0, 0, 0)"
+ },
+ "hover em": {
+  "color": "rgb(160, 0, 160)"
+ },
+ "hover em link": {
+  "color": "rgb(0, 0, 238)"
+ },
+ "left link": {
+  "color": "rgb(0, 0, 238)"
+ },
+ "press link": {
+  "color": "rgb(0, 128, 0)"
+ },
+ "geometry": {
+  ".c a": [
+   {
+    "x": 48,
+    "y": 24,
+    "width": 96.640625,
+    "height": 26
+   }
+  ],
+  ".c em": [
+   {
+    "x": 400.578125,
+    "y": 24,
+    "width": 90.4375,
+    "height": 26
+   }
+  ],
+  "#out": [
+   {
+    "x": 8,
+    "y": 75,
+    "width": 1264,
+    "height": 27
+   }
+  ]
+ }
+}

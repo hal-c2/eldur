@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+body { margin: 8px; font: 24px serif; }
+.c a:hover { color: red; }
+.c a:active { color: rgb(0, 128, 0); }
+.c em:hover { color: rgb(160, 0, 160); }
+</style></head><body>
+<div class="c"><ul><li><a href="#x">The guide</a> — the map of these docs, <em>and more</em>.</li></ul></div>
+<p id="out">pending</p>
+<script>
+// eldur/eldur#17: a script on the page made the converter keep a runtime DOM,
+// and the inline `<a>` above has no item of its own.
+const out = document.getElementById("out");
+const note = document.createElement("span");
+note.textContent = "ran";
+out.replaceChildren(note);
+console.log("LC GWATCH " + out.textContent);
+</script>
+</body></html>
