@@ -50,11 +50,11 @@ done
 need_python
 if [[ "$help" == false ]]; then
   command -v node >/dev/null 2>&1 || die "node not found on PATH: install Node.js (it runs Playwright for the Chromium side)"
-  # The same lookup render_html.mjs makes, then Chromium itself, so a missing
-  # browser is said now instead of once per case.
+  # The same lookup and headless launch render_html.mjs makes (a headless
+  # launch may take chromium-headless-shell), so a missing browser is said now
+  # instead of once per case.
   node --input-type=module -e '
     const { pathToFileURL } = await import("node:url");
-    const fs = await import("node:fs");
     let pw;
     try {
       pw = await (await import(pathToFileURL(process.argv[1]).href)).loadPlaywright();
@@ -62,8 +62,10 @@ if [[ "$help" == false ]]; then
       console.error("visual: Playwright not found: mise use -g npm:playwright (or npm i -g playwright), then playwright install chromium");
       process.exit(1);
     }
-    if (!fs.existsSync(pw.chromium.executablePath())) {
-      console.error("visual: Playwright has no Chromium: playwright install chromium");
+    try {
+      await (await pw.chromium.launch({ headless: true })).close();
+    } catch (e) {
+      console.error("visual: Playwright cannot start Chromium headless (playwright install chromium): " + String(e.message).split("\n")[0]);
       process.exit(1);
     }
   ' "$root/tools/visual/playwright.mjs" || exit 1
@@ -72,7 +74,11 @@ if [[ "$help" == false ]]; then
     command -v sway >/dev/null 2>&1 ||
       die "sway not found on PATH: the default --backend gl renders QML on a private headless sway; install sway, or pass --backend software"
   fi
-  [[ "$has_out" == true ]] || args+=(--out "$(target_dir)/visual")
+  # Assigned first: in an argument list, set -e would miss target_dir's failure.
+  if [[ "$has_out" != true ]]; then
+    out="$(target_dir)/visual"
+    args+=(--out "$out")
+  fi
 fi
 
 exec python3 tools/visual/run.py ${args[@]+"${args[@]}"}
