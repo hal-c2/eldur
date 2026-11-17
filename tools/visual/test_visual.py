@@ -35,26 +35,30 @@ import run as visual_run  # noqa: E402
 def _chromium_missing() -> str | None:
     if shutil.which("node") is None:
         return "node is not installed"
-    # The lookup render_html.mjs makes, then the browser itself.
-    probe = subprocess.run(
-        [
-            "node",
-            "--input-type=module",
-            "-e",
-            "const {pathToFileURL} = await import('node:url');"
-            "const fs = await import('node:fs');"
-            "let pw;"
-            "try { pw = await (await import(pathToFileURL(process.argv[1]).href)).loadPlaywright(); }"
-            "catch { console.log('Playwright is not installed'); process.exit(0); }"
-            "if (!fs.existsSync(pw.chromium.executablePath()))"
-            " console.log('Playwright has no Chromium');",
-            str(SCRIPT_DIR / "playwright.mjs"),
-        ],
-        capture_output=True,
-        text=True,
-        timeout=120,
-        check=False,
-    )
+    # The lookup render_html.mjs makes, then the launch it makes: a headless
+    # launch may take chromium-headless-shell, not the full Chromium.
+    try:
+        probe = subprocess.run(
+            [
+                "node",
+                "--input-type=module",
+                "-e",
+                "const {pathToFileURL} = await import('node:url');"
+                "let pw;"
+                "try { pw = await (await import(pathToFileURL(process.argv[1]).href)).loadPlaywright(); }"
+                "catch { console.log('Playwright is not installed'); process.exit(0); }"
+                "try { await (await pw.chromium.launch({ headless: true })).close(); }"
+                "catch (e) { console.log('Playwright cannot start Chromium headless: '"
+                " + String(e.message).split('\\n')[0]); }",
+                str(SCRIPT_DIR / "playwright.mjs"),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return "node took over 120 s to look for Playwright's Chromium"
     if probe.returncode != 0:
         return f"node failed to look for Playwright: {probe.stderr.strip()}"
     return probe.stdout.strip() or None
