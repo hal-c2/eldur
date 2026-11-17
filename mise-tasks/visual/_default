@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+#MISE description="Score converted pages against Chromium: render each corpus page in Chromium and its QML in qml6, compare (mise run visual:test runs the harness's own tests)"
+#USAGE arg "[args]..." var=#true help="Passed to tools/visual/run.py: --selftest, --cases a,b, --update-baseline, --backend gl|software, --corpus DIR, --out DIR (default <cargo target dir>/visual), --baseline FILE, --width N, --height N; see python3 tools/visual/run.py --help"
+set -euo pipefail
+task_name="visual"
+# shellcheck source=mise-tasks/_lib/common.sh
+. "$(dirname "$0")/../_lib/common.sh"
+# shellcheck source=mise-tasks/_lib/python.sh
+. "$(dirname "$0")/../_lib/python.sh"
+cd "$root"
+
+backend=gl
+has_out=false
+help=false
+args=()
+# run.py resolves paths against its working directory, the project root; a
+# path the caller typed is relative to where they ran mise.
+expect_path=false
+for a in "$@"; do
+  if [[ "$expect_path" == true ]]; then
+    args+=("$(from_caller "$a")")
+    expect_path=false
+    continue
+  fi
+  case "$a" in
+    test | --test)
+      echo "visual: the harness's tests are their own task now: mise run visual:test" >&2
+      exit 2
+      ;;
+    -h | --help) help=true; args+=("$a") ;;
+    --corpus | --out | --baseline)
+      [[ "$a" == --out ]] && has_out=true
+      args+=("$a")
+      expect_path=true
+      ;;
+    --corpus=* | --out=* | --baseline=*)
+      [[ "$a" == --out=* ]] && has_out=true
+      args+=("${a%%=*}=$(from_caller "${a#*=}")")
+      ;;
+    --backend=*) backend="${a#*=}"; args+=("$a") ;;
+    *)
+      [[ "${prev:-}" == --backend ]] && backend="$a"
+      args+=("$a")
+      ;;
+  esac
+  prev="$a"
+done
+[[ "$expect_path" == false ]] || die "${args[${#args[@]}-1]} needs a path after it"
+
+need_python
+if [[ "$help" == false ]]; then
+  command -v node >/dev/null 2>&1 || die "node not found on PATH: install Node.js (it runs Playwright for the Chromium side)"
+  # The same lookup render_html.mjs makes, then Chromium itself, so a missing
+  # browser is said now instead of once per case.
+  node --input-type=module -e '
+    const { pathToFileURL } = await import("node:url");
+    const fs = await import("node:fs");
+    let pw;
+    try {
+      pw = await (await import(pathToFileURL(process.argv[1]).href)).loadPlaywright();
+    } catch {
+      console.error("visual: Playwright not found: mise use -g npm:playwright (or npm i -g playwright), then playwright install chromium");
+      process.exit(1);
+    }
+    if (!fs.existsSync(pw.chromium.executablePath())) {
+      console.error("visual: Playwright has no Chromium: playwright install chromium");
+      process.exit(1);
+    }
+  ' "$root/tools/visual/playwright.mjs" || exit 1
+  command -v qml6 >/dev/null 2>&1 || die "qml6 not found on PATH: $qt6_install_hint"
+  if [[ "$backend" == gl ]]; then
+    command -v sway >/dev/null 2>&1 ||
+      die "sway not found on PATH: the default --backend gl renders QML on a private headless sway; install sway, or pass --backend software"
+  fi
+  [[ "$has_out" == true ]] || args+=(--out "$(target_dir)/visual")
+fi
+
+exec python3 tools/visual/run.py ${args[@]+"${args[@]}"}

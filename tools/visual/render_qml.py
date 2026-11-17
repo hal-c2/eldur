@@ -300,6 +300,10 @@ def render_qml(
         out_abs.unlink()
 
     env = os.environ.copy()
+    # A desktop's platform theme (QT_QPA_PLATFORMTHEME=gtk3 is common) loads
+    # GTK, which exits when there is no display, and would restyle the page
+    # with the user's desktop settings; screenshots compare without one.
+    env.pop("QT_QPA_PLATFORMTHEME", None)
     if backend == "gl":
         assert sway is not None
         for key in ("WAYLAND_SOCKET", "DISPLAY", "QT_QUICK_BACKEND"):
