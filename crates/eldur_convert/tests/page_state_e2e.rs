@@ -9,7 +9,7 @@
 
 mod support;
 
-use eldur_convert::{Options, RootKind, convert_str};
+use eldur_convert::{Input, NoResources, Options, RootKind};
 
 const PAGE: &str = r#"<!doctype html><html><head><meta charset="utf-8"></head><body>
 <p id="out">ready</p>
@@ -38,7 +38,11 @@ if (!customElements.get("x-note")) {
 // What a page did to its title and its address is the page's.
 L("title", JSON.stringify(document.title), "history", history.length);
 document.title = "set";
+var opened = location.href;
 history.pushState(null, '', '#seen');
+history.back();
+L("back to", opened.slice(opened.lastIndexOf("/") + 1), location.href === opened);
+history.forward();
 L("loaded");
 </script>
 </body></html>"#;
@@ -88,14 +92,30 @@ TestCase {
         wait(500)
         console.log("LC first still up " + (first.width === 800))
     }
+
+    // And the later one going first leaves the earlier one as it was.
+    function test_4_newer_goes_first() {
+        const first = makePage("page 5")
+        const second = makePage("page 6")
+        second.destroy()
+        wait(200)
+        console.log("LC page 6 gone")
+        first.forceActiveFocus()
+        keyClick(Qt.Key_T)
+        mouseClick(first, 400, 300)
+        wait(600)
+    }
 }
 }
 "##;
 
+// In the order each page logs them; the late timers, due while the next page
+// is being made, are counted per test in `LATE` instead.
 const WANT: &[&str] = &[
     "LC page 1",
     "LC defined before false",
     "LC title \"\" history 1",
+    "LC back to Main.qml true",
     "LC loaded",
     "LC timer",
     "LC frame",
@@ -106,6 +126,7 @@ const WANT: &[&str] = &[
     "LC page 2",
     "LC defined before false",
     "LC title \"\" history 1",
+    "LC back to Main.qml true",
     "LC loaded",
     "LC timer",
     "LC frame",
@@ -113,10 +134,10 @@ const WANT: &[&str] = &[
     "LC document key 1",
     "LC window key 1",
     "LC document click",
-    "LC late timer",
     "LC page 3",
     "LC defined before false",
     "LC title \"\" history 1",
+    "LC back to Main.qml true",
     "LC loaded",
     "LC timer",
     "LC frame",
@@ -129,6 +150,7 @@ const WANT: &[&str] = &[
     "LC page 4",
     "LC defined before true",
     "LC title \"set\" history 2",
+    "LC back to Main.qml true",
     "LC loaded",
     "LC timer",
     "LC frame",
@@ -138,9 +160,48 @@ const WANT: &[&str] = &[
     "LC window key 2",
     "LC window key 1",
     "LC document click",
-    "LC late timer",
-    "LC late timer",
     "LC first still up true",
+    "LC page 5",
+    "LC defined before false",
+    "LC title \"\" history 1",
+    "LC back to Main.qml true",
+    "LC loaded",
+    "LC timer",
+    "LC frame",
+    "LC interval",
+    "LC document key 1",
+    "LC window key 1",
+    "LC document click",
+    "LC page 6",
+    "LC defined before true",
+    "LC title \"set\" history 2",
+    "LC back to Main.qml true",
+    "LC loaded",
+    "LC timer",
+    "LC frame",
+    "LC interval",
+    "LC document key 2",
+    "LC document key 1",
+    "LC window key 2",
+    "LC window key 1",
+    "LC document click",
+    // Page 5 is the document again, and still hears its key and its click.
+    // What page 6 added to the shared document stays with it.
+    "LC page 6 gone",
+    "LC document key 3",
+    "LC document key 2",
+    "LC window key 3",
+    "LC window key 2",
+    "LC document click",
+];
+
+// Each test, by the line it starts with, and how many late timers run in it:
+// page 1's must not run once page 2 is made, and two pages up at once run both.
+const LATE: &[(&str, usize)] = &[
+    ("LC page 1", 0),
+    ("LC page 2", 1),
+    ("LC page 3", 2),
+    ("LC page 5", 2),
 ];
 
 #[test]
@@ -152,7 +213,14 @@ fn a_page_made_again_in_one_engine_hears_only_its_own_listeners() {
         root: RootKind::Item,
         ..Options::default()
     };
-    let out = convert_str(PAGE, &options);
+    let out = eldur_convert::convert(
+        &Input {
+            html: PAGE.to_owned(),
+            url: "state/index.html".to_owned(),
+        },
+        &options,
+        &mut NoResources,
+    );
     let dir = std::env::temp_dir().join(format!("eldur-page-state-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("temp dir");
     for file in &out.files {
@@ -178,12 +246,30 @@ fn a_page_made_again_in_one_engine_hears_only_its_own_listeners() {
         .lines()
         .filter_map(|l| l.find("LC ").map(|at| &l[at..]))
         .collect();
-    if logged != WANT {
+    let ordered: Vec<_> = logged
+        .iter()
+        .copied()
+        .filter(|l| *l != "LC late timer")
+        .collect();
+    if ordered != WANT {
         problems.push(format!(
             "logged\n    {}\n  wanted\n    {}",
-            logged.join("\n    "),
+            ordered.join("\n    "),
             WANT.join("\n    ")
         ));
+    }
+    let mut late: Vec<(&str, usize)> = Vec::new();
+    for line in &logged {
+        if let Some(&(start, _)) = LATE.iter().find(|(start, _)| start == line) {
+            late.push((start, 0));
+        } else if *line == "LC late timer"
+            && let Some(last) = late.last_mut()
+        {
+            last.1 += 1;
+        }
+    }
+    if late != LATE {
+        problems.push(format!("late timers per test: {late:?}, wanted {LATE:?}"));
     }
     assert!(problems.is_empty(), "{}", problems.join("\n  "));
 }

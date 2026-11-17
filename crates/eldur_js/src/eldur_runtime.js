@@ -36,6 +36,9 @@
 // while the engine's own wait for the event loop, past all of a press's events.
 // Nothing reaches the engine's queue from a script, so promises are made here.
 var _micro = { queue: [], draining: false, native: false };
+// Counts the resets: work begun before one (a request in flight) belongs to a
+// page that is gone, and is dropped when it ends.
+var _pageGen = 0;
 
 function _microEnqueue(job) {
     _micro.queue.push(job);
@@ -485,6 +488,11 @@ function objectRest(source, excludedKeys) {
 // ---------------------------------------------------------------------------
 
 var _root = null;
+// Every root `init` was given whose page may still be up, oldest first; `_root`
+// is the newest of them still alive.
+var _roots = [];
+// Each page's input layer, by its root: the layer is made on the root.
+var _inLayers = new Map();
 var _holder = null;
 var _startTime = Date.now();
 var _fallbackTitle = "";
@@ -503,10 +511,14 @@ var _componentProbeCache = new Map();
 
 function init(rootItem, baseUrl, documentUrl) {
     // A page's start hooks may each call init; only a new root is a new page,
-    // and it starts afresh only once the last page is gone: one still on screen
-    // goes on hearing its listeners and running its timers.
-    if (rootItem && rootItem !== _root && !_live(_root)) {
-        _resetPageState();
+    // and it starts afresh only once every earlier page is gone: one still on
+    // screen goes on hearing its listeners and running its timers.
+    if (rootItem && rootItem !== _root) {
+        _roots = _roots.filter(function(r) { return _live(r) && r !== rootItem; });
+        if (_roots.length === 0) {
+            _resetPageState();
+        }
+        _roots.push(rootItem);
     }
     if (rootItem) {
         _root = rootItem;
@@ -528,11 +540,12 @@ function init(rootItem, baseUrl, documentUrl) {
     var docUrl = _explicitDocumentUrl !== "" ? _explicitDocumentUrl : _explicitBaseUrl;
     if (docUrl !== "") {
         _updateLocationFromHref(docUrl, false);
+        // The entry the page opened on is at its address: `back()` to it goes there.
+        var opened = _historyEntries[_historyIndex];
+        _historyEntries[_historyIndex] = { state: opened.state, url: _locState.href };
     }
     // The layer belongs to the page it was made on, and may have gone with it.
-    if (_in && _in.page !== _root) {
-        _in = null;
-    }
+    _in = _inLayers.get(_root) || null;
     _vModels = [];
     _vRules = null;
     _vStateRules = null;
@@ -573,8 +586,8 @@ function init(rootItem, baseUrl, documentUrl) {
 
 // This file is one library per QML engine, so every page made in the engine
 // shares its module state; in a browser each page has a `document` and a
-// `window` of its own. A new root, once the last one is destroyed, is a new
-// page: what the last one listened to, the timers and frames it asked for, its
+// `window` of its own. A new root, once every earlier root is destroyed, is a
+// new page: what the last one listened to, the timers and frames it asked for, its
 // custom elements, the rules read from its root and the runtime's helpers that
 // served it all go, as they do when the last page goes with none after it. Every module-level variable that belongs to a page is reset here.
 // Two pages alive at once in one engine share one `document`, as before: the
@@ -598,6 +611,7 @@ function _resetPageState() {
     _timerTurnQueued = false;
     // A job the last page queued would run in this one's document.
     _micro.queue = [];
+    _pageGen += 1;
     _rafQueue = [];
     _scrollEvents = [];
     _documentListeners = { listeners: {}, onceListeners: {}, onHandlers: {} };
@@ -610,6 +624,7 @@ function _resetPageState() {
     _focusLooked = false;
     _tap = null;
     _in = null;
+    _inLayers = new Map();
     _dialogs = [];
     _dialogs.moved = 0;
     _ce.defs = {};
@@ -968,15 +983,28 @@ function _helperParent() {
     return _holder;
 }
 
-// A helper's tick for a page that is gone, with none after it: the page's
-// timers and frames go with it.
+// Called where the runtime is woken (a helper's tick, input) to find whether
+// `_root` is gone. With an earlier page still up, that page is the document
+// again, with its input layer; with none, the pages' timers, frames and
+// listeners go with them.
 function _pageGone() {
-    if (_root && !_live(_root)) {
-        _resetPageState();
-        _root = null;
-        return true;
+    if (!_root || _live(_root)) {
+        return false;
     }
-    return false;
+    _roots = _roots.filter(_live);
+    _inLayers.forEach(function(layer, root) {
+        if (!_live(root)) {
+            _inLayers.delete(root);
+        }
+    });
+    if (_roots.length > 0) {
+        _root = _roots[_roots.length - 1];
+        _in = _inLayers.get(_root) || null;
+        return false;
+    }
+    _resetPageState();
+    _root = null;
+    return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -1453,6 +1481,7 @@ function fetch(input, initOpts) {
     var method = opts.method ? String(opts.method).toUpperCase() : "GET";
 
     return new Promise(function(resolve, reject) {
+        var gen = _pageGen;
         var xhr = new XMLHttpRequest();
         xhr.open(method, url, true);
 
@@ -1465,7 +1494,7 @@ function fetch(input, initOpts) {
         }
 
         xhr.onreadystatechange = function() {
-            if (xhr.readyState !== XMLHttpRequest.DONE) {
+            if (xhr.readyState !== XMLHttpRequest.DONE || gen !== _pageGen) {
                 return;
             }
             var bodyText = xhr.responseText || "";
@@ -1499,6 +1528,9 @@ function fetch(input, initOpts) {
         };
 
         xhr.onerror = function() {
+            if (gen !== _pageGen) {
+                return;
+            }
             reject(new TypeError("Network request failed for " + url));
         };
 
@@ -14299,6 +14331,7 @@ function _inInstall() {
         restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusShift: false,
         spaceDown: null, typing: null, popovers: [], radioLast: {}, focusProbe: null
     };
+    _inLayers.set(_root, _in);
     var home = _root.contentItem || _root;
     var overlay = Qt.createQmlObject("import QtQuick\n"
         + "Item { anchors.fill: parent; z: 1000000\n"
@@ -14337,6 +14370,9 @@ function _inInstall() {
 // One call for each thing the mouse does; `buttons` is -1 for "as it was", from
 // a hover, and a released point has no position left to read.
 function _inPointed(scene, buttons, modifiers) {
+    if (_pageGone() || !_in) {
+        return;
+    }
     // Nothing the mouse does overtakes the click of the release before it.
     _inFlushLater();
     if (scene.x === -1e9) {
@@ -14802,6 +14838,9 @@ function _inReleaseScrollers() {
 }
 
 function _inWheel(qtEv) {
+    if (_pageGone() || !_in) {
+        return;
+    }
     var scene = qtEv.scenePosition || _in.last || Qt.point(qtEv.x, qtEv.y);
     if (qtEv.x !== undefined && !qtEv.scenePosition) {
         scene = _in.overlay.mapToItem(null, qtEv.x, qtEv.y);
@@ -15115,11 +15154,13 @@ function _inHasTabIndex(item) {
 }
 
 function _inKeyGate(qtEv) {
+    _pageGone();
     _inKeyed(qtEv, true);
     return !qtEv.accepted;
 }
 
 function _inKeyUpGate(qtEv) {
+    _pageGone();
     _inKeyed(qtEv, false);
 }
 
@@ -15546,7 +15587,7 @@ function _inFocusElement() {
 
 function _inFocusChanged() {
     // Called later, for a page that may since have gone with its input layer.
-    if (!_in) {
+    if (_pageGone() || !_in) {
         return;
     }
     var now = _inFocusElement();
