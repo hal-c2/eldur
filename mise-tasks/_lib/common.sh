@@ -105,10 +105,23 @@ qt_pinned="6.11"
 # does not, so the Qt tools beside it are asked (Qt's installers ship them
 # unsuffixed). Qt 5's tools answer too, so only an answer of 6 counts.
 qt_version_of() {
-  local tool="$1" dir ask out
-  dir="$(dirname "$tool")"
+  local tool="$1" real="$1" link dir ask out
+  # A link on PATH (~/bin/qmltestrunner6 -> ~/Qt/6.12.0/gcc_64/bin/...) has
+  # no Qt beside it; the file it names does. readlink -f is not on every
+  # macOS, so each hop is followed by hand.
+  while [ -L "$real" ]; do
+    link="$(readlink "$real")"
+    case "$link" in
+      /*) real="$link" ;;
+      *) real="$(dirname "$real")/$link" ;;
+    esac
+  done
+  dir="$(dirname "$real")"
   case "${tool##*/}" in
-    qmllint* | qml | qml6) out="$("$tool" --version 2>/dev/null || true)" ;;
+    qmllint*) out="$("$tool" --version 2>/dev/null || true)" ;;
+    # qml makes its GUI application before it reads --version, so with no
+    # display it would answer nothing without the offscreen platform.
+    qml | qml6) out="$(QT_QPA_PLATFORM=offscreen "$tool" --version 2>/dev/null || true)" ;;
     *) out="" ;;
   esac
   if [[ "$out" =~ (^|[^0-9])(6\.[0-9]+\.[0-9]+) ]]; then
@@ -128,8 +141,9 @@ qt_version_of() {
 
 # `qt_pin_mismatches`: a line for each Qt tool the tasks run (found as they
 # find it) that belongs to another Qt than the pinned minor, with what to set
-# so the tasks take a pinned one instead. Nothing when all are pinned, or for
-# a tool that is not there.
+# so the tasks take a pinned one instead. A tool whose Qt cannot be told is
+# named too, since it may be any Qt. Nothing when all are pinned, or for a
+# tool that is not there.
 qt_pin_mismatches() {
   local name path version use fix
   for name in qmltestrunner qmllint qml6; do
@@ -152,7 +166,10 @@ qt_pin_mismatches() {
     esac
     [ -n "$path" ] || continue
     version="$(qt_version_of "$path")"
-    [ -n "$version" ] || continue
+    if [ -z "$version" ]; then
+      echo "$name ($path) answers no Qt 6 version, and no qtpaths or qmake beside it does, so $use it on a Qt that may not be the pinned $qt_pinned: install Qt $qt_pinned (Qt's online installer, or aqt install-qt) and $fix"
+      continue
+    fi
     case "$version" in "$qt_pinned".*) continue ;; esac
     echo "$name ($path) is Qt $version, not the pinned Qt $qt_pinned, and $use it: install Qt $qt_pinned (Qt's online installer, or aqt install-qt) and $fix"
   done

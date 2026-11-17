@@ -16,7 +16,7 @@ scratch="$(cd "$scratch" && pwd -P)"
 # qmltestrunner and qmllint it means, through PATH or QMLTESTRUNNER/QMLLINT.
 sys="$scratch/sys"
 mkdir -p "$sys"
-for cmd in bash cut dirname tr; do
+for cmd in bash cut dirname readlink tr; do
   ln -s "$(command -v "$cmd")" "$sys/$cmd"
 done
 
@@ -64,7 +64,7 @@ expect() {
   fi
 }
 
-for c in newer pinned installer env-newer qt5 qml-newer; do
+for c in newer pinned installer env-newer qt5 qml-newer linked unknown; do
   stub "$c" rustup ""
   stub "$c" rustc "rustc 1.98.1 (stand-in)"
 done
@@ -86,11 +86,24 @@ expect installer 0 "" "${pinned_env[@]}"
 distro env-newer "$qt_pinned.2"
 expect env-newer 1 "qmltestrunner ($scratch/qt-newer/qmltestrunner) is Qt $newer.1" \
   QMLTESTRUNNER="$scratch/qt-newer/qmltestrunner"
-# Qt 5's qtpaths beside the runner answers 5.15, which is no Qt 6 to compare.
+# Qt 5's qtpaths beside the runner answers 5.15, which is no Qt 6: setup
+# cannot tell it is the pinned one, so it says so.
 stub qt5-bin qtpaths "5.15.19"
 stub qt5-bin qmltestrunner ""
 stub qt5-bin qmllint "qmllint 5.15.19"
-expect qt5 0 "" QMLTESTRUNNER="$scratch/qt5-bin/qmltestrunner" QMLLINT="$scratch/qt5-bin/qmllint"
+expect qt5 1 "qmltestrunner ($scratch/qt5-bin/qmltestrunner) answers no Qt 6 version" \
+  QMLTESTRUNNER="$scratch/qt5-bin/qmltestrunner" QMLLINT="$scratch/qt5-bin/qmllint"
+# A link on PATH to a newer installer's runner: its Qt is the one the link
+# names, though nothing sits beside the link.
+ln -s ../qt-newer/qmltestrunner "$scratch/linked/qmltestrunner6"
+ln -s "$scratch/qt-pinned/qmllint" "$scratch/linked/qmllint6"
+ln -s "$scratch/qt-pinned/qml" "$scratch/linked/qml6"
+expect linked 1 "qmltestrunner ($scratch/linked/qmltestrunner6) is Qt $newer.1, not the pinned Qt $qt_pinned"
+# A runner with nothing beside it that answers is not passed unseen.
+stub unknown qmltestrunner6 "Unknown option: '--version'"
+ln -s "$scratch/qt-pinned/qmllint" "$scratch/unknown/qmllint6"
+ln -s "$scratch/qt-pinned/qml" "$scratch/unknown/qml6"
+expect unknown 1 "qmltestrunner ($scratch/unknown/qmltestrunner6) answers no Qt 6 version"
 stub qml-newer qml6 "Qml Runtime $newer.0"
 expect qml-newer 1 "qml6 ($scratch/qml-newer/qml6) is Qt $newer.0, not the pinned Qt $qt_pinned" "${pinned_env[@]}"
 
