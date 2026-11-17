@@ -145,6 +145,12 @@ fn created_and_removed_inline_nodes_match_chromium() {
     page("mutate");
 }
 
+// #18: the text the converter wrote on the element is one of its children.
+#[test]
+fn replace_children_replaces_the_text_the_page_was_written_with() {
+    page("replace");
+}
+
 #[test]
 fn options_are_nodes_of_their_select() {
     page("options");

@@ -1,0 +1,26 @@
+<!doctype html><html><head><meta charset="utf-8"><script>
+// eldur/eldur#18: replaceChildren on an element the converter wrote, with its text.
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+</script></head><body>
+<p id="out">pending</p>
+<p id="two">old</p>
+<p id="three">gone</p>
+<p id="four">base</p>
+<script>
+var out=document.getElementById("out");
+var note=document.createElement("span"); note.textContent="ran";
+out.replaceChildren(note);
+L("repl",out.textContent,out.children.length,out.firstChild.tagName,out.childNodes.length);
+var two=document.getElementById("two");
+var n2=document.createElement("b"); n2.textContent="B";
+two.replaceChildren("a",n2);
+L("mixed",two.textContent,two.children.length,two.childNodes.length,two.firstChild.nodeType);
+var three=document.getElementById("three");
+three.replaceChildren();
+L("empty",three.textContent,three.children.length,three.childNodes.length);
+var four=document.getElementById("four");
+var n4=document.createElement("i"); n4.textContent="+";
+four.appendChild(n4);
+L("append",four.textContent,four.children.length,four.childNodes.length,four.firstChild.nodeType);
+</script>
+</body></html>
