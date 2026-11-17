@@ -2,5 +2,13 @@
 [tools]
 rust = { version = "1.98.1", components = "rustfmt,clippy" }
 
+# mise pins Rust through rustup, whose proxies live in ~/.cargo/bin. A system
+# Rust in /usr/bin, or a shell that already carries mise state, would otherwise
+# come first on PATH, and tasks would build with that version instead of the
+# pin. Aggressive activation puts the pinned tools' directories before
+# everything else. A [settings] table needs no `mise trust`.
+[settings]
+activate_aggressive = true
+
 [env]
 CARGO_TERM_COLOR = "always"
