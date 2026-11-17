@@ -502,8 +502,10 @@ var _warnedMissingTemplates = {};
 var _componentProbeCache = new Map();
 
 function init(rootItem, baseUrl, documentUrl) {
-    // A page's start hooks may each call init; only a new root is a new page.
-    if (rootItem && rootItem !== _root) {
+    // A page's start hooks may each call init; only a new root is a new page,
+    // and it starts afresh only once the last page is gone: one still on screen
+    // goes on hearing its listeners and running its timers.
+    if (rootItem && rootItem !== _root && !_live(_root)) {
         _resetPageState();
     }
     if (rootItem) {
@@ -537,7 +539,6 @@ function init(rootItem, baseUrl, documentUrl) {
     _gCascadeRules = null;
     _gPaintTable = null;
     _gWarned = {};
-    _gMarginHelper = null;
     _gStateRules = null;
     if (_vHasRules() && _root) {
         // What the converter wrote for a `Text` holds until the rules that
@@ -572,11 +573,12 @@ function init(rootItem, baseUrl, documentUrl) {
 
 // This file is one library per QML engine, so every page made in the engine
 // shares its module state; in a browser each page has a `document` and a
-// `window` of its own. A new root is a new page: what the last one listened to,
-// the timers and frames it asked for, its custom elements, the rules read from
-// its root and the helper objects made on it (gone with it) all go. Every
-// module-level variable that belongs to a page is reset here.
-// Two pages alive at once in one engine still share one `document`.
+// `window` of its own. A new root, once the last one is destroyed, is a new
+// page: what the last one listened to, the timers and frames it asked for, its
+// custom elements, the rules read from its root and the runtime's helpers that
+// served it all go, as they do when the last page goes with none after it. Every module-level variable that belongs to a page is reset here.
+// Two pages alive at once in one engine share one `document`, as before: the
+// later one adds to the state of the earlier, and stops none of it.
 function _resetPageState() {
     _dropHelper(_timerWake);
     _dropHelper(_rafAnim);
@@ -594,6 +596,8 @@ function _resetPageState() {
     _gLayoutReader = null;
     _timers = [];
     _timerTurnQueued = false;
+    // A job the last page queued would run in this one's document.
+    _micro.queue = [];
     _rafQueue = [];
     _scrollEvents = [];
     _documentListeners = { listeners: {}, onceListeners: {}, onHandlers: {} };
@@ -645,12 +649,30 @@ function _resetPageState() {
     _aKeyframeRules = null;
     _aRulesMove = null;
     _aInlineMoves = false;
+    _fallbackTitle = "";
+    // A new document's address is its own, or none: `init` sets it after this.
+    _locState.href = "";
+    _locState.protocol = "file:";
+    _locState.host = "";
+    _locState.hostname = "";
+    _locState.port = "";
+    _locState.pathname = "/";
+    _locState.search = "";
+    _locState.hash = "";
+    _locState.origin = "null";
+    _historyEntries = [{ state: null, url: "" }];
+    _historyIndex = 0;
 }
 
-// A helper made on the last page's root went with it; one on a root still
-// alive would go on running for a page that is no longer the document's.
+// A QObject a library variable still holds after it was destroyed is a wrapper
+// with no properties left; `null` only in a QML property.
+function _live(obj) {
+    return obj !== null && obj !== undefined && typeof obj.objectName === "string";
+}
+
+// The last page's helpers would go on running for a page that is gone.
 function _dropHelper(obj) {
-    if (obj && typeof obj.destroy === "function") {
+    if (_live(obj)) {
         if (typeof obj.running === "boolean") {
             obj.running = false;
         }
@@ -930,13 +952,31 @@ function _asHTMLCollection(arr) {
 }
 
 function _qobjectParent() {
-    if (_root) {
+    if (_live(_root)) {
         return _root;
     }
+    return _helperParent();
+}
+
+// The runtime's own timers and readers live as long as the engine, not as a
+// page's root: a page made while an earlier one is up shares them, and the
+// earlier one going must not take them with it. `_resetPageState` drops them.
+function _helperParent() {
     if (!_holder) {
         _holder = Qt.createQmlObject("import QtQuick; QtObject {}", Qt.application, "eldur_holder");
     }
     return _holder;
+}
+
+// A helper's tick for a page that is gone, with none after it: the page's
+// timers and frames go with it.
+function _pageGone() {
+    if (_root && !_live(_root)) {
+        _resetPageState();
+        _root = null;
+        return true;
+    }
+    return false;
 }
 
 // ---------------------------------------------------------------------------
@@ -953,10 +993,10 @@ var _timerTurnQueued = false;
 // order they were made, whatever they were set for; so one wake-up, and a queue that
 // knows when each is due.
 function _wakeForTimers() {
-    if (!_timerWake) {
+    if (!_live(_timerWake)) {
         _timerWake = Qt.createQmlObject(
             "import QtQuick; Timer { running: false }",
-            _qobjectParent(),
+            _helperParent(),
             "eldur_timer"
         );
         _timerWake.triggered.connect(_timerTurn);
@@ -971,6 +1011,9 @@ function _wakeForTimers() {
 
 // One callback a turn of the event loop, with what it queued run before the next.
 function _timerTurn() {
+    if (_pageGone()) {
+        return;
+    }
     _timerTurnQueued = true;
     Qt.callLater(_timerRunOne);
 }
@@ -1053,15 +1096,18 @@ var _rafQueue = [];
 var _rafAnim = null;
 
 function _ensureRafAnim() {
-    if (_rafAnim) {
+    if (_live(_rafAnim)) {
         return _rafAnim;
     }
     _rafAnim = Qt.createQmlObject(
         "import QtQuick; FrameAnimation { running: false }",
-        _qobjectParent(),
+        _helperParent(),
         "eldur_raf"
     );
     _rafAnim.triggered.connect(function() {
+        if (_pageGone()) {
+            return;
+        }
         // HTML's update the rendering: scroll steps run before the frame's callbacks.
         var moved = _scrollEvents.slice();
         _scrollEvents.length = 0;
@@ -1156,7 +1202,7 @@ function cancelAnimationFrame(id) {
             break;
         }
     }
-    if (_rafQueue.length === 0 && _rafAnim) {
+    if (_rafQueue.length === 0 && _live(_rafAnim)) {
         _rafAnim.running = false;
     }
 }
@@ -3147,8 +3193,8 @@ function _tableMinContent(cell, text) {
     if (!text) {
         return cell.implicitWidth;
     }
-    if (!_tableMetrics) {
-        _tableMetrics = Qt.createQmlObject("import QtQuick; FontMetrics {}", _root, "eldur_table_metrics");
+    if (!_live(_tableMetrics)) {
+        _tableMetrics = Qt.createQmlObject("import QtQuick; FontMetrics {}", _helperParent(), "eldur_table_metrics");
     }
     _tableMetrics.font = text.font;
     var words = String(text.text).split(/\s+/);
@@ -9235,8 +9281,8 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
     if (m.gKeepReplaced) {
         oldRaw.visible = false;
         // Not `null`: its bindings go on reading `parent`.
-        if (!_gGrave) {
-            _gGrave = Qt.createQmlObject("import QtQuick; Item { visible: false }", _qobjectParent(), "eldur_grave");
+        if (!_live(_gGrave)) {
+            _gGrave = Qt.createQmlObject("import QtQuick; Item { visible: false }", _helperParent(), "eldur_grave");
             _gGrave.parent = null;
         }
         oldRaw.parent = _gGrave;
@@ -15499,6 +15545,10 @@ function _inFocusElement() {
 }
 
 function _inFocusChanged() {
+    // Called later, for a page that may since have gone with its input layer.
+    if (!_in) {
+        return;
+    }
     var now = _inFocusElement();
     // In a popup of its own (a select's list): the select still has the focus.
     if (now === undefined || now === _in.focused) {
@@ -22075,17 +22125,20 @@ function _aTellPhase(a, state) {
 // --- What a moment looks like ---
 
 function _aWake() {
-    if (!_aTicker || !_aTicker.running) {
+    if (!_live(_aTicker) || !_aTicker.running) {
         _aClock = Date.now() - _startTime;
     }
-    if (!_aTicker) {
-        _aTicker = Qt.createQmlObject("import QtQuick; FrameAnimation { running: false }", _qobjectParent(), "eldur_motion");
+    if (!_live(_aTicker)) {
+        _aTicker = Qt.createQmlObject("import QtQuick; FrameAnimation { running: false }", _helperParent(), "eldur_motion");
         _aTicker.triggered.connect(_aFrame);
     }
     _aTicker.running = true;
 }
 
 function _aFrame() {
+    if (_pageGone()) {
+        return;
+    }
     _aClock = Date.now() - _startTime;
     if (_gDirty || !_aScanned) {
         _gDirty = true;
@@ -22988,7 +23041,7 @@ function _gPrune() {
 // A kid's margins the layout already has come from the conversion, which knew
 // nothing of what a script adds: all of a column's gaps are worked out afresh.
 function _gMarginTool() {
-    if (!_gMarginHelper) {
+    if (!_live(_gMarginHelper)) {
         _gMarginHelper = Qt.createQmlObject("import QtQuick; import QtQuick.Layouts; QtObject { "
             + "function set(i, t, b) { i.Layout.topMargin = t; i.Layout.bottomMargin = b; } "
             + "function side(i, l, r) { i.Layout.leftMargin = l; i.Layout.rightMargin = r; } "
@@ -23012,7 +23065,7 @@ function _gMarginTool() {
             + "function hold(i, t, b, p) { i.Layout.topMargin = p ? Qt.binding(function() { return t - carry(p); }) : t; i.Layout.bottomMargin = b; } "
             + "function top(i) { return i.Layout.topMargin; } "
             + "function preferred(i) { return i.Layout.preferredHeight; } "
-            + "function bottom(i) { return i.Layout.bottomMargin; } }", _root, "eldur_margins");
+            + "function bottom(i) { return i.Layout.bottomMargin; } }", _helperParent(), "eldur_margins");
     }
     return _gMarginHelper;
 }
@@ -24521,14 +24574,14 @@ function _gConvertedPlace(raw) {
 }
 
 function _gLayoutMargins(raw) {
-    if (!_gLayoutReader) {
+    if (!_live(_gLayoutReader)) {
         _gLayoutReader = Qt.createQmlObject("import QtQuick; import QtQuick.Layouts; QtObject { "
             + "function read(i) { return { top: i.Layout.topMargin, left: i.Layout.leftMargin, right: i.Layout.rightMargin, max: i.Layout.maximumWidth, "
             + "wide: i.Layout.preferredWidth, fill: i.Layout.fillWidth, tall: i.Layout.fillHeight, row: i.Layout.row, column: i.Layout.column, "
             + "rows: i.Layout.rowSpan, columns: i.Layout.columnSpan }; } "
             + "function cell(i, c) { i.Layout.row = c.row; i.Layout.column = c.column; i.Layout.rowSpan = c.rows; i.Layout.columnSpan = c.columns; "
             + "i.Layout.fillHeight = c.tall; } }",
-            _qobjectParent(), "eldur_layout_reader");
+            _helperParent(), "eldur_layout_reader");
     }
     return _gLayoutReader.read(raw);
 }
