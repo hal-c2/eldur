@@ -6,11 +6,9 @@ task_name="build"
 # shellcheck source=mise-tasks/_lib/common.sh
 . "$(dirname "$0")/_lib/common.sh"
 cd "$root"
-args=(build --workspace --locked)
-profile=debug
-if [[ "${usage_release:-false}" == "true" ]]; then
-  args+=(--release)
-  profile=release
-fi
-cargo "${args[@]}"
-echo "build: eldur is $(target_dir)/$profile/eldur"
+release=()
+[[ "${usage_release:-false}" == "true" ]] && release=(--release)
+cargo build --workspace --locked ${release[@]+"${release[@]}"}
+# Asked of cargo, which knows where a build target or profile puts it; the
+# build above already made it, so this builds nothing.
+echo "build: eldur is $(build_eldur ${release[@]+"${release[@]}"})"

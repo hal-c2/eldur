@@ -6,9 +6,8 @@ task_name="corpus"
 # shellcheck source=mise-tasks/_lib/common.sh
 . "$(dirname "$0")/_lib/common.sh"
 cd "$root"
-cargo build -q --locked -p eldur_cli
+eldur="$(build_eldur)"
 target="$(target_dir)"
-eldur="$target/debug/eldur"
 if [[ -n "${usage_out:-}" ]]; then
   out="$(from_caller "$usage_out")"
 else
