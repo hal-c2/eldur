@@ -64,8 +64,9 @@ if have qml6 && [ -n "$qmllint" ] && [ -n "$runner" ]; then
 else
   skipped+=("Qt 6 (qml6, qmllint, qmltestrunner) not all found: mise run qml:check and mise run dev with qml6 won't work, and mise run test skips the end-to-end tests that run QML; $qt6_install_hint")
 fi
-wrong_qt="$(qt_pin_mismatch)"
-[ -z "$wrong_qt" ] || mismatched+=("$wrong_qt")
+while IFS= read -r line; do
+  mismatched+=("$line")
+done < <(qt_pin_mismatches)
 if have ljos; then
   done_steps+=("ljos found: mise run dev runs pages in Ljós ($(command -v ljos))")
 else
