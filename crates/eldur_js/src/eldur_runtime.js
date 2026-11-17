@@ -519,6 +519,7 @@ function init(rootItem, baseUrl, documentUrl) {
     // screen goes on hearing its listeners and running its timers.
     if (rootItem && rootItem !== _root) {
         _roots = _roots.filter(function(r) { return _live(r) && r !== rootItem; });
+        _pageForgetDead();
         if (_roots.length === 0) {
             _resetPageState();
         } else if (_live(_root)) {
@@ -653,6 +654,9 @@ function _resetPageState() {
     _gDirty = false;
     _gLive = [];
     _gLiveTemplates = [];
+    for (var metricsKey in _gMetricsCache) {
+        _dropHelper(_gMetricsCache[metricsKey]);
+    }
     _gMetricsCache = {};
     _gStaticBase = null;
     _gStaticControls = [];
@@ -994,10 +998,19 @@ function _helperParent() {
 // `_root` is gone. With an earlier page still up, that page is the document
 // again, with its input layer; with none, the pages' timers, frames and
 // listeners go with them.
-// The state `init` derives from a page's own items, which a later page's
-// `init` overwrites.
+// The state `init` derives from a page's root and its own items, which a
+// later page's `init` overwrites. What a page adds to the shared document
+// (listeners, timers, custom elements, title, history) is not in it.
 function _pageCacheSave() {
+    var loc = {};
+    for (var key in _locState) {
+        loc[key] = _locState[key];
+    }
     return {
+        explicitBaseUrl: _explicitBaseUrl, explicitDocumentUrl: _explicitDocumentUrl, loc: loc,
+        warnedMissingTemplates: _warnedMissingTemplates, componentProbeCache: _componentProbeCache,
+        pseudoRules: _pseudoRules, pseudoShown: _pseudoShown, counterRules: _counterRules,
+        tableHosts: _tableHosts,
         vModels: _vModels, vRules: _vRules, vStateRules: _vStateRules,
         gCascadeRules: _gCascadeRules, gPaintTable: _gPaintTable, gWarned: _gWarned,
         gStateRules: _gStateRules, gLive: _gLive, gLiveTemplates: _gLiveTemplates,
@@ -1007,6 +1020,14 @@ function _pageCacheSave() {
 }
 
 function _pageCacheLoad(c) {
+    _explicitBaseUrl = c.explicitBaseUrl; _explicitDocumentUrl = c.explicitDocumentUrl;
+    // In place: what holds `_locState` sees the page's address.
+    for (var key in c.loc) {
+        _locState[key] = c.loc[key];
+    }
+    _warnedMissingTemplates = c.warnedMissingTemplates; _componentProbeCache = c.componentProbeCache;
+    _pseudoRules = c.pseudoRules; _pseudoShown = c.pseudoShown; _counterRules = c.counterRules;
+    _tableHosts = c.tableHosts;
     _vModels = c.vModels; _vRules = c.vRules; _vStateRules = c.vStateRules;
     _gCascadeRules = c.gCascadeRules; _gPaintTable = c.gPaintTable; _gWarned = c.gWarned;
     _gStateRules = c.gStateRules; _gLive = c.gLive; _gLiveTemplates = c.gLiveTemplates;
@@ -1014,11 +1035,9 @@ function _pageCacheLoad(c) {
     _gClosedHidden = c.gClosedHidden; _gStaticRoot = c.gStaticRoot; _gSchemed = c.gSchemed;
 }
 
-function _pageGone() {
-    if (!_root || _live(_root)) {
-        return false;
-    }
-    _roots = _roots.filter(_live);
+// What is kept for a page goes with it: pages made one after another, each
+// while the last is still up, hold nothing of the ones gone.
+function _pageForgetDead() {
     [_inLayers, _pageCaches].forEach(function(byRoot) {
         byRoot.forEach(function(value, root) {
             if (!_live(root)) {
@@ -1026,6 +1045,14 @@ function _pageGone() {
             }
         });
     });
+}
+
+function _pageGone() {
+    if (!_root || _live(_root)) {
+        return false;
+    }
+    _roots = _roots.filter(_live);
+    _pageForgetDead();
     if (_roots.length > 0) {
         _root = _roots[_roots.length - 1];
         _in = _inLayers.get(_root) || null;
@@ -2170,7 +2197,9 @@ var _pseudoPending = false;
 var _counterRules = [];
 
 function _pseudoLoad() {
+    // Both are the root's: a page with none has none, whatever one before had.
     _pseudoRules = [];
+    _counterRules = [];
     if (!_root || typeof _root.eldurPseudoRules !== "string") {
         return;
     }
@@ -19115,8 +19144,10 @@ function _gQtColor(text) {
 function _gMetrics(s) {
     var family = s["font-family"] || "";
     var key = family + "|" + s.fontSize + "|" + s["font-weight"] + "|" + s["font-style"];
-    if (!_gMetricsCache[key]) {
-        var metrics = Qt.createQmlObject("import QtQuick; FontMetrics {}", _qobjectParent(), "eldur_metrics");
+    // On the engine's holder: the page it was first asked for may go before
+    // another page that shares the cache.
+    if (!_live(_gMetricsCache[key])) {
+        var metrics = Qt.createQmlObject("import QtQuick; FontMetrics {}", _helperParent(), "eldur_metrics");
         metrics.font = _gFontOf(s);
         _gMetricsCache[key] = metrics;
     }
