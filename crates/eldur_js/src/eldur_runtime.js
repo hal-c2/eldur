@@ -1034,6 +1034,9 @@ function _pageCacheLoad(c) {
     var entry = _historyEntries[c.entryIndex];
     if (entry) {
         _historyEntries[c.entryIndex] = { state: entry.state, url: c.entryUrl };
+        // And the page is on that entry again: what the gone page pushed stays
+        // after it, to go forward to, but `state` and `back()` are this page's.
+        _historyIndex = c.entryIndex;
     }
     _warnedMissingTemplates = c.warnedMissingTemplates; _componentProbeCache = c.componentProbeCache;
     _pseudoRules = c.pseudoRules; _pseudoShown = c.pseudoShown; _counterRules = c.counterRules;

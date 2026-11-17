@@ -40,6 +40,7 @@ document.addEventListener("keydown", function(e) {
   if (e.key === "g") {
     document.getElementById("gen").classList.add("on");
     L("generated at", location.href.slice(location.href.lastIndexOf("/") + 1));
+    L("state", JSON.stringify(history.state));
     history.back();
     history.forward();
     L("forward to", location.href.slice(location.href.lastIndexOf("/") + 1));
@@ -78,7 +79,8 @@ L("loaded");
 </body></html>"#;
 
 // Another page, made beside the first: generated content of its own, none of
-// the first's rules, an address of its own. It uses only what the first
+// the first's rules, an address and a history entry of its own. It uses only
+// what the first
 // page's runtime has, which both share.
 const OTHER: &str = r#"<!doctype html><html><head><meta charset="utf-8">
 <style>#own::before { content: "OWN " }</style>
@@ -86,6 +88,8 @@ const OTHER: &str = r#"<!doctype html><html><head><meta charset="utf-8">
 <p id="own">other</p>
 <script>
 console.log("LC other at " + location.href.slice(location.href.lastIndexOf("/") + 1));
+// An entry of its own on top of the shared history.
+history.pushState({ other: 1 }, '', '#other');
 </script>
 </body></html>"#;
 
@@ -319,6 +323,7 @@ const WANT: &[&str] = &[
     "LC kept generated true",
     // Page 7 is the document again: at its own address, with its own rules.
     "LC generated at Main.qml#seen",
+    "LC state null",
     "LC forward to Main.qml#seen",
     "LC generated drawn true",
     "LC column drawn true",
