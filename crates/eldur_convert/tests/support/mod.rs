@@ -82,11 +82,11 @@ pub fn qmllint() -> Option<PathBuf> {
     if let Some(set) = env::var_os("QMLLINT").filter(|s| !s.is_empty()) {
         return Some(std::path::absolute(PathBuf::from(set)).expect("the working directory"));
     }
-    let beside = runner()?.with_file_name("qmllint");
-    if beside.is_file() {
-        return Some(beside);
-    }
-    on_path("qmllint6")
+    // Without a qmltestrunner, a `qmllint6` on PATH still serves.
+    runner()
+        .map(|r| r.with_file_name("qmllint"))
+        .filter(|beside| beside.is_file())
+        .or_else(|| on_path("qmllint6"))
 }
 
 fn find() -> Option<PathBuf> {
