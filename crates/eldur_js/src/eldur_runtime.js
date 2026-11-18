@@ -5524,14 +5524,21 @@ function _domTextStale(raw) {
 
 // A button whose content is its boxes (a flex button's children) has them in
 // a holder that does not read `text`: once a script writes its text, the
-// button draws that text as its label instead, in its font and colour.
-function _buttonDrawsText(raw) {
+// button draws that text as its label instead, in its font and colour, and in
+// `format`: literally for text, as markup for `innerHTML`.
+function _buttonDrawsText(raw, format) {
     var held = raw.contentItem;
+    if (held && _meta(held).buttonLabel) {
+        held.textFormat = format;
+        return;
+    }
     if (!held || typeof held.text === "string" || raw.background === undefined || raw.palette === undefined) {
         return;
     }
     var label = Qt.createQmlObject("import QtQuick; Text { horizontalAlignment: Text.AlignHCenter;"
         + " verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight }", raw, "eldur_button_label");
+    _meta(label).buttonLabel = true;
+    label.textFormat = format;
     label.text = Qt.binding(function() { return raw.text; });
     label.font = Qt.binding(function() { return raw.font; });
     label.color = Qt.binding(function() { return raw.palette.buttonText; });
@@ -5550,22 +5557,23 @@ function setText(item, value) {
     if (!raw) {
         return;
     }
+    // A value that cannot be a string replaces nothing, so the nodes' text stays.
+    var str = value === null || value === undefined ? "" : String(value);
     _domTextStale(raw);
     if (raw.__eldurInline) {
-        _vSetText(raw, value);
+        _vSetText(raw, str);
         return;
     }
     _gTouch();
     var vKnown = _isPlainJsObject(raw) ? null : _vExisting(raw);
     if (vKnown) {
-        _vSetText(vKnown, value);
+        _vSetText(vKnown, str);
         return;
     }
     if (_isPlainJsObject(raw)) {
-        raw.textContent = value;
+        raw.textContent = str;
         return;
     }
-    var str = value === null || value === undefined ? "" : String(value);
     var m = _meta(raw);
     if (_holdsLines(raw)) {
         // Every child goes, and the runs with them; the line stays for the text.
@@ -5590,7 +5598,7 @@ function setText(item, value) {
     }
     if (typeof raw.text === "string") {
         raw.text = _pseudoWrapped(raw, str);
-        _buttonDrawsText(raw);
+        _buttonDrawsText(raw, 0); // Text.PlainText
         return;
     }
     _clearAppended(raw);
@@ -5673,7 +5681,7 @@ function setInnerHTML(item, html) {
         }
         target.text = str;
         if (target === raw) {
-            _buttonDrawsText(raw);
+            _buttonDrawsText(raw, 4); // Text.StyledText
         }
         _rememberMarkup(raw, str);
         return;
@@ -8955,7 +8963,33 @@ function _inlineBecomesLines(raw) {
 
 // `going`, when given, is the node the inserted ones replace: it leaves once
 // they are in, and its custom elements hear so before the new ones do.
+// A button that draws its text holds no nodes of its own: text appended to it
+// joins the text it draws, and its nodes' text when that is still kept.
+function _drawsOwnText(raw) {
+    return typeof raw.text === "string" && raw.background !== undefined && typeof raw.clicked === "function"
+        && Boolean(raw.contentItem) && typeof raw.contentItem.text === "string";
+}
+
+function _appendDrawnText(raw, nodes) {
+    var add = nodes.map(getText).join("");
+    nodes.forEach(function(n) {
+        if (n.__eldurInline ? n.vparent || n.model : n.parent) {
+            _takeOut(n);
+        }
+    });
+    if (typeof raw.eldurDomText === "string" && !_meta(raw).ownText) {
+        raw.eldurDomText = raw.eldurDomText + add;
+    }
+    var own = _pseudoOwn(raw, raw.text) + add;
+    _meta(raw).explicitText = own;
+    raw.text = _pseudoWrapped(raw, own);
+}
+
 function _insertChildren(raw, nodes, ref, going) {
+    if (!ref && !going && nodes.length > 0 && nodes.every(_isTextNode) && _drawsOwnText(raw)) {
+        _appendDrawnText(raw, nodes);
+        return;
+    }
     if (going && nodes.indexOf(going) !== -1) {
         // Replaced by itself: it stays, before the next sibling that is not moving.
         var kids = _rawElementChildren(raw);
@@ -8968,6 +9002,7 @@ function _insertChildren(raw, nodes, ref, going) {
         }
         going = null;
     }
+    _vUnhold(nodes);
     var held = _ceHold(nodes);
     var leaving = _ceMoving(nodes, going);
     if (!nodes.every(_pseudoBoxSide)) {
@@ -11672,6 +11707,16 @@ function _vDetachKids(c) {
     var boxes = (c.boxes || []).filter(function(b) { return _vSlotOwner(b.item) === c; })
         .map(function(b) { return b.item; });
     c.boxes = [];
+    // Those of the elements going with them leave the line too, still their
+    // element's while a script holds it.
+    _vEachElement(old.filter(function(k) { return !k.gen; }), function(d) {
+        (d.boxes || []).forEach(function(b) {
+            if (_vSlotOwner(b.item) === d) {
+                _meta(b.item).vHeldBy = d;
+                boxes.push(b.item);
+            }
+        });
+    });
     boxes.forEach(function(box) { leaving.push.apply(leaving, _ceLeaving(box)); });
     boxes.forEach(_takeOut);
     for (var j = 0; j < old.length; ++j) {
@@ -14347,10 +14392,24 @@ function _vBoxIndex(v, b) {
     return 0;
 }
 
-// The inline element a box on a line is a child of, while it still is.
+// The inline element a box on a line is a child of, while it still is: on its
+// line, or off it with an element that went with an ancestor (`_vDetachKids`).
 function _vSlotOwner(box) {
     var owner = box ? _meta(box).vSlotOf : null;
-    return owner && _vCutOwner(box) === owner ? owner : null;
+    if (!owner) {
+        return null;
+    }
+    return _vCutOwner(box) === owner || _meta(box).vHeldBy === owner ? owner : null;
+}
+
+// Nodes put somewhere are no longer held by the element they went with.
+function _vUnhold(rawNodes) {
+    rawNodes.forEach(function(n) {
+        var m = n && !n.__eldurInline ? _itemMeta.get(n) : null;
+        if (m && m.vHeldBy) {
+            m.vHeldBy = null;
+        }
+    });
 }
 
 // `v`'s nodes that `keep` takes, with the boxes cut out of its line where they
@@ -16990,6 +17049,14 @@ function _vRemove(node) {
         return;
     }
     _vDomTextStale(owner);
+    // A box cut out of the line stays in its gap: what leaves no longer
+    // comes before it.
+    (owner.boxes || []).forEach(function(b) {
+        var was = b.before.indexOf(node);
+        if (was !== -1) {
+            b.before.splice(was, 1);
+        }
+    });
     var at = owner.kids.indexOf(node);
     if (at !== -1) {
         owner.kids.splice(at, 1);
@@ -17020,12 +17087,18 @@ function _vInsert(c, rawNodes, ref) {
     var list = c.kids;
     _vDomTextStale(c);
     // Before a box cut out of `c`'s line: at its place among the nodes, and
-    // each node put there comes before it from then on.
+    // each node put there comes before it, and before the boxes after it in
+    // the same gap, from then on.
+    _vUnhold(rawNodes);
     var refBox = ref && !ref.__eldurInline ? (c.boxes || []).find(function(b) {
         return b.item === ref && _vSlotOwner(ref) === c;
     }) : null;
+    var gapBoxes = [];
     if (refBox) {
-        ref = list[_vBoxIndex(c, refBox)] || null;
+        var gap = _vBoxIndex(c, refBox);
+        var live = (c.boxes || []).filter(function(b) { return _vSlotOwner(b.item) === c; });
+        gapBoxes = live.slice(live.indexOf(refBox)).filter(function(b) { return _vBoxIndex(c, b) === gap; });
+        ref = list[gap] || null;
     }
     for (var i = 0; i < rawNodes.length; ++i) {
         var node = _vAsNode(rawNodes[i]);
@@ -17051,9 +17124,7 @@ function _vInsert(c, rawNodes, ref) {
             list.splice(at, 0, node);
         }
         _vReconnect(node);
-        if (refBox) {
-            refBox.before.push(node);
-        }
+        gapBoxes.forEach(function(b) { b.before.push(node); });
         if (model && model.select && node.sel) {
             _vPick(model, node);
         }

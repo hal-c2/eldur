@@ -8,6 +8,9 @@ function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
 <p id="p3"><span id="s3"><select id="q3"><option>C</option></select>c</span> d</p>
 <p id="p4">x <span id="t4">a<select id="q4"><option>D</option></select>c</span></p>
 <p id="p5"><span id="t5">a<select id="q5"><option>E</option></select>c</span></p>
+<p id="p6"><span id="t6">a<select id="q6"><option>F</option></select>b</span></p>
+<p id="p7"><span id="t7"><select id="qa"><option>G</option></select><select id="qb"><option>H</option></select>z</span></p>
+<p id="p8"><span id="o8">a<span id="i8">b<input id="f8">c</span>d</span></p>
 <p id="p2"><span id="s2"><select id="q2"><option>A</option></select> tail</span> after</p>
 <script>
 L("once",document.querySelectorAll("select").length,document.body.querySelectorAll("p,span,select,input,label").length);
@@ -33,4 +36,14 @@ L("insert",JSON.stringify(t4.textContent),[].map.call(t4.childNodes,function(n){
 var t5=document.getElementById("t5");
 t5.textContent="New";
 L("replace",t5.childNodes.length,JSON.stringify(t5.textContent),t5.children.length,document.getElementById("p5").querySelectorAll("select").length);
+var t6=document.getElementById("t6");
+t6.appendChild(t6.firstChild);
+L("move",[].map.call(t6.childNodes,function(n){return n.id||n.textContent}).join(","));
+var t7=document.getElementById("t7");
+t7.insertBefore(document.createTextNode("X"),document.getElementById("qa"));
+t7.insertBefore(document.createTextNode("Y"),document.getElementById("qb"));
+L("adjacent",[].map.call(t7.childNodes,function(n){return n.id||n.textContent}).join(","));
+var o8=document.getElementById("o8"),i8=document.getElementById("i8");
+o8.textContent="New";
+L("nested",document.getElementById("p8").querySelectorAll("input").length,I(document.getElementById("f8")),JSON.stringify(document.getElementById("p8").textContent),I(i8.querySelector("input")));
 </script></body></html>
