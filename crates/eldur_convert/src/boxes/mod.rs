@@ -397,19 +397,15 @@ impl<'a> Builder<'a, '_> {
     }
 
     /// What a `<button>` draws beyond its text: inline content some of which has a
-    /// box. Children a script can reach stay what they were: the text of the
+    /// box. Its children are objects of their own, so a script reaches each
+    /// as in a browser, its text included.
     /// `Button`, as the runtime knows it.
     fn button_content(&mut self, node: NodeId) -> Content<'a> {
         let is_button = self
             .doc
             .element(node)
             .is_some_and(|e| e.is_html() && e.local_name() == "button");
-        if !is_button
-            || self
-                .doc
-                .element_children(node)
-                .any(|child| self.keeps_descendant(child))
-        {
+        if !is_button {
             return Content::Empty;
         }
         let mut children = Vec::new();

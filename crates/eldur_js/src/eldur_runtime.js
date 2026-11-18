@@ -5451,7 +5451,10 @@ function _itCollect(raw, out) {
         model.kids.filter(_vIsRendered).forEach(function(k) { _itCollect(k, out); });
     } else {
         var kids = _rawKids(raw, true);
-        if (kids.length === 0) {
+        if (kids.length === 0 && _itNamed && raw.textFormat === 4 && typeof raw.text === "string") {
+            // A label drawing `innerHTML`'s markup names by what it marks up.
+            out.push(_markupName(raw.text));
+        } else if (kids.length === 0) {
             // Rendered text: a button's drawn label, not its nodes' text.
             out.push(typeof raw.eldurDomText === "string" && typeof raw.text === "string"
                 ? _pseudoOwn(raw, raw.text) : getText(raw));
@@ -5528,6 +5531,60 @@ function _itOwnName(raw) {
         return alt === null || alt === undefined ? "" : String(alt);
     }
     return null;
+}
+
+// The name markup gives (StyledText's subset of HTML): its text, less
+// `aria-hidden` elements, with an element's `aria-label` or an image's `alt`
+// for its content.
+function _markupName(html) {
+    var out = "";
+    var stack = [];
+    var quiet = 0;
+    var re = /<(\/?)([A-Za-z][\w-]*)([^>]*?)(\/?)>|([^<]+)/g;
+    function attr(attrs, name) {
+        var m = new RegExp("\\b" + name + "\\s*=\\s*(\"([^\"]*)\"|'([^']*)'|([^\\s>]+))", "i").exec(attrs);
+        return m ? _unescapeHtmlText(m[2] !== undefined ? m[2] : m[3] !== undefined ? m[3] : m[4]) : null;
+    }
+    for (var m = re.exec(html); m; m = re.exec(html)) {
+        if (m[5] !== undefined) {
+            if (quiet === 0) {
+                out += _unescapeHtmlText(m[5]);
+            }
+            continue;
+        }
+        var tag = m[2].toLowerCase();
+        if (m[1]) {
+            for (var at = stack.length - 1; at >= 0 && stack[at].tag !== tag; --at) {
+            }
+            if (at >= 0) {
+                stack.splice(at).forEach(function(open) {
+                    if (open.quiet) {
+                        --quiet;
+                    }
+                });
+            }
+            continue;
+        }
+        var own = attr(m[3], "aria-hidden") === "true" ? "" : attr(m[3], "aria-label");
+        if (own === null && tag === "img") {
+            own = attr(m[3], "alt") || "";
+        }
+        if (quiet === 0 && own !== null && own !== "") {
+            out += " " + own + " ";
+        }
+        if (tag === "br" && quiet === 0) {
+            out += " ";
+        }
+        if (_VOID_TAG.test(tag) || m[4]) {
+            continue;
+        }
+        // An element that says its own name, or none, quiets its content.
+        if (own !== null) {
+            ++quiet;
+        }
+        stack.push({ tag: tag, quiet: own !== null });
+    }
+    return out;
 }
 
 // A button's name read from what it holds, by the rules the converter read
@@ -9093,7 +9150,7 @@ function _insertChildren(raw, nodes, ref, going, atStart) {
     if (_VOID_TAG.test(_nodeTag(raw))) {
         nodes.forEach(function(n) {
             if (n.__eldurInline ? n.vparent || n.model : n.parent) {
-                _takeOut(n);
+                _detachNode(n);
             }
         });
         return;

@@ -29,4 +29,10 @@ i9.type="submit";
 document.body.appendChild(i9);
 i9.append(" now");
 L("input",JSON.stringify(i8.value),JSON.stringify(i9.value));
+customElements.define("x-gone", class extends HTMLElement {
+  disconnectedCallback() { L("left"); }
+});
+var xg=document.createElement("x-gone");
+document.body.appendChild(xg);
+i8.appendChild(xg);
 </script></body></html>
