@@ -227,10 +227,12 @@ fn write(dir: &Path, out: &eldur_convert::Output) {
 const PILL: &str = r#"<!DOCTYPE html><html><body style="margin:0;font:16px sans-serif">
 <button id="pill" style="display:flex;gap:8px;align-items:center;padding:8px 16px;background:#7a4a00;color:#fff;border:0;border-radius:999px"><span>Go</span><span style="display:inline-block;width:12px;height:12px;background:#ffd400"></span><b>bold</b></button>
 <button id="tall" style="display:flex;padding:8px;border:0"><span style="width:48px;height:48px;background:#ff0000"></span></button>
-<button id="swap" style="display:flex;gap:4px"><span>Go</span><b>bold</b></button>
+<button id="swap" style="display:flex;gap:4px"><span>Go</span><b>bold</b><span aria-hidden="true">G</span></button>
 <button id="wide" style="display:inline-flex;width:200px;padding:0;border:0;justify-content:space-between"><span style="width:20px;height:20px;background:#00ff00"></span><span style="width:20px;height:20px;background:#0000ff"></span></button>
 <button id="column" style="display:inline-flex;flex-direction:column;justify-content:space-between;height:200px;width:60px;padding:0;border:0"><span style="width:20px;height:20px;background:#00ffff"></span><span style="width:20px;height:20px;background:#ff00ff"></span></button>
 <button id="mark">Go</button>
+<button id="count" style="display:flex;gap:4px"><span id="n">3</span><span>left</span><span aria-hidden="true">⌘D</span></button>
+<input type="submit" id="sub">
 <p id="log">-</p>
 <script>
 document.getElementById('swap').addEventListener('click', function () {
@@ -239,6 +241,10 @@ document.getElementById('swap').addEventListener('click', function () {
 document.getElementById('mark').addEventListener('click', function () {
   this.innerHTML = '<b>Save</b>';
   this.append('<i> now</i>');
+  document.getElementById('sub').append(' now');
+});
+document.getElementById('count').addEventListener('click', function () {
+  document.getElementById('n').textContent = '4';
 });
 document.getElementById('pill').addEventListener('click', function () {
   var log = document.getElementById('log');
@@ -319,7 +325,18 @@ TestCase {
         const done = under(swap, i => i.text === "Done" && i !== swap)
         verify(done && done.visible, "written text drawn")
         verify(!go || !go.visible, "old children no longer drawn")
-        tryCompare(swap.Accessible, "name", "Done")
+        // The converter named it from its content, less the hidden "G".
+        tryCompare(swap, "eldurContentName", "Done")
+        compare(swap.Accessible.name, "Done")
+    }
+
+    // A name read again after a write follows the rules it was first read
+    // by: hidden content stays out, and flex items stand apart.
+    function test_a_content_name_is_read_again_as_a_name() {
+        const count = find("count")
+        compare(count.eldurContentName, "3 left")
+        mouseClick(count)
+        tryCompare(count, "eldurContentName", "4 left")
     }
 
     // A set height is the column's to share (Chromium: y 0 and 180 in 200 px).
@@ -341,6 +358,11 @@ TestCase {
         const label = under(mark, i => typeof i.text === "string" && i.text.indexOf("now") >= 0 && i !== mark)
         verify(label, "appended text drawn")
         verify(label.text.indexOf("&lt;i&gt;") >= 0, "escaped: " + label.text)
+        // An <input> is void: what a script puts in it is not drawn.
+        const sub = find("sub")
+        compare(sub.text, "Submit")
+        const extra = under(sub, i => typeof i.text === "string" && i.text.indexOf("now") >= 0)
+        verify(!extra, "nothing drawn over the value")
     }
 
     // A set width is the flex layout's to share: space-between puts the

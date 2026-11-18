@@ -5323,6 +5323,9 @@ var _IT_BLOCK = /^(address|article|aside|blockquote|center|dd|details|dialog|dir
 // between blocks, two around a paragraph, and a tab between cells.
 var _IT_ATOM = "\uE000";
 
+// While a name is read (`_contentName`), the button being named.
+var _itNamed = null;
+
 function _itCollect(raw, out) {
     if (raw.__eldurInline) {
         if (raw.vtext) {
@@ -5341,6 +5344,16 @@ function _itCollect(raw, out) {
     } else if (_itHidden(raw)) {
         return;
     }
+    if (_itNamed && raw !== _itNamed && !raw.vtext) {
+        if (getAttribute(raw, "aria-hidden") === "true") {
+            return;
+        }
+        var own = _itOwnName(raw);
+        if (own !== null) {
+            out.push(1, own, 1);
+            return;
+        }
+    }
     var tag = _inferTagName(raw).toLowerCase();
     if (tag === "br") {
         out.push("\n");
@@ -5356,6 +5369,11 @@ function _itCollect(raw, out) {
     var run = !raw.__eldurInline && raw.parent && typeof raw.parent.firstBaseline === "number";
     if (run) {
         edge = 0;
+    }
+    // In a name a box stands apart from its neighbours, as the converter
+    // reads it: "Go" and "bold" in their own flex items are "Go bold".
+    if (_itNamed && raw !== _itNamed && !raw.__eldurInline && !run && tag !== "#text") {
+        edge = Math.max(edge, 1);
     }
     if (edge) {
         out.push(edge);
@@ -5419,6 +5437,44 @@ function _itHidden(raw) {
         && (_root.contentItem ? _root.contentItem.visible : _root.visible) !== false;
 }
 
+// What a node inside a name says for itself (AccName 2B to 2D): what its own
+// `aria-labelledby` points at, its `aria-label`, an image's `alt`; null when
+// its content speaks.
+function _itOwnName(raw) {
+    var by = getAttribute(raw, "aria-labelledby");
+    if (by) {
+        var parts = String(by).trim().split(/\s+/).map(function(id) {
+            var el = _unwrap(document.getElementById(id));
+            return el ? String(getText(el)).replace(/\s+/g, " ").trim() : "";
+        }).filter(function(t) { return t !== ""; });
+        if (parts.length > 0) {
+            return parts.join(" ");
+        }
+    }
+    var label = getAttribute(raw, "aria-label");
+    if (label && String(label).trim() !== "") {
+        return String(label).replace(/\s+/g, " ").trim();
+    }
+    if (_inferTagName(raw).toLowerCase() === "img") {
+        var alt = getAttribute(raw, "alt");
+        return alt === null || alt === undefined ? "" : String(alt);
+    }
+    return null;
+}
+
+// A button's name read from what it holds, by the rules the converter read
+// it with (`eldurContentName`): hidden content left out, a node's own name
+// for its content, boxes apart.
+function _contentName(raw) {
+    var was = _itNamed;
+    _itNamed = raw;
+    try {
+        return _innerText(raw).replace(/\s+/g, " ").trim();
+    } finally {
+        _itNamed = was;
+    }
+}
+
 function _innerText(raw) {
     // An element not being rendered reads as its textContent.
     if (_itHidden(raw)) {
@@ -5474,7 +5530,7 @@ function _domTextStale(raw) {
 function _contentNameLater(raw) {
     Qt.callLater(function() {
         if (typeof raw.eldurContentName === "string") {
-            raw.eldurContentName = _innerText(raw);
+            raw.eldurContentName = _contentName(raw);
         }
     });
 }
@@ -5485,7 +5541,10 @@ function _contentNameLater(raw) {
 // `format`: literally for text, as markup for `innerHTML`.
 function _buttonDrawsText(raw, format) {
     var held = raw.contentItem;
-    if (held && _meta(held).buttonLabel) {
+    // The converter's label of a text-only button draws `text` too, and
+    // in Text's default AutoText would read text as markup.
+    if (held && (_meta(held).buttonLabel
+        || (typeof held.text === "string" && typeof held.textFormat === "number"))) {
         held.textFormat = format;
         held.text = Qt.binding(function() { return raw.text; });
         return;
@@ -8881,7 +8940,7 @@ function _putDrawnText(raw, nodes, atStart) {
     _meta(raw).explicitText = own;
     // A label drawing `innerHTML`'s markup draws the new text literally.
     var label = raw.contentItem;
-    var markup = label && _meta(label).buttonLabel && label.textFormat === 4 ? label.text : null;
+    var markup = label && label.textFormat === 4 ? label.text : null;
     raw.text = _pseudoWrapped(raw, own);
     if (markup !== null) {
         label.text = _pseudoWrapped(raw, put(_pseudoOwn(raw, markup), _vEscapeText(add)));
@@ -8892,7 +8951,19 @@ function _putDrawnText(raw, nodes, atStart) {
 // they are in, and its custom elements hear so before the new ones do.
 // `atStart`: with no `ref`, the nodes go first rather than last. Only a
 // text-only button needs it, since it has no child to name as `ref`.
+var _VOID_TAG = /^(area|base|br|col|embed|hr|img|input|link|meta|source|track|wbr)$/;
+
 function _insertChildren(raw, nodes, ref, going, atStart) {
+    // A void element draws none of its children: what a script puts in one
+    // leaves where it was and is not drawn (Known gap: it holds no nodes).
+    if (_VOID_TAG.test(_nodeTag(raw))) {
+        nodes.forEach(function(n) {
+            if (n.__eldurInline ? n.vparent || n.model : n.parent) {
+                _takeOut(n);
+            }
+        });
+        return;
+    }
     if (!ref && !going && nodes.length > 0 && nodes.every(_isTextNode) && _drawsOwnText(raw)) {
         _putDrawnText(raw, nodes, atStart);
         return;
