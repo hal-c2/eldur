@@ -1210,11 +1210,11 @@ ApplicationWindow {
                                     property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                                     spacing: 0
+                                    Layout.topMargin: 6 - check.eldurCarry
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Number.POSITIVE_INFINITY
                                     Layout.fillHeight: false
                                     Layout.maximumHeight: Number.POSITIVE_INFINITY
-                                    Layout.topMargin: 6 - check.eldurCarry
 
                                     Item {
                                         Layout.fillWidth: true
