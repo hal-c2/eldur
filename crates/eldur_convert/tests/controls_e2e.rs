@@ -227,8 +227,12 @@ fn write(dir: &Path, out: &eldur_convert::Output) {
 const PILL: &str = r#"<!DOCTYPE html><html><body style="margin:0;font:16px sans-serif">
 <button id="pill" style="display:flex;gap:8px;align-items:center;padding:8px 16px;background:#7a4a00;color:#fff;border:0;border-radius:999px"><span>Go</span><span style="display:inline-block;width:12px;height:12px;background:#ffd400"></span><b>bold</b></button>
 <button id="tall" style="display:flex;padding:8px;border:0"><span style="width:48px;height:48px;background:#ff0000"></span></button>
+<button id="swap" style="display:flex;gap:4px"><span>Go</span><b>bold</b></button>
 <p id="log">-</p>
 <script>
+document.getElementById('swap').addEventListener('click', function () {
+  this.textContent = 'Done';
+});
 document.getElementById('pill').addEventListener('click', function () {
   var log = document.getElementById('log');
   log.textContent = log.textContent + 'click;';
@@ -296,6 +300,18 @@ TestCase {
         verify(red, "child drawn")
         near(red.mapToItem(tall, 0, 0).y, 8, 1, "child y")
         compare(red.height, 48)
+    }
+
+    // A script's text replaces the boxes a button draws, as in a browser.
+    function test_written_text_replaces_the_buttons_children() {
+        const swap = find("swap")
+        const go = under(swap, i => i.text === "Go" && i !== swap)
+        verify(go && go.visible, "children drawn first")
+        mouseClick(swap)
+        wait(0)
+        const done = under(swap, i => i.text === "Done" && i !== swap)
+        verify(done && done.visible, "written text drawn")
+        verify(!go || !go.visible, "old children no longer drawn")
     }
 
     function test_the_button_still_clicks() {

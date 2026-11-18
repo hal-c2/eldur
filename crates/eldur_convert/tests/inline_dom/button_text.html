@@ -5,11 +5,16 @@ function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
 <button id="b2" style="display:flex;gap:4px"><span>Go</span><b>bold</b></button>
 <button id="b4" style="display:flex;gap:4px"><span>Go</span><b>kept</b></button>
 <button id="b3" aria-label="Search">Find <kbd style="display:none">Ctrl K</kbd></button>
+<button id="b6">New<kbd style="display:none">Ctrl N</kbd></button>
 <script>
 var b1=document.getElementById("b1"),b2=document.getElementById("b2"),b3=document.getElementById("b3");
 L("hidden",JSON.stringify(b1.textContent),JSON.stringify(b3.textContent));
 var b4=document.getElementById("b4");
 L("flex",JSON.stringify(b2.textContent),JSON.stringify(b4.textContent));
+L("rendered",JSON.stringify(b1.innerText),JSON.stringify(b3.innerText));
 b1.textContent="Done";
-L("set",JSON.stringify(b1.textContent));
+L("set",JSON.stringify(b1.textContent),b1.childNodes.length,b1.firstChild.nodeType,JSON.stringify(b1.firstChild.textContent));
+var b6=document.getElementById("b6");
+b6.appendChild(document.createTextNode("!"));
+L("appended",JSON.stringify(b6.textContent.slice(-1)));
 </script></body></html>

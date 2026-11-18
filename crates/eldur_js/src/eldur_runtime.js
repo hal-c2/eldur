@@ -4661,6 +4661,9 @@ function _detachNode(raw) {
 
 function _takeOut(raw) {
     _counterTouch();
+    if (!_pseudoBoxSide(raw)) {
+        _domTextStale(_logicalParent(raw));
+    }
     // A browser says so as it goes; Qt only moves the focus, when it gets there.
     if (_in && _in.focused) {
         for (var at = _in.focused; at; at = _gParent(at)) {
@@ -5013,6 +5016,9 @@ function _rawKids(raw, withText, withPseudo, asRuns) {
     if (ownModel && !ownModel.select) {
         out = ownModel.kids.filter(withText ? _vIsRendered : _vIsElement);
     }
+    // A box cut out of an inline element is that element's child; the line
+    // still places it, so layout input keeps it where it stands.
+    var cutLine = !asRuns && _isLines(container) && _vSlotLine(container);
     for (var i = 0; i < container.children.length; ++i) {
         var child = container.children[i];
         if (!child) {
@@ -5026,8 +5032,7 @@ function _rawKids(raw, withText, withPseudo, asRuns) {
         if (child.eldurChrome || _meta(child).gPaint) {
             continue;
         }
-        // A box cut out of an inline element is that element's child.
-        if (_isLines(container) && _vSlotOwner(_vLineBox(child))) {
+        if (cutLine && _vSlotOwner(_vLineBox(child))) {
             continue;
         }
         if (!withPseudo && _pseudoBoxSide(child)) {
@@ -5423,7 +5428,9 @@ function _itCollect(raw, out) {
     } else {
         var kids = _rawKids(raw, true);
         if (kids.length === 0) {
-            out.push(getText(raw));
+            // Rendered text: a button's drawn label, not its nodes' text.
+            out.push(typeof raw.eldurDomText === "string" && typeof raw.text === "string"
+                ? _pseudoOwn(raw, raw.text) : getText(raw));
         } else if (kids[0].tableSlot) {
             _itGrid(kids, out);
         } else {
@@ -5504,11 +5511,46 @@ function _innerText(raw) {
         .split(_IT_ATOM).join("");
 }
 
+// A button keeps its nodes' text (`eldurDomText`) while they are as the page
+// made them; a change to them at any depth leaves its drawn text to read.
+function _domTextStale(raw) {
+    for (var at = raw, depth = 0; at && depth < 256; at = _logicalParent(at), ++depth) {
+        if (typeof at.eldurDomText === "string") {
+            _meta(at).ownText = true;
+            return;
+        }
+    }
+}
+
+// A button whose content is its boxes (a flex button's children) has them in
+// a holder that does not read `text`: once a script writes its text, the
+// button draws that text as its label instead, in its font and colour.
+function _buttonDrawsText(raw) {
+    var held = raw.contentItem;
+    if (!held || typeof held.text === "string" || raw.background === undefined || raw.palette === undefined) {
+        return;
+    }
+    var label = Qt.createQmlObject("import QtQuick; Text { horizontalAlignment: Text.AlignHCenter;"
+        + " verticalAlignment: Text.AlignVCenter; elide: Text.ElideRight }", raw, "eldur_button_label");
+    label.text = Qt.binding(function() { return raw.text; });
+    label.font = Qt.binding(function() { return raw.font; });
+    label.color = Qt.binding(function() { return raw.palette.buttonText; });
+    held.visible = false;
+    raw.contentItem = label;
+}
+
+// The same, for a change to the nodes of a line's model or element.
+function _vDomTextStale(c) {
+    var model = c ? _vModelFor(c) : null;
+    _domTextStale(c && c.__eldurInline ? c : model && model.text);
+}
+
 function setText(item, value) {
     var raw = _unwrap(item);
     if (!raw) {
         return;
     }
+    _domTextStale(raw);
     if (raw.__eldurInline) {
         _vSetText(raw, value);
         return;
@@ -5525,7 +5567,6 @@ function setText(item, value) {
     }
     var str = value === null || value === undefined ? "" : String(value);
     var m = _meta(raw);
-    m.ownText = true;
     if (_holdsLines(raw)) {
         // Every child goes, and the runs with them; the line stays for the text.
         _rawKids(raw, true).forEach(function(kid) {
@@ -5549,6 +5590,7 @@ function setText(item, value) {
     }
     if (typeof raw.text === "string") {
         raw.text = _pseudoWrapped(raw, str);
+        _buttonDrawsText(raw);
         return;
     }
     _clearAppended(raw);
@@ -5585,11 +5627,11 @@ function setInnerHTML(item, html) {
         return;
     }
     var str = html === null || html === undefined ? "" : String(html);
-    _meta(raw).ownText = true;
     if (/<\s*(script|style)\b/i.test(str)) {
         console.warn("eldur: <script> and <style> inside innerHTML are unsupported");
         return;
     }
+    _domTextStale(raw);
     if (str === "" && !raw.__eldurInline) {
         _rawElementChildren(raw).forEach(_detachNode);
     }
@@ -5630,6 +5672,9 @@ function setInnerHTML(item, html) {
             target.textFormat = 4;
         }
         target.text = str;
+        if (target === raw) {
+            _buttonDrawsText(raw);
+        }
         _rememberMarkup(raw, str);
         return;
     }
@@ -8925,6 +8970,9 @@ function _insertChildren(raw, nodes, ref, going) {
     }
     var held = _ceHold(nodes);
     var leaving = _ceMoving(nodes, going);
+    if (!nodes.every(_pseudoBoxSide)) {
+        _domTextStale(raw);
+    }
     _insertChildrenAt(raw, nodes, ref);
     if (going && going.parent !== undefined) {
         _takeOut(going);
@@ -11618,8 +11666,14 @@ function _vAnyNode() {
 }
 
 function _vDetachKids(c) {
+    _vDomTextStale(c);
     var old = c.kids.slice();
     var leaving = [];
+    var boxes = (c.boxes || []).filter(function(b) { return _vSlotOwner(b.item) === c; })
+        .map(function(b) { return b.item; });
+    c.boxes = [];
+    boxes.forEach(function(box) { leaving.push.apply(leaving, _ceLeaving(box)); });
+    boxes.forEach(_takeOut);
     for (var j = 0; j < old.length; ++j) {
         if (!old[j].gen) {
             leaving.push.apply(leaving, _ceLeaving(old[j]));
@@ -14267,6 +14321,32 @@ function _vSlotBox(at) {
     }
 }
 
+// Builds `line`'s runs, which slot the boxes cut out of its elements, so a box
+// first on the line is known as its element's before anything reads past it.
+function _vSlotLine(line) {
+    if (!_meta(line).vRunsBuilt) {
+        for (var i = 0; i < line.children.length; ++i) {
+            if (typeof line.children[i].eldurInline === "string") {
+                _vModelOf(line.children[i]);
+                break;
+            }
+        }
+    }
+    return true;
+}
+
+// Where among `v.kids` a box slotted to it stands: after the last node still
+// there of those that came before it.
+function _vBoxIndex(v, b) {
+    for (var k = b.before.length - 1; k >= 0; --k) {
+        var i = v.kids.indexOf(b.before[k]);
+        if (i !== -1) {
+            return i + 1;
+        }
+    }
+    return 0;
+}
+
 // The inline element a box on a line is a child of, while it still is.
 function _vSlotOwner(box) {
     var owner = box ? _meta(box).vSlotOf : null;
@@ -14280,16 +14360,7 @@ function _vWithBoxes(v, keep) {
     if (boxes.length === 0) {
         return v.kids.filter(keep);
     }
-    // After the last node still there of those that came before it.
-    var at = boxes.map(function(b) {
-        for (var k = b.before.length - 1; k >= 0; --k) {
-            var i = v.kids.indexOf(b.before[k]);
-            if (i !== -1) {
-                return i + 1;
-            }
-        }
-        return 0;
-    });
+    var at = boxes.map(function(b) { return _vBoxIndex(v, b); });
     var out = [];
     for (var i = 0; i <= v.kids.length; ++i) {
         for (var j = 0; j < boxes.length; ++j) {
@@ -16918,6 +16989,7 @@ function _vRemove(node) {
     if (!owner) {
         return;
     }
+    _vDomTextStale(owner);
     var at = owner.kids.indexOf(node);
     if (at !== -1) {
         owner.kids.splice(at, 1);
@@ -16946,6 +17018,15 @@ function _vAsNode(raw) {
 function _vInsert(c, rawNodes, ref) {
     var model = _vModelFor(c);
     var list = c.kids;
+    _vDomTextStale(c);
+    // Before a box cut out of `c`'s line: at its place among the nodes, and
+    // each node put there comes before it from then on.
+    var refBox = ref && !ref.__eldurInline ? (c.boxes || []).find(function(b) {
+        return b.item === ref && _vSlotOwner(ref) === c;
+    }) : null;
+    if (refBox) {
+        ref = list[_vBoxIndex(c, refBox)] || null;
+    }
     for (var i = 0; i < rawNodes.length; ++i) {
         var node = _vAsNode(rawNodes[i]);
         if (!node) {
@@ -16970,6 +17051,9 @@ function _vInsert(c, rawNodes, ref) {
             list.splice(at, 0, node);
         }
         _vReconnect(node);
+        if (refBox) {
+            refBox.before.push(node);
+        }
         if (model && model.select && node.sel) {
             _vPick(model, node);
         }
@@ -17424,7 +17508,7 @@ function _walkItems(node, visitor) {
         }
     }
     if (node.children) {
-        var onLine = _isLines(node);
+        var onLine = _isLines(node) && _vSlotLine(node);
         for (var i = 0; i < node.children.length; ++i) {
             if (node.children[i].eldurSlot !== undefined) {
                 continue;

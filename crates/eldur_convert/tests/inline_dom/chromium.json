@@ -3,7 +3,9 @@
   "log": [
    "LC hidden \"SaveCtrl S\" \"Find Ctrl K\"",
    "LC flex \"Gobold\" \"Gokept\"",
-   "LC set \"Done\""
+   "LC rendered \"Save\" \"Find\"",
+   "LC set \"Done\" 1 3 \"Done\"",
+   "LC appended \"!\""
   ],
   "clicks": []
  },
@@ -184,6 +186,7 @@
  },
  "cut_boxes": {
   "log": [
+   "LC once 6 20",
    "LC span b:1:doc",
    "LC kids 2 4 2 ts ti ti",
    "LC nodes a ts b ti",
@@ -193,7 +196,9 @@
    "LC label li 1 li v li",
    "LC first 1 s2 1 q2 s2",
    "LC text \"x aTb y\" \"aTb\"",
-   "LC removed ts,b,ti ts null"
+   "LC removed ts,b,ti ts null",
+   "LC insert \"aXDc\" a,X,q4,c X",
+   "LC replace 1 \"New\" 0 0"
   ],
   "clicks": []
  },
