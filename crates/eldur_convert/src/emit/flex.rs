@@ -983,16 +983,25 @@ impl Emitter<'_, '_> {
     }
 
     /// The px size of `b`'s content box along an axis, when its style
-    /// gives one.
+    /// gives one. A percentage gap is of the used size (CSS Box Alignment
+    /// §8.1), so a px `max-*` caps the set size and a px `min-*` then
+    /// raises it (CSS 2 §10.4); a cap in any other unit leaves the size
+    /// to the laid-out item, which the gap's percentage then follows.
     pub(super) fn content_px(&mut self, b: &LayoutBox<'_>, horizontal: bool) -> Option<f32> {
         let style = &*b.style;
-        let size = if horizontal {
-            &style.width
+        let (size, min, max) = if horizontal {
+            (&style.width, &style.min_width, &style.max_width)
         } else {
-            &style.height
+            (&style.height, &style.min_height, &style.max_height)
         };
         let Size::Length(l) = size else { return None };
-        let px = l.as_px()?;
+        let mut px = l.as_px()?;
+        if let Size::Length(m) = max {
+            px = px.min(m.as_px()?);
+        }
+        if let Size::Length(m) = min {
+            px = px.max(m.as_px()?);
+        }
         Some(match style.box_sizing {
             BoxSizing::ContentBox => px,
             BoxSizing::BorderBox => {
