@@ -78,37 +78,41 @@ jobs:
       # archive pinned by checksum) and the same fontconfig rules
       # (.github/fontconfig/eldur-recordings.conf): the generic families and
       # the fallback for a glyph those faces lack (a ✓ in Arial) then match.
-      - name: Cache the font packages
+      # Noto CJK comes from its own releases, not Ubuntu's fonts-noto-cjk:
+      # those are byte for byte the files where the recordings were made, and
+      # the Ubuntu mirror stalled on that 61 MB package again and again.
+      - name: Cache the font downloads
         uses: actions/cache@v4.3.0
         with:
-          path: ~/font-debs
-          key: font-debs-ubuntu-24.04-v1
+          path: ~/font-downloads
+          key: font-downloads-notocjk-sans2.004-serif2.003-nerd3.5.1
       - name: Install the fonts the recordings were measured with
         env:
           NERD_FONTS: https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.1/JetBrainsMono.tar.xz
           NERD_FONTS_SHA256: 04d5e8f903693f9dd13e16f867e994834e681eb3c72c0d337a770dcda09010cf
-        timeout-minutes: 20
+          NOTO_SANS_CJK: https://github.com/notofonts/noto-cjk/releases/download/Sans2.004/03_NotoSansCJK-OTC.zip
+          NOTO_SANS_CJK_SHA256: 528f4e1b25ff3badb0321b38d015d954c4c0de926c7830ef50e4a1948f6a3eed
+          NOTO_SERIF_CJK: https://github.com/notofonts/noto-cjk/releases/download/Serif2.003/04_NotoSerifCJKOTC.zip
+          NOTO_SERIF_CJK_SHA256: c76ed8fd491ce98182ec6430238b90a1eabea8857c7db64e9037efa38e198a31
+        timeout-minutes: 15
         run: |
-          debs="$HOME/font-debs"
-          mkdir -p "$debs/partial"
-          apt=(-o "Dir::Cache::archives=$debs" -o Acquire::Retries=5 -o Acquire::http::Timeout=30)
-          packages=(fontconfig fonts-liberation fonts-urw-base35 fonts-noto-core fonts-noto-cjk fonts-noto-color-emoji)
+          apt=(-o Acquire::Retries=5 -o Acquire::http::Timeout=30)
           sudo apt-get "${apt[@]}" update
-          # A mirror has stalled for half an hour on the 61 MB fonts-noto-cjk;
-          # a stalled try is cut off and the next one resumes it.
-          for try in 1 2 3 4 5; do
-            timeout 180 sudo apt-get "${apt[@]}" install -y --no-install-recommends --download-only "${packages[@]}" && break
-            echo "::warning::font download try $try failed"
-            [[ $try == 5 ]] && exit 1
-          done
-          sudo apt-get "${apt[@]}" install -y --no-install-recommends "${packages[@]}"
-          sudo chown -R "$USER" "$debs"
-          archive="$RUNNER_TEMP/JetBrainsMono.tar.xz"
-          curl -fsSLo "$archive" --retry 5 "$NERD_FONTS"
-          echo "$NERD_FONTS_SHA256  $archive" | sha256sum -c -
+          sudo apt-get "${apt[@]}" install -y --no-install-recommends \
+            fontconfig fonts-liberation fonts-urw-base35 fonts-noto-core fonts-noto-color-emoji
+          downloads="$HOME/font-downloads"
+          mkdir -p "$downloads"
+          fetch() { # url sha256 -> path of the checked download
+            local file="$downloads/${1##*/}"
+            [[ -f "$file" ]] || curl -fsSLo "$file" --retry 5 "$1"
+            echo "$2  $file" | sha256sum -c - >&2
+            echo "$file"
+          }
           fonts="$HOME/.local/share/fonts"
-          mkdir -p "$fonts"
-          tar -xJf "$archive" -C "$fonts" \
+          mkdir -p "$fonts/noto-cjk"
+          unzip -qjo "$(fetch "$NOTO_SANS_CJK" "$NOTO_SANS_CJK_SHA256")" '*.ttc' -d "$fonts/noto-cjk"
+          unzip -qjo "$(fetch "$NOTO_SERIF_CJK" "$NOTO_SERIF_CJK_SHA256")" '*.ttc' -d "$fonts/noto-cjk"
+          tar -xJf "$(fetch "$NERD_FONTS" "$NERD_FONTS_SHA256")" -C "$fonts" \
             JetBrainsMonoNerdFont-Regular.ttf JetBrainsMonoNerdFont-Bold.ttf \
             JetBrainsMonoNerdFont-Italic.ttf JetBrainsMonoNerdFont-BoldItalic.ttf
           conf="${XDG_CONFIG_HOME:-$HOME/.config}/fontconfig/conf.d"
