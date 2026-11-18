@@ -5,8 +5,12 @@ function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
 <span id="s"><select><option value="a">A</option><option value="b" selected>B</option></select></span>
 <p id="p">x <span id="t">a<select id="ts"><option>T</option></select>b<input id="ti"></span> y</p>
 <label id="l">Name <input id="li" value="v"></label>
+<p id="p3"><span id="s3"><select id="q3"><option>C</option></select>c</span> d</p>
+<p id="p4">x <span id="t4">a<select id="q4"><option>D</option></select>c</span></p>
+<p id="p5"><span id="t5">a<select id="q5"><option>E</option></select>c</span></p>
 <p id="p2"><span id="s2"><select id="q2"><option>A</option></select> tail</span> after</p>
 <script>
+L("once",document.querySelectorAll("select").length,document.body.querySelectorAll("p,span,select,input,label").length);
 var s=document.getElementById("s"),q=s.querySelector("select");
 L("span",(q?q.value:"null")+":"+s.children.length+":"+(document.querySelector("select")?"doc":"nodoc"));
 var t=document.getElementById("t"),ts=document.getElementById("ts");
@@ -23,4 +27,10 @@ var p=document.getElementById("p");
 L("text",JSON.stringify(p.textContent),JSON.stringify(t.textContent));
 t.removeChild(t.firstChild);
 L("removed",[].map.call(t.childNodes,function(n){return n.id||n.textContent}).join(","),I(t.firstElementChild),I(ts.previousSibling));
+var t4=document.getElementById("t4"),q4=document.getElementById("q4");
+t4.insertBefore(document.createTextNode("X"),q4);
+L("insert",JSON.stringify(t4.textContent),[].map.call(t4.childNodes,function(n){return n.id||n.textContent}).join(","),q4.previousSibling.textContent);
+var t5=document.getElementById("t5");
+t5.textContent="New";
+L("replace",t5.childNodes.length,JSON.stringify(t5.textContent),t5.children.length,document.getElementById("p5").querySelectorAll("select").length);
 </script></body></html>
