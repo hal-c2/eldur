@@ -226,6 +226,7 @@ fn write(dir: &Path, out: &eldur_convert::Output) {
 /// "Go" at x 16, the square at (41.78, 9.5), "bold" at x 61.78.
 const PILL: &str = r#"<!DOCTYPE html><html><body style="margin:0;font:16px sans-serif">
 <button id="pill" style="display:flex;gap:8px;align-items:center;padding:8px 16px;background:#7a4a00;color:#fff;border:0;border-radius:999px"><span>Go</span><span style="display:inline-block;width:12px;height:12px;background:#ffd400"></span><b>bold</b></button>
+<button id="tall" style="display:flex;padding:8px;border:0"><span style="width:48px;height:48px;background:#ff0000"></span></button>
 <p id="log">-</p>
 <script>
 document.getElementById('pill').addEventListener('click', function () {
@@ -284,6 +285,17 @@ TestCase {
         compare(dot.height, 12)
         near(bold.mapToItem(pill, 0, 0).x, 61.78, 2, "bold x")
         compare(bold.font.bold, true)
+    }
+
+    // A child taller than a line of the button's font makes the button taller.
+    function test_a_tall_child_grows_the_button() {
+        const tall = find("tall")
+        near(tall.width, 64, 1, "width")
+        near(tall.height, 64, 1, "height")
+        const red = under(tall, i => i.color !== undefined && Qt.colorEqual(i.color, "#ff0000"))
+        verify(red, "child drawn")
+        near(red.mapToItem(tall, 0, 0).y, 8, 1, "child y")
+        compare(red.height, 48)
     }
 
     function test_the_button_still_clicks() {

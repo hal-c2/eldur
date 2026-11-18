@@ -514,6 +514,22 @@ impl Emitter<'_, '_> {
                     Content::Blocks(inside) => {
                         let label = self.button_inside(inside, &id);
                         button.set("contentItem", object_value(label));
+                        // Its boxes are as big as they are, not one line of its
+                        // font (whose text scale is for its own label); a set
+                        // height still wins.
+                        button.set(
+                            "implicitWidth",
+                            Value::expr("contentItem.implicitWidth + leftPadding + rightPadding"),
+                        );
+                        let fixed = matches!(&style.height, Size::Length(h) if h.as_px().is_some());
+                        if !fixed {
+                            button.set(
+                                "implicitHeight",
+                                Value::expr(
+                                    "contentItem.implicitHeight + topPadding + bottomPadding",
+                                ),
+                            );
+                        }
                     }
                     Content::Empty => {}
                 }
@@ -1196,6 +1212,18 @@ impl Emitter<'_, '_> {
             if read != drawn {
                 obj.set("Accessible.name", Value::String(read));
             }
+            // A script's `textContent` is every text node, hidden or apart,
+            // which `text` no longer is (the runtime reads this instead).
+            let dom = eldur_dom::collapse_whitespace(&self.doc.text_content(node));
+            if dom != drawn {
+                obj.members.push(Member::PropertyDecl {
+                    ty: "string".to_owned(),
+                    name: "eldurDomText".to_owned(),
+                    value: Some(Value::string(&dom)),
+                    readonly: false,
+                    required: false,
+                });
+            }
             drawn
         };
         let beyond_latin = text.chars().any(|c| u32::from(c) >= 0x100);
@@ -1703,13 +1731,44 @@ mod tests {
     }
 
     #[test]
+    fn a_referenced_element_names_by_its_own_label_alt_or_hidden_text() {
+        let (q, _) = qml(
+            r#"<span id=n aria-label="Delete"></span><button aria-labelledby="n"></button>
+               <img id=i alt="Logo" src="x.png"><button aria-labelledby="i">x</button>
+               <span id=h style="display:none">Secret <b style="display:none">code</b></span>
+               <button aria-labelledby="h">y</button>
+               <span id=v>Shown<b style="display:none"> gone</b></span><button aria-labelledby="v">z</button>
+               <span id=c aria-labelledby="v">Loop</span><button aria-labelledby="c">w</button>"#,
+        );
+        for want in ["Delete", "Logo", "Secret code", "Shown", "Loop"] {
+            assert!(
+                q.contains(&format!("Accessible.name: \"{want}\"")),
+                "no {want} in\n{q}"
+            );
+        }
+        assert!(!q.contains("gone\""), "{q}");
+    }
+
+    #[test]
+    fn a_buttons_dom_text_is_kept_when_it_draws_less() {
+        let (q, _) = qml(
+            r#"<button>Save<kbd style="display:none">Ctrl S</kbd></button><button>Plain</button>"#,
+        );
+        assert!(
+            q.contains("property string eldurDomText: \"SaveCtrl S\""),
+            "{q}"
+        );
+        assert_eq!(q.matches("eldurDomText").count(), 1, "{q}");
+    }
+
+    #[test]
     fn hidden_text_is_neither_drawn_nor_read_and_aria_hidden_is_only_drawn() {
         let (q, _) = qml(
             r#"<button>Save<kbd style="display:none">Ctrl S</kbd></button>
                <button>Open<span aria-hidden="true"> ⌘O</span></button>"#,
         );
         assert!(q.contains("text: \"Save\""), "{q}");
-        assert!(!q.contains("Ctrl S"), "{q}");
+        assert!(!q.contains("text: \"Save Ctrl S\""), "{q}");
         assert!(q.contains("text: \"Open ⌘O\""), "{q}");
         assert!(q.contains("Accessible.name: \"Open\""), "{q}");
     }
