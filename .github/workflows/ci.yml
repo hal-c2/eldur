@@ -75,9 +75,9 @@ jobs:
       # tables in docs/spec/layout.md); fonts_e2e also measures Nimbus Sans
       # (URW base35 20200910) and Noto Sans. Text widths and line heights
       # follow the font, so the runner gets the same files (the Nerd Font
-      # archive pinned by checksum) and the same fontconfig rules
-      # (.github/fontconfig/eldur-recordings.conf): the generic families and
-      # the fallback for a glyph those faces lack (a ✓ in Arial) then match.
+      # archive pinned by checksum) and the same fontconfig rules, system and
+      # user (.github/fontconfig): the generic families and the fallback for
+      # a glyph those faces lack (a ✓ in Arial) then match.
       # Noto CJK comes from its own releases, not Ubuntu's fonts-noto-cjk:
       # those are byte for byte the files where the recordings were made, and
       # the Ubuntu mirror stalled on that 61 MB package again and again.
@@ -115,9 +115,10 @@ jobs:
           tar -xJf "$(fetch "$NERD_FONTS" "$NERD_FONTS_SHA256")" -C "$fonts" \
             JetBrainsMonoNerdFont-Regular.ttf JetBrainsMonoNerdFont-Bold.ttf \
             JetBrainsMonoNerdFont-Italic.ttf JetBrainsMonoNerdFont-BoldItalic.ttf
-          conf="${XDG_CONFIG_HOME:-$HOME/.config}/fontconfig/conf.d"
+          sudo cp .github/fontconfig/50-omarchy.conf /etc/fonts/conf.d/50-omarchy.conf
+          conf="${XDG_CONFIG_HOME:-$HOME/.config}/fontconfig"
           mkdir -p "$conf"
-          cp .github/fontconfig/eldur-recordings.conf "$conf/90-eldur-recordings.conf"
+          cp .github/fontconfig/user-fonts.conf "$conf/fonts.conf"
           fc-cache -f
           for f in sans-serif serif monospace Arial; do
             echo "$f: $(fc-match "$f" -f '%{family[0]}'); a ✓ from: $(fc-match -s "$f:charset=2713" -f '%{family[0]}, ' | head -c 120)"
