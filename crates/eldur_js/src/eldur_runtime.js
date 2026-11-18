@@ -518,6 +518,8 @@ function init(rootItem, baseUrl, documentUrl) {
     // and it starts afresh only once every earlier page is gone: one still on
     // screen goes on hearing its listeners and running its timers.
     if (rootItem && rootItem !== _root) {
+        // A page gone before anything ticked: the one under it is the document again first.
+        _pageGone();
         _roots = _roots.filter(function(r) { return _live(r) && r !== rootItem; });
         _pageForgetDead();
         if (_roots.length === 0) {
@@ -4833,8 +4835,30 @@ function _scrollClippedIntoView(box, raw, block) {
 // box is the root element's.
 function _listenToScroll(raw, moves) {
     if (moves && typeof moves.contentYChanged === "function") {
-        moves.contentYChanged.connect(function() { _queueScrollEvent(raw); });
-        moves.contentXChanged.connect(function() { _queueScrollEvent(raw); });
+        moves.contentYChanged.connect(function() {
+            if (!_coveredRoot(raw)) {
+                _queueScrollEvent(raw);
+            }
+        });
+        moves.contentXChanged.connect(function() {
+            if (!_coveredRoot(raw)) {
+                _queueScrollEvent(raw);
+            }
+        });
+    }
+}
+
+// A page's root holds its document's and window's `resize` and `scroll`
+// listeners; under another page it is not the document, and hears neither
+// until it is again.
+function _coveredRoot(raw) {
+    _pageGone();
+    return raw !== _root && _roots.indexOf(raw) !== -1;
+}
+
+function _rootSignal(raw, type) {
+    if (!_coveredRoot(raw)) {
+        _dispatchDynamic(raw, type, null);
     }
 }
 
@@ -7900,9 +7924,9 @@ function _connectSignalOnce(raw, type) {
         m.connected[type] = true;
         return true;
     } else if (type === "resize" && typeof raw.widthChanged === "function") {
-        raw.widthChanged.connect(function() { _dispatchDynamic(raw, "resize", null); });
+        raw.widthChanged.connect(function() { _rootSignal(raw, "resize"); });
         if (typeof raw.heightChanged === "function") {
-            raw.heightChanged.connect(function() { _dispatchDynamic(raw, "resize", null); });
+            raw.heightChanged.connect(function() { _rootSignal(raw, "resize"); });
         }
         m.connected[type] = true;
         return true;

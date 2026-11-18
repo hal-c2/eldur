@@ -240,7 +240,7 @@ Reading geometry (`getBoundingClientRect`, `offset*`, `client*`, `scroll*`,
 | `popstate` | `window` | Dispatched on `history.back()` / `forward()` / `go()` | `{ type: "popstate", state, target: Eldur.window }` |
 | `visibilitychange` | `document` | Dispatched if visibility state changes | `{ type: "visibilitychange", target: Eldur.document }` |
 
-**Pages in one engine.** The runtime is one library per QML engine, so a host (a `StackView`, say) can have several converted pages alive at once. There is one document, as in a browser: the newest page still alive. Only its `document` and `window` listeners hear, and `document.title` is its title. A page under it hears nothing, and when the pages over it go it is the document again with its own listeners and title. A page that goes takes its listeners with it. Custom element definitions, timers and the history list stay shared.
+**Pages in one engine.** The runtime is one library per QML engine, so a host (a `StackView`, say) can have several converted pages alive at once. There is one document, as in a browser: the newest page still alive. Only its `document` and `window` listeners hear, and `document.title` is its title. A page under it hears nothing, not even its own root resized or scrolled, and when the pages over it go it is the document again with its own listeners and title. A page that goes takes its listeners with it, also when nothing ran between it going and the next page being made. Custom element definitions, timers and the history list stay shared.
 
 ### 7.2 Event Constructors & `EventTarget`
 
