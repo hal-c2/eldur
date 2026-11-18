@@ -342,6 +342,29 @@ var named = ['h', 'k', 'p', 'q'].map(function (id) { return document.getElementB
     run(page, &places("ShareMinimum", checks), "grid_share_minimum");
 }
 
+/// An item's own margins are part of what its area holds: in a frozen
+/// `minmax()` column, and in a px column, the item's width and margins
+/// leave the rest of its area open, and the next column starts where
+/// Chromium starts it.
+#[test]
+fn an_item_with_margins_keeps_its_area() {
+    let page = r#"<!DOCTYPE html><html><body style="margin:0">
+<div style="display:grid;width:300px;grid-template-columns:minmax(200px,1fr) 1fr">
+<div id="h" style="width:50%;height:20px;margin-left:5px;margin-right:10px"></div><div id="k" style="height:20px"></div>
+</div>
+<div style="display:grid;width:300px;grid-template-columns:200px 1fr">
+<div id="p" style="width:100px;height:20px;margin-left:10px;margin-right:20px"></div><div id="q" style="height:20px"></div>
+</div>
+<script>
+var named = ['h', 'k', 'p', 'q'].map(function (id) { return document.getElementById(id); });
+</script></body></html>"#;
+    let checks = r#"        check("h", 5, 0, 100)
+        check("k", 200, 0, 100)
+        check("p", 10, 20, 100)
+        check("q", 200, 20, 100)"#;
+    run(page, &places("MarginArea", checks), "grid_margin_area");
+}
+
 /// The row gap a keeper moves into the items' top margins is no part of
 /// an `fr` row's share: `1fr 3fr` rows share 200 px less one 10 px gap,
 /// 47.5 and 142.5 px (CSS Grid 2 §12.7).

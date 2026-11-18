@@ -27,9 +27,11 @@ div div { height: 20px }
 <div style="display:flex;flex-direction:column;row-gap:10%;height:50%"><div id=v1></div><div id=v2></div></div>
 <div style="display:flex;flex-wrap:wrap;align-content:start;row-gap:10%;min-height:200px"><div id=z1 style="width:100%"></div><div id=z2 style="width:100%"></div></div>
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));grid-auto-rows:100px;width:400px"><div id=y1 style="height:50px"></div><div id=y2 style="height:auto"></div></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));grid-auto-rows:100px;width:400px"><div id=y3 style="height:50px"></div><div id=y4 style="height:150px"></div><div id=y5 style="height:50px"></div><div id=y6 style="height:50px"></div><div id=y7 style="height:50px"></div></div>
+<div><div id=y8></div></div>
 <script>
 // Named so that they get an objectName the test can find.
-var named = [document.getElementById('a'), document.getElementById('b'), document.getElementById('c'), document.getElementById('d'), document.getElementById('e'), document.getElementById('h'), document.getElementById('i'), document.getElementById('j'), document.getElementById('k'), document.getElementById('l'), document.getElementById('m'), document.getElementById('f'), document.getElementById('g'), document.getElementById('n'), document.getElementById('o'), document.getElementById('p'), document.getElementById('q'), document.getElementById('r'), document.getElementById('s'), document.getElementById('t'), document.getElementById('w'), document.getElementById('x'), document.getElementById('u1'), document.getElementById('u2'), document.getElementById('v1'), document.getElementById('v2'), document.getElementById('z1'), document.getElementById('z2'), document.getElementById('y1'), document.getElementById('y2')];
+var named = [document.getElementById('a'), document.getElementById('b'), document.getElementById('c'), document.getElementById('d'), document.getElementById('e'), document.getElementById('h'), document.getElementById('i'), document.getElementById('j'), document.getElementById('k'), document.getElementById('l'), document.getElementById('m'), document.getElementById('f'), document.getElementById('g'), document.getElementById('n'), document.getElementById('o'), document.getElementById('p'), document.getElementById('q'), document.getElementById('r'), document.getElementById('s'), document.getElementById('t'), document.getElementById('w'), document.getElementById('x'), document.getElementById('u1'), document.getElementById('u2'), document.getElementById('v1'), document.getElementById('v2'), document.getElementById('z1'), document.getElementById('z2'), document.getElementById('y1'), document.getElementById('y2'), document.getElementById('y3'), document.getElementById('y4'), document.getElementById('y5'), document.getElementById('y6'), document.getElementById('y7'), document.getElementById('y8')];
 </script></body></html>"#;
 
 /// Chromium, `getBoundingClientRect()` at 900×800 and 450×800: `[x, y,
@@ -100,6 +102,14 @@ TestCase {
         // A set height keeps its own in a px auto row; the row stays 100.
         check("y1", 0, 1020, 200, 50)
         check("y2", 200, 1020, 200, 100)
+        // Every item of a px auto row with a set height: the row stays 100,
+        // a taller item overflows it.
+        check("y3", 0, 1120, 100, 50)
+        check("y4", 100, 1120, 100, 150)
+        check("y5", 200, 1120, 100, 50)
+        check("y6", 300, 1120, 100, 50)
+        check("y7", 0, 1220, 100, 50)
+        check("y8", 0, 1320, 900, 20)
     }
 
     function test_gaps_follow_the_width() {
@@ -138,6 +148,14 @@ TestCase {
         // A set height keeps its own in a px auto row; the row stays 100.
         check("y1", 0, 1020, 200, 50)
         check("y2", 200, 1020, 200, 100)
+        // Every item of a px auto row with a set height: the row stays 100,
+        // a taller item overflows it.
+        check("y3", 0, 1120, 100, 50)
+        check("y4", 100, 1120, 100, 150)
+        check("y5", 200, 1120, 100, 50)
+        check("y6", 300, 1120, 100, 50)
+        check("y7", 0, 1220, 100, 50)
+        check("y8", 0, 1320, 450, 20)
     }
 }
 }
