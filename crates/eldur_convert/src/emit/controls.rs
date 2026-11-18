@@ -169,18 +169,21 @@ fn recolor(obj: &mut Object, own: &Value, to: &Value) {
     }
 }
 
-/// `control`'s `Accessible.name` from ARIA or its first `<label>`: what the
-/// label reads, without the control itself (a `<select>` inside its label
-/// would otherwise lend it every option's text).
+/// `control`'s `Accessible.name` from ARIA or its `<label>`s: what they read
+/// in document order, joined, without the control itself (a `<select>` inside
+/// its label would otherwise lend it every option's text). A label that reads
+/// nothing, all hidden, gives way to the next (HTML-AAM).
 fn label_text(doc: &Document, styles: &StyleMap, control: NodeId) -> Option<String> {
     if let Some(name) = accessible::aria_name(doc, styles, control) {
         return Some(name);
     }
-    let label = doc
+    let parts: Vec<String> = doc
         .descendants(doc.root())
-        .find(|&n| labeled_control(doc, n) == Some(control))?;
-    let text = accessible::content_text(doc, styles, label, Some(control), Reading::Read);
-    (!text.is_empty()).then_some(text)
+        .filter(|&n| labeled_control(doc, n) == Some(control))
+        .map(|label| accessible::content_text(doc, styles, label, Some(control), Reading::Read))
+        .filter(|t| !t.is_empty())
+        .collect();
+    (!parts.is_empty()).then(|| parts.join(" "))
 }
 
 fn attr_f64(doc: &Document, node: NodeId, name: &str) -> Option<f64> {
@@ -1747,6 +1750,28 @@ mod tests {
             );
         }
         assert!(!q.contains("gone\""), "{q}");
+    }
+
+    #[test]
+    fn an_image_names_by_its_aria_label_and_only_when_shown() {
+        let (q, _) = qml(
+            r#"<button><img src="x.png" alt="Trash can" aria-label="Delete"></button>
+               <span id=m>Search<img src="x.png" alt="Gone" style="visibility:hidden"></span>
+               <button aria-labelledby="m">q</button>"#,
+        );
+        assert!(q.contains("Accessible.name: \"Delete\""), "{q}");
+        assert!(!q.contains("Trash can"), "{q}");
+        assert!(q.contains("Accessible.name: \"Search\""), "{q}");
+        assert!(!q.contains("Gone"), "{q}");
+    }
+
+    #[test]
+    fn every_label_of_a_control_names_it() {
+        let (q, _) = qml(
+            r#"<label for=q><span style="display:none">hidden</span></label>
+               <label for=q>Search</label><input id=q>"#,
+        );
+        assert!(q.contains("Accessible.name: \"Search\""), "{q}");
     }
 
     #[test]

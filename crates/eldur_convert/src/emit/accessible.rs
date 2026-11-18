@@ -91,11 +91,20 @@ fn collect(
                 if apart {
                     out.push(' ');
                 }
-                if reading != Reading::Drawn
-                    && e.local_name() == "img"
-                    && let Some(alt) = e.attr("alt")
-                {
-                    out.push_str(alt);
+                if reading != Reading::Drawn && e.local_name() == "img" {
+                    // An image is named by its own `aria-label`, then its
+                    // `alt` (step 2C, 2D); one that is not shown names
+                    // nothing, unless it is read because it is referenced.
+                    let shown = reading != Reading::Read
+                        || style.is_none_or(|s| s.visibility == Visibility::Visible);
+                    let label = e
+                        .attr("aria-label")
+                        .map(collapse_whitespace)
+                        .filter(|t| !t.is_empty())
+                        .or_else(|| e.attr("alt").map(str::to_owned));
+                    if shown && let Some(label) = label {
+                        out.push_str(&label);
+                    }
                 } else {
                     collect(doc, styles, child, skip, reading, out);
                 }
