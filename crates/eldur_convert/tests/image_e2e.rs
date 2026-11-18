@@ -150,16 +150,123 @@ fn image_sizes_match_chromium() {
     }
     let out = convert();
     let dir = std::env::temp_dir().join(format!("eldur-image-{}", std::process::id()));
-    std::fs::create_dir_all(&dir).expect("temp dir");
+    run(&dir, &out, "tst_image.qml", TEST);
+}
+
+const WIDE: &str = r##"<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><rect width="400" height="200" fill="#c60"/></svg>"##;
+
+/// `width`/`height` attributes are presentational hints (HTML §15.4.3):
+/// any author rule beats them, `height: auto` and a layered rule included,
+/// and they parse as dimension values (`80px`, ` 30.5`, `50%`).
+const HINTS_PAGE: &str = r#"<!doctype html><html><head><style>
+body { margin: 0 }
+img { display: block }
+@layer base { .auto { height: auto } }
+</style></head><body>
+<div style="width:300px"><img id=h src="wide.svg" width="400" height="400" style="width:100%;height:auto"></div>
+<div id=after style="height:10px"></div>
+<img id=i src="wide.svg" width="100" height="100">
+<img id=j src="wide.svg" height="100">
+<img id=k class=auto src="wide.svg" width="120" height="400">
+<div style="width:300px"><img id=l src="wide.svg" width="50%"></div>
+<img id=m src="wide.svg" width="80px" height=" 30.5">
+<script>
+// Named so that they get an objectName the test can find.
+var named = [document.getElementById('h'), document.getElementById('after'), document.getElementById('i'), document.getElementById('j'), document.getElementById('k'), document.getElementById('l'), document.getElementById('m')];
+</script></body></html>"#;
+
+/// Chromium, `getBoundingClientRect()` at 1280×800.
+const HINTS_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 1280
+    height: 800
+
+TestCase {
+    name: "ImageHints"
+    when: windowShown
+
+    property var page
+    function box(name) {
+        const item = findChild(page, name)
+        verify(item, name)
+        const p = item.mapToItem(page, 0, 0)
+        return [p.x, p.y, item.width, item.height]
+    }
+    // Qt Layouts round each cell up to whole pixels: y within a pixel.
+    function compareBox(name, expected) {
+        const b = box(name)
+        compare([b[0], b[2], b[3]], [expected[0], expected[2], expected[3]], name)
+        fuzzyCompare(b[1], expected[1], 1.5, name + " y")
+    }
+
+    function init() {
+        const component = Qt.createComponent("Main.qml")
+        verify(component.status === Component.Ready, component.errorString())
+        page = createTemporaryObject(component, host, { width: 1280, height: 800 })
+        waitForRendering(page)
+    }
+
+    function test_author_rules_beat_the_attributes() {
+        compareBox("h"), [0, 0, 300, 150])
+        compareBox("after"), [0, 150, 1280, 10])
+        compareBox("i"), [0, 160, 100, 100])
+        compareBox("j"), [0, 260, 200, 100])
+        compareBox("k"), [0, 360, 120, 60])
+        compareBox("l"), [0, 420, 150, 75])
+        compareBox("m"), [0, 495, 80, 30.5])
+    }
+}
+}
+"##;
+
+struct Wide;
+
+impl Resources for Wide {
+    fn read(&mut self, url: &str, _base: &str) -> Option<Resource> {
+        (url == "wide.svg").then(|| Resource {
+            resolved: "/page/wide.svg".to_owned(),
+            bytes: WIDE.as_bytes().to_vec(),
+        })
+    }
+}
+
+#[test]
+fn image_attributes_are_hints_as_in_chromium() {
+    if support::no_qt() {
+        return;
+    }
+    let options = Options {
+        root: RootKind::Item,
+        ..Options::default()
+    };
+    let out = eldur_convert::convert(
+        &Input {
+            html: HINTS_PAGE.to_owned(),
+            url: "/page/index.html".to_owned(),
+        },
+        &options,
+        &mut Wide,
+    );
+    let dir = std::env::temp_dir().join(format!("eldur-image-hints-{}", std::process::id()));
+    run(&dir, &out, "tst_image_hints.qml", HINTS_TEST);
+}
+
+/// Writes `out` and `test` to `dir` and runs the test in qmltestrunner.
+fn run(dir: &Path, out: &eldur_convert::Output, name: &str, test: &str) {
+    std::fs::create_dir_all(dir).expect("temp dir");
     for file in &out.files {
         let path = dir.join(&file.path);
         std::fs::create_dir_all(path.parent().expect("parent")).expect("asset dir");
         std::fs::write(path, &file.contents).expect("write output");
     }
-    std::fs::write(dir.join("tst_image.qml"), TEST).expect("write test");
+    std::fs::write(dir.join(name), test).expect("write test");
     let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
-        .arg(dir.join("tst_image.qml"))
+        .arg(dir.join(name))
         .env("QT_FORCE_STDERR_LOGGING", "1")
         .output()
         .expect("run qmltestrunner");
@@ -169,6 +276,6 @@ fn image_sizes_match_chromium() {
         String::from_utf8_lossy(&output.stderr),
         out.main_qml().unwrap_or_default()
     );
-    std::fs::remove_dir_all(&dir).expect("remove temp dir");
+    std::fs::remove_dir_all(dir).expect("remove temp dir");
     assert!(output.status.success(), "{text}");
 }
