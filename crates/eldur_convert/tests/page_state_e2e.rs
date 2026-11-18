@@ -521,7 +521,7 @@ document.addEventListener("keydown", function(e) {{ if (e.key === "e") document.
 window.addEventListener("go", function() {{ document.title = "End"; }}, true);
 document.addEventListener("go", function() {{ console.log("LC {name} go"); }});
 // The key a keydown listener made another page with goes no further.
-document.addEventListener("keypress", function(e) {{ if (e.key === "s") console.log("LC {name} press s"); }});
+document.addEventListener("keypress", function(e) {{ if (e.key === "s" || e.key === "c") console.log("LC {name} press " + e.key); }});
 document.addEventListener("keydown", function(e) {{ console.log("LC {name} key " + e.key); }});
 window.addEventListener("resize", function() {{ console.log("LC {name} resize"); }});
 window.addEventListener("scroll", function() {{ console.log("LC {name} scroll"); }});
@@ -548,6 +548,7 @@ document.addEventListener("keydown", function() {{
 const STATIC_TEST: &str = r##"
 import QtQuick
 import QtTest
+import "eldur_runtime.js" as Eldur
 
 Item {
     id: host
@@ -601,6 +602,8 @@ TestCase {
         home.width = 700
         scroller(home).contentY = 100
         wait(100)
+        // Nor one dispatched at its root by name.
+        Eldur.dispatchEvent(home, { type: "resize" })
         console.log("LC covered home resized and scrolled")
         // A key typed in the covered page is no key of the document's.
         home.forceActiveFocus()
@@ -676,6 +679,7 @@ const STATIC_WANT: &[&str] = &[
     "LC Contact key c",
     "LC Contact kept key c",
     "LC Contact again key c",
+    "LC Contact press c",
     "LC Contact key d",
     "LC Contact kept key d",
     "LC Contact again key d",
