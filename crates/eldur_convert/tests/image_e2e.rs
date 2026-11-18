@@ -211,13 +211,13 @@ TestCase {
     }
 
     function test_author_rules_beat_the_attributes() {
-        compareBox("h"), [0, 0, 300, 150])
-        compareBox("after"), [0, 150, 1280, 10])
-        compareBox("i"), [0, 160, 100, 100])
-        compareBox("j"), [0, 260, 200, 100])
-        compareBox("k"), [0, 360, 120, 60])
-        compareBox("l"), [0, 420, 150, 75])
-        compareBox("m"), [0, 495, 80, 30.5])
+        compareBox("h", [0, 0, 300, 150])
+        compareBox("after", [0, 150, 1280, 10])
+        compareBox("i", [0, 160, 100, 100])
+        compareBox("j", [0, 260, 200, 100])
+        compareBox("k", [0, 360, 120, 60])
+        compareBox("l", [0, 420, 150, 75])
+        compareBox("m", [0, 495, 80, 30.5])
     }
 }
 }
