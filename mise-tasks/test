@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="All Rust tests (the end-to-end tests that run QML in Qt 6's qmltestrunner skip, saying so, when Qt 6 is missing)"
+#MISE description="All Rust tests (the end-to-end tests that run QML in Qt 6's qmltestrunner skip, saying so, when Qt 6 is missing, unless ELDUR_REQUIRE_QT=1, which makes them fail)"
 #USAGE arg "[cargo_args]..." var=#true help="Passed to cargo test, e.g. -p eldur_css; mise eats the first --, so test binary flags need two: mise run test -- -p eldur_css -- --nocapture"
 set -euo pipefail
 task_name="test"
@@ -11,6 +11,12 @@ cd "$root"
 if runner="$(qt6_tool qmltestrunner)" && [[ -n "$runner" ]]; then
   export QMLTESTRUNNER="$runner"
 else
+  # CI's Qt job sets ELDUR_REQUIRE_QT=1: there a missing runner is a failure,
+  # never a green run of skipped tests.
+  case "${ELDUR_REQUIRE_QT:-}" in
+    "" | 0) ;;
+    *) die "ELDUR_REQUIRE_QT is set but Qt 6's qmltestrunner was not found (set QMLTESTRUNNER, or $qt6_install_hint)" ;;
+  esac
   echo "test: Qt 6's qmltestrunner not found, so the end-to-end tests that run QML skip (set QMLTESTRUNNER, or $qt6_install_hint)" >&2
 fi
 # No --workspace by default: the root is a virtual workspace, so a bare run

@@ -21,12 +21,24 @@ pub fn runner() -> Option<&'static Path> {
 
 /// True, after printing why, when Qt 6 is not installed: the test returns
 /// early, as it has nothing to run its QML in. A skipped test passes, so
-/// `mise run test` says up front when these are skipped.
+/// `mise run test` says up front when these are skipped. With
+/// `ELDUR_REQUIRE_QT=1` (CI's Qt job) the test fails instead, so a runner
+/// that went missing can never turn the job green by skipping.
 pub fn no_qt() -> bool {
     if runner().is_some() {
         return false;
     }
-    eprintln!("skipped: {MISSING}");
+    skip(MISSING)
+}
+
+/// The name of the variable that turns every skip here into a failure.
+pub const REQUIRE_QT: &str = "ELDUR_REQUIRE_QT";
+
+fn skip(why: &str) -> bool {
+    if env::var_os(REQUIRE_QT).is_some_and(|v| !v.is_empty() && v != "0") {
+        panic!("{REQUIRE_QT} is set, so this test may not skip: {why}");
+    }
+    eprintln!("skipped: {why}");
     true
 }
 
@@ -41,8 +53,7 @@ pub fn missing(commands: &[&str]) -> bool {
     if absent.is_empty() {
         return false;
     }
-    eprintln!("skipped: not on PATH: {}", absent.join(", "));
-    true
+    skip(&format!("not on PATH: {}", absent.join(", ")))
 }
 
 /// `qmltestrunner`, ready for the caller's arguments. Callers check
