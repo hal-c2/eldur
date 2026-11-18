@@ -1212,9 +1212,9 @@ impl Emitter<'_, '_> {
             let drawn = accessible::content_text(self.doc, self.styles, node, None, Reading::Drawn);
             let read = accessible::content_text(self.doc, self.styles, node, None, Reading::Read);
             // A name read from content follows it: the runtime reads it again
-            // when a script changes what the button holds. ARIA or a label set
-            // later replaces the binding and keeps its own.
-            if read != drawn {
+            // when a script changes what the button holds. A button ARIA or a
+            // label names keeps that name, so it has none to follow.
+            if read != drawn && label_text(self.doc, self.styles, node).is_none() {
                 obj.members.push(Member::PropertyDecl {
                     ty: "string".to_owned(),
                     name: "eldurContentName".to_owned(),
@@ -1743,6 +1743,12 @@ mod tests {
             "{q}"
         );
         assert!(q.contains("Accessible.name: \"Close\""), "{q}");
+        // A name ARIA gives has no content name beside it to read again.
+        assert_eq!(
+            q.matches("property string eldurContentName").count(),
+            1,
+            "{q}"
+        );
     }
 
     #[test]
