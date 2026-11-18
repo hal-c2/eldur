@@ -1,0 +1,15 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}</style></head>
+<body data-clicks="key:Tab key:ArrowUp">
+<theme-select><label><span class="sr-only">Select theme</span><select><option value="dark">Dark</option><option value="light">Light</option><option value="auto" selected>Auto</option></select></label></theme-select>
+<p id="out">none</p>
+<script>
+customElements.define("theme-select", class extends HTMLElement {
+  constructor() {
+    super();
+    const s = this.querySelector("select");
+    if (s) s.addEventListener("change", e => { document.getElementById("out").textContent = e.target.value; console.log("LC change " + e.target.value); });
+    document.getElementById("out").textContent = s ? "wired" : "unwired";
+    console.log("LC " + document.getElementById("out").textContent);
+  }
+});
+</script></body></html>

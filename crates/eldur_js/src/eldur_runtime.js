@@ -5026,6 +5026,10 @@ function _rawKids(raw, withText, withPseudo, asRuns) {
         if (child.eldurChrome || _meta(child).gPaint) {
             continue;
         }
+        // A box cut out of an inline element is that element's child.
+        if (_isLines(container) && _vSlotOwner(_vLineBox(child))) {
+            continue;
+        }
         if (!withPseudo && _pseudoBoxSide(child)) {
             continue;
         }
@@ -11320,7 +11324,7 @@ var _VProto = {
         return this.vparent || (this.model ? _vHostElement(this.model) : null);
     },
     get children() {
-        return this.kids ? this.kids.filter(_vIsElement) : [];
+        return this.kids ? _vWithBoxes(this, _vIsElement) : [];
     },
     get width() { return _vRect(this).width; },
     get height() { return _vRect(this).height; },
@@ -11455,6 +11459,7 @@ function _vModelOf(item) {
         _meta(line).vRunsBuilt = true;
         for (var r = 0; r < line.children.length; ++r) {
             _vModelOf(line.children[r]);
+            _vSlotBox(line.children[r]);
         }
         return _vModelOf(item);
     }
@@ -14197,6 +14202,66 @@ function _vCutBoxes(v) {
         }
     });
     return boxes;
+}
+
+// The control (or other box) a line holds for an inline element, on the item
+// the line places or on the wrapper that places it.
+function _vLineBox(kid) {
+    if (!kid) {
+        return null;
+    }
+    if (kid.eldurInlineOwner !== undefined) {
+        return kid;
+    }
+    var inner = kid.children && kid.children.length === 1 ? kid.children[0] : null;
+    return inner && inner.eldurInlineOwner !== undefined ? inner : null;
+}
+
+// A box cut out of an inline element's line is still that element's child in
+// the page, where it stood among its nodes. The runs are built in line order,
+// so it comes after what the element's earlier runs hold and before what later
+// ones add (`_vModelOf`).
+function _vSlotBox(kid) {
+    var box = _vLineBox(kid);
+    var owner = box ? _vKeyed[box.eldurInlineOwner] : null;
+    if (owner && owner.kids && !_meta(box).vSlotOf) {
+        _meta(box).vSlotOf = owner;
+        (owner.boxes = owner.boxes || []).push({ item: box, after: owner.kids[owner.kids.length - 1] || null });
+    }
+}
+
+// The inline element a box on a line is a child of, while it still is.
+function _vSlotOwner(box) {
+    var owner = box ? _meta(box).vSlotOf : null;
+    return owner && _vCutOwner(box) === owner ? owner : null;
+}
+
+// `v`'s nodes that `keep` takes, with the boxes cut out of its line where they
+// stand. A box whose node before it is gone goes last.
+function _vWithBoxes(v, keep) {
+    var boxes = (v.boxes || []).filter(function(b) { return _vSlotOwner(b.item) === v; });
+    if (boxes.length === 0) {
+        return v.kids.filter(keep);
+    }
+    var at = boxes.map(function(b) {
+        if (b.after === null) {
+            return 0;
+        }
+        var i = v.kids.indexOf(b.after);
+        return i === -1 ? v.kids.length : i + 1;
+    });
+    var out = [];
+    for (var i = 0; i <= v.kids.length; ++i) {
+        for (var j = 0; j < boxes.length; ++j) {
+            if (at[j] === i) {
+                out.push(boxes[j].item);
+            }
+        }
+        if (i < v.kids.length && keep(v.kids[i])) {
+            out.push(v.kids[i]);
+        }
+    }
+    return out;
 }
 
 // The element around a box on a line, in the run its words went to.
@@ -17277,7 +17342,7 @@ function _vCreatedTextModel(raw) {
 // must agree where a model's nodes stand among a box's items.
 function _rawChildNodes(raw) {
     if (raw.__eldurInline) {
-        return raw.kids ? raw.kids.filter(_vIsRendered) : [];
+        return raw.kids ? _vWithBoxes(raw, _vIsRendered) : [];
     }
     var own = _vOwnModel(raw) || _vCreatedTextModel(raw);
     if (own && !_meta(raw).flow) {
@@ -17319,8 +17384,13 @@ function _walkItems(node, visitor) {
         }
     }
     if (node.children) {
+        var onLine = _isLines(node);
         for (var i = 0; i < node.children.length; ++i) {
             if (node.children[i].eldurSlot !== undefined) {
+                continue;
+            }
+            // Its inline element reaches it, in its place among the element's nodes.
+            if (onLine && _vSlotOwner(_vLineBox(node.children[i]))) {
                 continue;
             }
             if (_walkItems(node.children[i], visitor)) {
