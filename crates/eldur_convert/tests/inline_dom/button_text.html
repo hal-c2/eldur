@@ -7,6 +7,7 @@ function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
 <button id="b3" aria-label="Search">Find <kbd style="display:none">Ctrl K</kbd></button>
 <button id="b6">New<kbd style="display:none">Ctrl N</kbd></button>
 <button id="b7">Save<kbd style="display:none">Ctrl S</kbd></button>
+<input type="submit" id="i8">
 <script>
 var b1=document.getElementById("b1"),b2=document.getElementById("b2"),b3=document.getElementById("b3");
 L("hidden",JSON.stringify(b1.textContent),JSON.stringify(b3.textContent));
@@ -21,4 +22,11 @@ L("appended",JSON.stringify(b6.textContent),JSON.stringify(b6.innerText));
 var b7=document.getElementById("b7");
 b7.prepend("Hi ");
 L("prepended",JSON.stringify(b7.textContent),JSON.stringify(b7.innerText));
+var i8=document.getElementById("i8");
+i8.append(" now");
+var i9=document.createElement("input");
+i9.type="submit";
+document.body.appendChild(i9);
+i9.append(" now");
+L("input",JSON.stringify(i8.value),JSON.stringify(i9.value));
 </script></body></html>

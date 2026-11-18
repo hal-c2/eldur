@@ -8988,9 +8988,10 @@ function _inlineBecomesLines(raw) {
 }
 
 // A button that draws its text holds no nodes of its own: text put in it
-// joins the text it draws, and its nodes' text when that is still kept.
+// joins the text it draws, and its nodes' text when that is still kept. An
+// `<input>` drawn as a button draws its value, which text put in it leaves.
 function _drawsOwnText(raw) {
-    return typeof raw.text === "string" && raw.background !== undefined && typeof raw.clicked === "function"
+    return _nodeTag(raw) === "button" && typeof raw.text === "string" && raw.background !== undefined && typeof raw.clicked === "function"
         && Boolean(raw.contentItem) && typeof raw.contentItem.text === "string";
 }
 

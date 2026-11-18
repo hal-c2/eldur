@@ -411,7 +411,7 @@ Why this and not one QML object per element, or splitting the block whenever a s
 - `<select>` change, `dblclick`, and controls added through `innerHTML` have no Chromium comparison; a control so added is not connected until a later listener sweeps the page.
 - Created block children of a `<div>` that was empty at conversion are not stacked: the div is a `Text`, and they overlap at its top.
 - `dataset` writes do not recompute styles.
-- A button whose only content is text holds no child nodes: `childNodes` is empty and `firstChild` is null, as for every text-only control. Text appended or prepended to it joins the text it draws at that end, so `textContent` reads as Chromium's; `insertBefore(text, firstChild)` appends, since `firstChild` is null.
+- A button whose only content is text holds no child nodes: `childNodes` is empty and `firstChild` is null, as for every text-only control. Text appended or prepended to it joins the text it draws at that end, so `textContent` reads as Chromium's; `insertBefore(text, firstChild)` appends, since `firstChild` is null. An appended text node gives its text and stays out of the page: its `parentNode` is null, and a later write to its `data` does not show. An `<input>` drawn as a button keeps drawing its value.
 - A box cut out of a line whose element a script removes or moves elsewhere is held by that element and stays off the page; it does not come back if the element is put back in the page. Its parent reads as that element.
 - A box the page made (a control, an image) does not go into an inline element a script appends it to: it stays where it was, and `eldur:` warns.
 
