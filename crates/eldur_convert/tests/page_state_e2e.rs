@@ -681,7 +681,10 @@ fn a_page_made_after_one_went_with_nothing_ticking_hears_only_its_own_listeners(
     };
     let dir = std::env::temp_dir().join(format!("eldur-static-pages-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("temp dir");
-    for (at, name) in ["Home", "About", "Contact", "Next", "Last"].into_iter().enumerate() {
+    for (at, name) in ["Home", "About", "Contact", "Next", "Last"]
+        .into_iter()
+        .enumerate()
+    {
         let out = eldur_convert::convert(
             &Input {
                 html: static_page(name),
