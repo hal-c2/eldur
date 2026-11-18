@@ -1067,6 +1067,10 @@ function _pageForgetDead() {
     [_inLayers, _pageCaches].forEach(function(byRoot) {
         byRoot.forEach(function(value, root) {
             if (!_live(root)) {
+                if (byRoot === _pageCaches) {
+                    _detachAborts(value.documentListeners);
+                    _detachAborts(value.windowListeners);
+                }
                 byRoot.delete(root);
             }
         });
@@ -1074,11 +1078,14 @@ function _pageForgetDead() {
 }
 
 function _pageGone() {
+    // A covered page can go while the document stays: its kept state goes now.
+    _pageForgetDead();
     if (!_root || _live(_root)) {
         return false;
     }
     _roots = _roots.filter(_live);
-    _pageForgetDead();
+    _detachAborts(_documentListeners);
+    _detachAborts(_windowListeners);
     if (_roots.length > 0) {
         _root = _roots[_roots.length - 1];
         _in = _inLayers.get(_root) || null;
@@ -1230,7 +1237,10 @@ function _ensureRafAnim() {
         var moved = _scrollEvents.slice();
         _scrollEvents.length = 0;
         for (var at = 0; at < moved.length; ++at) {
-            _dispatchDynamic(moved[at], "scroll", null);
+            // Queued while its page was the document, which another may be now.
+            if (!_coveredRoot(moved[at])) {
+                _dispatchDynamic(moved[at], "scroll", null);
+            }
         }
         var batch = _rafQueue.slice();
         _rafQueue.length = 0;
@@ -1659,6 +1669,8 @@ function prompt(message, defaultValue) {
 }
 
 function setTitle(newTitle) {
+    // The host may have taken the document away with nothing run since.
+    _pageGone();
     var text = String(newTitle);
     _fallbackTitle = text;
     if (_root && typeof _root.title === "string") {
@@ -1667,6 +1679,7 @@ function setTitle(newTitle) {
 }
 
 function getTitle() {
+    _pageGone();
     if (_root && typeof _root.title === "string") {
         return _root.title;
     }
@@ -7514,8 +7527,16 @@ function _dispatchDynamic(raw, type, qtEv) {
     }
     var path = _eventPath(raw);
     domEv._path = path.map(_eventTarget);
+    // A listener can make another page, which is the document then: the
+    // event's remaining document and window steps are not that page's.
+    var page = _root;
+    var steps = function(node) {
+        return (node !== document && node !== window) || _root === page;
+    };
     for (var down = path.length - 1; down > 0 && !domEv._propagationStopped; --down) {
-        _runListeners(path[down], "capture:" + type, type, domEv, 1);
+        if (steps(path[down])) {
+            _runListeners(path[down], "capture:" + type, type, domEv, 1);
+        }
     }
     if (!domEv._propagationStopped) {
         _runListeners(raw, "capture:" + type, type, domEv, 2);
@@ -7524,7 +7545,9 @@ function _dispatchDynamic(raw, type, qtEv) {
         _runListeners(raw, type, type, domEv, 2);
     }
     for (var up = 1; up < path.length && domEv.bubbles && !domEv._propagationStopped; ++up) {
-        _runListeners(path[up], type, type, domEv, 3);
+        if (steps(path[up])) {
+            _runListeners(path[up], type, type, domEv, 3);
+        }
     }
     domEv.currentTarget = null;
     domEv.eventPhase = 0;
@@ -7994,6 +8017,23 @@ function _freshListeners() {
     return { listeners: {}, onceListeners: {}, onHandlers: {} };
 }
 
+// A signal the host keeps would keep a gone page's whole set alive.
+function _detachAborts(store) {
+    if (!store || !store.aborts) {
+        return;
+    }
+    Object.keys(store.aborts).forEach(function(key) {
+        store.aborts[key].forEach(_detachAbort);
+    });
+    store.aborts = {};
+}
+
+function _detachAbort(reg) {
+    if (typeof reg.signal.removeEventListener === "function") {
+        reg.signal.removeEventListener("abort", reg.onAbort);
+    }
+}
+
 // `_meta` of either is the root's.
 function _listenerMeta(raw) {
     if (raw === document) {
@@ -8038,9 +8078,17 @@ function _addListener(item, eventType, handler, options) {
         }
         if (said.signal) {
             // From the set it went into: the page may no longer be the document.
-            said.signal.addEventListener("abort", function() {
-                _dropListener(m, key, handler);
-            });
+            // The abort drops this registration only, not one made after it.
+            var reg = { signal: said.signal, onAbort: null };
+            reg.onAbort = function() {
+                if (m.aborts && m.aborts[key] && m.aborts[key].get(handler) === reg) {
+                    _dropListener(m, key, handler);
+                }
+            };
+            m.aborts = m.aborts || {};
+            m.aborts[key] = m.aborts[key] || new Map();
+            m.aborts[key].set(handler, reg);
+            said.signal.addEventListener("abort", reg.onAbort);
         }
     }
     _inInstallFor(raw, type);
@@ -8115,6 +8163,11 @@ function unlisten(item, eventType, handler, options) {
 }
 
 function _dropListener(m, type, handler) {
+    var reg = m.aborts && m.aborts[type] ? m.aborts[type].get(handler) : null;
+    if (reg) {
+        m.aborts[type].delete(handler);
+        _detachAbort(reg);
+    }
     var list = m.listeners[type];
     if (!list) {
         return;
@@ -15110,14 +15163,26 @@ function _inKeysOn(item) {
         return;
     }
     m.inKeys = item;
+    var hear = _inKeyedOn(_root);
     if (typeof item.eldurKeyDown === "function") {
-        item.eldurKeyDown.connect(function(qtEv) { _inKeyed(qtEv, true); });
-        item.eldurKeyUp.connect(function(qtEv) { _inKeyed(qtEv, false); });
+        item.eldurKeyDown.connect(function(qtEv) { hear(qtEv, true); });
+        item.eldurKeyUp.connect(function(qtEv) { hear(qtEv, false); });
         return;
     }
     var listen = Qt.createQmlObject(_IN_KEY_HEAR, _in.overlay, "eldur-keys");
-    listen.hear = _inKeyed;
+    listen.hear = hear;
     listen.who = item;
+}
+
+// A key typed in a page that is not the document (another window still up
+// under it, say) is no key of the document's.
+function _inKeyedOn(page) {
+    return function(qtEv, down) {
+        if (_pageGone() || !_in || _root !== page) {
+            return false;
+        }
+        return _inKeyed(qtEv, down);
+    };
 }
 
 // What can take focus and what starts control events, wherever it came from.
@@ -15133,8 +15198,8 @@ function _inWireControls(from) {
             // The scroller moves on keys in its own handler: ask first.
             // The walk starts at the root: the first is the page's own.
             _in.pageKeys = _in.pageKeys || item;
-            item.keyGate = _inKeyGate;
-            item.keyUpGate = _inKeyUpGate;
+            item.keyGate = _inKeyGateOn(_root);
+            item.keyUpGate = _inKeyUpGateOn(_root);
             _meta(item.scroller).keysInput = item;
             if (item.overlaidOn) {
                 _meta(item.overlaidOn).keysInput = item;
@@ -15179,8 +15244,9 @@ function _inWireNumber(raw) {
         + "signal down(var event); signal up(var event); "
         + "function onPressed(event) { down(event); } function onReleased(event) { up(event); } }", raw, "eldur_number_keys");
     hear.who = editor;
-    hear.down.connect(function(qtEv) { _inKeyed(qtEv, true); });
-    hear.up.connect(function(qtEv) { _inKeyed(qtEv, false); });
+    var keyed = _inKeyedOn(_root);
+    hear.down.connect(function(qtEv) { keyed(qtEv, true); });
+    hear.up.connect(function(qtEv) { keyed(qtEv, false); });
     // Qt would commit its own reading of the text at focus out.
     raw.valueFromText = function(text) {
         return _inNumberValid(text) ? Math.round(Number(text)) : raw.value;
@@ -15278,20 +15344,25 @@ function _inHasTabIndex(item) {
     return (_vIsTagged(item) || Boolean(_meta(item).createdTag)) && getAttribute(item, "tabindex") !== null;
 }
 
-function _inKeyGate(qtEv) {
-    // With no layer the runtime heard nothing: the scroller moves as without it.
-    if (_pageGone() || !_in) {
+function _inKeyGateOn(page) {
+    return function(qtEv) {
+        // With no layer the runtime heard nothing, and a page that is not the
+        // document hears nothing: the scroller moves as without it.
+        if (_pageGone() || !_in || _root !== page) {
+            return !qtEv.accepted;
+        }
+        _inKeyed(qtEv, true);
         return !qtEv.accepted;
-    }
-    _inKeyed(qtEv, true);
-    return !qtEv.accepted;
+    };
 }
 
-function _inKeyUpGate(qtEv) {
-    if (_pageGone() || !_in) {
-        return;
-    }
-    _inKeyed(qtEv, false);
+function _inKeyUpGateOn(page) {
+    return function(qtEv) {
+        if (_pageGone() || !_in || _root !== page) {
+            return;
+        }
+        _inKeyed(qtEv, false);
+    };
 }
 
 function _inIsField(raw) {
