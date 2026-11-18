@@ -21,8 +21,10 @@ impl Emitter<'_, '_> {
             BoxSizing::ContentBox => (0.0, 0.0),
             BoxSizing::BorderBox => (insets.horizontal(), insets.vertical()),
         };
-        // `width`/`height` attributes are presentational hints, below any
-        // CSS value.
+        // The `width`/`height` attributes reached the cascade as
+        // presentational hints, so `style` already holds them unless an
+        // author rule beat them; here they only give a ratio to an image
+        // whose file has none.
         let attr_px = |name: &str| {
             element
                 .attr(name)
@@ -32,14 +34,8 @@ impl Emitter<'_, '_> {
             Size::Length(l) => l.as_px().map(|px| (px - extra).max(0.0)),
             _ => None,
         };
-        let width = css_px(&style.width, extra_w).or_else(|| match style.width {
-            Size::Auto => attr_px("width"),
-            _ => None,
-        });
-        let height = css_px(&style.height, extra_h).or_else(|| match style.height {
-            Size::Auto => attr_px("height"),
-            _ => None,
-        });
+        let width = css_px(&style.width, extra_w);
+        let height = css_px(&style.height, extra_h);
         let size = asset.as_ref().and_then(|a| a.size);
         let ratio = size
             .map(|(w, h)| h / w)

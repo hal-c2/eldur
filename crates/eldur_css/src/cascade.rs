@@ -420,6 +420,47 @@ fn font_hints(elem: &eldur_dom::Element) -> Option<String> {
     Some(hints)
 }
 
+/// `<img>`'s `width` and `height` attributes as the `width`/`height`
+/// declarations they are presentational hints for (WHATWG HTML §15.4.3), so
+/// that any author rule beats them, `auto` included. `None` for any other
+/// element, or one with neither attribute.
+fn img_hints(elem: &eldur_dom::Element) -> Option<String> {
+    if !elem.is_html() || elem.local_name() != "img" {
+        return None;
+    }
+    let hints: String = ["width", "height"]
+        .iter()
+        .filter_map(|name| Some(format!("{name}:{};", dimension(elem.attr(name)?)?)))
+        .collect();
+    (!hints.is_empty()).then_some(hints)
+}
+
+/// A dimension value as CSS (WHATWG HTML §2.3.4.4, rules for parsing
+/// dimension values): leading digits and a fraction, `%` after them making it
+/// a percentage; whatever follows is ignored (`80px` is 80).
+fn dimension(value: &str) -> Option<String> {
+    let value = value.trim_start_matches([' ', '\t', '\n', '\x0c', '\r']);
+    let int = value.bytes().take_while(u8::is_ascii_digit).count();
+    if int == 0 {
+        return None;
+    }
+    let rest = &value[int..];
+    let frac = match rest.strip_prefix('.') {
+        Some(after) => match after.bytes().take_while(u8::is_ascii_digit).count() {
+            0 => 0,
+            n => n + 1,
+        },
+        None => 0,
+    };
+    let number = &value[..int + frac];
+    let unit = if value[int + frac..].starts_with('%') {
+        "%"
+    } else {
+        "px"
+    };
+    Some(format!("{number}{unit}"))
+}
+
 pub(crate) fn compute_styles(
     doc: &Document,
     sheets: &[Stylesheet],
@@ -523,8 +564,11 @@ pub(crate) fn prepare<'a>(
         let Some(elem) = doc.element(node) else {
             continue;
         };
-        if let Some(hints) = font_hints(elem) {
-            let (decls, _) = parse_inline_style(&hints, "<font> attributes", Origin::Author);
+        let hints = font_hints(elem)
+            .map(|h| (h, "<font> attributes"))
+            .or_else(|| img_hints(elem).map(|h| (h, "<img> attributes")));
+        if let Some((hints, source)) = hints {
+            let (decls, _) = parse_inline_style(&hints, source, Origin::Author);
             for d in &decls {
                 record_decl_longhand(d, &mut longhand_set);
             }
@@ -1126,12 +1170,15 @@ impl<'a> CascadeEngine<'a> {
                 }
             });
 
-        // Before any rule of the page's, so that any rule beats it.
+        // Before any rule of the page's, so that any rule beats it, a
+        // layered one too (measured in Chromium: `@layer x { img { height:
+        // auto } }` beats `<img height>`): the empty key sorts before every
+        // layer.
         for (offset, decl) in self.hint_styles[node.index()].iter().enumerate() {
             let key = CascadeKey {
                 tier: OriginTier::of(Origin::Author, false),
                 is_inline_style: false,
-                layer_key: LayerOrderKey::unlayered(),
+                layer_key: LayerOrderKey(Vec::new()),
                 specificity: Specificity::default(),
                 order: offset as u32,
             };
@@ -1925,7 +1972,7 @@ pub(crate) fn layer_ranks(sheets: &[Stylesheet], viewport: &Viewport) -> LayerRa
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{LengthAuto, Rgba};
+    use crate::{Length, LengthAuto, LengthPercentage, Rgba, Size};
 
     #[test]
     fn blockification_rules_per_css_display_3() {
@@ -1975,6 +2022,35 @@ mod tests {
         assert_eq!(of("a").font_size, 10.0);
         assert_eq!(of("a").font_family, vec!["serif".to_owned()]);
         assert_eq!(of("b").font_size, 20.0);
+    }
+
+    #[test]
+    fn img_dimension_attributes_are_presentational_hints() {
+        let doc = Document::parse(
+            r#"<!doctype html><body>
+            <img id="a" width="400" height="400" style="width:100%;height:auto">
+            <img id="b" width="400" height=" 30.5px">
+            <img id="c" width="50%" height="x">
+            <img id="d" class="auto" width="120" height="400"></body>"#,
+        );
+        let css = "@layer base { .auto { height: auto } }";
+        let (sheet, _) = Stylesheet::parse(css, Origin::Author, "hints.css", None);
+        let map = compute_styles(&doc, &[sheet], &Viewport::default());
+        let of = |id: &str| map.style(doc.element_by_id(id).expect(id)).expect(id);
+        assert_eq!(of("a").height, Size::Auto);
+        assert_eq!(
+            of("a").width,
+            Size::Length(Length::Linear(LengthPercentage::percent(100.0)))
+        );
+        assert_eq!(of("b").width, Size::Length(Length::px(400.0)));
+        assert_eq!(of("b").height, Size::Length(Length::px(30.5)));
+        assert_eq!(
+            of("c").width,
+            Size::Length(Length::Linear(LengthPercentage::percent(50.0)))
+        );
+        assert_eq!(of("c").height, Size::Auto);
+        assert_eq!(of("d").height, Size::Auto, "a layered rule beats a hint");
+        assert_eq!(of("d").width, Size::Length(Length::px(120.0)));
     }
 
     #[test]
