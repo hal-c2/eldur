@@ -1,4 +1,12 @@
 {
+ "button_text": {
+  "log": [
+   "LC hidden \"SaveCtrl S\" \"Find Ctrl K\"",
+   "LC flex \"Gobold\" \"Gokept\" bk",
+   "LC set \"Done\""
+  ],
+  "clicks": []
+ },
  "ce_select": {
   "log": [
    "LC wired",
@@ -182,7 +190,10 @@
    "LC sib ti null b a ts",
    "LC up t p true true",
    "LC query ti 2 4 ti",
-   "LC label li 1 li v li"
+   "LC label li 1 li v li",
+   "LC first 1 s2 1 q2 s2",
+   "LC text \"x aTb y\" \"aTb\"",
+   "LC removed ts,b,ti ts null"
   ],
   "clicks": []
  },

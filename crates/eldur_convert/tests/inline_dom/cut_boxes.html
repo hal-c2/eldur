@@ -5,6 +5,7 @@ function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
 <span id="s"><select><option value="a">A</option><option value="b" selected>B</option></select></span>
 <p id="p">x <span id="t">a<select id="ts"><option>T</option></select>b<input id="ti"></span> y</p>
 <label id="l">Name <input id="li" value="v"></label>
+<p id="p2"><span id="s2"><select id="q2"><option>A</option></select> tail</span> after</p>
 <script>
 var s=document.getElementById("s"),q=s.querySelector("select");
 L("span",(q?q.value:"null")+":"+s.children.length+":"+(document.querySelector("select")?"doc":"nodoc"));
@@ -16,4 +17,10 @@ L("up",I(ts.parentElement),I(ts.closest("p")),t.contains(ts),document.getElement
 L("query",I(t.querySelector("input")),t.querySelectorAll("select,input").length,document.getElementById("p").querySelectorAll("*").length,I(document.getElementById("p").querySelector("#ti")));
 var l=document.getElementById("l");
 L("label",I(l.querySelector("input")),l.children.length,I(l.firstElementChild),l.querySelector("input").value,I(l.control));
+var p2=document.getElementById("p2"),s2=document.getElementById("s2");
+L("first",p2.children.length,I(p2.firstElementChild),s2.children.length,I(s2.firstChild),I(document.getElementById("q2").parentNode));
+var p=document.getElementById("p");
+L("text",JSON.stringify(p.textContent),JSON.stringify(t.textContent));
+t.removeChild(t.firstChild);
+L("removed",[].map.call(t.childNodes,function(n){return n.id||n.textContent}).join(","),I(t.firstElementChild),I(ts.previousSibling));
 </script></body></html>

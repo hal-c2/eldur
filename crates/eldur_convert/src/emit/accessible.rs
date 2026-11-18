@@ -16,6 +16,9 @@ pub(crate) enum Reading {
     /// What is read out: also without `aria-hidden="true"` and
     /// `visibility: hidden`, as AccName step 2A skips hidden nodes.
     Read,
+    /// Everything but the elements that never render: a hidden element that
+    /// `aria-labelledby` names is read whole, hidden parts and all (step 2A).
+    Referenced,
 }
 
 /// `node`'s text as `reading` sees it, with `skip`'s subtree left out (the
@@ -46,7 +49,7 @@ fn collect(
         }
         match &doc.node(child).data {
             NodeData::Text(t) => {
-                let shown = reading == Reading::Drawn
+                let shown = reading != Reading::Read
                     || styles
                         .computed(node)
                         .is_none_or(|c| c.style.visibility == Visibility::Visible);
@@ -62,7 +65,9 @@ fn collect(
                     continue;
                 }
                 let style = styles.computed(child).map(|c| &c.style);
-                if style.is_some_and(|s| s.display == Display::None) {
+                if reading != Reading::Referenced
+                    && style.is_some_and(|s| s.display == Display::None)
+                {
                     continue;
                 }
                 if reading == Reading::Read && e.attr("aria-hidden") == Some("true") {
@@ -86,7 +91,7 @@ fn collect(
                 if apart {
                     out.push(' ');
                 }
-                if reading == Reading::Read
+                if reading != Reading::Drawn
                     && e.local_name() == "img"
                     && let Some(alt) = e.attr("alt")
                 {
@@ -108,12 +113,10 @@ fn collect(
 pub(crate) fn aria_name(doc: &Document, styles: &StyleMap, node: NodeId) -> Option<String> {
     let element = doc.element(node)?;
     if let Some(ids) = element.attr("aria-labelledby") {
-        // A referenced element names even while hidden (step 2B), so its own
-        // text is taken whole, minus what it hides inside.
         let parts: Vec<String> = ids
             .split_ascii_whitespace()
             .filter_map(|id| doc.element_by_id(id))
-            .map(|by| content_text(doc, styles, by, None, Reading::Read))
+            .map(|by| referenced_name(doc, styles, by))
             .filter(|t| !t.is_empty())
             .collect();
         if !parts.is_empty() {
@@ -124,4 +127,48 @@ pub(crate) fn aria_name(doc: &Document, styles: &StyleMap, node: NodeId) -> Opti
         .attr("aria-label")
         .map(collapse_whitespace)
         .filter(|t| !t.is_empty())
+}
+
+/// The name of an element `aria-labelledby` points at: its own `aria-label`
+/// or `alt` first, then its content (steps 2C to 2F). Its own
+/// `aria-labelledby` is not followed, so a traversal never loops (step 2B).
+/// A hidden one still names, with what it hides inside; a shown one leaves
+/// its hidden parts out.
+fn referenced_name(doc: &Document, styles: &StyleMap, by: NodeId) -> String {
+    let element = doc.element(by);
+    let own = element
+        .and_then(|e| {
+            e.attr("aria-label")
+                .filter(|t| !t.trim().is_empty())
+                .or_else(|| (e.local_name() == "img").then(|| e.attr("alt")).flatten())
+        })
+        .map(collapse_whitespace);
+    if let Some(own) = own {
+        return own;
+    }
+    let reading = if hidden(doc, styles, by) {
+        Reading::Referenced
+    } else {
+        Reading::Read
+    };
+    content_text(doc, styles, by, None, reading)
+}
+
+/// Whether `node` is out of the accessibility tree: not displayed, invisible,
+/// or under `aria-hidden`, itself or through an ancestor.
+fn hidden(doc: &Document, styles: &StyleMap, node: NodeId) -> bool {
+    if styles
+        .computed(node)
+        .is_some_and(|c| c.style.visibility != Visibility::Visible)
+    {
+        return true;
+    }
+    std::iter::once(node).chain(doc.ancestors(node)).any(|n| {
+        styles
+            .computed(n)
+            .is_some_and(|c| c.style.display == Display::None)
+            || doc
+                .element(n)
+                .is_some_and(|e| e.attr("aria-hidden") == Some("true"))
+    })
 }

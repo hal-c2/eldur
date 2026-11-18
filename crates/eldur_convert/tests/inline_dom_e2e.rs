@@ -157,6 +157,11 @@ fn a_control_in_an_inline_element_is_its_child() {
 }
 
 #[test]
+fn a_buttons_text_content_is_its_dom_text_not_what_it_draws() {
+    page("button_text");
+}
+
+#[test]
 fn a_custom_elements_constructor_finds_the_select_inside_its_label() {
     page("ce_select");
 }
