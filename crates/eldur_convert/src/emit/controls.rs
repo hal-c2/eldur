@@ -172,7 +172,9 @@ fn recolor(obj: &mut Object, own: &Value, to: &Value) {
 /// `control`'s `Accessible.name` from ARIA or its `<label>`s: what they read
 /// in document order, joined, without the control itself (a `<select>` inside
 /// its label would otherwise lend it every option's text). A label that reads
-/// nothing, all hidden, gives way to the next (HTML-AAM).
+/// nothing, all hidden, gives way to the next (HTML-AAM). A hidden label still
+/// names its control, read whole as an `aria-labelledby` target is; a shown
+/// one leaves out what it hides inside.
 fn label_text(doc: &Document, styles: &StyleMap, control: NodeId) -> Option<String> {
     if let Some(name) = accessible::aria_name(doc, styles, control) {
         return Some(name);
@@ -180,7 +182,14 @@ fn label_text(doc: &Document, styles: &StyleMap, control: NodeId) -> Option<Stri
     let parts: Vec<String> = doc
         .descendants(doc.root())
         .filter(|&n| labeled_control(doc, n) == Some(control))
-        .map(|label| accessible::content_text(doc, styles, label, Some(control), Reading::Read))
+        .map(|label| {
+            let reading = if accessible::hidden(doc, styles, label) {
+                Reading::Referenced
+            } else {
+                Reading::Read
+            };
+            accessible::content_text(doc, styles, label, Some(control), reading)
+        })
         .filter(|t| !t.is_empty())
         .collect();
     (!parts.is_empty()).then(|| parts.join(" "))
@@ -1776,6 +1785,22 @@ mod tests {
         let (q, _) = qml(
             r#"<label for=q><span style="display:none">hidden</span></label>
                <label for=q>Search</label><input id=q>"#,
+        );
+        assert!(q.contains("Accessible.name: \"Search\""), "{q}");
+    }
+
+    #[test]
+    fn a_node_in_a_name_follows_its_own_labelledby_first() {
+        let (q, _) = qml(r#"<span id=name>Archive</span>
+               <button><img src="icon.png" aria-labelledby="name" aria-label="Delete" alt=""></button>"#);
+        assert!(q.contains("Accessible.name: \"Archive\""), "{q}");
+        assert!(!q.contains("Delete"), "{q}");
+    }
+
+    #[test]
+    fn a_hidden_label_still_names_its_control() {
+        let (q, _) = qml(
+            r#"<label for=q hidden><span aria-hidden="true">Search</span></label><input id=q>"#,
         );
         assert!(q.contains("Accessible.name: \"Search\""), "{q}");
     }

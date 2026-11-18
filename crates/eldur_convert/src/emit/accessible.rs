@@ -30,8 +30,22 @@ pub(crate) fn content_text(
     skip: Option<NodeId>,
     reading: Reading,
 ) -> String {
+    text_of(doc, styles, node, skip, reading, false)
+}
+
+/// The same, `traversal` when it is the content of an element
+/// `aria-labelledby` points at: a node in it does not follow its own
+/// `aria-labelledby` (step 2B), so a traversal never loops.
+fn text_of(
+    doc: &Document,
+    styles: &StyleMap,
+    node: NodeId,
+    skip: Option<NodeId>,
+    reading: Reading,
+    traversal: bool,
+) -> String {
     let mut out = String::new();
-    collect(doc, styles, node, skip, reading, &mut out);
+    collect(doc, styles, node, skip, reading, traversal, &mut out);
     collapse_whitespace(&out)
 }
 
@@ -41,6 +55,7 @@ fn collect(
     node: NodeId,
     skip: Option<NodeId>,
     reading: Reading,
+    traversal: bool,
     out: &mut String,
 ) {
     for child in doc.children(node) {
@@ -91,22 +106,35 @@ fn collect(
                 if apart {
                     out.push(' ');
                 }
-                if reading != Reading::Drawn && e.local_name() == "img" {
-                    // An image is named by its own `aria-label`, then its
-                    // `alt` (step 2C, 2D); one that is not shown names
-                    // nothing, unless it is read because it is referenced.
+                // What a node in a name says for itself: what its own
+                // `aria-labelledby` points at, outside a traversal (step 2B),
+                // its `aria-label` (2C), an image's `alt` (2D); one that is
+                // not shown says nothing, unless it is read because it is
+                // referenced.
+                let own = (reading != Reading::Drawn)
+                    .then(|| {
+                        (!traversal)
+                            .then(|| labelledby(doc, styles, child))
+                            .flatten()
+                            .or_else(|| {
+                                e.attr("aria-label")
+                                    .map(collapse_whitespace)
+                                    .filter(|t| !t.is_empty())
+                            })
+                            .or_else(|| {
+                                (e.local_name() == "img")
+                                    .then(|| e.attr("alt").unwrap_or_default().to_owned())
+                            })
+                    })
+                    .flatten();
+                if let Some(own) = own {
                     let shown = reading != Reading::Read
                         || style.is_none_or(|s| s.visibility == Visibility::Visible);
-                    let label = e
-                        .attr("aria-label")
-                        .map(collapse_whitespace)
-                        .filter(|t| !t.is_empty())
-                        .or_else(|| e.attr("alt").map(str::to_owned));
-                    if shown && let Some(label) = label {
-                        out.push_str(&label);
+                    if shown {
+                        out.push_str(&own);
                     }
                 } else {
-                    collect(doc, styles, child, skip, reading, out);
+                    collect(doc, styles, child, skip, reading, traversal, out);
                 }
                 if apart {
                     out.push(' ');
@@ -121,21 +149,24 @@ fn collect(
 /// label or content (AccName steps 2B and 2C).
 pub(crate) fn aria_name(doc: &Document, styles: &StyleMap, node: NodeId) -> Option<String> {
     let element = doc.element(node)?;
-    if let Some(ids) = element.attr("aria-labelledby") {
-        let parts: Vec<String> = ids
-            .split_ascii_whitespace()
-            .filter_map(|id| doc.element_by_id(id))
-            .map(|by| referenced_name(doc, styles, by))
+    labelledby(doc, styles, node).or_else(|| {
+        element
+            .attr("aria-label")
+            .map(collapse_whitespace)
             .filter(|t| !t.is_empty())
-            .collect();
-        if !parts.is_empty() {
-            return Some(parts.join(" "));
-        }
-    }
-    element
-        .attr("aria-label")
-        .map(collapse_whitespace)
+    })
+}
+
+/// What `node`'s `aria-labelledby` names it, when it names anything.
+fn labelledby(doc: &Document, styles: &StyleMap, node: NodeId) -> Option<String> {
+    let ids = doc.element(node)?.attr("aria-labelledby")?;
+    let parts: Vec<String> = ids
+        .split_ascii_whitespace()
+        .filter_map(|id| doc.element_by_id(id))
+        .map(|by| referenced_name(doc, styles, by))
         .filter(|t| !t.is_empty())
+        .collect();
+    (!parts.is_empty()).then(|| parts.join(" "))
 }
 
 /// The name of an element `aria-labelledby` points at: its own `aria-label`
@@ -160,12 +191,12 @@ fn referenced_name(doc: &Document, styles: &StyleMap, by: NodeId) -> String {
     } else {
         Reading::Read
     };
-    content_text(doc, styles, by, None, reading)
+    text_of(doc, styles, by, None, reading, true)
 }
 
 /// Whether `node` is out of the accessibility tree: not displayed, invisible,
 /// or under `aria-hidden`, itself or through an ancestor.
-fn hidden(doc: &Document, styles: &StyleMap, node: NodeId) -> bool {
+pub(crate) fn hidden(doc: &Document, styles: &StyleMap, node: NodeId) -> bool {
     if styles
         .computed(node)
         .is_some_and(|c| c.style.visibility != Visibility::Visible)
