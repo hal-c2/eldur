@@ -3,13 +3,13 @@ function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
 </script></head><body>
 <button id="b1">Save<kbd style="display:none">Ctrl S</kbd></button>
 <button id="b2" style="display:flex;gap:4px"><span>Go</span><b>bold</b></button>
-<button id="b4" style="display:flex;gap:4px"><span>Go</span><b id="bk">kept</b></button>
+<button id="b4" style="display:flex;gap:4px"><span>Go</span><b>kept</b></button>
 <button id="b3" aria-label="Search">Find <kbd style="display:none">Ctrl K</kbd></button>
 <script>
 var b1=document.getElementById("b1"),b2=document.getElementById("b2"),b3=document.getElementById("b3");
 L("hidden",JSON.stringify(b1.textContent),JSON.stringify(b3.textContent));
-var b4=document.getElementById("b4"),bk=document.getElementById("bk");
-L("flex",JSON.stringify(b2.textContent),JSON.stringify(b4.textContent),bk.id);
+var b4=document.getElementById("b4");
+L("flex",JSON.stringify(b2.textContent),JSON.stringify(b4.textContent));
 b1.textContent="Done";
 L("set",JSON.stringify(b1.textContent));
 </script></body></html>

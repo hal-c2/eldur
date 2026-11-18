@@ -2,7 +2,7 @@
  "button_text": {
   "log": [
    "LC hidden \"SaveCtrl S\" \"Find Ctrl K\"",
-   "LC flex \"Gobold\" \"Gokept\" bk",
+   "LC flex \"Gobold\" \"Gokept\"",
    "LC set \"Done\""
   ],
   "clicks": []
