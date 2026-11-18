@@ -233,6 +233,7 @@ const PILL: &str = r#"<!DOCTYPE html><html><body style="margin:0;font:16px sans-
 <button id="mark">Go</button>
 <button id="count" style="display:flex;gap:4px"><span id="n">3</span><span>left</span><span aria-hidden="true">⌘D</span></button>
 <input type="submit" id="sub">
+<button id="restyle">Old<span aria-hidden="true">X</span></button>
 <p id="log">-</p>
 <script>
 document.getElementById('swap').addEventListener('click', function () {
@@ -242,6 +243,9 @@ document.getElementById('mark').addEventListener('click', function () {
   this.innerHTML = '<b>Save</b>';
   this.append('<i> now</i>');
   document.getElementById('sub').append(' now');
+});
+document.getElementById('restyle').addEventListener('click', function () {
+  this.innerHTML = '<b>New</b> <img src="x.png" alt="file"><span aria-hidden="true">⌘N</span>';
 });
 document.getElementById('count').addEventListener('click', function () {
   document.getElementById('n').textContent = '4';
@@ -337,6 +341,15 @@ TestCase {
         compare(count.eldurContentName, "3 left")
         mouseClick(count)
         tryCompare(count, "eldurContentName", "4 left")
+    }
+
+    // Markup written with `innerHTML` names by what it marks up (Chromium:
+    // "New file").
+    function test_a_content_name_is_read_from_written_markup() {
+        const restyle = find("restyle")
+        compare(restyle.eldurContentName, "Old")
+        mouseClick(restyle)
+        tryCompare(restyle, "eldurContentName", "New file")
     }
 
     // A set height is the column's to share (Chromium: y 0 and 180 in 200 px).
