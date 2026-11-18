@@ -5219,15 +5219,15 @@ function getText(item) {
         return "";
     }
     if (raw.__eldurInline) {
-        return _vText(raw);
+        return _vTextContent(raw);
     }
     var vOwn = _vModelOf(raw);
     if (vOwn) {
-        return _vText(vOwn);
+        return _vTextContent(vOwn);
     }
     var vRun = _findTextChild(raw);
     if (vRun && _gIsBox(raw) && _vModelOf(vRun)) {
-        return _vText(_vModelOf(vRun));
+        return _vTextContent(_vModelOf(vRun));
     }
     if (vRun && _gIsBox(raw) && _meta(vRun).vSplit) {
         return _rawKids(raw, true).filter(function(k) { return k !== vRun; }).map(getText).join("");
@@ -5249,6 +5249,11 @@ function getText(item) {
     // What is typed in an input is its value; it has no content.
     if (raw.eldurTag === "input" || _meta(raw).createdTag === "input") {
         return "";
+    }
+    // A button draws less than its nodes hold (hidden text, boxes apart);
+    // its nodes' text is kept beside until a script writes it.
+    if (typeof raw.eldurDomText === "string" && !_meta(raw).ownText) {
+        return raw.eldurDomText;
     }
     if (typeof raw.text === "string") {
         return _pseudoOwn(raw, raw.text);
@@ -5520,6 +5525,7 @@ function setText(item, value) {
     }
     var str = value === null || value === undefined ? "" : String(value);
     var m = _meta(raw);
+    m.ownText = true;
     if (_holdsLines(raw)) {
         // Every child goes, and the runs with them; the line stays for the text.
         _rawKids(raw, true).forEach(function(kid) {
@@ -5579,6 +5585,7 @@ function setInnerHTML(item, html) {
         return;
     }
     var str = html === null || html === undefined ? "" : String(html);
+    _meta(raw).ownText = true;
     if (/<\s*(script|style)\b/i.test(str)) {
         console.warn("eldur: <script> and <style> inside innerHTML are unsupported");
         return;
@@ -11457,10 +11464,16 @@ function _vModelOf(item) {
     var line = item.parent;
     if (line && typeof line.firstBaseline === "number" && !_meta(line).vRunsBuilt) {
         _meta(line).vRunsBuilt = true;
+        var cut = [];
         for (var r = 0; r < line.children.length; ++r) {
             _vModelOf(line.children[r]);
-            _vSlotBox(line.children[r]);
+            var at = _vSlotAt(line.children[r]);
+            if (at) {
+                cut.push(at);
+            }
         }
+        // A box first in its element is met before the element's runs make it.
+        cut.forEach(_vSlotBox);
         return _vModelOf(item);
     }
     var m = _meta(item);
@@ -11587,6 +11600,21 @@ function _vContainerKids(c) {
 
 function _vText(c) {
     return c.vtext ? c.data : _vLeaves(c.kids, []).join("");
+}
+
+// `c`'s `textContent`: its text, and that of the boxes cut out of its line,
+// where they stand among its nodes.
+function _vTextContent(c) {
+    if (c.vtext) {
+        return c.data;
+    }
+    return _vWithBoxes(c, _vAnyNode).map(function(k) {
+        return k.vtext || k.kids ? _vTextContent(k) : getText(k);
+    }).join("");
+}
+
+function _vAnyNode() {
+    return true;
 }
 
 function _vDetachKids(c) {
@@ -14219,14 +14247,23 @@ function _vLineBox(kid) {
 
 // A box cut out of an inline element's line is still that element's child in
 // the page, where it stood among its nodes. The runs are built in line order,
-// so it comes after what the element's earlier runs hold and before what later
-// ones add (`_vModelOf`).
-function _vSlotBox(kid) {
+// so it comes after what the element's earlier runs hold (`_vModelOf`); its
+// element may not be built yet, when nothing of it comes before. Generated
+// boxes are no element's child.
+function _vSlotAt(kid) {
     var box = _vLineBox(kid);
-    var owner = box ? _vKeyed[box.eldurInlineOwner] : null;
-    if (owner && owner.kids && !_meta(box).vSlotOf) {
-        _meta(box).vSlotOf = owner;
-        (owner.boxes = owner.boxes || []).push({ item: box, after: owner.kids[owner.kids.length - 1] || null });
+    if (!box || _pseudoBoxSide(kid) || _pseudoBoxSide(box)) {
+        return null;
+    }
+    var owner = _vKeyed[box.eldurInlineOwner];
+    return { box: box, key: box.eldurInlineOwner, before: owner && owner.kids ? owner.kids.slice() : [] };
+}
+
+function _vSlotBox(at) {
+    var owner = _vKeyed[at.key];
+    if (owner && owner.kids && !_meta(at.box).vSlotOf) {
+        _meta(at.box).vSlotOf = owner;
+        (owner.boxes = owner.boxes || []).push({ item: at.box, before: at.before });
     }
 }
 
@@ -14237,18 +14274,21 @@ function _vSlotOwner(box) {
 }
 
 // `v`'s nodes that `keep` takes, with the boxes cut out of its line where they
-// stand. A box whose node before it is gone goes last.
+// stand.
 function _vWithBoxes(v, keep) {
     var boxes = (v.boxes || []).filter(function(b) { return _vSlotOwner(b.item) === v; });
     if (boxes.length === 0) {
         return v.kids.filter(keep);
     }
+    // After the last node still there of those that came before it.
     var at = boxes.map(function(b) {
-        if (b.after === null) {
-            return 0;
+        for (var k = b.before.length - 1; k >= 0; --k) {
+            var i = v.kids.indexOf(b.before[k]);
+            if (i !== -1) {
+                return i + 1;
+            }
         }
-        var i = v.kids.indexOf(b.after);
-        return i === -1 ? v.kids.length : i + 1;
+        return 0;
     });
     var out = [];
     for (var i = 0; i <= v.kids.length; ++i) {
