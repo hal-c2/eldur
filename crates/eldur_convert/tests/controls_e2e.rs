@@ -228,6 +228,7 @@ const PILL: &str = r#"<!DOCTYPE html><html><body style="margin:0;font:16px sans-
 <button id="pill" style="display:flex;gap:8px;align-items:center;padding:8px 16px;background:#7a4a00;color:#fff;border:0;border-radius:999px"><span>Go</span><span style="display:inline-block;width:12px;height:12px;background:#ffd400"></span><b>bold</b></button>
 <button id="tall" style="display:flex;padding:8px;border:0"><span style="width:48px;height:48px;background:#ff0000"></span></button>
 <button id="swap" style="display:flex;gap:4px"><span>Go</span><b>bold</b></button>
+<button id="wide" style="display:inline-flex;width:200px;padding:0;border:0;justify-content:space-between"><span style="width:20px;height:20px;background:#00ff00"></span><span style="width:20px;height:20px;background:#0000ff"></span></button>
 <p id="log">-</p>
 <script>
 document.getElementById('swap').addEventListener('click', function () {
@@ -312,6 +313,18 @@ TestCase {
         const done = under(swap, i => i.text === "Done" && i !== swap)
         verify(done && done.visible, "written text drawn")
         verify(!go || !go.visible, "old children no longer drawn")
+    }
+
+    // A set width is the flex layout's to share: space-between puts the
+    // second child at the far edge (Chromium: x 0 and 180 in 200 px).
+    function test_a_fixed_width_flex_button_spreads_its_children() {
+        const wide = find("wide")
+        near(wide.width, 200, 0.5, "width")
+        const green = under(wide, i => i.color !== undefined && Qt.colorEqual(i.color, "#00ff00"))
+        const blue = under(wide, i => i.color !== undefined && Qt.colorEqual(i.color, "#0000ff"))
+        verify(green && blue, "children drawn")
+        near(green.mapToItem(wide, 0, 0).x, 0, 1, "first x")
+        near(blue.mapToItem(wide, 0, 0).x, 180, 1, "second x")
     }
 
     function test_the_button_still_clicks() {
