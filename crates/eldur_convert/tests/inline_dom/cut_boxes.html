@@ -1,0 +1,19 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif}</style><script>
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
+</script></head><body>
+<span id="s"><select><option value="a">A</option><option value="b" selected>B</option></select></span>
+<p id="p">x <span id="t">a<select id="ts"><option>T</option></select>b<input id="ti"></span> y</p>
+<label id="l">Name <input id="li" value="v"></label>
+<script>
+var s=document.getElementById("s"),q=s.querySelector("select");
+L("span",(q?q.value:"null")+":"+s.children.length+":"+(document.querySelector("select")?"doc":"nodoc"));
+var t=document.getElementById("t"),ts=document.getElementById("ts");
+L("kids",t.children.length,t.childNodes.length,t.childElementCount,I(t.firstElementChild),I(t.lastElementChild),I(t.children[1]));
+L("nodes",t.firstChild.textContent,I(t.childNodes[1]),t.childNodes[2].textContent,I(t.lastChild));
+L("sib",I(ts.nextElementSibling),I(ts.previousElementSibling),ts.nextSibling.textContent,ts.previousSibling.textContent,I(document.getElementById("ti").previousElementSibling));
+L("up",I(ts.parentElement),I(ts.closest("p")),t.contains(ts),document.getElementById("p").contains(ts));
+L("query",I(t.querySelector("input")),t.querySelectorAll("select,input").length,document.getElementById("p").querySelectorAll("*").length,I(document.getElementById("p").querySelector("#ti")));
+var l=document.getElementById("l");
+L("label",I(l.querySelector("input")),l.children.length,I(l.firstElementChild),l.querySelector("input").value,I(l.control));
+</script></body></html>

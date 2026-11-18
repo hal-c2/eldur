@@ -34,7 +34,7 @@ TestCase {
         waitForRendering(page)
         for (const [x, y] of CLICKS) {
             if (typeof x === "string") {
-                const named = { Tab: Qt.Key_Tab, Enter: Qt.Key_Return, ArrowDown: Qt.Key_Down }
+                const named = { Tab: Qt.Key_Tab, Enter: Qt.Key_Return, ArrowDown: Qt.Key_Down, ArrowUp: Qt.Key_Up }
                 keyClick(named[x] !== undefined ? named[x] : x)
             } else {
                 mouseClick(page, x, y)
@@ -149,6 +149,16 @@ fn created_and_removed_inline_nodes_match_chromium() {
 #[test]
 fn replace_children_replaces_the_text_the_page_was_written_with() {
     page("replace");
+}
+
+#[test]
+fn a_control_in_an_inline_element_is_its_child() {
+    page("cut_boxes");
+}
+
+#[test]
+fn a_custom_elements_constructor_finds_the_select_inside_its_label() {
+    page("ce_select");
 }
 
 #[test]

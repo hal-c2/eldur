@@ -1,4 +1,20 @@
 {
+ "ce_select": {
+  "log": [
+   "LC wired",
+   "LC change light"
+  ],
+  "clicks": [
+   {
+    "name": "key:Tab",
+    "key": "Tab"
+   },
+   {
+    "name": "key:ArrowUp",
+    "key": "ArrowUp"
+   }
+  ]
+ },
  "clicks": {
   "log": [
    "LC count 1",
@@ -157,6 +173,18 @@
     "y": 155.5
    }
   ]
+ },
+ "cut_boxes": {
+  "log": [
+   "LC span b:1:doc",
+   "LC kids 2 4 2 ts ti ti",
+   "LC nodes a ts b ti",
+   "LC sib ti null b a ts",
+   "LC up t p true true",
+   "LC query ti 2 4 ti",
+   "LC label li 1 li v li"
+  ],
+  "clicks": []
  },
  "ev_change": {
   "log": [
