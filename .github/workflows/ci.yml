@@ -84,9 +84,13 @@ jobs:
         env:
           NERD_FONTS: https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.1/JetBrainsMono.tar.xz
           NERD_FONTS_SHA256: 04d5e8f903693f9dd13e16f867e994834e681eb3c72c0d337a770dcda09010cf
+        # A mirror once stalled mid-download for half an hour: time it out
+        # and retry instead.
+        timeout-minutes: 10
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends fontconfig fonts-liberation fonts-urw-base35 fonts-noto-core \
+          apt='-o Acquire::Retries=5 -o Acquire::http::Timeout=30'
+          sudo apt-get $apt update
+          sudo apt-get $apt install -y --no-install-recommends fontconfig fonts-liberation fonts-urw-base35 fonts-noto-core \
             fonts-noto-cjk fonts-noto-color-emoji
           archive="$RUNNER_TEMP/JetBrainsMono.tar.xz"
           curl -fsSLo "$archive" "$NERD_FONTS"
@@ -120,6 +124,18 @@ jobs:
       - run: mise run setup --check
       # Every *_e2e test but qmllint_e2e: the corpus passes Qt 6.12's
       # qmllint but not 6.11's (hal-c2/eldur#49); drop the skip with its fix.
-      - run: >-
-          mise run test -- -p eldur_convert --test '*_e2e' --no-fail-fast
-          -- --skip converted_corpus_passes_qt6_qmllint
+      - name: mise run test (the e2e tests)
+        timeout-minutes: 30
+        run: |
+          # A test waits on qmltestrunner without a timeout; if one hangs,
+          # say which page (each runs from a temp dir named after it).
+          mise run test -- -p eldur_convert --test '*_e2e' --no-fail-fast \
+            -- --skip converted_corpus_passes_qt6_qmllint &
+          tests=$!
+          for _ in $(seq 900); do kill -0 "$tests" 2>/dev/null || break; sleep 1; done
+          if kill -0 "$tests" 2>/dev/null; then
+            echo "::warning::the e2e tests are still running after 15 min:"
+            ps -eo pid,etime,args --forest | grep -B2 -A2 '[q]mltestrunner' || true
+            ls -d "${TMPDIR:-/tmp}"/eldur-* || true
+          fi
+          wait "$tests"
