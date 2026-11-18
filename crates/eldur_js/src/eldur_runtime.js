@@ -7584,9 +7584,10 @@ function _eventPath(raw) {
 }
 
 // `page` is the document's when the event started: `document` and `window`
-// hear it only while it still is, checked before each of their listeners.
+// hear it only while it still is, checked before each of their listeners,
+// also those of theirs kept on the root (`resize`, `scroll`).
 function _runListeners(raw, key, type, domEv, phase, page) {
-    var paged = raw === document || raw === window;
+    var paged = raw === document || raw === window || (raw === page && _ROOT_HEARS[type] === true);
     if (paged && _root !== page) {
         return;
     }
@@ -7998,6 +7999,10 @@ function listenBound(item, eventType, handler, options) {
 // own listeners. What is fired only at the root (`resize`, `hashchange`, ...)
 // is listened for there.
 function _listenerHome(item, eventType) {
+    // Called from outside a tick or event, the document may still be a gone page's.
+    if (item === document || item === window) {
+        _pageGone();
+    }
     // A script's own event type is in no table, and goes up to the document as any other.
     if ((item === document || item === window)
         && (_BUBBLES[String(eventType)] === true || _DOCUMENT_HEARS[String(eventType)] === true
@@ -8257,10 +8262,6 @@ function dispatchEvent(item, domEv) {
     }
     if (!item || !domEv || !domEv.type) {
         return true;
-    }
-    // Called from outside a tick or event, the document may still be a gone page's.
-    if (item === document || item === window) {
-        _pageGone();
     }
     return _dispatchDynamic(_listenerHome(item, domEv.type), String(domEv.type), domEv);
 }
@@ -15449,7 +15450,13 @@ function _inKeysDone() {
 
 function _inKeyDown(qtEv) {
     var raw = _inKeyTarget();
+    var page = _root;
+    var layer = _in;
     if (_inKeyEvent("keydown", raw, qtEv).defaultPrevented) {
+        return true;
+    }
+    // A keydown listener that made another page ended the key: the rest is not that page's.
+    if (_root !== page || _in !== layer) {
         return true;
     }
     // keydown's listeners can have moved the focus: the rest happens there.

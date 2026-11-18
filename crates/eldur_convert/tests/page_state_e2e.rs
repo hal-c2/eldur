@@ -516,6 +516,12 @@ fn static_page(name: &str) -> String {
 // The test makes the page a title names, inside the key's dispatch.
 document.addEventListener("keydown", function(e) {{ if (e.key === "s") document.title = "Next"; }});
 window.addEventListener("keydown", function(e) {{ if (e.key === "w") document.title = "Last"; }}, true);
+window.addEventListener("resize", function() {{ if (document.title === "Last") document.title = "Fin"; }});
+document.addEventListener("keydown", function(e) {{ if (e.key === "e") document.dispatchEvent(new Event("go")); }});
+window.addEventListener("go", function() {{ document.title = "End"; }}, true);
+document.addEventListener("go", function() {{ console.log("LC {name} go"); }});
+// The key a keydown listener made another page with goes no further.
+document.addEventListener("keypress", function(e) {{ if (e.key === "s") console.log("LC {name} press s"); }});
 document.addEventListener("keydown", function(e) {{ console.log("LC {name} key " + e.key); }});
 window.addEventListener("resize", function() {{ console.log("LC {name} resize"); }});
 window.addEventListener("scroll", function() {{ console.log("LC {name} scroll"); }});
@@ -626,6 +632,19 @@ TestCase {
         keyClick(Qt.Key_W)
         wait(50)
         console.log("LC key w made " + last.made.title)
+        // The same for a root's resize, and for an event dispatched at the
+        // document itself.
+        const fin = opened(last.made, "Fin")
+        last.made.width = 700
+        wait(50)
+        console.log("LC resize made " + fin.made.title)
+        const end = opened(fin.made, "End")
+        fin.made.forceActiveFocus()
+        keyClick(Qt.Key_E)
+        wait(50)
+        console.log("LC key e made " + end.made.title)
+        end.made.destroy()
+        fin.made.destroy()
         last.made.destroy()
         next.made.destroy()
         wait(200)
@@ -662,6 +681,8 @@ const STATIC_WANT: &[&str] = &[
     "LC Contact again key d",
     "LC key s made Next",
     "LC key w made Last",
+    "LC resize made Fin",
+    "LC key e made End",
     "LC Home key h",
     "LC Home kept key h",
     "LC Home again key h",
@@ -681,7 +702,7 @@ fn a_page_made_after_one_went_with_nothing_ticking_hears_only_its_own_listeners(
     };
     let dir = std::env::temp_dir().join(format!("eldur-static-pages-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("temp dir");
-    for (at, name) in ["Home", "About", "Contact", "Next", "Last"]
+    for (at, name) in ["Home", "About", "Contact", "Next", "Last", "Fin", "End"]
         .into_iter()
         .enumerate()
     {
