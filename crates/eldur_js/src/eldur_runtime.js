@@ -527,6 +527,12 @@ function init(rootItem, baseUrl, documentUrl) {
             // The elements showing generated text are the earlier page's: this
             // page's rules must not take it off them.
             _pseudoShown = new Set();
+            // There is one document, as in a browser, and this page is it now:
+            // the earlier page's document and window listeners hear nothing
+            // until it is the document again, and its title is its own.
+            _documentListeners = _freshListeners();
+            _windowListeners = _freshListeners();
+            _fallbackTitle = "";
         }
         _roots.push(rootItem);
     }
@@ -624,8 +630,8 @@ function _resetPageState() {
     _pageGen += 1;
     _rafQueue = [];
     _scrollEvents = [];
-    _documentListeners = { listeners: {}, onceListeners: {}, onHandlers: {} };
-    _windowListeners = { listeners: {}, onceListeners: {}, onHandlers: {} };
+    _documentListeners = _freshListeners();
+    _windowListeners = _freshListeners();
     _keyHeard = {};
     _controlEvents = {};
     _activeElement = null;
@@ -1002,8 +1008,9 @@ function _helperParent() {
 // again, with its input layer; with none, the pages' timers, frames and
 // listeners go with them.
 // The state `init` derives from a page's root and its own items, which a
-// later page's `init` overwrites. What a page adds to the shared document
-// (listeners, timers, custom elements, title, history) is not in it.
+// later page's `init` overwrites, and what the page is as the document: its
+// document and window listeners and a title it has no root property for.
+// What pages share (timers, custom elements, history) is not in it.
 function _pageCacheSave() {
     var loc = {};
     for (var key in _locState) {
@@ -1021,7 +1028,9 @@ function _pageCacheSave() {
         gCascadeRules: _gCascadeRules, gPaintTable: _gPaintTable, gWarned: _gWarned,
         gStateRules: _gStateRules, gLive: _gLive, gLiveTemplates: _gLiveTemplates,
         gStaticBase: _gStaticBase, gStaticControls: _gStaticControls,
-        gClosedHidden: _gClosedHidden, gStaticRoot: _gStaticRoot, gSchemed: _gSchemed
+        gClosedHidden: _gClosedHidden, gStaticRoot: _gStaticRoot, gSchemed: _gSchemed,
+        documentListeners: _documentListeners, windowListeners: _windowListeners,
+        fallbackTitle: _fallbackTitle
     };
 }
 
@@ -1046,6 +1055,8 @@ function _pageCacheLoad(c) {
     _gStateRules = c.gStateRules; _gLive = c.gLive; _gLiveTemplates = c.gLiveTemplates;
     _gStaticBase = c.gStaticBase; _gStaticControls = c.gStaticControls;
     _gClosedHidden = c.gClosedHidden; _gStaticRoot = c.gStaticRoot; _gSchemed = c.gSchemed;
+    _documentListeners = c.documentListeners; _windowListeners = c.windowListeners;
+    _fallbackTitle = c.fallbackTitle;
 }
 
 // What is kept for a page goes with it: pages made one after another, each
@@ -7949,8 +7960,15 @@ function _listenerHome(item, eventType) {
     return _unwrap(item);
 }
 
-var _documentListeners = { listeners: {}, onceListeners: {}, onHandlers: {} };
-var _windowListeners = { listeners: {}, onceListeners: {}, onHandlers: {} };
+// The page that is the document's: `init` gives a page made over another a
+// fresh pair, and the page cache keeps the covered page's for when it is the
+// document again.
+var _documentListeners = _freshListeners();
+var _windowListeners = _freshListeners();
+
+function _freshListeners() {
+    return { listeners: {}, onceListeners: {}, onHandlers: {} };
+}
 
 // `_meta` of either is the root's.
 function _listenerMeta(raw) {
@@ -7995,8 +8013,9 @@ function _addListener(item, eventType, handler, options) {
             m.passive[key].set(handler, Boolean(said.passive));
         }
         if (said.signal) {
+            // From the set it went into: the page may no longer be the document.
             said.signal.addEventListener("abort", function() {
-                unlisten(item, eventType, handler, options);
+                _dropListener(m, key, handler);
             });
         }
     }
@@ -8068,7 +8087,10 @@ function unlisten(item, eventType, handler, options) {
         return;
     }
     var m = _listenerMeta(_listenerHome(item, eventType));
-    var type = _isCapture(options) ? "capture:" + eventType : String(eventType);
+    _dropListener(m, _isCapture(options) ? "capture:" + eventType : String(eventType), handler);
+}
+
+function _dropListener(m, type, handler) {
     var list = m.listeners[type];
     if (!list) {
         return;

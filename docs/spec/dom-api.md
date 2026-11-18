@@ -38,7 +38,7 @@ Rewriting uses **Static Resolution First, Runtime Fallback Second**:
 | `el.contains(other)` | `Eldur.wrap(<id>).contains(other)` | `Eldur.wrap(el).contains(other)` (true if `other === el` or descendant) | Supported & tested |
 | `document.body` / `document.documentElement` | Root content `QmlTarget` (`root` or `body`) | `Eldur.document.body` / `Eldur.document.documentElement` (`Eldur.wrap(root)`) | Supported & tested |
 | `document.head` | `Eldur.document.head` | Synthetic `<head>` element wrapper | Supported & tested |
-| `document.title` (get / set) | `Eldur.getTitle()` / `Eldur.setTitle(val)` | Reads/writes `root.title` if `Window`, else internal title string | Supported & tested |
+| `document.title` (get / set) | `Eldur.getTitle()` / `Eldur.setTitle(val)` | Reads/writes `root.title`: the `ApplicationWindow`'s, or with `--root item` the root `Item`'s `property string title` (from `<title>`, `""` without one). Each page keeps its own while a later page is up, and has it again when that page goes | Supported & tested |
 | `document.activeElement` | `Eldur.document.activeElement` | Focused QML item (`activeFocus` or `focus`) wrapped in `Eldur.wrap`, defaulting to `document.body` | Supported & tested |
 | `document.hidden` / `document.visibilityState` | `Eldur.document.hidden` / `Eldur.document.visibilityState` | `false` / `"visible"` (unless root window is hidden) | Supported & tested |
 | `document.createElement(tag)` | `Eldur.document.createElement(tag)` | Dynamically creates QML item via `Qt.createQmlObject` wrapped in `Eldur.wrap` | Supported & tested |
@@ -239,6 +239,8 @@ Reading geometry (`getBoundingClientRect`, `offset*`, `client*`, `scroll*`,
 | `hashchange` | `window` | Dispatched when `location.hash` changes | `{ type: "hashchange", target: Eldur.window }` |
 | `popstate` | `window` | Dispatched on `history.back()` / `forward()` / `go()` | `{ type: "popstate", state, target: Eldur.window }` |
 | `visibilitychange` | `document` | Dispatched if visibility state changes | `{ type: "visibilitychange", target: Eldur.document }` |
+
+**Pages in one engine.** The runtime is one library per QML engine, so a host (a `StackView`, say) can have several converted pages alive at once. There is one document, as in a browser: the newest page still alive. Only its `document` and `window` listeners hear, and `document.title` is its title. A page under it hears nothing, and when the pages over it go it is the document again with its own listeners and title. A page that goes takes its listeners with it. Custom element definitions, timers and the history list stay shared.
 
 ### 7.2 Event Constructors & `EventTarget`
 
