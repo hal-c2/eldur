@@ -59,18 +59,32 @@ fi
 have() { command -v "$1" >/dev/null 2>&1; }
 qmllint="$(qt6_tool qmllint)"
 runner="$(qt6_tool qmltestrunner)"
-if have qml6 && [ -n "$qmllint" ] && [ -n "$runner" ]; then
+if have qml6 && [ -n "$qmllint" ] && qt_tool_runs "$qmllint" && [ -n "$runner" ] && qt_tool_runs "$runner"; then
   done_steps+=("Qt 6 found: qml6 ($(command -v qml6)), qmllint ($qmllint), qmltestrunner ($runner)")
 else
   skipped+=("Qt 6 (qml6, qmllint, qmltestrunner) not all found: mise run qml:check and mise run dev with qml6 won't work, and mise run test skips the end-to-end tests that run QML; $qt6_install_hint")
 fi
-# A note's later lines (the pin, the install) stay under it.
+# A record's later lines (a note's pin and install, or a newline inside a
+# variable it names) stay with the record before them.
+last=""
 while IFS= read -r line; do
   case "$line" in
-    SKIPPED\ *) skipped+=("${line#SKIPPED }") ;;
-    NOTE\ *) noted+=("${line#NOTE }") ;;
-    *) noted[${#noted[@]} - 1]="${noted[${#noted[@]} - 1]}
+    SKIPPED\ *)
+      skipped+=("${line#SKIPPED }")
+      last=skipped
+      ;;
+    NOTE\ *)
+      noted+=("${line#NOTE }")
+      last=noted
+      ;;
+    *)
+      case "$last" in
+        noted) noted[${#noted[@]} - 1]="${noted[${#noted[@]} - 1]}
       $line" ;;
+        skipped) skipped[${#skipped[@]} - 1]="${skipped[${#skipped[@]} - 1]}
+      $line" ;;
+      esac
+      ;;
   esac
 done < <(qt_pin_report)
 if have ljos; then

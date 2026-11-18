@@ -55,7 +55,7 @@ expect() {
   out="$(env -i HOME="$scratch" PATH="$scratch/$case:$sys" RUSTUP_TOOLCHAIN=1.98.1 \
     usage_check=true "$@" bash mise-tasks/setup 2>&1)" || code=$?
   if [ "$code" != "$want" ] || { [ -n "$text" ] && [[ "$out" != *"$text"* ]]; } ||
-    { [ -z "$text" ] && [[ "$out" == *"note, a Qt"* ]]; } || [[ "$out" == *"not the pinned"* ]]; then
+    { [ -z "$text" ] && [[ "$out" == *"note, a Qt"* ]]; } || [[ "$out" == *$'\n'"not the pinned version:"* ]]; then
     echo "tasks:test: $case: setup exited $code, wanted $want and '${text:-no note on Qt}'; it said:" >&2
     printf '%s\n' "$out" | sed 's/^/    /' >&2
     failed=1
@@ -64,7 +64,7 @@ expect() {
   fi
 }
 
-for c in newer pinned installer env-newer qt5 qml-newer linked unknown lint-only bare qt5-lint missing full; do
+for c in newer pinned installer env-newer qt5 qml-newer linked unknown lint-only bare qt5-lint missing gone full; do
   stub "$c" rustup ""
   stub "$c" rustc "rustc 1.98.1 (stand-in)"
 done
@@ -133,9 +133,23 @@ expect qt5-lint 0 "qmllint: Qt 5.15.2 found ($scratch/qt5-lint/qmllint)" \
 # in the current directory is run in its place.
 mkdir -p "$scratch/missing"
 ln -s "$scratch/qt-pinned/qml" "$scratch/missing/qml6"
-expect missing 0 "skipped:
+expect missing 0 "
   - qmltestrunner (qmltestrunner-typo) is not on PATH" \
   QMLTESTRUNNER=qmltestrunner-typo QMLLINT="$scratch/qt-pinned/qmllint"
+expect missing 0 "Qt 6 (qml6, qmllint, qmltestrunner) not all found" \
+  QMLTESTRUNNER=qmltestrunner-typo QMLLINT="$scratch/qt-pinned/qmllint"
+# A newline in the name stays inside its own line of the report.
+expect missing 0 "qmltestrunner (qmltestrunner-typo
+      second) is not on PATH" \
+  QMLTESTRUNNER="qmltestrunner-typo
+second" QMLLINT="$scratch/qt-pinned/qmllint"
+# A path that names nothing is missing too, though a Qt answers beside it.
+stub gone qmake6 "$newer.1"
+ln -s "$scratch/qt-pinned/qml" "$scratch/gone/qml6"
+expect gone 0 "qmllint ($scratch/gone/qmllint) is not an executable file" \
+  QMLTESTRUNNER="$scratch/qt-pinned/qmltestrunner" QMLLINT="$scratch/gone/qmllint"
+expect gone 0 "Qt 6 (qml6, qmllint, qmltestrunner) not all found" \
+  QMLTESTRUNNER="$scratch/qt-pinned/qmltestrunner" QMLLINT="$scratch/gone/qmllint"
 # setup itself, not --check, with another minor: it installs (stand-ins
 # here), then says the same note and passes.
 distro full "$newer.1"

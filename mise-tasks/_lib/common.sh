@@ -159,8 +159,16 @@ qt_version_of() {
 # it may be any Qt. A tool named by its variable that is not on PATH is a
 # `SKIPPED` line: Qt is optional, as when none is found. Nothing when all
 # are pinned, or for a tool that is not there.
+# `qt_tool_runs <tool>`: whether a Qt tool, named by its path or by a bare
+# name on PATH, is there to run. A bare name is never looked for in ".".
+qt_tool_runs() {
+  case "$1" in
+    */*) [ -f "$1" ] && [ -x "$1" ] ;;
+    *) command -v "$1" >/dev/null 2>&1 ;;
+  esac
+}
 qt_pin_report() {
-  local name path version use fix
+  local name path version use fix why
   for name in qmltestrunner qmllint qml6; do
     case "$name" in
       qml6)
@@ -180,15 +188,16 @@ qt_pin_report() {
         ;;
     esac
     [ -n "$path" ] || continue
-    case "$path" in
-      */*) ;;
-      *)
-        if ! command -v "$path" >/dev/null 2>&1; then
-          echo "SKIPPED $name ($path) is not on PATH, so $use nothing: install Qt $qt_pinned (Qt's online installer, or aqt install-qt) and $fix"
-          continue
-        fi
-        ;;
-    esac
+    # A tool that is not there has no Qt to ask, and the Qt beside where it
+    # would be is not proof of it.
+    if ! qt_tool_runs "$path"; then
+      case "$path" in
+        */*) why="is not an executable file" ;;
+        *) why="is not on PATH" ;;
+      esac
+      echo "SKIPPED $name ($path) $why, so $use nothing: install Qt $qt_pinned (Qt's online installer, or aqt install-qt) and $fix"
+      continue
+    fi
     version="$(qt_version_of "$path")"
     case "$version" in
       "$qt_pinned".*) continue ;;
