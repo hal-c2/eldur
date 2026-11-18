@@ -8961,16 +8961,14 @@ function _inlineBecomesLines(raw) {
     return next;
 }
 
-// `going`, when given, is the node the inserted ones replace: it leaves once
-// they are in, and its custom elements hear so before the new ones do.
-// A button that draws its text holds no nodes of its own: text appended to it
+// A button that draws its text holds no nodes of its own: text put in it
 // joins the text it draws, and its nodes' text when that is still kept.
 function _drawsOwnText(raw) {
     return typeof raw.text === "string" && raw.background !== undefined && typeof raw.clicked === "function"
         && Boolean(raw.contentItem) && typeof raw.contentItem.text === "string";
 }
 
-function _appendDrawnText(raw, nodes) {
+function _putDrawnText(raw, nodes, atStart) {
     var add = nodes.map(getText).join("");
     nodes.forEach(function(n) {
         if (n.__eldurInline ? n.vparent || n.model : n.parent) {
@@ -8978,16 +8976,21 @@ function _appendDrawnText(raw, nodes) {
         }
     });
     if (typeof raw.eldurDomText === "string" && !_meta(raw).ownText) {
-        raw.eldurDomText = raw.eldurDomText + add;
+        raw.eldurDomText = atStart ? add + raw.eldurDomText : raw.eldurDomText + add;
     }
-    var own = _pseudoOwn(raw, raw.text) + add;
+    var had = _pseudoOwn(raw, raw.text);
+    var own = atStart ? add + had : had + add;
     _meta(raw).explicitText = own;
     raw.text = _pseudoWrapped(raw, own);
 }
 
-function _insertChildren(raw, nodes, ref, going) {
+// `going`, when given, is the node the inserted ones replace: it leaves once
+// they are in, and its custom elements hear so before the new ones do.
+// `atStart`: with no `ref`, the nodes go first rather than last. Only a
+// text-only button needs it, since it has no child to name as `ref`.
+function _insertChildren(raw, nodes, ref, going, atStart) {
     if (!ref && !going && nodes.length > 0 && nodes.every(_isTextNode) && _drawsOwnText(raw)) {
-        _appendDrawnText(raw, nodes);
+        _putDrawnText(raw, nodes, atStart);
         return;
     }
     if (going && nodes.indexOf(going) !== -1) {
@@ -11207,7 +11210,7 @@ function wrap(rawItem) {
             }
             var kids = _rawElementChildren(rawItem);
             var first = kids.length > 0 ? kids[0] : null;
-            _insertChildren(rawItem, rawNodes, first);
+            _insertChildren(rawItem, rawNodes, first, undefined, true);
         },
         before: function() {
             if (rawItem.__eldurInline) {

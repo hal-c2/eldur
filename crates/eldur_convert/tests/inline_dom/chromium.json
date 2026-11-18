@@ -5,7 +5,8 @@
    "LC flex \"Gobold\" \"Gokept\"",
    "LC rendered \"Save\" \"Find\"",
    "LC set \"Done\" \"Done\"",
-   "LC appended \"NewCtrl N!\" \"New!\""
+   "LC appended \"NewCtrl N!\" \"New!\"",
+   "LC prepended \"Hi SaveCtrl S\" \"Hi Save\""
   ],
   "clicks": []
  },
