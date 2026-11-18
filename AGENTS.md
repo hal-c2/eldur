@@ -31,7 +31,7 @@ mapping specifications are in `docs/spec/`.
 
 | Task | Command |
 |---|---|
-| First run: toolchain (needs rustup), crates, report of missing optional tools; `--check` installs nothing and fails on a Rust or Qt that is not the pinned one (Qt 6.11) | `mise run setup [--offline] [--check]` |
+| First run: toolchain (needs rustup), crates, report of missing optional tools; `--check` installs nothing and fails on a Rust that is not the pinned one; a Qt other than the pinned 6.11 is a note | `mise run setup [--offline] [--check]` |
 | Convert a page and run it in ljos or qml6 (fails if neither is found) | `mise run dev [page.html] [-o dir] [--runtime auto\|ljos\|qml6\|none] [--viewport WxH]` |
 | Format every crate in place | `mise run fmt` |
 | Format check, clippy (warnings are errors) | `mise run check` |

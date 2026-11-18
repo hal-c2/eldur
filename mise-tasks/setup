@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="First run: install the pinned toolchain, fetch crates, and say which optional tools are missing (idempotent)"
 #USAGE flag "--offline" help="Skip cargo fetch (use crates already in the cargo cache)"
-#USAGE flag "--check" help="Install and fetch nothing; report what is found, and fail if Rust or Qt is not the pinned version"
+#USAGE flag "--check" help="Install and fetch nothing; report what is found, and fail if Rust is not the pinned version; a Qt of another version is a note"
 set -euo pipefail
 task_name="setup"
 # shellcheck source=mise-tasks/_lib/common.sh
@@ -11,7 +11,7 @@ cd "$root"
 check="${usage_check:-false}"
 done_steps=()
 skipped=()
-mismatched=()
+noted=()
 
 # mise installs mise.toml's Rust through rustup; without it `mise install`
 # fails with a message about the backend, not about what to install.
@@ -64,9 +64,15 @@ if have qml6 && [ -n "$qmllint" ] && [ -n "$runner" ]; then
 else
   skipped+=("Qt 6 (qml6, qmllint, qmltestrunner) not all found: mise run qml:check and mise run dev with qml6 won't work, and mise run test skips the end-to-end tests that run QML; $qt6_install_hint")
 fi
+# A note's later lines (the pin, the install) stay under it.
 while IFS= read -r line; do
-  mismatched+=("$line")
-done < <(qt_pin_mismatches)
+  case "$line" in
+    SKIPPED\ *) skipped+=("${line#SKIPPED }") ;;
+    NOTE\ *) noted+=("${line#NOTE }") ;;
+    *) noted[${#noted[@]} - 1]="${noted[${#noted[@]} - 1]}
+      $line" ;;
+  esac
+done < <(qt_pin_report)
 if have ljos; then
   done_steps+=("ljos found: mise run dev runs pages in Ljós ($(command -v ljos))")
 else
@@ -100,17 +106,14 @@ if ((${#skipped[@]})); then
   echo "skipped:"
   printf '  - %s\n' "${skipped[@]}"
 fi
-if ((${#mismatched[@]})); then
-  echo "not the pinned version:"
-  printf '  - %s\n' "${mismatched[@]}"
+if ((${#noted[@]})); then
+  echo "note, a Qt other than the pinned one (this setup works; what runs on Qt may differ from the pin's):"
+  printf '  - %s\n' "${noted[@]}"
 fi
 echo
 if [ -n "$wrong_rust" ]; then
   die "$wrong_rust"
 fi
-# Qt is optional, so plain setup only reports a Qt of another minor; --check
-# is the question "is this machine what CI and the specs assume?".
-if [ "$check" = true ] && ((${#mismatched[@]})); then
-  die "${mismatched[0]}"
-fi
+# Qt is only the reference, so neither setup nor --check fails on its
+# version: what fails is Rust, above, which every build needs.
 echo "next: mise run dev   (convert a sample page and run it)"
