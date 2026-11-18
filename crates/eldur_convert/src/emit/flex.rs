@@ -191,7 +191,6 @@ impl Emitter<'_, '_> {
         line: Option<u32>,
     ) -> Object {
         let style = &*b.style;
-        let given = self.own_given;
         let row = matches!(
             style.flex_direction,
             FlexDirection::Row | FlexDirection::RowReverse
@@ -225,7 +224,7 @@ impl Emitter<'_, '_> {
         } else {
             &style.row_gap
         };
-        let own_definite = super::flow::has_height(style) || given == Given::Definite;
+        let own_definite = self.gap_height_definite(style, false);
         let own = self.content_px(b, row);
         let gap = Self::gap(gap_len.as_ref(), row || own_definite, own);
 
@@ -444,7 +443,7 @@ impl Emitter<'_, '_> {
         } else {
             &style.row_gap
         };
-        let definite = row || super::flow::has_height(style) || self.own_given == Given::Definite;
+        let definite = row || self.gap_height_definite(style, false);
         let own = self.content_px(b, row);
         let gap = Self::gap(gap_len.as_ref(), definite, own);
         let size = if row { "width" } else { "height" };
@@ -769,7 +768,7 @@ impl Emitter<'_, '_> {
         let style = &*b.style;
         let (own_w, own_h) = (self.content_px(b, true), self.content_px(b, false));
         let column_gap = Self::gap(style.column_gap.as_ref(), true, own_w);
-        let definite = super::flow::has_height(style) || self.own_given == Given::Definite;
+        let definite = self.gap_height_definite(style, false);
         let row_gap = Self::gap(style.row_gap.as_ref(), definite, own_h);
         if let Some(min_cell) = self.uniform_basis(items) {
             self.diags.info(
@@ -962,6 +961,25 @@ impl Emitter<'_, '_> {
             None if definite => l.clone(),
             None => percent_of(l, 0.0),
         }))
+    }
+
+    /// Whether a percentage gap along the block axis has a height to
+    /// resolve against. A percentage of an auto height is auto (CSS 2
+    /// §10.5), so only a length, a percentage of a definite height, or a
+    /// parent that stretches the box to a set height gives one. A grid
+    /// resolves its gaps against its laid-out height, so a `min-height`
+    /// gives it one too; a flex container's stays 0 then, as in Chromium.
+    pub(super) fn gap_height_definite(&self, style: &ComputedStyle, min_counts: bool) -> bool {
+        let height = match &style.height {
+            // A zero height adds nothing to resolve, and keeps a grid that
+            // the rest of the emitter treats as auto-high.
+            Size::Length(l) if l.as_px() == Some(0.0) => false,
+            Size::Length(l) if is_viewport_relative(l) => true,
+            Size::Length(_) => self.percent_resolves(),
+            _ => false,
+        };
+        let min = matches!(&style.min_height, Size::Length(m) if m.as_px() != Some(0.0));
+        height || (min_counts && min) || self.own_given == Given::Definite
     }
 
     /// The px size of `b`'s content box along an axis, when its style

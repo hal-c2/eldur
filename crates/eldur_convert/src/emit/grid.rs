@@ -19,7 +19,7 @@ use eldur_css::{
 use eldur_qml::{Member, Object, Value};
 
 use super::flex::{Pack, pack, spacer_slots};
-use super::flow::{has_height, is_layout, is_viewport_relative, size_value};
+use super::flow::{is_layout, is_viewport_relative, size_value};
 use super::units::{Gap, fmt_number, has_percentage, length_expr, number, round};
 use super::{Emitter, Given};
 use crate::boxes::{LayoutBox, describe, node_line};
@@ -825,7 +825,11 @@ impl Emitter<'_, '_> {
         grid.set("columns", Value::Number((n + usize::from(!fills)) as f64));
         let (own_w, own_h) = (self.content_px(b, true), self.content_px(b, false));
         let column_gap = Self::gap(style.column_gap.as_ref(), true, own_w);
-        let row_gap = Self::gap(style.row_gap.as_ref(), has_height(style), own_h);
+        let row_gap = Self::gap(
+            style.row_gap.as_ref(),
+            self.gap_height_definite(style, true),
+            own_h,
+        );
         grid.set("columnSpacing", column_gap.value("width"));
         grid.set("rowSpacing", row_gap.value("height"));
         grid.members.push(Member::PropertyDecl {
@@ -857,15 +861,7 @@ impl Emitter<'_, '_> {
         let mut items: Vec<&LayoutBox<'_>> = children.iter().collect();
         items.sort_by_key(|c| c.style.order);
         let given = self.own_given;
-        // A percentage of an auto height is auto (CSS 2 §10.5).
-        let definite_height = match &style.height {
-            Size::Length(l) if !is_viewport_relative(l) && l.as_px().is_none() => {
-                self.percent_resolves()
-                    || matches!(&style.min_height, Size::Length(m) if m.as_px() != Some(0.0))
-            }
-            _ => has_height(style),
-        };
-        let definite = definite_height || given == Given::Definite;
+        let definite = self.gap_height_definite(style, true);
         let (own_w, own_h) = (self.content_px(b, true), self.content_px(b, false));
         let column_gap = Self::gap(style.column_gap.as_ref(), true, own_w);
         let row_gap = Self::gap(style.row_gap.as_ref(), definite, own_h);
@@ -911,7 +907,9 @@ impl Emitter<'_, '_> {
                 .collect();
             let mut grid = self.auto_fit_grid(b, min_cell, !*fill, column_gap, row_gap, objs);
             // A set height stops the stretch to the row (CSS Box Alignment §6.1):
-            // the item keeps it, at the start of its area.
+            // the item keeps it, at the start of its area, and the px row
+            // height below leaves it alone.
+            let auto_row = auto_row_px(style);
             for (obj, c) in grid.children_mut().zip(&items) {
                 let extra = match c.style.box_sizing {
                     BoxSizing::ContentBox => {
@@ -928,10 +926,7 @@ impl Emitter<'_, '_> {
                     if obj.get("Layout.alignment").is_none() {
                         obj.set("Layout.alignment", Value::expr("Qt.AlignTop"));
                     }
-                }
-            }
-            if let Some(h) = auto_row_px(style) {
-                for obj in grid.children_mut() {
+                } else if let Some(h) = auto_row {
                     obj.set("Layout.preferredHeight", number(h));
                     obj.set("Layout.minimumHeight", number(h));
                     obj.set("Layout.maximumHeight", number(h));
