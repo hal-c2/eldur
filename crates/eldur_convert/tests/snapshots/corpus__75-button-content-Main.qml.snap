@@ -325,7 +325,9 @@ ApplicationWindow {
                     // <button>
                     Button {
                         id: buttonControl4
-                        Accessible.name: "Open"
+                        property string eldurContentName: "Open"
+
+                        Accessible.name: eldurContentName
                         text: "Open ⌘O"
                         palette.buttonText: "#000000"
                         font.family: EldurFonts.family("Arial")
