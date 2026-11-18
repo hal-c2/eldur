@@ -1,0 +1,6 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: "diagnostics.join(\"\\n\")"
+---
+info[css]: <style>#1:7: unknown property `clip`
+info[html]: index.html:23: <button> has element children; the Button shows only their text

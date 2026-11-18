@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Button content and names</title>
+<style>
+  body { margin: 16px; font: 16px sans-serif; }
+  .pill { display: flex; gap: 8px; align-items: center; padding: 8px 16px;
+          background: #7a4a00; color: #fff; border: 0; border-radius: 999px; }
+  .dot { display: inline-block; width: 12px; height: 12px; background: #ffd400; }
+  .row { display: inline-flex; gap: 6px; align-items: center; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
+  kbd.hint { display: none; }
+</style>
+</head>
+<body>
+  <p>A flex button lays out its children in its own box.</p>
+  <button class="pill"><span>Go</span><span class="dot"></span><b>bold</b></button>
+
+  <p>Hidden text is not drawn and not read; aria-label wins over content.</p>
+  <button class="row"><span>Save</span><kbd class="hint">Ctrl S</kbd></button>
+  <button aria-label="Close dialog">×</button>
+  <button>Open<span aria-hidden="true"> ⌘O</span></button>
+
+  <p>A label names its control without the control's own text.</p>
+  <label><span class="sr-only">Select theme</span><select>
+    <option value="dark">Dark</option><option value="light">Light</option>
+  </select></label>
+  <span id="first">Given</span> <span id="last">name</span>
+  <input aria-labelledby="first last">
+</body>
+</html>

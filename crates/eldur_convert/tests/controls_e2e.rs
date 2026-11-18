@@ -219,3 +219,108 @@ fn write(dir: &Path, out: &eldur_convert::Output) {
         std::fs::write(dir.join(&file.path), &file.contents).expect("write output");
     }
 }
+
+/// Issue #6: a flex `<button>` lays its children out in its own box. The
+/// numbers are Chromium's (1280×800, its default fonts, the UA's 13.33px
+/// button font): button 105.92×31,
+/// "Go" at x 16, the square at (41.78, 9.5), "bold" at x 61.78.
+const PILL: &str = r#"<!DOCTYPE html><html><body style="margin:0;font:16px sans-serif">
+<button id="pill" style="display:flex;gap:8px;align-items:center;padding:8px 16px;background:#7a4a00;color:#fff;border:0;border-radius:999px"><span>Go</span><span style="display:inline-block;width:12px;height:12px;background:#ffd400"></span><b>bold</b></button>
+<p id="log">-</p>
+<script>
+document.getElementById('pill').addEventListener('click', function () {
+  var log = document.getElementById('log');
+  log.textContent = log.textContent + 'click;';
+});
+</script></body></html>"#;
+
+const PILL_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 1280
+    height: 800
+
+TestCase {
+    name: "Pill"
+    when: windowShown
+
+    property var page
+    function find(name) { return findChild(page, name) }
+    function under(item, test) {
+        if (test(item)) return item
+        for (let i = 0; i < item.children.length; ++i) {
+            const hit = under(item.children[i], test)
+            if (hit) return hit
+        }
+        return null
+    }
+
+    function init() {
+        const component = Qt.createComponent("Main.qml")
+        verify(component.status === Component.Ready, component.errorString())
+        page = createTemporaryObject(component, host, { width: 1280, height: 800 })
+        waitForRendering(page)
+    }
+
+    function near(actual, expected, slack, what) {
+        verify(Math.abs(actual - expected) <= slack, what + ": " + actual + ", Chromium " + expected)
+    }
+
+    function test_children_lay_out_in_the_button() {
+        const pill = find("pill")
+        near(pill.width, 105.92, 3, "width")
+        near(pill.height, 31, 1, "height")
+        const go = under(pill, i => i.text === "Go" && i !== pill)
+        const dot = under(pill, i => i.color !== undefined && Qt.colorEqual(i.color, "#ffd400"))
+        const bold = under(pill, i => i.text === "bold")
+        verify(go && dot && bold, "children drawn")
+        near(go.mapToItem(pill, 0, 0).x, 16, 1, "Go x")
+        near(dot.mapToItem(pill, 0, 0).x, 41.78, 1.5, "square x")
+        near(dot.mapToItem(pill, 0, 0).y, 9.5, 1, "square y")
+        compare(dot.width, 12)
+        compare(dot.height, 12)
+        near(bold.mapToItem(pill, 0, 0).x, 61.78, 2, "bold x")
+        compare(bold.font.bold, true)
+    }
+
+    function test_the_button_still_clicks() {
+        mouseClick(find("pill"))
+        wait(0)
+        compare(find("log").text, "-click;")
+    }
+}
+}
+"##;
+
+#[test]
+fn a_flex_buttons_children_lay_out_inside_it() {
+    if support::no_qt() {
+        return;
+    }
+    let options = Options {
+        root: RootKind::Item,
+        ..Options::default()
+    };
+    let out = convert_str(PILL, &options);
+    let dir = std::env::temp_dir().join(format!("eldur-pill-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    write(&dir, &out);
+    std::fs::write(dir.join("tst_pill.qml"), PILL_TEST).expect("write test");
+    let output = support::qmltestrunner()
+        .args(["-platform", "offscreen", "-input"])
+        .arg(dir.join("tst_pill.qml"))
+        .env("QT_FORCE_STDERR_LOGGING", "1")
+        .output()
+        .expect("run qmltestrunner");
+    let text = format!(
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    std::fs::remove_dir_all(&dir).expect("remove temp dir");
+    assert!(output.status.success(), "{text}");
+    assert!(!text.contains("eldur:"), "{text}");
+}
