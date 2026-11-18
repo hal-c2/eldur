@@ -412,6 +412,8 @@ Why this and not one QML object per element, or splitting the block whenever a s
 - Created block children of a `<div>` that was empty at conversion are not stacked: the div is a `Text`, and they overlap at its top.
 - `dataset` writes do not recompute styles.
 - A button whose only content is text holds no child nodes: `childNodes` is empty and `firstChild` is null, as for every text-only control. Text appended or prepended to it joins the text it draws at that end, so `textContent` reads as Chromium's; `insertBefore(text, firstChild)` appends, since `firstChild` is null. An appended text node gives its text and stays out of the page: its `parentNode` is null, and a later write to its `data` does not show. An `<input>` drawn as a button keeps drawing its value.
+- A void element (`<input>`, `<img>`, `<br>` and the rest) draws none of its children, as in Chromium, but holds none either: a node a script puts in one leaves where it was, and `childNodes` stays empty.
+- A button named from its content reads its name again after a script changes that content, by the rules the converter used: `aria-hidden` content is left out, a node's own `aria-labelledby`, `aria-label` or `alt` stands for its content, and boxes stand apart. A label's text is not read again.
 - A box cut out of a line whose element a script removes or moves elsewhere is held by that element and stays off the page; it does not come back if the element is put back in the page. Its parent reads as that element.
 - A box the page made (a control, an image) does not go into an inline element a script appends it to: it stays where it was, and `eldur:` warns.
 
