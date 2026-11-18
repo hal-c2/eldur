@@ -146,13 +146,14 @@ TestCase {
     // An input's effects run over several turns of the event loop (the event, the
     // page's handler, the layout after it): the scene is read when a few more
     // turns change nothing, however long a loaded machine takes to turn them.
-    // Qt delivers hover to an item made under a still mouse when it next draws
-    // a frame, as Chromium does after its layout: one is asked for and must
-    // come before the turns are counted.
-    function quiet() {
+    // Qt delivers hover to an item made under a still mouse some frames after
+    // it is made, where Chromium does after its layout: the scene is read once
+    // every item under the mouse that follows hover says it has it.
+    function quiet(mouse) {
         wait(settled)
         page.Window.window.update()
-        verify(waitForRendering(page, 5000), "no frame drawn after the input in 5 s")
+        tryVerify(() => unhovered(mouse).length === 0, 5000,
+            "hover not delivered under the mouse in 5 s")
         let was = look()
         for (let round = 0; round < 20; round++) {
             for (let turn = 0; turn < 3; turn++) wait(0)
@@ -161,16 +162,21 @@ TestCase {
             was = now
         }
     }
+    function unhovered(mouse) {
+        return items(page, []).filter(i => typeof i.eldurHovered === "boolean" && i.visible
+            && !i.eldurHovered && (q => q.x >= 0 && q.y >= 0 && q.x < i.width && q.y < i.height)(
+                page.mapToItem(i, mouse.x, mouse.y)))
+    }
     function hover(item) {
         const p = position(item)
         mouseMove(page, p.x, p.y)
-        quiet()
+        quiet(p)
     }
     function click(item) {
         const p = position(item)
         mouseMove(page, p.x, p.y)
         mouseClick(page, p.x, p.y)
-        quiet()
+        quiet(p)
     }
 
     function css(text) {
