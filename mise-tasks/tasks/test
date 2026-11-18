@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#MISE description="Test the tasks' own logic with stand-in tools: setup --check against the pinned Qt and the next minor"
+#MISE description="Test the tasks' own logic with stand-in tools: setup and setup --check against the pinned Qt and the next minor"
 set -euo pipefail
 task_name="tasks:test"
 # shellcheck source=mise-tasks/_lib/common.sh
@@ -47,16 +47,16 @@ installer() {
 failed=0
 # `expect <case> <exit code> <text> [NAME=value...]`: setup --check, with
 # <case>'s tools first on PATH and the variables given, exits with <exit
-# code> and prints <text>, or prints no "not the pinned" line when <text>
-# is empty.
+# code> and prints <text>, or prints no note on Qt when <text> is empty. Qt
+# is only the reference, so no Qt it finds fails setup.
 expect() {
   local case="$1" want="$2" text="$3" out code=0
   shift 3
   out="$(env -i HOME="$scratch" PATH="$scratch/$case:$sys" RUSTUP_TOOLCHAIN=1.98.1 \
     usage_check=true "$@" bash mise-tasks/setup 2>&1)" || code=$?
   if [ "$code" != "$want" ] || { [ -n "$text" ] && [[ "$out" != *"$text"* ]]; } ||
-    { [ -z "$text" ] && [[ "$out" == *"not the pinned"* ]]; }; then
-    echo "tasks:test: $case: setup --check exited $code, wanted $want and '${text:-no mismatch}'; it said:" >&2
+    { [ -z "$text" ] && [[ "$out" == *"note, a Qt"* ]]; } || [[ "$out" == *"not the pinned"* ]]; then
+    echo "tasks:test: $case: setup exited $code, wanted $want and '${text:-no note on Qt}'; it said:" >&2
     printf '%s\n' "$out" | sed 's/^/    /' >&2
     failed=1
   else
@@ -64,7 +64,7 @@ expect() {
   fi
 }
 
-for c in newer pinned installer env-newer qt5 qml-newer linked unknown lint-only bare qt5-lint missing; do
+for c in newer pinned installer env-newer qt5 qml-newer linked unknown lint-only bare qt5-lint missing full; do
   stub "$c" rustup ""
   stub "$c" rustc "rustc 1.98.1 (stand-in)"
 done
@@ -73,8 +73,13 @@ installer qt-newer "$newer.1"
 pinned_env=(QMLTESTRUNNER="$scratch/qt-pinned/qmltestrunner" QMLLINT="$scratch/qt-pinned/qmllint")
 
 distro newer "$newer.1"
-expect newer 1 "qmltestrunner ($scratch/newer/qmltestrunner6) is Qt $newer.1, not the pinned Qt $qt_pinned"
-expect newer 1 "qmllint ($scratch/newer/qmllint6) is Qt $newer.1, not the pinned Qt $qt_pinned"
+# Another minor is a legitimate setup: a note naming the Qt found, the pin
+# and how to install it, and setup passes.
+expect newer 0 "note, a Qt other than the pinned one"
+expect newer 0 "qmltestrunner: Qt $newer.1 found ($scratch/newer/qmltestrunner6)"
+expect newer 0 "qmllint: Qt $newer.1 found ($scratch/newer/qmllint6)"
+expect newer 0 "pinned: Qt $qt_pinned (qt_pinned in mise-tasks/_lib/common.sh"
+expect newer 0 "for the pinned Qt: install Qt $qt_pinned (Qt's online installer, or aqt install-qt) and set QMLTESTRUNNER to its qmltestrunner"
 distro pinned "$qt_pinned.2"
 expect pinned 0 ""
 # A newer distribution Qt on PATH, and the pinned installer's tools named,
@@ -84,29 +89,29 @@ ln -sf "$scratch/qt-pinned/qml" "$scratch/installer/qml6"
 expect installer 0 "" "${pinned_env[@]}"
 # A pinned distribution Qt, but QMLTESTRUNNER names a newer one.
 distro env-newer "$qt_pinned.2"
-expect env-newer 1 "qmltestrunner ($scratch/qt-newer/qmltestrunner) is Qt $newer.1" \
+expect env-newer 0 "qmltestrunner: Qt $newer.1 found ($scratch/qt-newer/qmltestrunner)" \
   QMLTESTRUNNER="$scratch/qt-newer/qmltestrunner"
 # Qt 5's qtpaths beside the runner answers 5.15, which is no Qt 6: setup
-# cannot tell it is the pinned one, so it says so.
+# cannot tell it is the pinned one, so it says so in a note.
 stub qt5-bin qtpaths "5.15.19"
 stub qt5-bin qmltestrunner ""
 stub qt5-bin qmllint "qmllint 5.15.19"
-expect qt5 1 "qmltestrunner ($scratch/qt5-bin/qmltestrunner) answers no Qt 6 version" \
+expect qt5 0 "qmltestrunner: no Qt 6 version answered ($scratch/qt5-bin/qmltestrunner)" \
   QMLTESTRUNNER="$scratch/qt5-bin/qmltestrunner" QMLLINT="$scratch/qt5-bin/qmllint"
 # A link on PATH to a newer installer's runner: its Qt is the one the link
 # names, though nothing sits beside the link.
 ln -s ../qt-newer/qmltestrunner "$scratch/linked/qmltestrunner6"
 ln -s "$scratch/qt-pinned/qmllint" "$scratch/linked/qmllint6"
 ln -s "$scratch/qt-pinned/qml" "$scratch/linked/qml6"
-expect linked 1 "qmltestrunner ($scratch/linked/qmltestrunner6) is Qt $newer.1, not the pinned Qt $qt_pinned"
+expect linked 0 "qmltestrunner: Qt $newer.1 found ($scratch/linked/qmltestrunner6)"
 # A runner with nothing beside it that answers is not passed unseen.
 stub unknown-runner qmltestrunner6 "Unknown option: '--version'"
 ln -s "$scratch/qt-pinned/qmllint" "$scratch/unknown/qmllint6"
 ln -s "$scratch/qt-pinned/qml" "$scratch/unknown/qml6"
-expect unknown 1 "qmltestrunner ($scratch/unknown-runner/qmltestrunner6) answers no Qt 6 version" \
+expect unknown 0 "qmltestrunner: no Qt 6 version answered ($scratch/unknown-runner/qmltestrunner6)" \
   QMLTESTRUNNER="$scratch/unknown-runner/qmltestrunner6"
 stub qml-newer qml6 "Qml Runtime $newer.0"
-expect qml-newer 1 "qml6 ($scratch/qml-newer/qml6) is Qt $newer.0, not the pinned Qt $qt_pinned" "${pinned_env[@]}"
+expect qml-newer 0 "qml6: Qt $newer.0 found ($scratch/qml-newer/qml6)" "${pinned_env[@]}"
 # A distribution's declarative tools alone: no qtpaths or qmake, but the
 # qmllint beside the runner is of its Qt.
 stub lint-only qmltestrunner6 "Unknown option: '--version'"
@@ -116,19 +121,31 @@ expect lint-only 0 ""
 # QMLTESTRUNNER as a bare name: its Qt is the one beside it on PATH.
 ln -s "$scratch/qt-newer/qmltestrunner" "$scratch/bare/qmltestrunner"
 ln -s "$scratch/qt-pinned/qml" "$scratch/bare/qml6"
-expect bare 1 "qmltestrunner (qmltestrunner) is Qt $newer.1, not the pinned Qt $qt_pinned" \
+expect bare 0 "qmltestrunner: Qt $newer.1 found (qmltestrunner)" \
   QMLTESTRUNNER=qmltestrunner QMLLINT="$scratch/qt-pinned/qmllint"
 # A qmllint that says it is Qt 5 is Qt 5, whatever Qt 6 tools are beside it.
 stub qt5-lint qmllint "qmllint 5.15.2"
 stub qt5-lint qmllint6 "qmllint $qt_pinned.2"
-expect qt5-lint 1 "qmllint ($scratch/qt5-lint/qmllint) is Qt 5.15.2, not the pinned Qt $qt_pinned" \
+expect qt5-lint 0 "qmllint: Qt 5.15.2 found ($scratch/qt5-lint/qmllint)" \
   QMLTESTRUNNER="$scratch/qt-pinned/qmltestrunner" QMLLINT="$scratch/qt5-lint/qmllint"
-# A bare name that is not on PATH is said to be missing; nothing in the
-# current directory is run in its place.
+# A bare name that is not on PATH is said to be missing, as a Qt that is not
+# there at all is: Qt is optional, so that is skipped, not a failure. Nothing
+# in the current directory is run in its place.
 mkdir -p "$scratch/missing"
 ln -s "$scratch/qt-pinned/qml" "$scratch/missing/qml6"
-expect missing 1 "qmltestrunner (qmltestrunner-typo) is not on PATH" \
+expect missing 0 "skipped:
+  - qmltestrunner (qmltestrunner-typo) is not on PATH" \
   QMLTESTRUNNER=qmltestrunner-typo QMLLINT="$scratch/qt-pinned/qmllint"
+# setup itself, not --check, with another minor: it installs (stand-ins
+# here), then says the same note and passes.
+distro full "$newer.1"
+stub full mise "rustc 1.98.1 (stand-in)"
+stub full git ""
+expect full 0 "setup done:" usage_check=false usage_offline=true
+expect full 0 "qmltestrunner: Qt $newer.1 found ($scratch/full/qmltestrunner6)" usage_check=false usage_offline=true
+# What setup needs still fails it: here a rustc that is not the pin.
+stub full rustc "rustc 1.0.0 (stand-in)"
+expect full 1 "rustc on PATH is 1.0.0" usage_check=false usage_offline=true
 
 [ "$failed" = 0 ] || die "a case above failed"
 echo "tasks:test: every case passed"

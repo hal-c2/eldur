@@ -151,12 +151,15 @@ qt_version_of() {
   done
 }
 
-# `qt_pin_mismatches`: a line for each Qt tool the tasks run (found as they
-# find it) that belongs to another Qt than the pinned minor, with what to set
-# so the tasks take a pinned one instead. A tool whose Qt cannot be told is
-# named too, since it may be any Qt. Nothing when all are pinned, or for a
-# tool that is not there.
-qt_pin_mismatches() {
+# `qt_pin_report`: for each Qt tool the tasks run (found as they find it)
+# that belongs to another Qt than the pinned minor, a `NOTE` line naming the
+# Qt found and its path, then the pin and what to install and set so the
+# tasks take the pinned one. Qt is only the reference, so that is a working
+# setup, not a failure. A tool whose Qt cannot be told is a note too, since
+# it may be any Qt. A tool named by its variable that is not on PATH is a
+# `SKIPPED` line: Qt is optional, as when none is found. Nothing when all
+# are pinned, or for a tool that is not there.
+qt_pin_report() {
   local name path version use fix
   for name in qmltestrunner qmllint qml6; do
     case "$name" in
@@ -181,17 +184,18 @@ qt_pin_mismatches() {
       */*) ;;
       *)
         if ! command -v "$path" >/dev/null 2>&1; then
-          echo "$name ($path) is not on PATH, so $use nothing: install Qt $qt_pinned (Qt's online installer, or aqt install-qt) and $fix"
+          echo "SKIPPED $name ($path) is not on PATH, so $use nothing: install Qt $qt_pinned (Qt's online installer, or aqt install-qt) and $fix"
           continue
         fi
         ;;
     esac
     version="$(qt_version_of "$path")"
-    if [ -z "$version" ]; then
-      echo "$name ($path) answers no Qt 6 version, and no Qt tool beside it does, so $use it on a Qt that may not be the pinned $qt_pinned: install Qt $qt_pinned (Qt's online installer, or aqt install-qt) and $fix"
-      continue
-    fi
-    case "$version" in "$qt_pinned".*) continue ;; esac
-    echo "$name ($path) is Qt $version, not the pinned Qt $qt_pinned, and $use it: install Qt $qt_pinned (Qt's online installer, or aqt install-qt) and $fix"
+    case "$version" in
+      "$qt_pinned".*) continue ;;
+      "") echo "NOTE $name: no Qt 6 version answered ($path), nor by a Qt tool beside it; $use it on a Qt that may be another than the pinned one" ;;
+      *) echo "NOTE $name: Qt $version found ($path); $use it" ;;
+    esac
+    echo "pinned: Qt $qt_pinned (qt_pinned in mise-tasks/_lib/common.sh, the Qt the QML tests, qml:check and docs/spec/ measure)"
+    echo "for the pinned Qt: install Qt $qt_pinned (Qt's online installer, or aqt install-qt) and $fix"
   done
 }
