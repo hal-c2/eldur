@@ -1130,14 +1130,17 @@ impl Emitter<'_, '_> {
                 &own,
                 &Value::expr(format!("{id}.palette.buttonText")),
             );
-            // A flex or grid box shares out the width the button sets (its
-            // anonymous content box fills the content box); for an auto-sized
-            // button that is its own implicit width.
+            // A flex or grid box shares out the size the button has, set or
+            // stretched (its anonymous content box fills the content box, as
+            // Chromium lays it out); for an auto-sized button that is its own
+            // implicit size. Anything else is centred, as a line is.
             if matches!(b.style.display, Display::Flex | Display::Grid) {
                 obj.set("width", Value::expr("parent.width"));
+                obj.set("height", Value::expr("parent.height"));
+            } else {
+                obj.set("x", Value::expr("Math.round((parent.width - width) / 2)"));
+                obj.set("y", Value::expr("Math.round((parent.height - height) / 2)"));
             }
-            obj.set("x", Value::expr("Math.round((parent.width - width) / 2)"));
-            obj.set("y", Value::expr("Math.round((parent.height - height) / 2)"));
             holder.set(
                 "implicitWidth",
                 Value::expr(format!("Math.ceil({item_id}.implicitWidth)")),

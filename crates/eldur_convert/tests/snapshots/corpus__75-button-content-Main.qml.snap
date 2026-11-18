@@ -106,8 +106,7 @@ ApplicationWindow {
                             id: rowlayout
                             spacing: 0
                             width: parent.width
-                            x: Math.round((parent.width - width) / 2)
-                            y: Math.round((parent.height - height) / 2)
+                            height: parent.height
 
                             // <span>
                             Text {
@@ -238,8 +237,7 @@ ApplicationWindow {
                                 id: rowlayout2
                                 spacing: 0
                                 width: parent.width
-                                x: Math.round((parent.width - width) / 2)
-                                y: Math.round((parent.height - height) / 2)
+                                height: parent.height
 
                                 // <span>
                                 Text {
