@@ -7607,12 +7607,9 @@ function _runListeners(raw, key, type, domEv, phase) {
         if (at === -1) {
             continue;
         }
-        if (onceList) {
-            var onceIdx = onceList.indexOf(fn);
-            if (onceIdx !== -1) {
-                onceList.splice(onceIdx, 1);
-                list.splice(at, 1);
-            }
+        // A once listener that ran is removed as any other, its signal's record too.
+        if (onceList && onceList.indexOf(fn) !== -1) {
+            _dropListener(m, key, fn);
         }
         domEv._passive = _isPassive(m, key, fn, raw, type);
         // With no script under it, a listener's end is where promises run.
