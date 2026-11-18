@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Inline SVG icons</title>
+<style>
+  body { margin: 0; padding: 16px; font: 16px sans-serif; color: #222; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+  a { color: #0645ad; }
+  a:hover { color: #c00; }
+  .card { display: flex; gap: 8px; align-items: center; }
+</style>
+</head>
+<body>
+<h1>Inline SVG icons</h1>
+<p>
+  <a href="https://example.com/repo"><span class="sr-only">Source code</span><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 22 22H2z"/></svg></a>
+  <a href="#more">What is this? <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M14 6l6 6-6 6"/></svg></a>
+</p>
+<a class="card" href="#more">Read more <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 11h12l-5-5 1.4-1.4L20 12l-7.6 7.4L11 18l5-5H4z"/></svg></a>
+<p><svg role="img" aria-label="A red badge" width="32" height="32" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#c00"/></svg>
+<svg width="32" height="32" viewBox="0 0 24 24"><title>Status: ok</title><circle cx="12" cy="12" r="10" fill="green"/></svg></p>
+<h2 id="more">More</h2>
+<p>An icon is drawn from a file of its own, in the colour of the text around it.</p>
+</body>
+</html>
