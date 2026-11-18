@@ -523,6 +523,14 @@ document.addEventListener("keydown", kept, {{ signal: c.signal }});
 document.removeEventListener("keydown", kept);
 document.addEventListener("keydown", kept);
 c.abort();
+// And a once listener that ran is gone with its signal's record.
+var again = function(e) {{ console.log("LC {name} again key " + e.key); }};
+var d = new AbortController();
+document.addEventListener("keydown", again, {{ once: true, signal: d.signal }});
+document.addEventListener("keydown", function() {{
+  document.addEventListener("keydown", again);
+  d.abort();
+}}, {{ once: true }});
 </script>
 </body></html>"#
     )
@@ -590,6 +598,8 @@ TestCase {
         console.log("LC host reads " + JSON.stringify(contact.title))
         keyClick(Qt.Key_C)
         wait(50)
+        keyClick(Qt.Key_D)
+        wait(50)
         contact.destroy()
         wait(200)
         home.forceActiveFocus()
@@ -611,11 +621,17 @@ const STATIC_WANT: &[&str] = &[
     "LC key in covered home heard nothing",
     "LC About key a",
     "LC About kept key a",
+    "LC About again key a",
     "LC host reads \"Contact\"",
     "LC Contact key c",
     "LC Contact kept key c",
+    "LC Contact again key c",
+    "LC Contact key d",
+    "LC Contact kept key d",
+    "LC Contact again key d",
     "LC Home key h",
     "LC Home kept key h",
+    "LC Home again key h",
     "LC Home resize",
     "LC Home scroll",
     "LC host reads \"Home\"",
