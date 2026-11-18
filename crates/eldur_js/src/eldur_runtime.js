@@ -5558,8 +5558,10 @@ function _markupName(html) {
     var quiet = 0;
     var re = /<(\/?)([A-Za-z][\w-]*)([^>]*?)(\/?)>|([^<]+)/g;
     function attr(attrs, name) {
-        // After whitespace only: `\b` matches after the `-` of `data-aria-label`.
-        var m = new RegExp("(?:^|\\s)" + name + "\\s*=\\s*(\"([^\"]*)\"|'([^']*)'|([^\\s>]+))", "i").exec(attrs);
+        // A name starts after whitespace, a quote that closed a value, or a
+        // `/`, as the HTML tokenizer reads it; not after the `-` of
+        // `data-aria-label`, where `\b` would match.
+        var m = new RegExp("(?:^|[\\s\"'/])" + name + "\\s*=\\s*(\"([^\"]*)\"|'([^']*)'|([^\\s>]+))", "i").exec(attrs);
         return m ? _unescapeHtmlText(m[2] !== undefined ? m[2] : m[3] !== undefined ? m[3] : m[4]) : null;
     }
     for (var m = re.exec(html); m; m = re.exec(html)) {
