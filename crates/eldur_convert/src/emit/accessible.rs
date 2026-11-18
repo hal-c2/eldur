@@ -7,6 +7,8 @@
 use eldur_css::{Display, StyleMap, Visibility};
 use eldur_dom::{Document, NodeData, NodeId, collapse_whitespace};
 
+use super::controls::labeled_control;
+
 /// Which content counts.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Reading {
@@ -169,8 +171,37 @@ fn labelledby(doc: &Document, styles: &StyleMap, node: NodeId) -> Option<String>
     (!parts.is_empty()).then(|| parts.join(" "))
 }
 
+/// The name `control`'s `<label>`s give it (AccName step 2D, HTML-AAM): what
+/// they read in document order, joined, without the control itself (a
+/// `<select>` inside its label would otherwise lend it every option's text).
+/// A label that reads nothing gives way to the next (HTML-AAM). A hidden label
+/// still names its control, read whole as a referenced node is; a shown one
+/// leaves out what it hides inside. `traversal` as for [`text_of`].
+pub(crate) fn label_name(
+    doc: &Document,
+    styles: &StyleMap,
+    control: NodeId,
+    traversal: bool,
+) -> Option<String> {
+    let parts: Vec<String> = doc
+        .descendants(doc.root())
+        .filter(|&n| labeled_control(doc, n) == Some(control))
+        .map(|label| {
+            let reading = if hidden(doc, styles, label) {
+                Reading::Referenced
+            } else {
+                Reading::Read
+            };
+            text_of(doc, styles, label, Some(control), reading, traversal)
+        })
+        .filter(|t| !t.is_empty())
+        .collect();
+    (!parts.is_empty()).then(|| parts.join(" "))
+}
+
 /// The name of an element `aria-labelledby` points at: its own `aria-label`
-/// or `alt` first, then its content (steps 2C to 2F). Its own
+/// or `alt` first, then a control's `<label>`, then its content (steps 2C to
+/// 2F). Its own
 /// `aria-labelledby` is not followed, so a traversal never loops (step 2B).
 /// A hidden one still names, with what it hides inside; a shown one leaves
 /// its hidden parts out.
@@ -183,7 +214,7 @@ fn referenced_name(doc: &Document, styles: &StyleMap, by: NodeId) -> String {
                 .or_else(|| (e.local_name() == "img").then(|| e.attr("alt")).flatten())
         })
         .map(collapse_whitespace);
-    if let Some(own) = own {
+    if let Some(own) = own.or_else(|| label_name(doc, styles, by, true)) {
         return own;
     }
     let reading = if hidden(doc, styles, by) {

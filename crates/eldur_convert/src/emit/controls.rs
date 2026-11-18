@@ -169,30 +169,11 @@ fn recolor(obj: &mut Object, own: &Value, to: &Value) {
     }
 }
 
-/// `control`'s `Accessible.name` from ARIA or its `<label>`s: what they read
-/// in document order, joined, without the control itself (a `<select>` inside
-/// its label would otherwise lend it every option's text). A label that reads
-/// nothing, all hidden, gives way to the next (HTML-AAM). A hidden label still
-/// names its control, read whole as an `aria-labelledby` target is; a shown
-/// one leaves out what it hides inside.
+/// `control`'s `Accessible.name` from ARIA, then its `<label>`s
+/// ([`accessible::label_name`]).
 fn label_text(doc: &Document, styles: &StyleMap, control: NodeId) -> Option<String> {
-    if let Some(name) = accessible::aria_name(doc, styles, control) {
-        return Some(name);
-    }
-    let parts: Vec<String> = doc
-        .descendants(doc.root())
-        .filter(|&n| labeled_control(doc, n) == Some(control))
-        .map(|label| {
-            let reading = if accessible::hidden(doc, styles, label) {
-                Reading::Referenced
-            } else {
-                Reading::Read
-            };
-            accessible::content_text(doc, styles, label, Some(control), reading)
-        })
-        .filter(|t| !t.is_empty())
-        .collect();
-    (!parts.is_empty()).then(|| parts.join(" "))
+    accessible::aria_name(doc, styles, control)
+        .or_else(|| accessible::label_name(doc, styles, control, false))
 }
 
 fn attr_f64(doc: &Document, node: NodeId, name: &str) -> Option<f64> {
@@ -1230,8 +1211,18 @@ impl Emitter<'_, '_> {
             }
             let drawn = accessible::content_text(self.doc, self.styles, node, None, Reading::Drawn);
             let read = accessible::content_text(self.doc, self.styles, node, None, Reading::Read);
+            // A name read from content follows it: the runtime reads it again
+            // when a script changes what the button holds. ARIA or a label set
+            // later replaces the binding and keeps its own.
             if read != drawn {
-                obj.set("Accessible.name", Value::String(read));
+                obj.members.push(Member::PropertyDecl {
+                    ty: "string".to_owned(),
+                    name: "eldurContentName".to_owned(),
+                    value: Some(Value::String(read)),
+                    readonly: false,
+                    required: false,
+                });
+                obj.set("Accessible.name", Value::expr("eldurContentName"));
             }
             // A script's `textContent` is every text node, hidden or apart,
             // which `text` no longer is (the runtime reads this instead).
@@ -1731,12 +1722,53 @@ mod tests {
         )
     }
 
+    /// Whether `q` names something `want`: a fixed name, or one read from
+    /// content, which follows it.
+    fn named(q: &str, want: &str) -> bool {
+        q.contains(&format!("Accessible.name: \"{want}\""))
+            || q.contains(&format!("property string eldurContentName: \"{want}\""))
+    }
+
+    #[test]
+    fn a_name_from_content_follows_it_and_aria_keeps_its_own() {
+        let (q, _) = qml(r#"<button>Open<span aria-hidden="true"> ⌘O</span></button>
+               <button aria-label="Close">x<span aria-hidden="true"> Esc</span></button>"#);
+        assert!(
+            q.contains("property string eldurContentName: \"Open\""),
+            "{q}"
+        );
+        assert_eq!(
+            q.matches("Accessible.name: eldurContentName").count(),
+            1,
+            "{q}"
+        );
+        assert!(q.contains("Accessible.name: \"Close\""), "{q}");
+    }
+
+    #[test]
+    fn a_referenced_control_names_by_its_label_before_its_content() {
+        // Chromium: "Archive" for both buttons.
+        let (q, _) = qml(r#"<label for="a">Archive</label><button id="a">Run</button>
+               <button aria-labelledby="a">Fallback</button>"#);
+        assert_eq!(q.matches("Accessible.name: \"Archive\"").count(), 2, "{q}");
+    }
+
+    #[test]
+    fn a_node_read_in_content_is_read_again_through_a_reference() {
+        // Chromium names this "Save Save": the image follows its own
+        // `aria-labelledby` (step 2B) whatever the walk read before.
+        let (q, _) = qml(
+            r#"<button><span id="save">Save</span> <img src="icon.png" aria-labelledby="save"></button>"#,
+        );
+        assert!(named(&q, "Save Save"), "{q}");
+    }
+
     #[test]
     fn a_label_names_its_control_without_the_controls_text() {
         let (q, _) = qml(
             r#"<label>Select theme<select><option>Dark</option><option>Light</option></select></label>"#,
         );
-        assert!(q.contains("Accessible.name: \"Select theme\""), "{q}");
+        assert!(named(&q, "Select theme"), "{q}");
     }
 
     #[test]
@@ -1745,10 +1777,10 @@ mod tests {
                <button aria-labelledby="a b" aria-label="no">x</button>
                <button aria-label=" Close  menu ">X</button>
                <label>Name <input aria-label="Full name"></label>"#);
-        assert!(q.contains("Accessible.name: \"Hi there\""), "{q}");
-        assert!(q.contains("Accessible.name: \"Close menu\""), "{q}");
-        assert!(q.contains("Accessible.name: \"Full name\""), "{q}");
-        assert!(!q.contains("Accessible.name: \"no\""), "{q}");
+        assert!(named(&q, "Hi there"), "{q}");
+        assert!(named(&q, "Close menu"), "{q}");
+        assert!(named(&q, "Full name"), "{q}");
+        assert!(!named(&q, "no"), "{q}");
     }
 
     #[test]
@@ -1762,10 +1794,7 @@ mod tests {
                <span id=c aria-labelledby="v">Loop</span><button aria-labelledby="c">w</button>"#,
         );
         for want in ["Delete", "Logo", "Secret code", "Shown", "Loop"] {
-            assert!(
-                q.contains(&format!("Accessible.name: \"{want}\"")),
-                "no {want} in\n{q}"
-            );
+            assert!(named(&q, want), "no {want} in\n{q}");
         }
         assert!(!q.contains("gone\""), "{q}");
     }
@@ -1777,9 +1806,9 @@ mod tests {
                <span id=m>Search<img src="x.png" alt="Gone" style="visibility:hidden"></span>
                <button aria-labelledby="m">q</button>"#,
         );
-        assert!(q.contains("Accessible.name: \"Delete\""), "{q}");
+        assert!(named(&q, "Delete"), "{q}");
         assert!(!q.contains("Trash can"), "{q}");
-        assert!(q.contains("Accessible.name: \"Search\""), "{q}");
+        assert!(named(&q, "Search"), "{q}");
         assert!(!q.contains("Gone"), "{q}");
     }
 
@@ -1789,14 +1818,14 @@ mod tests {
             r#"<label for=q><span style="display:none">hidden</span></label>
                <label for=q>Search</label><input id=q>"#,
         );
-        assert!(q.contains("Accessible.name: \"Search\""), "{q}");
+        assert!(named(&q, "Search"), "{q}");
     }
 
     #[test]
     fn a_node_in_a_name_follows_its_own_labelledby_first() {
         let (q, _) = qml(r#"<span id=name>Archive</span>
                <button><img src="icon.png" aria-labelledby="name" aria-label="Delete" alt=""></button>"#);
-        assert!(q.contains("Accessible.name: \"Archive\""), "{q}");
+        assert!(named(&q, "Archive"), "{q}");
         assert!(!q.contains("Delete"), "{q}");
     }
 
@@ -1805,7 +1834,7 @@ mod tests {
         let (q, _) = qml(
             r#"<label for=q hidden><span aria-hidden="true">Search</span></label><input id=q>"#,
         );
-        assert!(q.contains("Accessible.name: \"Search\""), "{q}");
+        assert!(named(&q, "Search"), "{q}");
     }
 
     #[test]
@@ -1829,7 +1858,7 @@ mod tests {
         assert!(q.contains("text: \"Save\""), "{q}");
         assert!(!q.contains("text: \"Save Ctrl S\""), "{q}");
         assert!(q.contains("text: \"Open ⌘O\""), "{q}");
-        assert!(q.contains("Accessible.name: \"Open\""), "{q}");
+        assert!(named(&q, "Open"), "{q}");
     }
 
     #[test]
@@ -1971,8 +2000,8 @@ mod tests {
         );
         assert!(q.contains("t.forceActiveFocus();"), "{q}");
         assert!(q.contains("c.click();"), "{q}");
-        assert!(q.contains("Accessible.name: \"Name\""), "{q}");
-        assert!(q.contains("Accessible.name: \"Terms\""), "{q}");
+        assert!(named(&q, "Name"), "{q}");
+        assert!(named(&q, "Terms"), "{q}");
     }
 
     #[test]
