@@ -237,6 +237,7 @@ const PILL: &str = r#"<!DOCTYPE html><html><body style="margin:0;font:16px sans-
 <p id="log">-</p>
 <button id="same" style="display:flex;gap:4px"><span>*</span>Save</button>
 <button id="dattr">Old<span aria-hidden="true">X</span></button>
+<button id="glued">Old<span aria-hidden="true">X</span></button>
 <script>
 document.getElementById('swap').addEventListener('click', function () {
   this.textContent = 'Done';
@@ -254,6 +255,9 @@ document.getElementById('same').addEventListener('click', function () {
 });
 document.getElementById('dattr').addEventListener('click', function () {
   document.getElementById('dattr').innerHTML = '<span data-aria-hidden="true">Kept</span> <b data-aria-label="x">Yes</b>';
+});
+document.getElementById('glued').addEventListener('click', function () {
+  document.getElementById('glued').innerHTML = '<b title="t"aria-label="Bold">x</b> <i/aria-label="Now">y</i>';
 });
 document.getElementById('count').addEventListener('click', function () {
   document.getElementById('n').textContent = '4';
@@ -380,6 +384,15 @@ TestCase {
         compare(dattr.eldurContentName, "Old")
         mouseClick(dattr)
         tryCompare(dattr, "eldurContentName", "Kept Yes")
+    }
+
+    // An attribute name may follow a quoted value or a `/` with no space
+    // between them (Chromium: "Bold Now").
+    function test_glued_attributes_name_written_markup() {
+        const glued = find("glued")
+        compare(glued.eldurContentName, "Old")
+        mouseClick(glued)
+        tryCompare(glued, "eldurContentName", "Bold Now")
     }
 
     // A set height is the column's to share (Chromium: y 0 and 180 in 200 px).
