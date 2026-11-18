@@ -64,7 +64,7 @@ expect() {
   fi
 }
 
-for c in newer pinned installer env-newer qt5 qml-newer linked unknown lint-only bare qt5-lint missing gone full; do
+for c in newer pinned installer env-newer qt5 qml-newer linked unknown lint-only bare qt5-lint missing gone builtin full; do
   stub "$c" rustup ""
   stub "$c" rustc "rustc 1.98.1 (stand-in)"
 done
@@ -136,7 +136,10 @@ ln -s "$scratch/qt-pinned/qml" "$scratch/missing/qml6"
 expect missing 0 "
   - qmltestrunner (qmltestrunner-typo) is not on PATH" \
   QMLTESTRUNNER=qmltestrunner-typo QMLLINT="$scratch/qt-pinned/qmllint"
-expect missing 0 "Qt 6 (qml6, qmllint, qmltestrunner) not all found" \
+expect missing 0 "Qt 6 (qml6, qmllint, qmltestrunner) not all found: QMLTESTRUNNER names no qmltestrunner (below); install" \
+  QMLTESTRUNNER=qmltestrunner-typo QMLLINT="$scratch/qt-pinned/qmllint"
+# mise run test takes a QMLTESTRUNNER as asked and fails on it, so setup says so.
+expect missing 0 "and QMLTESTRUNNER names it, so mise run test fails on it: point QMLTESTRUNNER at Qt $qt_pinned's qmltestrunner, or unset it" \
   QMLTESTRUNNER=qmltestrunner-typo QMLLINT="$scratch/qt-pinned/qmllint"
 # A newline in the name stays inside its own line of the report.
 expect missing 0 "qmltestrunner (qmltestrunner-typo
@@ -148,8 +151,16 @@ stub gone qmake6 "$newer.1"
 ln -s "$scratch/qt-pinned/qml" "$scratch/gone/qml6"
 expect gone 0 "qmllint ($scratch/gone/qmllint) is not an executable file" \
   QMLTESTRUNNER="$scratch/qt-pinned/qmltestrunner" QMLLINT="$scratch/gone/qmllint"
-expect gone 0 "Qt 6 (qml6, qmllint, qmltestrunner) not all found" \
+# Only what goes without that tool is said: dev does not use qmllint.
+expect gone 0 "Qt 6 (qml6, qmllint, qmltestrunner) not all found: QMLLINT names no qmllint (below); install" \
   QMLTESTRUNNER="$scratch/qt-pinned/qmltestrunner" QMLLINT="$scratch/gone/qmllint"
+expect gone 0 "so mise run qml:check fails on it: point QMLLINT at Qt $qt_pinned's qmllint, or unset it" \
+  QMLTESTRUNNER="$scratch/qt-pinned/qmltestrunner" QMLLINT="$scratch/gone/qmllint"
+# A shell builtin is no runner, though command -v answers for it.
+mkdir -p "$scratch/builtin"
+ln -s "$scratch/qt-pinned/qml" "$scratch/builtin/qml6"
+expect builtin 0 "qmltestrunner (:) is not on PATH" QMLTESTRUNNER=: QMLLINT="$scratch/qt-pinned/qmllint"
+expect builtin 0 "not all found: QMLTESTRUNNER names no qmltestrunner (below)" QMLTESTRUNNER=: QMLLINT="$scratch/qt-pinned/qmllint"
 # setup itself, not --check, with another minor: it installs (stand-ins
 # here), then says the same note and passes.
 distro full "$newer.1"

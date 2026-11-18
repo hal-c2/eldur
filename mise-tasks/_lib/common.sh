@@ -151,24 +151,28 @@ qt_version_of() {
   done
 }
 
+# `qt_tool_runs <tool>`: whether a Qt tool, named by its path or by a bare
+# name on PATH, is an executable file there to run. A bare name is never
+# looked for in ".", and a shell builtin (QMLTESTRUNNER=:) is no tool.
+qt_tool_runs() {
+  local found
+  case "$1" in
+    */*) [ -f "$1" ] && [ -x "$1" ] ;;
+    *) found="$(type -P "$1" 2>/dev/null)" && [ -n "$found" ] && [ -f "$found" ] && [ -x "$found" ] ;;
+  esac
+}
+
 # `qt_pin_report`: for each Qt tool the tasks run (found as they find it)
 # that belongs to another Qt than the pinned minor, a `NOTE` line naming the
 # Qt found and its path, then the pin and what to install and set so the
 # tasks take the pinned one. Qt is only the reference, so that is a working
 # setup, not a failure. A tool whose Qt cannot be told is a note too, since
-# it may be any Qt. A tool named by its variable that is not on PATH is a
-# `SKIPPED` line: Qt is optional, as when none is found. Nothing when all
-# are pinned, or for a tool that is not there.
-# `qt_tool_runs <tool>`: whether a Qt tool, named by its path or by a bare
-# name on PATH, is there to run. A bare name is never looked for in ".".
-qt_tool_runs() {
-  case "$1" in
-    */*) [ -f "$1" ] && [ -x "$1" ] ;;
-    *) command -v "$1" >/dev/null 2>&1 ;;
-  esac
-}
+# it may be any Qt. A tool its variable names that is not on PATH, or not
+# an executable file, is a `SKIPPED` line saying the task that fails on it:
+# Qt is optional, so setup passes. Nothing when all are pinned, or for a
+# tool that is not there and not named.
 qt_pin_report() {
-  local name path version use fix why
+  local name path version use fix why var
   for name in qmltestrunner qmllint qml6; do
     case "$name" in
       qml6)
@@ -190,12 +194,20 @@ qt_pin_report() {
     [ -n "$path" ] || continue
     # A tool that is not there has no Qt to ask, and the Qt beside where it
     # would be is not proof of it.
+    # Only a variable can name a tool that is not there: qt6_tool finds the
+    # others on PATH or in Qt's directories. The task given that variable
+    # takes it as asked and fails on it, so that is what is said.
     if ! qt_tool_runs "$path"; then
       case "$path" in
         */*) why="is not an executable file" ;;
         *) why="is not on PATH" ;;
       esac
-      echo "SKIPPED $name ($path) $why, so $use nothing: install Qt $qt_pinned (Qt's online installer, or aqt install-qt) and $fix"
+      var="$(printf '%s' "$name" | tr '[:lower:]' '[:upper:]')"
+      case "$name" in
+        qmltestrunner) use="mise run test fails on it" ;;
+        *) use="mise run qml:check fails on it" ;;
+      esac
+      echo "SKIPPED $name ($path) $why, and $var names it, so $use: point $var at Qt $qt_pinned's $name, or unset it"
       continue
     fi
     version="$(qt_version_of "$path")"

@@ -59,10 +59,24 @@ fi
 have() { command -v "$1" >/dev/null 2>&1; }
 qmllint="$(qt6_tool qmllint)"
 runner="$(qt6_tool qmltestrunner)"
-if have qml6 && [ -n "$qmllint" ] && qt_tool_runs "$qmllint" && [ -n "$runner" ] && qt_tool_runs "$runner"; then
+# Each tool that is not there says what goes without it.
+lacks=()
+have qml6 || lacks+=("no qml6, so mise run qml:check and visual won't work, and mise run dev runs pages only in ljos")
+if [ -z "$qmllint" ]; then
+  lacks+=("no qmllint, so mise run qml:check won't work")
+elif ! qt_tool_runs "$qmllint"; then
+  lacks+=("QMLLINT names no qmllint (below)")
+fi
+if [ -z "$runner" ]; then
+  lacks+=("no qmltestrunner, so mise run test skips the end-to-end tests that run QML")
+elif ! qt_tool_runs "$runner"; then
+  lacks+=("QMLTESTRUNNER names no qmltestrunner (below)")
+fi
+if [ ${#lacks[@]} -eq 0 ]; then
   done_steps+=("Qt 6 found: qml6 ($(command -v qml6)), qmllint ($qmllint), qmltestrunner ($runner)")
 else
-  skipped+=("Qt 6 (qml6, qmllint, qmltestrunner) not all found: mise run qml:check and mise run dev with qml6 won't work, and mise run test skips the end-to-end tests that run QML; $qt6_install_hint")
+  lack="$(printf '; %s' "${lacks[@]}")"
+  skipped+=("Qt 6 (qml6, qmllint, qmltestrunner) not all found: ${lack#; }; $qt6_install_hint")
 fi
 # A record's later lines (a note's pin and install, or a newline inside a
 # variable it names) stay with the record before them.
