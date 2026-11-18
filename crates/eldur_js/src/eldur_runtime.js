@@ -4928,6 +4928,19 @@ function _childContainer(raw) {
     if (m.tableGrid) {
         return m.tableGrid;
     }
+    // A button laid out as boxes holds its children in the layout of its
+    // anonymous content box (eldur_convert `button_content`). Lines there
+    // are a created button's text and ::before/::after, not its children.
+    var held = raw.background !== undefined && raw.contentItem;
+    if (held && !held.objectName && !_meta(held).createdTag && typeof held.eldurTag !== "string" && held.children) {
+        for (var hi = 0; hi < held.children.length; ++hi) {
+            var hc = held.children[hi];
+            if (hc && !_isLines(hc) && (typeof hc.spacing === "number" || typeof hc.columnSpacing === "number")
+                && !hc.objectName && !_meta(hc).createdTag && typeof hc.eldurTag !== "string") {
+                return hc;
+            }
+        }
+    }
     if (typeof base.spacing === "number" || typeof base.columnSpacing === "number") {
         return base;
     }
@@ -5451,9 +5464,12 @@ function _itCollect(raw, out) {
         model.kids.filter(_vIsRendered).forEach(function(k) { _itCollect(k, out); });
     } else {
         var kids = _rawKids(raw, true);
-        if (kids.length === 0 && _itNamed && raw.textFormat === 4 && typeof raw.text === "string") {
+        // A button's text is drawn by its label, in the label's format.
+        var drawn = typeof raw.textFormat === "number" ? raw
+            : raw.contentItem && typeof raw.contentItem.textFormat === "number" ? raw.contentItem : null;
+        if (kids.length === 0 && _itNamed && drawn && drawn.textFormat === 4 && typeof drawn.text === "string") {
             // A label drawing `innerHTML`'s markup names by what it marks up.
-            out.push(_markupName(raw.text));
+            out.push(_markupName(drawn.text));
         } else if (kids.length === 0) {
             // Rendered text: a button's drawn label, not its nodes' text.
             out.push(typeof raw.eldurDomText === "string" && typeof raw.text === "string"
@@ -5660,6 +5676,37 @@ function _contentNameLater(raw) {
     });
 }
 
+// The anonymous Text in a button's content holder that draws `text`: not an
+// element's, which a script reaches as a node.
+function _heldTextLabel(held, text) {
+    if (typeof text !== "string" || text === "") {
+        return null;
+    }
+    var queue = [held];
+    for (var depth = 0; depth < 4 && queue.length > 0; ++depth) {
+        var next = [];
+        for (var i = 0; i < queue.length; ++i) {
+            var kids = queue[i].children || [];
+            for (var k = 0; k < kids.length; ++k) {
+                var c = kids[k];
+                if (!c || c.objectName || typeof c.eldurTag === "string" || _meta(c).createdTag
+                    || typeof c.eldurPseudo === "string") {
+                    continue;
+                }
+                if (typeof c.text === "string" && typeof c.textFormat === "number") {
+                    if (c.text === text) {
+                        return c;
+                    }
+                    continue;
+                }
+                next.push(c);
+            }
+        }
+        queue = next;
+    }
+    return null;
+}
+
 // A button whose content is its boxes (a flex button's children) has them in
 // a holder that does not read `text`: once a script writes its text, the
 // button draws that text as its label instead, in its font and colour, and in
@@ -5675,6 +5722,13 @@ function _buttonDrawsText(raw, format) {
         return;
     }
     if (!held || typeof held.text === "string" || raw.background === undefined || raw.palette === undefined) {
+        return;
+    }
+    // A created button's template draws its text beside its ::before and
+    // ::after boxes, which stay as they do in a browser.
+    var drawing = _heldTextLabel(held, raw.text);
+    if (drawing) {
+        drawing.textFormat = format;
         return;
     }
     var label = Qt.createQmlObject("import QtQuick; Text { horizontalAlignment: Text.AlignHCenter;"
