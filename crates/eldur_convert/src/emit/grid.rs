@@ -13,14 +13,14 @@
 use std::collections::{BTreeMap, HashSet};
 
 use eldur_css::{
-    Align, BoxSizing, CalcNode, ComputedStyle, GridLine, Length, LengthPercentage, Size,
-    TextDecorationLine, Track,
+    Align, BoxSizing, ComputedStyle, GridLine, Length, LengthPercentage, Size, TextDecorationLine,
+    Track,
 };
 use eldur_qml::{Member, Object, Value};
 
 use super::flex::{Pack, pack, spacer_slots};
 use super::flow::{has_height, is_layout, is_viewport_relative, size_value};
-use super::units::{fmt_number, length_expr, number, round};
+use super::units::{Gap, fmt_number, has_percentage, length_expr, number, round};
 use super::{Emitter, Given};
 use crate::boxes::{LayoutBox, describe, node_line};
 
@@ -374,7 +374,7 @@ pub(crate) fn track_size(track: &Track, base: Option<&str>) -> (TrackSize, bool)
 /// The sizing of one grid axis.
 struct AxisPlan {
     tracks: Vec<TrackSize>,
-    gap: f32,
+    gap: Gap,
     horizontal: bool,
     /// `align-content: normal` or `stretch`: `auto` tracks take free space.
     stretch: bool,
@@ -451,7 +451,7 @@ pub(crate) fn subdivide(tracks: &[TrackSize]) -> Option<Vec<usize>> {
 }
 
 impl AxisPlan {
-    fn new(tracks: Vec<TrackSize>, gap: f32, fr_active: bool, horizontal: bool) -> Self {
+    fn new(tracks: Vec<TrackSize>, gap: Gap, fr_active: bool, horizontal: bool) -> Self {
         let mut tracks = tracks;
         if !fr_active {
             for t in &mut tracks {
@@ -508,6 +508,40 @@ impl AxisPlan {
         })
     }
 
+    /// The size of the area `[start, start + span)` as an expression, when
+    /// its tracks are fixed and some are sized by expressions (the shares
+    /// of `fr` columns with a minimum): their sum and the gaps between.
+    fn area(&self, start: usize, span: usize) -> Option<String> {
+        let tracks =
+            &self.tracks[start.min(self.tracks.len())..(start + span).min(self.tracks.len())];
+        if !tracks.iter().all(|t| matches!(t, TrackSize::Fixed(_)))
+            || !tracks
+                .iter()
+                .any(|t| matches!(t, TrackSize::Fixed(Value::Expr(_))))
+        {
+            return None;
+        }
+        let base = if self.horizontal {
+            "parent.width"
+        } else {
+            "parent.height"
+        };
+        let mut sum = 0.0;
+        let mut terms = Vec::new();
+        for t in tracks {
+            match t {
+                TrackSize::Fixed(Value::Number(n)) => sum += *n as f32,
+                TrackSize::Fixed(Value::Expr(e)) => terms.push(e.clone()),
+                _ => {}
+            }
+        }
+        let fixed = self.gap.plus_text(sum, span.saturating_sub(1) as f32, base);
+        if fixed != "0" {
+            terms.push(fixed);
+        }
+        Some(terms.join(" + "))
+    }
+
     /// `Layout.*` for an item spanning `[start, start + span)` that
     /// stretches in this axis. `None` when the track is content-sized and
     /// the item keeps its natural size.
@@ -515,7 +549,12 @@ impl AxisPlan {
         let dim = if self.horizontal { "Width" } else { "Height" };
         let tracks =
             &self.tracks[start.min(self.tracks.len())..(start + span).min(self.tracks.len())];
-        let gaps = self.gap * span.saturating_sub(1) as f32;
+        let gaps = span.saturating_sub(1) as f32;
+        let base = if self.horizontal {
+            "parent.width"
+        } else {
+            "parent.height"
+        };
         let pinned = |v: Value| {
             vec![
                 (format!("Layout.preferred{dim}"), v.clone()),
@@ -569,11 +608,137 @@ impl AxisPlan {
                     _ => 0.0,
                 })
                 .sum();
-            return pinned(number(sum + gaps));
+            return pinned(self.gap.plus(sum, gaps, base));
+        }
+        if let Some(area) = self.area(start, span) {
+            return pinned(Value::expr(area));
         }
         let any_fr = tracks.iter().any(|t| matches!(t, TrackSize::Fr { .. }));
         fill(any_fr, None, None)
     }
+}
+
+/// `fr` columns of which some have a px minimum (`minmax(200px, 1fr)`),
+/// among px columns: what [`freeze_fr_minimums`] makes them.
+struct FrSizes {
+    frs: Vec<f32>,
+    mins: Vec<f32>,
+    /// The px columns and the gaps, as text: the grid's width less this is
+    /// the space the `fr` columns share.
+    taken: String,
+    /// The px columns, the minimums and the px gaps: the narrowest the
+    /// columns get.
+    floor: f32,
+}
+
+impl FrSizes {
+    /// `eldurColumns`, the `fr` columns' widths in order, found as CSS Grid 2
+    /// §12.7.1 "find the size of an fr" does: a column whose share would be
+    /// under its minimum keeps the minimum and takes no share, and the
+    /// others share what is left, until no share is under a minimum.
+    fn declare(self, grid: &mut Object) {
+        let list = |v: &[f32]| {
+            format!(
+                "[{}]",
+                v.iter()
+                    .map(|n| fmt_number(round(*n)))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+        };
+        grid.members.push(Member::Function {
+            name: "eldurFrSizes".to_owned(),
+            params: vec!["free".to_owned()],
+            body: [
+                format!("const fr = {}, min = {}", list(&self.frs), list(&self.mins)),
+                "const frozen = fr.map(() => false)".to_owned(),
+                "for (;;) {".to_owned(),
+                "    let left = free, flex = 0".to_owned(),
+                "    for (let i = 0; i < fr.length; ++i) {".to_owned(),
+                "        if (frozen[i]) left -= min[i]".to_owned(),
+                "        else flex += fr[i]".to_owned(),
+                "    }".to_owned(),
+                "    // A flex sum under 1 takes only its part of the space.".to_owned(),
+                "    const size = left / Math.max(1, flex)".to_owned(),
+                "    let again = false".to_owned(),
+                "    for (let i = 0; i < fr.length; ++i) {".to_owned(),
+                "        if (frozen[i] || size * fr[i] >= min[i]) continue".to_owned(),
+                "        frozen[i] = true".to_owned(),
+                "        again = true".to_owned(),
+                "    }".to_owned(),
+                "    if (!again) return fr.map((f, i) => frozen[i] ? min[i] : Math.max(min[i], size * f))".to_owned(),
+                "}".to_owned(),
+            ]
+            .to_vec(),
+        });
+        // The grid's own size hints stay constant: from its columns they
+        // would follow its width, and its layout would rearrange while Qt
+        // arranges it. A caller's size still replaces them.
+        grid.set("Layout.minimumWidth", number(self.floor));
+        grid.set("Layout.preferredWidth", number(self.floor));
+        grid.members.push(Member::PropertyDecl {
+            ty: "var".to_owned(),
+            name: "eldurColumns".to_owned(),
+            value: Some(Value::expr(format!(
+                "eldurFrSizes(width - {})",
+                if self.taken.contains(' ') {
+                    format!("({})", self.taken)
+                } else {
+                    self.taken
+                }
+            ))),
+            readonly: true,
+            required: false,
+        });
+    }
+}
+
+/// Columns of px and `fr` tracks, some `fr` with a px minimum: Qt's fill
+/// items share the width equally whatever their minimums, so each `fr`
+/// column becomes a fixed one sized by the grid's `eldurColumns` (see
+/// [`FrSizes::declare`]). Other columns are returned as they are.
+fn freeze_fr_minimums(tracks: Vec<TrackSize>, gap: &Gap) -> (Vec<TrackSize>, Option<FrSizes>) {
+    let some_min = tracks
+        .iter()
+        .any(|t| matches!(t, TrackSize::Fr { min: Some(m), .. } if *m > 0.0));
+    let px_or_fr = tracks
+        .iter()
+        .all(|t| matches!(t, TrackSize::Fixed(Value::Number(_)) | TrackSize::Fr { .. }));
+    if !some_min || !px_or_fr {
+        return (tracks, None);
+    }
+    let mut frs = Vec::new();
+    let mut mins = Vec::new();
+    let mut fixed = 0.0;
+    let n = tracks.len();
+    let tracks = tracks
+        .into_iter()
+        .map(|t| match t {
+            TrackSize::Fr { fr, min } => {
+                let j = frs.len();
+                frs.push(fr);
+                mins.push(min.unwrap_or(0.0).max(0.0));
+                TrackSize::Fixed(Value::expr(format!("parent.eldurColumns[{j}]")))
+            }
+            TrackSize::Fixed(Value::Number(px)) => {
+                fixed += px as f32;
+                TrackSize::Fixed(Value::Number(px))
+            }
+            t => t,
+        })
+        .collect();
+    let gaps = n.saturating_sub(1) as f32;
+    let taken = gap.plus_text(fixed, gaps, "width");
+    let floor = fixed + mins.iter().sum::<f32>() + gap.px().unwrap_or(0.0) * gaps;
+    (
+        tracks,
+        Some(FrSizes {
+            frs,
+            mins,
+            taken,
+            floor,
+        }),
+    )
 }
 
 /// Makes room for free space between rows: `slots[i]` empty rows go before
@@ -658,10 +823,11 @@ impl Emitter<'_, '_> {
         let fills = tracks.iter().any(|t| *t < 0.0);
         grid.members.retain(|m| !matches!(m, Member::Child(_)));
         grid.set("columns", Value::Number((n + usize::from(!fills)) as f64));
-        let column_gap = self.gap_px(style.column_gap.as_ref(), line);
-        let row_gap = self.gap_px(style.row_gap.as_ref(), line);
-        grid.set("columnSpacing", number(column_gap));
-        grid.set("rowSpacing", number(row_gap));
+        let (own_w, own_h) = (self.content_px(b, true), self.content_px(b, false));
+        let column_gap = Self::gap(style.column_gap.as_ref(), true, own_w);
+        let row_gap = Self::gap(style.row_gap.as_ref(), has_height(style), own_h);
+        grid.set("columnSpacing", column_gap.value("width"));
+        grid.set("rowSpacing", row_gap.value("height"));
         grid.members.push(Member::PropertyDecl {
             ty: "var".to_owned(),
             name: "eldurTracks".to_owned(),
@@ -690,8 +856,19 @@ impl Emitter<'_, '_> {
         let style = &*b.style;
         let mut items: Vec<&LayoutBox<'_>> = children.iter().collect();
         items.sort_by_key(|c| c.style.order);
-        let column_gap = self.gap_px(style.column_gap.as_ref(), line);
-        let row_gap = self.gap_px(style.row_gap.as_ref(), line);
+        let given = self.own_given;
+        // A percentage of an auto height is auto (CSS 2 §10.5).
+        let definite_height = match &style.height {
+            Size::Length(l) if !is_viewport_relative(l) && l.as_px().is_none() => {
+                self.percent_resolves()
+                    || matches!(&style.min_height, Size::Length(m) if m.as_px() != Some(0.0))
+            }
+            _ => has_height(style),
+        };
+        let definite = definite_height || given == Given::Definite;
+        let (own_w, own_h) = (self.content_px(b, true), self.content_px(b, false));
+        let column_gap = Self::gap(style.column_gap.as_ref(), true, own_w);
+        let row_gap = Self::gap(style.row_gap.as_ref(), definite, own_h);
 
         if let [Track::AutoRepeat { fill, tracks }] = style.grid_template_columns.as_slice()
             && let Some(min_cell) = repeat_min_cell(tracks)
@@ -733,6 +910,26 @@ impl Emitter<'_, '_> {
                 })
                 .collect();
             let mut grid = self.auto_fit_grid(b, min_cell, !*fill, column_gap, row_gap, objs);
+            // A set height stops the stretch to the row (CSS Box Alignment §6.1):
+            // the item keeps it, at the start of its area.
+            for (obj, c) in grid.children_mut().zip(&items) {
+                let extra = match c.style.box_sizing {
+                    BoxSizing::ContentBox => {
+                        let line = c.node.and_then(|n| node_line(self.doc, n));
+                        self.insets(&c.style, line).vertical()
+                    }
+                    BoxSizing::BorderBox => 0.0,
+                };
+                if let Size::Length(l) = &c.style.height
+                    && (l.as_px().is_some() || is_viewport_relative(l))
+                {
+                    obj.set("Layout.preferredHeight", size_value(l, extra));
+                    obj.set("Layout.fillHeight", false);
+                    if obj.get("Layout.alignment").is_none() {
+                        obj.set("Layout.alignment", Value::expr("Qt.AlignTop"));
+                    }
+                }
+            }
             if let Some(h) = auto_row_px(style) {
                 for obj in grid.children_mut() {
                     obj.set("Layout.preferredHeight", number(h));
@@ -815,6 +1012,20 @@ impl Emitter<'_, '_> {
             explicit_cols,
             style.grid_auto_flow_column,
         );
+        if !definite && placement.rows > 1 && style.row_gap.as_ref().is_some_and(has_percentage) {
+            // Chromium lays the rows out with no gap, then resolves the
+            // percentage against the height that gives and overflows; the
+            // height cannot follow its own rows' gap here.
+            self.diags.info(
+                "css",
+                line,
+                format!(
+                    "the percentage row gap of {} has no definite height to be of and is \
+                     laid out as 0",
+                    self.what(b)
+                ),
+            );
+        }
 
         let mut approx = false;
         let mut tracks_for = |template: &[Track], auto: &[Track], n: usize, base: Option<&str>| {
@@ -836,6 +1047,7 @@ impl Emitter<'_, '_> {
             placement.cols,
             Some("parent.width"),
         );
+        let (col_tracks, fr_sizes) = freeze_fr_minimums(col_tracks, &column_gap);
         let mut placement = placement;
         let mut gap_split = None;
         let col_tracks = match subdivide(&col_tracks) {
@@ -852,8 +1064,8 @@ impl Emitter<'_, '_> {
                     })
                     .collect();
                 let all_fr = frs.len() == col_tracks.len();
-                if all_fr && column_gap > 0.0 {
-                    gap_split = Some(GapSplit::new(&offsets, column_gap));
+                if all_fr && !column_gap.is_zero() {
+                    gap_split = Some(GapSplit::new(&offsets, column_gap.clone()));
                 }
                 let total: f32 = frs.iter().sum();
                 let k = offsets.last().copied().unwrap_or(0) as f32;
@@ -903,16 +1115,6 @@ impl Emitter<'_, '_> {
             }
             None => col_tracks,
         };
-        let given = self.own_given;
-        // A percentage of an auto height is auto (CSS 2 §10.5).
-        let definite_height = match &style.height {
-            Size::Length(l) if !is_viewport_relative(l) && l.as_px().is_none() => {
-                self.percent_resolves()
-                    || matches!(&style.min_height, Size::Length(m) if m.as_px() != Some(0.0))
-            }
-            _ => has_height(style),
-        };
-        let definite = definite_height || given == Given::Definite;
         let tall = definite || given == Given::Stretched;
         let row_tracks = tracks_for(
             &style.grid_template_rows,
@@ -931,9 +1133,13 @@ impl Emitter<'_, '_> {
                 ),
             );
         }
-        let column_gap = if gap_split.is_some() { 0.0 } else { column_gap };
-        let cols = AxisPlan::new(col_tracks, column_gap, true, true);
-        let mut rows = AxisPlan::new(row_tracks, row_gap, definite, false);
+        let column_gap = if gap_split.is_some() {
+            Gap::default()
+        } else {
+            column_gap
+        };
+        let cols = AxisPlan::new(col_tracks, column_gap.clone(), true, true);
+        let mut rows = AxisPlan::new(row_tracks, row_gap.clone(), definite, false);
         rows.stretch = matches!(
             style.align_content,
             Align::Normal | Align::Auto | Align::Stretch
@@ -956,7 +1162,9 @@ impl Emitter<'_, '_> {
             );
         }
 
-        let filler_col = !cols.absorbs();
+        // Columns sized by `eldurFrSizes` share out the whole width themselves;
+        // a filler beside them would add a column gap past the grid's edge.
+        let filler_col = !cols.absorbs() && fr_sizes.is_none();
         let filler_row = placement.rows > 0
             && tall
             && (packed == Some(Pack::Start) || (rows.stretch && !rows.absorbs()));
@@ -1026,8 +1234,8 @@ impl Emitter<'_, '_> {
         let keeps = shares.iter().any(|s| s.0);
         // Qt puts row spacing before the carrier and keeper rows too, so the
         // row gap becomes the top margin of what starts in a later row.
-        let base_gap_margins = (carrier_row || row_slots.is_some()) && row_gap > 0.0;
-        let gap_margins = base_gap_margins || keeps && row_gap > 0.0;
+        let base_gap_margins = (carrier_row || row_slots.is_some()) && !row_gap.is_zero();
+        let gap_margins = base_gap_margins || keeps && !row_gap.is_zero();
         let explicit = !trivial
             || !placeholders.is_empty()
             || filler_col
@@ -1040,10 +1248,17 @@ impl Emitter<'_, '_> {
             "columns",
             Value::Number((placement.cols + usize::from(filler_col)) as f64),
         );
-        grid.set("columnSpacing", number(column_gap));
+        if let Some(sizes) = fr_sizes {
+            sizes.declare(&mut grid);
+        }
+        grid.set("columnSpacing", column_gap.value("width"));
         grid.set(
             "rowSpacing",
-            number(if gap_margins { 0.0 } else { row_gap }),
+            if gap_margins {
+                Value::Number(0.0)
+            } else {
+                row_gap.value("height")
+            },
         );
         // Only a plain run of same-sized cells can follow its items out of the
         // layout: spans and other tracks would change more than the cell.
@@ -1108,15 +1323,10 @@ impl Emitter<'_, '_> {
                 _ => 0.0,
             });
             if gap_margins && p.row > 0 {
-                add_margin(&mut obj, "Layout.topMargin", row_gap);
+                add_gap_margin(&mut obj, "Layout.topMargin", &row_gap, 1.0);
             }
             if let Some(split) = &gap_split {
-                let (left, right) = split.margins(p.col, p.col + p.col_span);
-                for (name, px) in [("Layout.leftMargin", left), ("Layout.rightMargin", right)] {
-                    if px != 0.0 {
-                        add_margin(&mut obj, name, px);
-                    }
-                }
+                split.add_margins(&mut obj, p.col, p.col + p.col_span);
             }
             if self.options.source_comments
                 && let Some(node) = child.node
@@ -1137,7 +1347,7 @@ impl Emitter<'_, '_> {
                         "Layout.topMargin",
                         Value::expr(format!(
                             "parent && parent.eldurCell && parent.eldurCell(this) >= {across} ? {} : {}",
-                            fmt_number(round(own + row_gap)),
+                            row_gap.plus_text(*own, 1.0, "parent.height"),
                             fmt_number(round(*own)),
                         )),
                     );
@@ -1186,11 +1396,11 @@ impl Emitter<'_, '_> {
                 }
             }
             if gap_margins && r > 0 && r < placement.rows {
-                add_margin(&mut ph, "Layout.topMargin", row_gap);
+                add_gap_margin(&mut ph, "Layout.topMargin", &row_gap, 1.0);
             }
             if let Some(split) = &gap_split {
                 // Only its share matters: it keeps the sub-columns equal.
-                add_margin(&mut ph, "Layout.rightMargin", split.share());
+                add_gap_margin(&mut ph, "Layout.rightMargin", &split.gap, split.share());
             }
             grid.push_child(ph);
         }
@@ -1231,12 +1441,7 @@ impl Emitter<'_, '_> {
             }
             if let Some(split) = &gap_split {
                 // The moved gap is no part of the area.
-                let (left, right) = split.margins(*col, col + span);
-                for (name, px) in [("Layout.leftMargin", left), ("Layout.rightMargin", right)] {
-                    if px != 0.0 {
-                        add_margin(&mut keeper, name, px);
-                    }
-                }
+                split.add_margins(&mut keeper, *col, col + span);
             }
             grid.push_child(keeper);
         }
@@ -1255,7 +1460,7 @@ impl Emitter<'_, '_> {
                 &placement,
                 (&rows, gap_margins),
                 definite,
-                column_gap,
+                !column_gap.is_zero(),
                 gap_split.is_some(),
             )
             && rows.unequal_fr()
@@ -1321,7 +1526,7 @@ impl Emitter<'_, '_> {
         placement: &Placement,
         (rows, moved_gap): (&AxisPlan, bool),
         definite: bool,
-        column_gap: f32,
+        column_gap: bool,
         split: bool,
     ) -> bool {
         let auto_rows: Vec<usize> = (0..placement.rows)
@@ -1332,7 +1537,9 @@ impl Emitter<'_, '_> {
             || self.no_carry
             || self.hides_items
             || split
-            || (placement.cols > 1 && column_gap > 0.0)
+            || (placement.cols > 1 && column_gap)
+            // Its sums are of px.
+            || rows.gap.px().is_none()
             || placement.items.iter().any(|p| p.row_span > 1)
             || !rows.tracks.iter().all(|t| {
                 matches!(
@@ -1365,7 +1572,7 @@ impl Emitter<'_, '_> {
             let mut margins = margin("Layout.topMargin") + margin("Layout.bottomMargin");
             // A row gap moved into the top margins is the carrier's, below.
             if moved_gap && p.row > 0 {
-                margins -= f64::from(rows.gap);
+                margins -= f64::from(rows.gap.px().unwrap_or(0.0));
             }
             let own = match kid.get("Layout.preferredHeight") {
                 Some(Value::Number(n)) => Some(*n),
@@ -1395,9 +1602,10 @@ impl Emitter<'_, '_> {
         }
         // With no row spacing, a row's gap is its carrier's top margin, as
         // it is its items': it is then no part of the row's base or share.
+        let row_gap = rows.gap.px().unwrap_or(0.0);
         let gap_above = |carrier: &mut Object, r: usize| {
             if moved_gap && r > 0 {
-                add_margin(carrier, "Layout.topMargin", rows.gap);
+                add_margin(carrier, "Layout.topMargin", row_gap);
             }
         };
         let mut bases = Vec::new();
@@ -1464,7 +1672,7 @@ impl Emitter<'_, '_> {
                     _ => None,
                 })
                 .sum();
-            let gaps = f64::from(rows.gap) * placement.rows.saturating_sub(1) as f64;
+            let gaps = f64::from(row_gap) * placement.rows.saturating_sub(1) as f64;
             let taken = fmt_number(fixed + gaps);
             let shares: f64 = rows
                 .tracks
@@ -1573,6 +1781,40 @@ impl Emitter<'_, '_> {
                     if horizontal && *l == LengthPercentage::percent(100.0) =>
                 {
                     None
+                }
+                // A percentage is of the area (CSS Grid 2 §11.1); where the
+                // area is an expression the item keeps the rest of it open, or
+                // its track would shrink to the item.
+                Size::Length(l)
+                    if horizontal
+                        && has_percentage(l)
+                        && keeper.is_none()
+                        && let Some(area) = plan.area(start, span) =>
+                {
+                    let area = format!("({area})");
+                    let width = length_expr(l, &area);
+                    if h_align.is_none() {
+                        let rest = if extra == 0.0 {
+                            format!("{area} - ({width})")
+                        } else {
+                            format!("{area} - ({width}) - {}", fmt_number(round(extra)))
+                        };
+                        obj.set(
+                            "Layout.rightMargin",
+                            Value::Expr(match obj.get("Layout.rightMargin") {
+                                Some(Value::Number(n)) if *n != 0.0 => {
+                                    format!("{} + {rest}", fmt_number(*n))
+                                }
+                                Some(Value::Expr(e)) => format!("{e} + {rest}"),
+                                _ => rest,
+                            }),
+                        );
+                    }
+                    Some(if extra == 0.0 {
+                        Value::Expr(width)
+                    } else {
+                        Value::Expr(format!("{width} + {}", fmt_number(round(extra))))
+                    })
                 }
                 Size::Length(l) if horizontal || l.as_px().is_some() || is_viewport_relative(l) => {
                     Some(size_value(l, extra))
@@ -1729,8 +1971,8 @@ impl Emitter<'_, '_> {
         b: &LayoutBox<'_>,
         min_cell: f32,
         fit: bool,
-        column_gap: f32,
-        row_gap: f32,
+        column_gap: Gap,
+        row_gap: Gap,
         items: Vec<(Object, Option<String>)>,
     ) -> Object {
         let id = self
@@ -1762,8 +2004,8 @@ impl Emitter<'_, '_> {
                 "fitCols".to_owned()
             }),
         );
-        grid.set("columnSpacing", number(column_gap));
-        grid.set("rowSpacing", number(row_gap));
+        grid.set("columnSpacing", column_gap.value("width"));
+        grid.set("rowSpacing", row_gap.value("height"));
         if fit {
             grid.set("uniformCellWidths", true);
         }
@@ -1837,12 +2079,12 @@ struct GapSplit {
     /// The track each sub-column line starts, if any.
     track_at: Vec<Option<usize>>,
     sub_columns: usize,
-    gap: f32,
-    total_gap: f32,
+    gap: Gap,
+    tracks: usize,
 }
 
 impl GapSplit {
-    fn new(offsets: &[usize], gap: f32) -> Self {
+    fn new(offsets: &[usize], gap: Gap) -> Self {
         let sub_columns = offsets.last().copied().unwrap_or(0);
         let mut track_at = vec![None; sub_columns + 1];
         for (t, o) in offsets.iter().enumerate() {
@@ -1852,22 +2094,33 @@ impl GapSplit {
             track_at,
             sub_columns,
             gap,
-            total_gap: gap * offsets.len().saturating_sub(2) as f32,
+            tracks: offsets.len().saturating_sub(1),
         }
     }
 
-    /// The margin each sub-column carries.
+    /// The margin each sub-column carries, in gaps.
     fn share(&self) -> f32 {
-        self.total_gap / self.sub_columns as f32
+        self.tracks.saturating_sub(1) as f32 / self.sub_columns as f32
     }
 
     /// Left and right margins of an item in sub-columns `start..end`,
-    /// which start and end on track lines.
+    /// which start and end on track lines, in gaps: they scale with it, so
+    /// a percentage gap keeps its own expression.
     fn margins(&self, start: usize, end: usize) -> (f32, f32) {
         let before = |line: usize| self.share() * line as f32;
-        let left = self.track_at[start].map_or(0.0, |t| t as f32 * self.gap - before(start));
-        let right = self.track_at[end].map_or(0.0, |t| before(end) - (t as f32 - 1.0) * self.gap);
+        let left = self.track_at[start].map_or(0.0, |t| t as f32 - before(start));
+        let right = self.track_at[end].map_or(0.0, |t| before(end) - (t as f32 - 1.0));
         (left, right)
+    }
+
+    /// Adds the margins of an item in sub-columns `start..end` to `obj`.
+    fn add_margins(&self, obj: &mut Object, start: usize, end: usize) {
+        let (left, right) = self.margins(start, end);
+        for (name, k) in [("Layout.leftMargin", left), ("Layout.rightMargin", right)] {
+            if k != 0.0 {
+                add_gap_margin(obj, name, &self.gap, k);
+            }
+        }
     }
 }
 
@@ -1879,22 +2132,21 @@ pub(super) fn is_share(width: &Size) -> bool {
         && !matches!(l, Length::Linear(lp) if *lp == LengthPercentage::percent(100.0)))
 }
 
-/// Whether `length` has a percentage term anywhere, even inside `calc()`.
-fn has_percentage(length: &Length) -> bool {
-    fn node(n: &CalcNode) -> bool {
-        match n {
-            CalcNode::Leaf(l) => l.percent != 0.0,
-            CalcNode::Min(nodes) | CalcNode::Max(nodes) | CalcNode::Sum(nodes) => {
-                nodes.iter().any(node)
-            }
-            CalcNode::Clamp(a, b, c) => node(a) || node(b) || node(c),
-            CalcNode::Product(n, _) => node(n),
-        }
-    }
-    match length {
-        Length::Linear(l) => l.percent != 0.0,
-        Length::Calc(n) => node(n),
-    }
+/// Adds `k` gaps to a `Layout.*Margin` (or sets it); a percentage gap is
+/// of the grid's size.
+fn add_gap_margin(obj: &mut Object, name: &str, gap: &Gap, k: f32) {
+    let base = if name.contains("left") || name.contains("right") {
+        "parent.width"
+    } else {
+        "parent.height"
+    };
+    let value = match obj.get(name) {
+        None => gap.plus(0.0, k, base),
+        Some(Value::Number(n)) => gap.plus(*n as f32, k, base),
+        Some(Value::Expr(e)) => Value::expr(format!("{e} + {}", gap.plus_text(0.0, k, base))),
+        Some(_) => return,
+    };
+    obj.set(name, value);
 }
 
 /// Adds `px` to a px `Layout.*Margin` (or sets it).
