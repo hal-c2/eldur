@@ -35,7 +35,7 @@ mapping specifications are in `docs/spec/`.
 | Convert a page and run it in ljos or qml6 (fails if neither is found) | `mise run dev [page.html] [-o dir] [--runtime auto\|ljos\|qml6\|none] [--viewport WxH]` |
 | Format every crate in place | `mise run fmt` |
 | Format check, clippy (warnings are errors) | `mise run check` |
-| Rust tests; the QML end-to-end tests skip, saying so, without Qt 6's qmltestrunner | `mise run test [-- cargo test args]` |
+| Rust tests; the QML end-to-end tests skip, saying so, without Qt 6's qmltestrunner (fail instead with `ELDUR_REQUIRE_QT=1`) | `mise run test [-- cargo test args]` |
 | Build the workspace and print the `eldur` binary's path | `mise run build [--release]` |
 | API docs of every crate | `mise run docs [--open]` |
 | Install the `eldur` CLI from the checkout | `mise run install [--root dir]` |
@@ -50,7 +50,10 @@ mapping specifications are in `docs/spec/`.
 Every task takes `--help`. Paths you pass are relative to the directory you
 run mise in. Outputs go under cargo's target directory (`CARGO_TARGET_DIR` is
 respected). CI (`.github/workflows/ci.yml`) runs `setup`, `check`, `test` and
-`tasks:smoke`, without Qt, so the QML end-to-end tests skip there.
+`tasks:smoke` in its `tasks` job, without Qt, so the QML end-to-end tests skip
+there. Its `qml-e2e` job installs Qt 6.11 and runs every `*_e2e` test of
+`eldur_convert` with `ELDUR_REQUIRE_QT=1`, which makes a test that would skip
+fail instead.
 
 ## Conventions
 

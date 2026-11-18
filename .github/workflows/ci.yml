@@ -17,10 +17,10 @@ jobs:
       - uses: jdx/mise-action@v3
       # No Qt here: the end-to-end tests pin Qt 6.11's behaviour and Ubuntu
       # 24.04 ships Qt 6.4, so mise run test skips the tests that run QML in
-      # qmltestrunner (it says so in the log), and tasks:smoke dry-runs
-      # qml:check and visual. No Playwright or sway either, for the same
-      # reason. numpy and Pillow are for visual:test, whose tests that need
-      # Qt, node's Playwright or sway skip.
+      # qmltestrunner (it says so in the log; the qml-e2e job below runs
+      # them), and tasks:smoke dry-runs qml:check and visual. No Playwright
+      # or sway either, for the same reason. numpy and Pillow are for
+      # visual:test, whose tests that need Qt, node's Playwright or sway skip.
       - name: Install the visual harness's Python modules
         run: |
           sudo apt-get update
@@ -29,3 +29,45 @@ jobs:
       - run: mise run check
       - run: mise run test
       - run: mise run tasks:smoke
+
+  # The end-to-end tests that run converted QML in Qt 6.11's qmltestrunner.
+  # The tasks job has no Qt, so there they skip and pass; here
+  # ELDUR_REQUIRE_QT=1 turns any skip, or a runner that cannot be found, into
+  # a failure.
+  qml-e2e:
+    runs-on: ubuntu-24.04
+    env:
+      ELDUR_REQUIRE_QT: "1"
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v5
+      - uses: jdx/mise-action@v3
+      # The Qt minor the tests and docs/spec measure (qt_pinned in
+      # mise-tasks/_lib/common.sh); the patch is the newest 6.11 one.
+      # aqtinstall fetches it from Qt's own servers, cached by version.
+      - uses: jurplel/install-qt-action@v4.5.0
+        with:
+          version: "6.11.3"
+          host: linux
+          target: desktop
+          arch: linux_gcc_64
+          aqtversion: "==3.3.0"
+          cache: true
+      # Qt's installer ships its tools unsuffixed; the tests and tasks look
+      # for Qt 6's by the -6 names or by QMLTESTRUNNER/QMLLINT, because a
+      # plain qmltestrunner may be Qt 5's.
+      - name: Name Qt 6.11's tools for the tests
+        run: |
+          bin="$RUNNER_TEMP/qt6-bin"
+          mkdir -p "$bin"
+          ln -s "$QT_ROOT_DIR/bin/qml" "$bin/qml6"
+          echo "$bin" >>"$GITHUB_PATH"
+          {
+            echo "QMLTESTRUNNER=$QT_ROOT_DIR/bin/qmltestrunner"
+            echo "QMLLINT=$QT_ROOT_DIR/bin/qmllint"
+          } >>"$GITHUB_ENV"
+      - uses: Swatinem/rust-cache@v2.9.3
+      - run: mise run setup
+      # Fails unless qmltestrunner, qmllint and qml6 are the pinned Qt 6.11.
+      - run: mise run setup --check
+      - run: mise run test -- -p eldur_convert --test '*_e2e'
