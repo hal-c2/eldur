@@ -499,3 +499,151 @@ fn a_page_made_again_in_one_engine_hears_only_its_own_listeners() {
     }
     assert!(problems.is_empty(), "{}", problems.join("\n  "));
 }
+
+// Pages with no timer, frame or animation: nothing ticks between one going
+// and the next being made, so `init` is the first to see it gone. A covered
+// page's root resized is no resize of the document.
+fn static_page(name: &str) -> String {
+    format!(
+        r#"<!doctype html><html><head><meta charset="utf-8"><title>{name}</title></head><body>
+<p>{name}</p>
+<script>
+document.addEventListener("keydown", function(e) {{ console.log("LC {name} key " + e.key); }});
+window.addEventListener("resize", function() {{ console.log("LC {name} resize"); }});
+</script>
+</body></html>"#
+    )
+}
+
+const STATIC_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 800
+    height: 600
+
+TestCase {
+    name: "StaticPages"
+    when: windowShown
+
+    function make(file) {
+        const component = Qt.createComponent(file)
+        verify(component.status === Component.Ready, component.errorString())
+        const page = createTemporaryObject(component, host, { width: 800, height: 600 })
+        waitForRendering(page)
+        page.forceActiveFocus()
+        return page
+    }
+
+    function test_static_pages() {
+        const home = make("Home.qml")
+        const about = make("About.qml")
+        // Home is covered: its window hears no resize of its root.
+        home.width = 700
+        wait(50)
+        console.log("LC covered home resized")
+        keyClick(Qt.Key_A)
+        wait(50)
+        // The host has the focus when About goes, so not even a focus change
+        // runs between About going and Contact being made.
+        host.forceActiveFocus()
+        about.destroy()
+        wait(200)
+        const contact = make("Contact.qml")
+        console.log("LC host reads " + JSON.stringify(contact.title))
+        keyClick(Qt.Key_C)
+        wait(50)
+        contact.destroy()
+        wait(200)
+        home.forceActiveFocus()
+        keyClick(Qt.Key_H)
+        wait(50)
+        // Home is the document again, and hears its own resize again.
+        home.width = 650
+        wait(50)
+        console.log("LC host reads " + JSON.stringify(home.title))
+    }
+}
+}
+"##;
+
+const STATIC_WANT: &[&str] = &[
+    "LC covered home resized",
+    "LC About key a",
+    "LC host reads \"Contact\"",
+    "LC Contact key c",
+    "LC Home key h",
+    "LC Home resize",
+    "LC host reads \"Home\"",
+];
+
+#[test]
+fn a_page_made_after_one_went_with_nothing_ticking_hears_only_its_own_listeners() {
+    if support::no_qt() {
+        return;
+    }
+    let options = Options {
+        root: RootKind::Item,
+        ..Options::default()
+    };
+    let dir = std::env::temp_dir().join(format!("eldur-static-pages-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    for (at, name) in ["Home", "About", "Contact"].into_iter().enumerate() {
+        let out = eldur_convert::convert(
+            &Input {
+                html: static_page(name),
+                url: format!("{}/index.html", name.to_lowercase()),
+            },
+            &options,
+            &mut NoResources,
+        );
+        let script = format!("{}_page.js", name.to_lowercase());
+        for file in &out.files {
+            let path = file.path.to_string_lossy();
+            let contents = String::from_utf8_lossy(&file.contents);
+            match path.as_ref() {
+                "Main.qml" => std::fs::write(
+                    dir.join(format!("{name}.qml")),
+                    contents
+                        .replace("\"page.js\"", &format!("\"{script}\""))
+                        .replace("Main.qml", &format!("{name}.qml")),
+                ),
+                "page.js" => std::fs::write(dir.join(&script), &file.contents),
+                // The pages share the first one's runtime file, and so its state.
+                _ if at == 0 => std::fs::write(dir.join(&file.path), &file.contents),
+                _ => Ok(()),
+            }
+            .expect("write page");
+        }
+    }
+    std::fs::write(dir.join("tst_static_pages.qml"), STATIC_TEST).expect("write test");
+    let output = support::qmltestrunner()
+        .args(["-platform", "offscreen", "-input"])
+        .arg(dir.join("tst_static_pages.qml"))
+        .env("QT_FORCE_STDERR_LOGGING", "1")
+        .output()
+        .expect("run qmltestrunner");
+    let text = format!(
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
+    std::fs::remove_dir_all(&dir).expect("remove temp dir");
+    let mut problems: Vec<String> = support::problem_lines(&text, |l| {
+        l.contains("FAIL!") || l.contains("Warning:") || l.contains("QWARN") || l.contains("Error:")
+    });
+    let logged: Vec<_> = text
+        .lines()
+        .filter_map(|l| l.find("LC ").map(|at| &l[at..]))
+        .collect();
+    if logged != STATIC_WANT {
+        problems.push(format!(
+            "logged\n    {}\n  wanted\n    {}",
+            logged.join("\n    "),
+            STATIC_WANT.join("\n    ")
+        ));
+    }
+    assert!(problems.is_empty(), "{}", problems.join("\n  "));
+}
