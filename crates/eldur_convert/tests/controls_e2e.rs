@@ -93,7 +93,7 @@ TestCase {
         t.forceActiveFocus()
         t.cursorPosition = 3
         keyClick(Qt.Key_D)
-        compare(t.text, "abcX")
+        compare(t.text, "abcd")
         verify(logged().indexOf("down:d:KeyD;") !== -1, logged())
         verify(logged().indexOf("input:abcd;") !== -1, logged())
         verify(logged().indexOf("up:d;") !== -1, logged())
