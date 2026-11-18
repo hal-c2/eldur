@@ -468,6 +468,10 @@ fn a_page_made_again_in_one_engine_hears_only_its_own_listeners() {
     let mut problems: Vec<String> = support::problem_lines(&text, |l| {
         l.contains("FAIL!") || l.contains("Warning:") || l.contains("QWARN") || l.contains("Error:")
     });
+    // A runner that crashed after its last line logged all it had to.
+    if !output.status.success() {
+        problems.push(format!("qmltestrunner exited with {}", output.status));
+    }
     let logged: Vec<_> = text
         .lines()
         .filter_map(|l| l.find("LC ").map(|at| &l[at..]))
@@ -512,6 +516,13 @@ fn static_page(name: &str) -> String {
 document.addEventListener("keydown", function(e) {{ console.log("LC {name} key " + e.key); }});
 window.addEventListener("resize", function() {{ console.log("LC {name} resize"); }});
 window.addEventListener("scroll", function() {{ console.log("LC {name} scroll"); }});
+// A signal's abort takes only the registration it came with.
+var kept = function(e) {{ console.log("LC {name} kept key " + e.key); }};
+var c = new AbortController();
+document.addEventListener("keydown", kept, {{ signal: c.signal }});
+document.removeEventListener("keydown", kept);
+document.addEventListener("keydown", kept);
+c.abort();
 </script>
 </body></html>"#
     )
@@ -562,6 +573,12 @@ TestCase {
         scroller(home).contentY = 100
         wait(100)
         console.log("LC covered home resized and scrolled")
+        // A key typed in the covered page is no key of the document's.
+        home.forceActiveFocus()
+        keyClick(Qt.Key_X)
+        wait(50)
+        console.log("LC key in covered home heard nothing")
+        about.forceActiveFocus()
         keyClick(Qt.Key_A)
         wait(50)
         // The host has the focus when About goes, so not even a focus change
@@ -591,10 +608,14 @@ TestCase {
 
 const STATIC_WANT: &[&str] = &[
     "LC covered home resized and scrolled",
+    "LC key in covered home heard nothing",
     "LC About key a",
+    "LC About kept key a",
     "LC host reads \"Contact\"",
     "LC Contact key c",
+    "LC Contact kept key c",
     "LC Home key h",
+    "LC Home kept key h",
     "LC Home resize",
     "LC Home scroll",
     "LC host reads \"Home\"",
@@ -655,6 +676,10 @@ fn a_page_made_after_one_went_with_nothing_ticking_hears_only_its_own_listeners(
     let mut problems: Vec<String> = support::problem_lines(&text, |l| {
         l.contains("FAIL!") || l.contains("Warning:") || l.contains("QWARN") || l.contains("Error:")
     });
+    // A runner that crashed after its last line logged all it had to.
+    if !output.status.success() {
+        problems.push(format!("qmltestrunner exited with {}", output.status));
+    }
     let logged: Vec<_> = text
         .lines()
         .filter_map(|l| l.find("LC ").map(|at| &l[at..]))
