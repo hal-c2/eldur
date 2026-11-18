@@ -75,7 +75,8 @@ jobs:
       # archive is pinned by checksum. A glyph those faces lack (a ✓ in Arial)
       # comes from fontconfig's fallback, which where the recordings were made
       # is Noto CJK or the Nerd Font, never DejaVu: the runner's DejaVu is
-      # rejected, and Noto CJK and Noto Color Emoji are installed.
+      # rejected (DejaVu Math TeX Gyre too, which fontconfig
+      # otherwise tries first for a ✓), and Noto CJK and Noto Color Emoji are installed.
       - name: Install the fonts the recordings were measured with
         env:
           NERD_FONTS: https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.1/JetBrainsMono.tar.xz
@@ -98,15 +99,9 @@ jobs:
           <?xml version="1.0"?>
           <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
           <fontconfig>
-            <selectfont><rejectfont><pattern>
-              <patelt name="family"><string>DejaVu Sans</string></patelt>
-            </pattern></rejectfont></selectfont>
-            <selectfont><rejectfont><pattern>
-              <patelt name="family"><string>DejaVu Serif</string></patelt>
-            </pattern></rejectfont></selectfont>
-            <selectfont><rejectfont><pattern>
-              <patelt name="family"><string>DejaVu Sans Mono</string></patelt>
-            </pattern></rejectfont></selectfont>
+            <selectfont><rejectfont>
+              <glob>/usr/share/fonts/truetype/dejavu/*</glob>
+            </rejectfont></selectfont>
           </fontconfig>
           EOF
           fc-cache -f
