@@ -502,14 +502,16 @@ fn a_page_made_again_in_one_engine_hears_only_its_own_listeners() {
 
 // Pages with no timer, frame or animation: nothing ticks between one going
 // and the next being made, so `init` is the first to see it gone. A covered
-// page's root resized is no resize of the document.
+// page's root resized or scrolled is no resize or scroll of the document.
 fn static_page(name: &str) -> String {
     format!(
         r#"<!doctype html><html><head><meta charset="utf-8"><title>{name}</title></head><body>
 <p>{name}</p>
+<div style="height: 3000px"></div>
 <script>
 document.addEventListener("keydown", function(e) {{ console.log("LC {name} key " + e.key); }});
 window.addEventListener("resize", function() {{ console.log("LC {name} resize"); }});
+window.addEventListener("scroll", function() {{ console.log("LC {name} scroll"); }});
 </script>
 </body></html>"#
     )
@@ -537,13 +539,29 @@ TestCase {
         return page
     }
 
+    // The page's root scroller: what moves when its document scrolls.
+    function scroller(item) {
+        for (let i = 0; i < item.children.length; ++i) {
+            const c = item.children[i]
+            if (c.contentHeight !== undefined && c.contentHeight > c.height) {
+                return c
+            }
+            const deeper = scroller(c)
+            if (deeper) {
+                return deeper
+            }
+        }
+        return null
+    }
+
     function test_static_pages() {
         const home = make("Home.qml")
         const about = make("About.qml")
-        // Home is covered: its window hears no resize of its root.
+        // Home is covered: its window hears no resize or scroll of its root.
         home.width = 700
-        wait(50)
-        console.log("LC covered home resized")
+        scroller(home).contentY = 100
+        wait(100)
+        console.log("LC covered home resized and scrolled")
         keyClick(Qt.Key_A)
         wait(50)
         // The host has the focus when About goes, so not even a focus change
@@ -560,9 +578,11 @@ TestCase {
         home.forceActiveFocus()
         keyClick(Qt.Key_H)
         wait(50)
-        // Home is the document again, and hears its own resize again.
+        // Home is the document again, and hears its own resize and scroll again.
         home.width = 650
         wait(50)
+        scroller(home).contentY = 200
+        wait(100)
         console.log("LC host reads " + JSON.stringify(home.title))
     }
 }
@@ -570,12 +590,13 @@ TestCase {
 "##;
 
 const STATIC_WANT: &[&str] = &[
-    "LC covered home resized",
+    "LC covered home resized and scrolled",
     "LC About key a",
     "LC host reads \"Contact\"",
     "LC Contact key c",
     "LC Home key h",
     "LC Home resize",
+    "LC Home scroll",
     "LC host reads \"Home\"",
 ];
 
