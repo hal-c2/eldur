@@ -33,9 +33,9 @@ impl Resources for CaseFiles {
 #[test]
 fn converted_corpus_passes_qt6_qmllint() {
     let Some(qmllint) = support::qmllint() else {
-        eprintln!(
-            "skipped: Qt 6's qmllint not found (set QMLLINT, or install Qt 6's declarative \
-             tools, which bring qmltestrunner too)"
+        support::skip(
+            "Qt 6's qmllint not found (set QMLLINT, or install Qt 6's declarative \
+             tools, which bring qmltestrunner too)",
         );
         return;
     };

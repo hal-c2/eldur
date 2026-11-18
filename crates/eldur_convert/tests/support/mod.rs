@@ -34,7 +34,9 @@ pub fn no_qt() -> bool {
 /// The name of the variable that turns every skip here into a failure.
 pub const REQUIRE_QT: &str = "ELDUR_REQUIRE_QT";
 
-fn skip(why: &str) -> bool {
+/// Prints why the test returns early and gives true, or fails the test when
+/// [`REQUIRE_QT`] is set.
+pub fn skip(why: &str) -> bool {
     if env::var_os(REQUIRE_QT).is_some_and(|v| !v.is_empty() && v != "0") {
         panic!("{REQUIRE_QT} is set, so this test may not skip: {why}");
     }
