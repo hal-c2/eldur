@@ -66,8 +66,31 @@ jobs:
             echo "QMLTESTRUNNER=$QT_ROOT_DIR/bin/qmltestrunner"
             echo "QMLLINT=$QT_ROOT_DIR/bin/qmllint"
           } >>"$GITHUB_ENV"
+      # The recorded Chromium geometry (tests/apps/chromium.json and the like)
+      # was measured with Liberation 2.1.5 for Arial, Helvetica, serif and
+      # sans-serif, and JetBrainsMono Nerd Font 3.5.1 for monospace (the
+      # tables in docs/spec/layout.md). Text widths and line heights follow
+      # the font, so the runner gets the same files; the Nerd Font archive is
+      # pinned by checksum.
+      - name: Install the fonts the recordings were measured with
+        env:
+          NERD_FONTS: https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.1/JetBrainsMono.tar.xz
+          NERD_FONTS_SHA256: 04d5e8f903693f9dd13e16f867e994834e681eb3c72c0d337a770dcda09010cf
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends fontconfig fonts-liberation
+          archive="$RUNNER_TEMP/JetBrainsMono.tar.xz"
+          curl -fsSLo "$archive" "$NERD_FONTS"
+          echo "$NERD_FONTS_SHA256  $archive" | sha256sum -c -
+          fonts="$HOME/.local/share/fonts"
+          mkdir -p "$fonts"
+          tar -xJf "$archive" -C "$fonts" \
+            JetBrainsMonoNerdFont-Regular.ttf JetBrainsMonoNerdFont-Bold.ttf \
+            JetBrainsMonoNerdFont-Italic.ttf JetBrainsMonoNerdFont-BoldItalic.ttf
+          fc-cache -f
+          fc-list -f '%{family[0]} %{style[0]} %{fontversion} %{file}\n' | grep -E 'Liberation|JetBrains' | sort
       - uses: Swatinem/rust-cache@v2.9.3
       - run: mise run setup
       # Fails unless qmltestrunner, qmllint and qml6 are the pinned Qt 6.11.
       - run: mise run setup --check
-      - run: mise run test -- -p eldur_convert --test '*_e2e'
+      - run: mise run test -- -p eldur_convert --test '*_e2e' --no-fail-fast
