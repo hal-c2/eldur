@@ -78,8 +78,8 @@ else
   lack="$(printf '; %s' "${lacks[@]}")"
   skipped+=("Qt 6 (qml6, qmllint, qmltestrunner) not all found: ${lack#; }; $qt6_install_hint")
 fi
-# A record's later lines (a note's pin and install, or a newline inside a
-# variable it names) stay with the record before them.
+# A record's later lines (a note's pin and install) stay with the record
+# before them. qt_pin_report shows a newline inside a value as \n.
 last=""
 while IFS= read -r line; do
   case "$line" in

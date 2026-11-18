@@ -55,8 +55,9 @@ expect() {
   out="$(env -i HOME="$scratch" PATH="$scratch/$case:$sys" RUSTUP_TOOLCHAIN=1.98.1 \
     usage_check=true "$@" bash mise-tasks/setup 2>&1)" || code=$?
   if [ "$code" != "$want" ] || { [ -n "$text" ] && [[ "$out" != *"$text"* ]]; } ||
-    { [ -z "$text" ] && [[ "$out" == *"note, a Qt"* ]]; } || [[ "$out" == *$'\n'"not the pinned version:"* ]]; then
-    echo "tasks:test: $case: setup exited $code, wanted $want and '${text:-no note on Qt}'; it said:" >&2
+    { [ -z "$text" ] && [[ "$out" == *"note, a Qt"* ]]; } || [[ "$out" == *$'\n'"not the pinned version:"* ]] ||
+    { [ -n "${absent:-}" ] && [[ "$out" == *"$absent"* ]]; }; then
+    echo "tasks:test: $case: setup exited $code, wanted $want and '${text:-no note on Qt}'${absent:+ and no '$absent'}; it said:" >&2
     printf '%s\n' "$out" | sed 's/^/    /' >&2
     failed=1
   else
@@ -141,11 +142,13 @@ expect missing 0 "Qt 6 (qml6, qmllint, qmltestrunner) not all found: QMLTESTRUNN
 # mise run test takes a QMLTESTRUNNER as asked and fails on it, so setup says so.
 expect missing 0 "and QMLTESTRUNNER names it, so mise run test fails on it: point QMLTESTRUNNER at Qt $qt_pinned's qmltestrunner, or unset it" \
   QMLTESTRUNNER=qmltestrunner-typo QMLLINT="$scratch/qt-pinned/qmllint"
-# A newline in the name stays inside its own line of the report.
-expect missing 0 "qmltestrunner (qmltestrunner-typo
-      second) is not on PATH" \
+# A newline in the name is shown as \n, so it cannot start a record of its own.
+expect missing 0 "qmltestrunner (qmltestrunner-typo\nsecond) is not on PATH" \
   QMLTESTRUNNER="qmltestrunner-typo
 second" QMLLINT="$scratch/qt-pinned/qmllint"
+absent="note, a Qt" expect missing 0 "qmltestrunner (typo\nNOTE qml6: Qt 9.0 found) is not on PATH" \
+  QMLTESTRUNNER="typo
+NOTE qml6: Qt 9.0 found" QMLLINT="$scratch/qt-pinned/qmllint"
 # A path that names nothing is missing too, though a Qt answers beside it.
 stub gone qmake6 "$newer.1"
 ln -s "$scratch/qt-pinned/qml" "$scratch/gone/qml6"
@@ -154,7 +157,8 @@ expect gone 0 "qmllint ($scratch/gone/qmllint) is not an executable file" \
 # Only what goes without that tool is said: dev does not use qmllint.
 expect gone 0 "Qt 6 (qml6, qmllint, qmltestrunner) not all found: QMLLINT names no qmllint (below); install" \
   QMLTESTRUNNER="$scratch/qt-pinned/qmltestrunner" QMLLINT="$scratch/gone/qmllint"
-expect gone 0 "so mise run qml:check fails on it: point QMLLINT at Qt $qt_pinned's qmllint, or unset it" \
+# The QML tests take a set QMLLINT as asked too (crates/eldur_convert/tests/support).
+expect gone 0 "so mise run qml:check and mise run test fail on it: point QMLLINT at Qt $qt_pinned's qmllint, or unset it" \
   QMLTESTRUNNER="$scratch/qt-pinned/qmltestrunner" QMLLINT="$scratch/gone/qmllint"
 # A shell builtin is no runner, though command -v answers for it.
 mkdir -p "$scratch/builtin"
