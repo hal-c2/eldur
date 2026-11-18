@@ -2,20 +2,27 @@
 //! §10.3.2, §10.6.2): a given width or height keeps the intrinsic ratio,
 //! both stretch the image (`object-fit: fill`).
 
-use eldur_css::{BoxSizing, ComputedStyle, LengthPercentage, ObjectFit, Size};
-use eldur_dom::NodeId;
+use eldur_css::{BoxSizing, ComputedStyle, LengthPercentage, ObjectFit, Rgba, Size};
+use eldur_dom::{NodeId, collapse_whitespace};
 use eldur_qml::{Object, Value};
 
+use super::accessible;
 use super::flow::{Emitted, MarginSet};
 use super::units::{fmt_number, number, round};
 use super::{Emitter, hint};
 use crate::boxes::LayoutBox;
+use crate::images::{ImageAsset, svg_size};
 
 impl Emitter<'_, '_> {
     pub(super) fn image(&mut self, b: &LayoutBox<'_>, node: NodeId, line: Option<u32>) -> Emitted {
         let style = &*b.style;
         let element = self.doc.element(node).expect("an img is an element");
-        let asset = self.images.get(&node).cloned();
+        let inline_svg = element.is_svg();
+        let asset = if inline_svg {
+            self.svg_asset(node, style.color)
+        } else {
+            self.images.get(&node).cloned()
+        };
         let insets = self.insets(style, line);
         let (extra_w, extra_h) = match style.box_sizing {
             BoxSizing::ContentBox => (0.0, 0.0),
@@ -60,7 +67,7 @@ impl Emitter<'_, '_> {
         let mut image = Object::new("Image");
         if let Some(a) = &asset {
             image.set("source", Value::string(a.source.clone()));
-        } else if element.attr("src").is_none_or(|s| s.trim().is_empty()) {
+        } else if !inline_svg && element.attr("src").is_none_or(|s| s.trim().is_empty()) {
             // A missing file was reported when the files were read.
             let what = super::describe(self.doc, node);
             self.diags.warning(
@@ -85,7 +92,9 @@ impl Emitter<'_, '_> {
             image.set("sourceSize.width", Value::expr("width"));
             image.set("sourceSize.height", Value::expr("height"));
         }
-        if let Some(alt) = element.attr("alt").filter(|a| !a.is_empty()) {
+        if inline_svg {
+            self.svg_accessible(&mut image, node);
+        } else if let Some(alt) = element.attr("alt").filter(|a| !a.is_empty()) {
             image.set("Accessible.name", Value::string(alt.to_owned()));
         }
         image.set("anchors.fill", Value::expr("parent"));
@@ -168,6 +177,91 @@ impl Emitter<'_, '_> {
             collapse_through: false,
         }
     }
+}
+
+impl Emitter<'_, '_> {
+    /// The file an inline `<svg>` is shown from: its markup as a document of
+    /// its own, with `currentColor` resolved to `color`, the colour of the
+    /// element that holds it (SVG 2 §13.2, CSS Color 4 §6.4). The name is a
+    /// hash of the content, so each colour the svg takes in some state is a
+    /// file of its own and the same icon twice is one file.
+    fn svg_asset(&mut self, node: NodeId, color: Rgba) -> Option<ImageAsset> {
+        let colour = svg_colour(color);
+        let resolve = |_: &str, value: &str| replace_current_color(value, &colour);
+        let markup = self.doc.svg_markup(node, &resolve)?;
+        let source = format!("assets/svg-{:016x}.svg", fnv1a(markup.as_bytes()));
+        let (size, ratio) = svg_size(&markup);
+        self.svgs
+            .entry(source.clone())
+            .or_insert_with(|| markup.into_bytes());
+        Some(ImageAsset {
+            source,
+            size,
+            ratio,
+        })
+    }
+
+    /// An `aria-hidden` svg is drawn but not read (WAI-ARIA 1.2 §6.6); one
+    /// that is named, by ARIA or by its `<title>` (SVG-AAM §5.2), is a
+    /// graphic with that name.
+    fn svg_accessible(&self, image: &mut Object, node: NodeId) {
+        if accessible::hidden(self.doc, self.styles, node) {
+            image.set("Accessible.ignored", true);
+            return;
+        }
+        let title = || {
+            self.doc
+                .children(node)
+                .find(|&c| {
+                    self.doc
+                        .element(c)
+                        .is_some_and(|e| e.is_svg() && e.local_name() == "title")
+                })
+                .map(|t| collapse_whitespace(&self.doc.text_content(t)))
+                .filter(|t| !t.is_empty())
+        };
+        if let Some(name) = accessible::aria_name(self.doc, self.styles, node).or_else(title) {
+            image.set("Accessible.role", Value::expr("Accessible.Graphic"));
+            image.set("Accessible.name", Value::string(name));
+        }
+    }
+}
+
+/// `color` as SVG writes it: `#rrggbb`, or `rgba()` when it is translucent.
+fn svg_colour(c: Rgba) -> String {
+    if c.a == 255 {
+        format!("#{:02x}{:02x}{:02x}", c.r, c.g, c.b)
+    } else {
+        format!(
+            "rgba({},{},{},{})",
+            c.r,
+            c.g,
+            c.b,
+            fmt_number(f64::from(c.a) / 255.0)
+        )
+    }
+}
+
+/// `value` with each `currentColor`, in any case, replaced by `colour`.
+fn replace_current_color(value: &str, colour: &str) -> String {
+    const KEY: &str = "currentcolor";
+    let lower = value.to_ascii_lowercase();
+    let mut out = String::with_capacity(value.len());
+    let mut rest = 0;
+    for (at, _) in lower.match_indices(KEY) {
+        out.push_str(&value[rest..at]);
+        out.push_str(colour);
+        rest = at + KEY.len();
+    }
+    out.push_str(&value[rest..]);
+    out
+}
+
+/// FNV-1a: a stable name for a file from its content.
+fn fnv1a(bytes: &[u8]) -> u64 {
+    bytes.iter().fold(0xcbf2_9ce4_8422_2325, |h, &b| {
+        (h ^ u64::from(b)).wrapping_mul(0x0000_0100_0000_01b3)
+    })
 }
 
 fn is_centred(style: &ComputedStyle) -> bool {

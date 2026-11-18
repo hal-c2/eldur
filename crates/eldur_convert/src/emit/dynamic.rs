@@ -63,6 +63,8 @@ pub(crate) struct Inputs<'a> {
     pub wanted: &'a HashSet<NodeId>,
     pub images: &'a BTreeMap<NodeId, ImageAsset>,
     pub background_images: &'a BTreeMap<String, String>,
+    /// Where every emission writes the files of its inline `<svg>`s.
+    pub svgs: &'a std::cell::RefCell<BTreeMap<String, Vec<u8>>>,
     pub runtime_dom: bool,
     /// The page's scripts, when it has any.
     pub scripts: Option<&'a Scripts>,
@@ -241,6 +243,7 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
         }
     }
     let root = emitter.document(tree.as_ref(), body);
+    cx.svgs.borrow_mut().append(&mut emitter.svgs);
     Emission {
         root,
         targets: std::mem::take(&mut emitter.targets),
@@ -743,8 +746,14 @@ fn object_at<'o>(root: &'o mut Object, path: &[Step]) -> Option<&'o mut Object> 
 
 /// Every marked object's path.
 fn marker_paths(obj: &Object, path: &mut Path, out: &mut HashMap<usize, Path>) {
-    if let Some(i) = marked(obj) {
-        out.entry(i).or_insert_with(|| path.clone());
+    // An item can be more than one element's: an icon in an inline link is
+    // the svg's item and the link's.
+    for m in &obj.members {
+        if let Member::Comment(c) = m
+            && let Some(i) = c.strip_prefix(MARKER).and_then(|n| n.parse().ok())
+        {
+            out.entry(i).or_insert_with(|| path.clone());
+        }
     }
     for (i, m) in obj.members.iter().enumerate() {
         if let Member::Child(c) = m {
@@ -1120,6 +1129,7 @@ impl Dynamic<'_, '_> {
         emitter.shares = across.shares.clone();
         emitter.collapsed = collapsed;
         let root = emitter.document(tree.as_ref(), body);
+        cx.svgs.borrow_mut().append(&mut emitter.svgs);
         let emitted = Emitted {
             root,
             targets: std::mem::take(&mut emitter.targets),

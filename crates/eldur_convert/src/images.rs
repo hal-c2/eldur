@@ -223,7 +223,7 @@ pub(crate) fn intrinsic_size(bytes: &[u8]) -> (Option<(f32, f32)>, Option<f32>) 
     std::str::from_utf8(bytes).map_or((None, None), svg_size)
 }
 
-fn svg_size(text: &str) -> (Option<(f32, f32)>, Option<f32>) {
+pub(crate) fn svg_size(text: &str) -> (Option<(f32, f32)>, Option<f32>) {
     let Some(start) = text.find("<svg") else {
         return (None, None);
     };

@@ -869,6 +869,7 @@ pub(crate) fn add(
             wanted: &wanted,
             images: cx.images,
             background_images: cx.background_images,
+            svgs: cx.svgs,
             runtime_dom: cx.runtime_dom,
             scripts: cx.scripts,
             probe: Some(&probe),

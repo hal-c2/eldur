@@ -157,6 +157,9 @@ pub(crate) struct Emitter<'a, 'd> {
     /// The file each `<img>` shows.
     pub images: BTreeMap<NodeId, crate::images::ImageAsset>,
     pub background_images: BTreeMap<String, String>,
+    /// The files inline `<svg>` elements are written to, by path: one for
+    /// each colour `currentColor` takes.
+    pub svgs: BTreeMap<String, Vec<u8>>,
     /// Scripts reach elements at run time, so every element object says
     /// what it is (`eldurTag`, `eldurClasses`).
     pub runtime_dom: bool,
@@ -273,6 +276,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             imports: std::collections::BTreeSet::new(),
             images: BTreeMap::new(),
             background_images: BTreeMap::new(),
+            svgs: BTreeMap::new(),
             runtime_dom: false,
             open_elements: false,
             hides_items: false,
@@ -574,10 +578,10 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     return self.transformed(e, b, line);
                 }
                 if let Some(node) = b.node
-                    && self
-                        .doc
-                        .element(node)
-                        .is_some_and(|e| e.is_html() && e.local_name() == "img")
+                    && self.doc.element(node).is_some_and(|e| {
+                        (e.is_html() && e.local_name() == "img")
+                            || (e.is_svg() && e.local_name() == "svg")
+                    })
                 {
                     let e = self.image(b, node, line);
                     return self.transformed(e, b, line);
@@ -1091,7 +1095,6 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 );
             }
             crate::metadata::tag(&mut e.obj, self.doc, node);
-            self.block_link(&mut e.obj, node);
             if b.style.pointer_events == eldur_css::PointerEvents::None {
                 crate::metadata::declare_no_hit(&mut e.obj);
             }
@@ -1114,6 +1117,8 @@ impl<'a, 'd> Emitter<'a, 'd> {
             e.obj.members.push(carry::hint_comment(&hint(self.doc, b)));
         }
         if let Some(node) = b.node {
+            // Only an `<a>` with a box of its own: an inline one is a text run.
+            self.block_link(&mut e.obj, node);
             if !self.by_path {
                 dynamic::takes_focus_by_tabindex(&mut e.obj, self.doc, node);
             }

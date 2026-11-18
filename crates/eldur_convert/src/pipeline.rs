@@ -123,6 +123,7 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         HashSet::new()
     };
     let wanted = if runtime_dom { &reachable } else { wanted };
+    let svgs = std::cell::RefCell::default();
     let inputs = crate::emit::dynamic::Inputs {
         doc: &doc,
         styles: &styles,
@@ -131,6 +132,7 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         wanted,
         images: &images.by_node,
         background_images: &images.backgrounds,
+        svgs: &svgs,
         runtime_dom,
         scripts: (!scripts.is_empty()).then_some(&scripts),
         probe: None,
@@ -404,6 +406,25 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         String::new()
     };
     files.extend(crate::emit::components(&main, &runtime));
+    // Each state the page was emitted in wrote its svgs; a state that was
+    // folded away leaves files nothing shows.
+    let shown = |path: &str| {
+        main.contains(path)
+            || files.iter().any(|f| {
+                f.path.extension().is_some_and(|e| e == "js" || e == "qml")
+                    && String::from_utf8_lossy(&f.contents).contains(path)
+            })
+    };
+    let svgs: Vec<OutputFile> = svgs
+        .into_inner()
+        .into_iter()
+        .filter(|(path, _)| shown(path))
+        .map(|(path, contents)| OutputFile {
+            path: path.into(),
+            contents,
+        })
+        .collect();
+    files.extend(svgs);
     let fonts = if options.whole_runtime {
         eldur_js::FONTS_JS.to_owned()
     } else {
