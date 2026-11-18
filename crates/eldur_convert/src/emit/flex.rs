@@ -23,7 +23,7 @@ use eldur_css::{
 use eldur_qml::{Member, Object, Value};
 
 use super::flow::{is_layout, is_viewport_relative, size_value};
-use super::units::{fmt_number, length_expr, number, px_part, round};
+use super::units::{Gap, fmt_number, has_percentage, length_expr, number, percent_of};
 use super::{Emitter, Given};
 use crate::boxes::{BoxKind, LayoutBox, describe, node_line};
 
@@ -149,6 +149,10 @@ impl Axis {
     fn cross(self) -> &'static str {
         if self.row { "Height" } else { "Width" }
     }
+    /// The main size, the base of the gap's percentages.
+    fn size(self) -> &'static str {
+        if self.row { "width" } else { "height" }
+    }
     fn lead_margin(self) -> &'static str {
         if self.row {
             "Layout.leftMargin"
@@ -221,7 +225,9 @@ impl Emitter<'_, '_> {
         } else {
             &style.row_gap
         };
-        let gap = self.gap_px(gap_len.as_ref(), line);
+        let own_definite = super::flow::has_height(style) || given == Given::Definite;
+        let own = self.content_px(b, row);
+        let gap = Self::gap(gap_len.as_ref(), row || own_definite, own);
 
         let grows: Vec<f32> = items
             .iter()
@@ -277,7 +283,14 @@ impl Emitter<'_, '_> {
         let spacers = slots.iter().any(|s| *s > 0);
 
         let mut layout = Object::new(if row { "RowLayout" } else { "ColumnLayout" });
-        layout.set("spacing", number(if spacers { 0.0 } else { gap }));
+        layout.set(
+            "spacing",
+            if spacers {
+                Value::Number(0.0)
+            } else {
+                gap.value(axis.size())
+            },
+        );
         let stretch = if row {
             "Layout.horizontalStretchFactor"
         } else {
@@ -305,7 +318,6 @@ impl Emitter<'_, '_> {
                 layout.push_child(spacer());
                 spacers_at.push(layout.members.len() - 1);
             }
-            let own_definite = super::flow::has_height(style) || given == Given::Definite;
             self.child_given = if row {
                 let (m_start, m_end) = (&child.style.margin.top, &child.style.margin.bottom);
                 let stretches = cross(style.align_items, child.style.align_self, m_start, m_end)
@@ -321,19 +333,30 @@ impl Emitter<'_, '_> {
                 Given::Content
             };
             let mut obj = self.item(child, decoration).obj;
-            let lead_gap = if spacers && i > 0 { gap } else { 0.0 };
-            self.flex_item(&mut obj, child, style, axis, unequal_grow, lead_gap);
+            let lead_gap = if spacers && i > 0 {
+                gap.clone()
+            } else {
+                Gap::default()
+            };
+            let parent_size = format!("parent.{}", axis.size());
+            self.flex_item(&mut obj, child, style, axis, unequal_grow, &lead_gap);
             // The gap is between items in the layout: `display: none` is not one.
-            if lead_gap != 0.0 && may_lead {
+            if !lead_gap.is_zero() && may_lead {
                 lead_follows = true;
                 let name = axis.lead_margin();
                 let (with, without) = match obj.get(name) {
-                    Some(Value::Number(v)) => (fmt_number(*v), fmt_number(*v - round(gap))),
+                    Some(Value::Number(v)) => {
+                        (fmt_number(*v), gap.plus_text(*v as f32, -1.0, &parent_size))
+                    }
                     Some(v) => (
                         value_text(v),
-                        format!("{} - {}", value_text(v), fmt_number(round(gap))),
+                        format!(
+                            "{} - ({})",
+                            value_text(v),
+                            gap.plus_text(0.0, 1.0, &parent_size)
+                        ),
                     ),
-                    None => (fmt_number(round(gap)), "0".to_owned()),
+                    None => (gap.plus_text(0.0, 1.0, &parent_size), "0".to_owned()),
                 };
                 obj.set(
                     name,
@@ -421,7 +444,10 @@ impl Emitter<'_, '_> {
         } else {
             &style.row_gap
         };
-        let gap = self.gap_px(gap_len.as_ref(), line);
+        let definite = row || super::flow::has_height(style) || self.own_given == Given::Definite;
+        let own = self.content_px(b, row);
+        let gap = Self::gap(gap_len.as_ref(), definite, own);
+        let size = if row { "width" } else { "height" };
         let mut decl = |ty: &str, name: &str, value: Value| {
             layout.members.push(Member::PropertyDecl {
                 ty: ty.to_owned(),
@@ -444,9 +470,16 @@ impl Emitter<'_, '_> {
         };
         decl("string", "eldurPack", Value::String(name.to_owned()));
         decl("bool", "eldurPackRow", Value::Bool(row));
-        decl("real", "eldurPackGap", number(gap));
+        decl("real", "eldurPackGap", gap.value(size));
         let between = matches!(name, "between" | "around" | "evenly");
-        layout.set("spacing", number(if between { 0.0 } else { gap }));
+        layout.set(
+            "spacing",
+            if between {
+                Value::Number(0.0)
+            } else {
+                gap.value(size)
+            },
+        );
         layout
     }
 
@@ -460,7 +493,7 @@ impl Emitter<'_, '_> {
         container: &ComputedStyle,
         axis: Axis,
         factors: bool,
-        lead_gap: f32,
+        lead_gap: &Gap,
     ) {
         let style = &*b.style;
         let line = b.node.and_then(|n| node_line(self.doc, n));
@@ -702,18 +735,21 @@ impl Emitter<'_, '_> {
         }
         for (name, value) in edges {
             let lead = if name == axis.lead_margin() {
-                lead_gap
+                lead_gap.clone()
             } else {
-                0.0
+                Gap::default()
             };
-            let value = match (value, lead) {
-                (None, 0.0) => continue,
-                (None, lead) => number(lead),
-                (Some(Value::Number(v)), lead) => Value::Number(v + round(lead)),
-                (Some(v), 0.0) => v,
-                (Some(v), lead) => {
-                    Value::expr(format!("{} + {}", value_text(&v), fmt_number(round(lead))))
-                }
+            let base = format!("parent.{}", axis.size());
+            let value = match (value, lead.is_zero()) {
+                (None, true) => continue,
+                (None, false) => lead.value(&base),
+                (Some(Value::Number(v)), _) => lead.plus(v as f32, 1.0, &base),
+                (Some(v), true) => v,
+                (Some(v), false) => Value::expr(format!(
+                    "{} + {}",
+                    value_text(&v),
+                    lead.plus_text(0.0, 1.0, &base)
+                )),
             };
             if value != Value::Number(0.0) {
                 obj.set(name, value);
@@ -731,8 +767,10 @@ impl Emitter<'_, '_> {
         line: Option<u32>,
     ) -> Object {
         let style = &*b.style;
-        let column_gap = self.gap_px(style.column_gap.as_ref(), line);
-        let row_gap = self.gap_px(style.row_gap.as_ref(), line);
+        let (own_w, own_h) = (self.content_px(b, true), self.content_px(b, false));
+        let column_gap = Self::gap(style.column_gap.as_ref(), true, own_w);
+        let definite = super::flow::has_height(style) || self.own_given == Given::Definite;
+        let row_gap = Self::gap(style.row_gap.as_ref(), definite, own_h);
         if let Some(min_cell) = self.uniform_basis(items) {
             self.diags.info(
                 "qml",
@@ -759,7 +797,7 @@ impl Emitter<'_, '_> {
         }
 
         let mut flow = Object::new("Flow");
-        flow.set("spacing", number(column_gap));
+        flow.set("spacing", column_gap.value("width"));
         if row_gap != column_gap {
             self.diags.info(
                 "qml",
@@ -911,21 +949,45 @@ impl Emitter<'_, '_> {
         basis
     }
 
-    /// A gap in px; `normal` is 0 in flex and grid layout.
-    pub(super) fn gap_px(&mut self, gap: Option<&Length>, line: Option<u32>) -> f32 {
-        let Some(gap) = gap else { return 0.0 };
-        let (px, dropped) = px_part(gap);
-        if dropped {
-            self.diags.info(
-                "css",
-                line,
-                format!(
-                    "gap `{}` uses its px part only",
-                    length_expr(gap, "parent.width")
-                ),
-            );
-        }
-        px.max(0.0)
+    /// A gap. A percentage of a size that is not definite resolves
+    /// against 0 (CSS Box Alignment 3 §8.1), as Chromium has it for a
+    /// column flex container of auto height. One of a px size (`own`, the
+    /// content box's) is a constant: bound to the layout's own size, it
+    /// would change the layout's spacing while Qt arranges it, which Qt
+    /// stops as a recursive rearrange.
+    pub(super) fn gap(gap: Option<&Length>, definite: bool, own: Option<f32>) -> Gap {
+        Gap::new(gap.map(|l| match own {
+            _ if !has_percentage(l) => l.clone(),
+            Some(px) => percent_of(l, px),
+            None if definite => l.clone(),
+            None => percent_of(l, 0.0),
+        }))
+    }
+
+    /// The px size of `b`'s content box along an axis, when its style
+    /// gives one.
+    pub(super) fn content_px(&mut self, b: &LayoutBox<'_>, horizontal: bool) -> Option<f32> {
+        let style = &*b.style;
+        let size = if horizontal {
+            &style.width
+        } else {
+            &style.height
+        };
+        let Size::Length(l) = size else { return None };
+        let px = l.as_px()?;
+        Some(match style.box_sizing {
+            BoxSizing::ContentBox => px,
+            BoxSizing::BorderBox => {
+                let line = b.node.and_then(|n| node_line(self.doc, n));
+                let insets = self.insets(style, line);
+                let inner = if horizontal {
+                    insets.horizontal()
+                } else {
+                    insets.vertical()
+                };
+                (px - inner).max(0.0)
+            }
+        })
     }
 
     pub(super) fn what(&self, b: &LayoutBox<'_>) -> String {

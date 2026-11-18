@@ -105,3 +105,118 @@ pub(crate) fn px_part(length: &Length) -> (f32, bool) {
         Length::Calc(_) => (0.0, true),
     }
 }
+
+/// Whether `length` has a percentage term anywhere, even inside `calc()`.
+pub(crate) fn has_percentage(length: &Length) -> bool {
+    fn node(n: &CalcNode) -> bool {
+        match n {
+            CalcNode::Leaf(l) => l.percent != 0.0,
+            CalcNode::Min(nodes) | CalcNode::Max(nodes) | CalcNode::Sum(nodes) => {
+                nodes.iter().any(node)
+            }
+            CalcNode::Clamp(a, b, c) => node(a) || node(b) || node(c),
+            CalcNode::Product(n, _) => node(n),
+        }
+    }
+    match length {
+        Length::Linear(l) => l.percent != 0.0,
+        Length::Calc(n) => node(n),
+    }
+}
+
+/// `length` with its percentages resolved against `base` px.
+pub(crate) fn percent_of(length: &Length, base: f32) -> Length {
+    let leaf = |l: &LengthPercentage| LengthPercentage {
+        px: l.px + l.percent * base / 100.0,
+        percent: 0.0,
+        ..*l
+    };
+    fn node(n: &CalcNode, leaf: &dyn Fn(&LengthPercentage) -> LengthPercentage) -> CalcNode {
+        let all = |nodes: &[CalcNode]| nodes.iter().map(|n| node(n, leaf)).collect();
+        match n {
+            CalcNode::Leaf(l) => CalcNode::Leaf(leaf(l)),
+            CalcNode::Min(nodes) => CalcNode::Min(all(nodes)),
+            CalcNode::Max(nodes) => CalcNode::Max(all(nodes)),
+            CalcNode::Sum(nodes) => CalcNode::Sum(all(nodes)),
+            CalcNode::Clamp(a, b, c) => CalcNode::Clamp(
+                Box::new(node(a, leaf)),
+                Box::new(node(b, leaf)),
+                Box::new(node(c, leaf)),
+            ),
+            CalcNode::Product(n, k) => CalcNode::Product(Box::new(node(n, leaf)), *k),
+        }
+    }
+    match length {
+        Length::Linear(l) => Length::Linear(leaf(l)),
+        Length::Calc(n) => Length::Calc(node(n, &leaf)),
+    }
+}
+
+/// A `column-gap` or `row-gap` (`normal` is 0 in flex and grid layout):
+/// px, or a length whose percentages are of the container's content box
+/// (CSS Box Alignment 3 §8.1), bound to it.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub(crate) struct Gap(Option<Length>);
+
+impl Gap {
+    pub(crate) fn new(length: Option<Length>) -> Self {
+        Self(length.filter(|l| l.as_px() != Some(0.0)))
+    }
+
+    /// The gap in px, when it is a fixed length.
+    pub(crate) fn px(&self) -> Option<f32> {
+        match &self.0 {
+            None => Some(0.0),
+            Some(l) => l.as_px().map(|px| px.max(0.0)),
+        }
+    }
+
+    pub(crate) fn is_zero(&self) -> bool {
+        self.px() == Some(0.0)
+    }
+
+    /// The gap as an expression, its percentages of `base`. A gap is never
+    /// negative, and only `calc()` can come out so.
+    fn expr(&self, base: &str) -> String {
+        match &self.0 {
+            None => "0".to_owned(),
+            Some(l @ Length::Calc(_)) => format!("Math.max(0, {})", length_expr(l, base)),
+            Some(l) => length_expr(l, base),
+        }
+    }
+
+    /// The gap, percentages of `base`.
+    pub(crate) fn value(&self, base: &str) -> Value {
+        self.plus(0.0, 1.0, base)
+    }
+
+    /// `px + k·gap`.
+    pub(crate) fn plus(&self, px: f32, k: f32, base: &str) -> Value {
+        match self.px() {
+            Some(gap) => number(px + k * gap),
+            None => Value::expr(self.plus_text(px, k, base)),
+        }
+    }
+
+    /// [`Self::plus`] as expression text.
+    pub(crate) fn plus_text(&self, px: f32, k: f32, base: &str) -> String {
+        if let Some(gap) = self.px() {
+            return fmt_number(round(px + k * gap));
+        }
+        let k = round(k);
+        let gap = self.expr(base);
+        let scaled = match k {
+            0.0 => return fmt_number(round(px)),
+            1.0 => gap,
+            // A sum of terms, unlike a call.
+            k if matches!(self.0, Some(Length::Linear(_))) && gap.contains(' ') => {
+                format!("({gap}) * {}", fmt_number(k))
+            }
+            k => format!("{gap} * {}", fmt_number(k)),
+        };
+        match round(px) {
+            0.0 => scaled,
+            p => format!("{} + {scaled}", fmt_number(p)).replace("+ -", "- "),
+        }
+    }
+}
