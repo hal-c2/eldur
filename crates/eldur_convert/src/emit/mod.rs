@@ -3,6 +3,7 @@
 //! [`Emitter::block`] dispatches on [`BoxKind`]; each layout kind has its
 //! own submodule.
 
+mod accessible;
 pub(crate) mod background;
 mod carry;
 mod controls;
