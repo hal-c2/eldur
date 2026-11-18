@@ -74,26 +74,37 @@ jobs:
       # sans-serif, and JetBrainsMono Nerd Font 3.5.1 for monospace (the
       # tables in docs/spec/layout.md); fonts_e2e also measures Nimbus Sans
       # (URW base35 20200910) and Noto Sans. Text widths and line heights
-      # follow the font, so the runner gets the same files; the Nerd Font
-      # archive is pinned by checksum. A glyph those faces lack (a ✓ in Arial)
-      # comes from fontconfig's fallback, which where the recordings were made
-      # is Noto CJK or the Nerd Font, never DejaVu: the runner's DejaVu is
-      # rejected (DejaVu Math TeX Gyre too, which fontconfig
-      # otherwise tries first for a ✓), and Noto CJK and Noto Color Emoji are installed.
+      # follow the font, so the runner gets the same files (the Nerd Font
+      # archive pinned by checksum) and the same fontconfig rules
+      # (.github/fontconfig/eldur-recordings.conf): the generic families and
+      # the fallback for a glyph those faces lack (a ✓ in Arial) then match.
+      - name: Cache the font packages
+        uses: actions/cache@v4.3.0
+        with:
+          path: ~/font-debs
+          key: font-debs-ubuntu-24.04-v1
       - name: Install the fonts the recordings were measured with
         env:
           NERD_FONTS: https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.1/JetBrainsMono.tar.xz
           NERD_FONTS_SHA256: 04d5e8f903693f9dd13e16f867e994834e681eb3c72c0d337a770dcda09010cf
-        # A mirror once stalled mid-download for half an hour: time it out
-        # and retry instead.
-        timeout-minutes: 10
+        timeout-minutes: 20
         run: |
-          apt='-o Acquire::Retries=5 -o Acquire::http::Timeout=30'
-          sudo apt-get $apt update
-          sudo apt-get $apt install -y --no-install-recommends fontconfig fonts-liberation fonts-urw-base35 fonts-noto-core \
-            fonts-noto-cjk fonts-noto-color-emoji
+          debs="$HOME/font-debs"
+          mkdir -p "$debs/partial"
+          apt=(-o "Dir::Cache::archives=$debs" -o Acquire::Retries=5 -o Acquire::http::Timeout=30)
+          packages=(fontconfig fonts-liberation fonts-urw-base35 fonts-noto-core fonts-noto-cjk fonts-noto-color-emoji)
+          sudo apt-get "${apt[@]}" update
+          # A mirror has stalled for half an hour on the 61 MB fonts-noto-cjk;
+          # a stalled try is cut off and the next one resumes it.
+          for try in 1 2 3 4 5; do
+            timeout 180 sudo apt-get "${apt[@]}" install -y --no-install-recommends --download-only "${packages[@]}" && break
+            echo "::warning::font download try $try failed"
+            [[ $try == 5 ]] && exit 1
+          done
+          sudo apt-get "${apt[@]}" install -y --no-install-recommends "${packages[@]}"
+          sudo chown -R "$USER" "$debs"
           archive="$RUNNER_TEMP/JetBrainsMono.tar.xz"
-          curl -fsSLo "$archive" "$NERD_FONTS"
+          curl -fsSLo "$archive" --retry 5 "$NERD_FONTS"
           echo "$NERD_FONTS_SHA256  $archive" | sha256sum -c -
           fonts="$HOME/.local/share/fonts"
           mkdir -p "$fonts"
@@ -102,21 +113,11 @@ jobs:
             JetBrainsMonoNerdFont-Italic.ttf JetBrainsMonoNerdFont-BoldItalic.ttf
           conf="${XDG_CONFIG_HOME:-$HOME/.config}/fontconfig/conf.d"
           mkdir -p "$conf"
-          cat >"$conf/90-eldur-no-dejavu.conf" <<'EOF'
-          <?xml version="1.0"?>
-          <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
-          <fontconfig>
-            <selectfont><rejectfont>
-              <glob>/usr/share/fonts/truetype/dejavu/*</glob>
-            </rejectfont></selectfont>
-          </fontconfig>
-          EOF
+          cp .github/fontconfig/eldur-recordings.conf "$conf/90-eldur-recordings.conf"
           fc-cache -f
-          echo "fallback for U+2713 after Liberation Sans:"
-          fc-match -s 'Liberation Sans:charset=2713' -f '  %{family[0]} %{file}\n' | head -5
-          echo "every family:"
-          fc-list -f '%{family[0]}\n' | sort -u | tr '\n' ';'
-          echo
+          for f in sans-serif serif monospace Arial; do
+            echo "$f: $(fc-match "$f" -f '%{family[0]}'); a ✓ from: $(fc-match -s "$f:charset=2713" -f '%{family[0]}, ' | head -c 120)"
+          done
           fc-list -f '%{family[0]} %{style[0]} %{fontversion} %{file}\n' | grep -E 'Liberation|JetBrains|Nimbus Sans Regular|Noto Sans Regular|Noto Serif Regular' | sort
       - uses: Swatinem/rust-cache@v2.9.3
       - run: mise run setup
