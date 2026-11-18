@@ -229,10 +229,16 @@ const PILL: &str = r#"<!DOCTYPE html><html><body style="margin:0;font:16px sans-
 <button id="tall" style="display:flex;padding:8px;border:0"><span style="width:48px;height:48px;background:#ff0000"></span></button>
 <button id="swap" style="display:flex;gap:4px"><span>Go</span><b>bold</b></button>
 <button id="wide" style="display:inline-flex;width:200px;padding:0;border:0;justify-content:space-between"><span style="width:20px;height:20px;background:#00ff00"></span><span style="width:20px;height:20px;background:#0000ff"></span></button>
+<button id="column" style="display:inline-flex;flex-direction:column;justify-content:space-between;height:200px;width:60px;padding:0;border:0"><span style="width:20px;height:20px;background:#00ffff"></span><span style="width:20px;height:20px;background:#ff00ff"></span></button>
+<button id="mark">Go</button>
 <p id="log">-</p>
 <script>
 document.getElementById('swap').addEventListener('click', function () {
   this.textContent = 'Done';
+});
+document.getElementById('mark').addEventListener('click', function () {
+  this.innerHTML = '<b>Save</b>';
+  this.append('<i> now</i>');
 });
 document.getElementById('pill').addEventListener('click', function () {
   var log = document.getElementById('log');
@@ -313,6 +319,28 @@ TestCase {
         const done = under(swap, i => i.text === "Done" && i !== swap)
         verify(done && done.visible, "written text drawn")
         verify(!go || !go.visible, "old children no longer drawn")
+        tryCompare(swap.Accessible, "name", "Done")
+    }
+
+    // A set height is the column's to share (Chromium: y 0 and 180 in 200 px).
+    function test_a_fixed_height_column_button_spreads_its_children() {
+        const column = find("column")
+        near(column.height, 200, 0.5, "height")
+        const cyan = under(column, i => i.color !== undefined && Qt.colorEqual(i.color, "#00ffff"))
+        const magenta = under(column, i => i.color !== undefined && Qt.colorEqual(i.color, "#ff00ff"))
+        verify(cyan && magenta, "children drawn")
+        near(cyan.mapToItem(column, 0, 0).y, 0, 1, "first y")
+        near(magenta.mapToItem(column, 0, 0).y, 180, 1, "second y")
+    }
+
+    // Text appended after markup is text: its angle brackets are not tags.
+    function test_text_appended_after_markup_stays_literal() {
+        const mark = find("mark")
+        mouseClick(mark)
+        wait(0)
+        const label = under(mark, i => typeof i.text === "string" && i.text.indexOf("now") >= 0 && i !== mark)
+        verify(label, "appended text drawn")
+        verify(label.text.indexOf("&lt;i&gt;") >= 0, "escaped: " + label.text)
     }
 
     // A set width is the flex layout's to share: space-between puts the

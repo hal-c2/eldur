@@ -412,7 +412,8 @@ Why this and not one QML object per element, or splitting the block whenever a s
 - Created block children of a `<div>` that was empty at conversion are not stacked: the div is a `Text`, and they overlap at its top.
 - `dataset` writes do not recompute styles.
 - A button whose only content is text holds no child nodes: `childNodes` is empty and `firstChild` is null, as for every text-only control. Text appended or prepended to it joins the text it draws at that end, so `textContent` reads as Chromium's; `insertBefore(text, firstChild)` appends, since `firstChild` is null.
-- A box cut out of a line whose element a script removes is held by that element; it does not come back if the element is put back in the page.
+- A box cut out of a line whose element a script removes or moves elsewhere is held by that element and stays off the page; it does not come back if the element is put back in the page. Its parent reads as that element.
+- A box the page made (a control, an image) does not go into an inline element a script appends it to: it stays where it was, and `eldur:` warns.
 
 **Lines with boxes.** Each run on an `EldurLines` line (layout.md §2) has its own inline model, so inline elements there are nodes as elsewhere, an empty `<span id>` included, and a run's text is a text node to a script, not an element. Changing text, adding, removing or hiding a box lays the line out again. A press goes to the piece under it. `textContent` on the block replaces everything and leaves the line in place.
 
