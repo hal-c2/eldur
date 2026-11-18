@@ -62,13 +62,21 @@ impl DomResolver for FakeResolver {
     }
 }
 
+/// Whether a Qt tool is on PATH. A test without it returns early or leaves out
+/// its lint, and a skipped test passes; so with `ELDUR_REQUIRE_QT=1` (CI's Qt
+/// job, as for `eldur_convert`'s end-to-end tests) a missing tool fails the
+/// test instead of letting it pass without running any QML.
 fn has_binary(name: &str) -> bool {
-    Command::new(name)
+    let found = Command::new(name)
         .arg("--version")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .status()
-        .is_ok()
+        .is_ok();
+    if !found && std::env::var_os("ELDUR_REQUIRE_QT").is_some_and(|v| !v.is_empty() && v != "0") {
+        panic!("ELDUR_REQUIRE_QT is set, so this test may not skip: {name} not on PATH");
+    }
+    found
 }
 
 struct TempQmlDir {
