@@ -5558,7 +5558,8 @@ function _markupName(html) {
     var quiet = 0;
     var re = /<(\/?)([A-Za-z][\w-]*)([^>]*?)(\/?)>|([^<]+)/g;
     function attr(attrs, name) {
-        var m = new RegExp("\\b" + name + "\\s*=\\s*(\"([^\"]*)\"|'([^']*)'|([^\\s>]+))", "i").exec(attrs);
+        // After whitespace only: `\b` matches after the `-` of `data-aria-label`.
+        var m = new RegExp("(?:^|\\s)" + name + "\\s*=\\s*(\"([^\"]*)\"|'([^']*)'|([^\\s>]+))", "i").exec(attrs);
         return m ? _unescapeHtmlText(m[2] !== undefined ? m[2] : m[3] !== undefined ? m[3] : m[4]) : null;
     }
     for (var m = re.exec(html); m; m = re.exec(html)) {
@@ -5725,8 +5726,10 @@ function _buttonDrawsText(raw, format) {
         return;
     }
     // A created button's template draws its text beside its ::before and
-    // ::after boxes, which stay as they do in a browser.
-    var drawing = _heldTextLabel(held, raw.text);
+    // ::after boxes, which stay as they do in a browser. A converted
+    // button's text runs are its children, which a write replaces even
+    // when it writes the text one of them drew.
+    var drawing = _meta(raw).createdTag ? _heldTextLabel(held, raw.text) : null;
     if (drawing) {
         drawing.textFormat = format;
         return;
