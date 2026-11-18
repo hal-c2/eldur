@@ -445,15 +445,17 @@ fn dimension(value: &str) -> Option<String> {
         return None;
     }
     let rest = &value[int..];
-    let frac = match rest.strip_prefix('.') {
+    // A `.` is passed over even with no digits after it (`50.%` is 50%), but
+    // is no part of the number then, which CSS would not parse.
+    let (number_len, unit_at) = match rest.strip_prefix('.') {
         Some(after) => match after.bytes().take_while(u8::is_ascii_digit).count() {
-            0 => 0,
-            n => n + 1,
+            0 => (int, int + 1),
+            n => (int + 1 + n, int + 1 + n),
         },
-        None => 0,
+        None => (int, int),
     };
-    let number = &value[..int + frac];
-    let unit = if value[int + frac..].starts_with('%') {
+    let number = &value[..number_len];
+    let unit = if value[unit_at..].starts_with('%') {
         "%"
     } else {
         "px"
@@ -2031,7 +2033,8 @@ mod tests {
             <img id="a" width="400" height="400" style="width:100%;height:auto">
             <img id="b" width="400" height=" 30.5px">
             <img id="c" width="50%" height="x">
-            <img id="d" class="auto" width="120" height="400"></body>"#,
+            <img id="d" class="auto" width="120" height="400">
+            <img id="e" width="50.%" height="50."></body>"#,
         );
         let css = "@layer base { .auto { height: auto } }";
         let (sheet, _) = Stylesheet::parse(css, Origin::Author, "hints.css", None);
@@ -2051,6 +2054,12 @@ mod tests {
         assert_eq!(of("c").height, Size::Auto);
         assert_eq!(of("d").height, Size::Auto, "a layered rule beats a hint");
         assert_eq!(of("d").width, Size::Length(Length::px(120.0)));
+        // As Chromium: a `.` with no digits after it still comes before the unit.
+        assert_eq!(
+            of("e").width,
+            Size::Length(Length::Linear(LengthPercentage::percent(50.0)))
+        );
+        assert_eq!(of("e").height, Size::Length(Length::px(50.0)));
     }
 
     #[test]

@@ -907,8 +907,12 @@ impl Emitter<'_, '_> {
                 .collect();
             let mut grid = self.auto_fit_grid(b, min_cell, !*fill, column_gap, row_gap, objs);
             // A set height stops the stretch to the row (CSS Box Alignment §6.1):
-            // the item keeps it, at the start of its area, and the px row
-            // height below leaves it alone.
+            // the item keeps it, at the start of its area. A px auto row is
+            // sized apart from its items (CSS Grid 2 §7.6), but a GridLayout
+            // row takes its cells' heights, so a set-height item's bottom
+            // margin makes its cell exactly one row: negative when the item
+            // is taller, which Qt's GridLayout takes, and the item then
+            // overflows its row as in CSS.
             let auto_row = auto_row_px(style);
             for (obj, c) in grid.children_mut().zip(&items) {
                 let extra = match c.style.box_sizing {
@@ -921,11 +925,18 @@ impl Emitter<'_, '_> {
                 if let Size::Length(l) = &c.style.height
                     && (l.as_px().is_some() || is_viewport_relative(l))
                 {
-                    obj.set("Layout.preferredHeight", size_value(l, extra));
+                    let height = size_value(l, extra);
                     obj.set("Layout.fillHeight", false);
                     if obj.get("Layout.alignment").is_none() {
                         obj.set("Layout.alignment", Value::expr("Qt.AlignTop"));
                     }
+                    if let Some(h) = auto_row {
+                        let top = obj.get("Layout.topMargin").cloned();
+                        obj.set("Layout.bottomMargin", rest_of_row(h, &height, top.as_ref()));
+                        obj.set("Layout.minimumHeight", height.clone());
+                        obj.set("Layout.maximumHeight", height.clone());
+                    }
+                    obj.set("Layout.preferredHeight", height);
                 } else if let Some(h) = auto_row {
                     obj.set("Layout.preferredHeight", number(h));
                     obj.set("Layout.minimumHeight", number(h));
@@ -1731,6 +1742,43 @@ impl Emitter<'_, '_> {
         let layout_item = is_layout(&obj.type_name);
         let h_align = self_alignment(container.justify_items, style.justify_self, true);
         let v_align = self_alignment(container.align_items, style.align_self, false);
+        // The item's own margins come first: a width short of its area leaves
+        // the rest of it as right margin, which the margins are part of.
+        let m = &style.margin;
+        let mut nonzero_margin = false;
+        for (name, margin) in [
+            ("Layout.leftMargin", &m.left),
+            ("Layout.rightMargin", &m.right),
+            ("Layout.topMargin", &m.top),
+            ("Layout.bottomMargin", &m.bottom),
+        ] {
+            if let eldur_css::LengthAuto::Length(l) = margin
+                && let Some(px) = l.as_px()
+                && px > 0.0
+            {
+                obj.set(name, number(px));
+            } else if !matches!(margin, eldur_css::LengthAuto::Length(l) if l.as_px().is_some_and(|v| v >= 0.0))
+            {
+                nonzero_margin = true;
+            }
+        }
+        if nonzero_margin {
+            self.diags.info(
+                "qml",
+                line,
+                format!(
+                    "auto, negative or percentage margins on the grid item {} are ignored",
+                    self.what(b)
+                ),
+            );
+        }
+        let margin_w: f32 = ["Layout.leftMargin", "Layout.rightMargin"]
+            .iter()
+            .filter_map(|name| match obj.get(name) {
+                Some(Value::Number(n)) => Some(*n as f32),
+                _ => None,
+            })
+            .sum();
         // A column is as wide as what it holds: an item narrower than its fixed track
         // keeps the rest of it open, or the next column would start at its edge.
         if p.col_span == 1
@@ -1738,12 +1786,12 @@ impl Emitter<'_, '_> {
             && let Some(TrackSize::Fixed(Value::Number(track))) = cols.tracks.get(p.col)
             && let Size::Length(l) = &style.width
             && let Some(width) = l.as_px()
-            && f64::from(width + extra_w) < *track
+            && f64::from(width + extra_w + margin_w) < *track
         {
             add_margin(
                 obj,
                 "Layout.rightMargin",
-                (*track - f64::from(width + extra_w)) as f32,
+                (*track - f64::from(width + extra_w + margin_w)) as f32,
             );
         }
         let mut flags = Vec::new();
@@ -1789,10 +1837,11 @@ impl Emitter<'_, '_> {
                     let area = format!("({area})");
                     let width = length_expr(l, &area);
                     if h_align.is_none() {
-                        let rest = if extra == 0.0 {
+                        let taken = extra + margin_w;
+                        let rest = if taken == 0.0 {
                             format!("{area} - ({width})")
                         } else {
-                            format!("{area} - ({width}) - {}", fmt_number(round(extra)))
+                            format!("{area} - ({width}) - {}", fmt_number(round(taken)))
                         };
                         obj.set(
                             "Layout.rightMargin",
@@ -1922,34 +1971,6 @@ impl Emitter<'_, '_> {
                 format!(
                     "`justify-self`/`align-self` on {} in a sized grid track is laid out as \
                      `stretch`",
-                    self.what(b)
-                ),
-            );
-        }
-        let m = &style.margin;
-        let mut nonzero_margin = false;
-        for (name, margin) in [
-            ("Layout.leftMargin", &m.left),
-            ("Layout.rightMargin", &m.right),
-            ("Layout.topMargin", &m.top),
-            ("Layout.bottomMargin", &m.bottom),
-        ] {
-            if let eldur_css::LengthAuto::Length(l) = margin
-                && let Some(px) = l.as_px()
-                && px > 0.0
-            {
-                obj.set(name, number(px));
-            } else if !matches!(margin, eldur_css::LengthAuto::Length(l) if l.as_px().is_some_and(|v| v >= 0.0))
-            {
-                nonzero_margin = true;
-            }
-        }
-        if nonzero_margin {
-            self.diags.info(
-                "qml",
-                line,
-                format!(
-                    "auto, negative or percentage margins on the grid item {} are ignored",
                     self.what(b)
                 ),
             );
@@ -2151,4 +2172,27 @@ fn add_margin(obj: &mut Object, name: &str, px: f32) {
         _ => 0.0,
     };
     obj.set(name, number(current + px));
+}
+
+/// What a row of `row` px leaves under an item of `height` with a `top`
+/// margin: the bottom margin that makes the item's cell one row tall.
+fn rest_of_row(row: f32, height: &Value, top: Option<&Value>) -> Value {
+    let px = |v: &Value| match v {
+        Value::Number(n) => Some(*n),
+        _ => None,
+    };
+    let top_px = top.map_or(Some(0.0), px);
+    if let (Some(h), Some(t)) = (px(height), top_px) {
+        return Value::Number(f64::from(row) - h - t);
+    }
+    let term = |v: &Value| match v {
+        Value::Number(n) => fmt_number(*n),
+        Value::Expr(e) => format!("({e})"),
+        _ => "0".to_owned(),
+    };
+    let mut expr = format!("{} - {}", fmt_number(f64::from(row)), term(height));
+    if let Some(t) = top {
+        expr = format!("{expr} - {}", term(t));
+    }
+    Value::Expr(expr)
 }
