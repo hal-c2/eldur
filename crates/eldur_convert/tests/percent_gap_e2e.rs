@@ -23,9 +23,13 @@ div div { height: 20px }
 <div style="display:flex;flex-direction:column;row-gap:10%;height:200px"><div id=q></div><div id=r></div></div>
 <div style="display:flex;flex-direction:column;row-gap:10%"><div id=s></div><div id=t></div></div>
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:2%"><div id=w></div><div id=x></div></div>
+<div style="display:flex;flex-direction:column;row-gap:10%;min-height:200px"><div id=u1></div><div id=u2></div></div>
+<div style="display:flex;flex-direction:column;row-gap:10%;height:50%"><div id=v1></div><div id=v2></div></div>
+<div style="display:flex;flex-wrap:wrap;align-content:start;row-gap:10%;min-height:200px"><div id=z1 style="width:100%"></div><div id=z2 style="width:100%"></div></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));grid-auto-rows:100px;width:400px"><div id=y1 style="height:50px"></div><div id=y2 style="height:auto"></div></div>
 <script>
 // Named so that they get an objectName the test can find.
-var named = [document.getElementById('a'), document.getElementById('b'), document.getElementById('c'), document.getElementById('d'), document.getElementById('e'), document.getElementById('h'), document.getElementById('i'), document.getElementById('j'), document.getElementById('k'), document.getElementById('l'), document.getElementById('m'), document.getElementById('f'), document.getElementById('g'), document.getElementById('n'), document.getElementById('o'), document.getElementById('p'), document.getElementById('q'), document.getElementById('r'), document.getElementById('s'), document.getElementById('t'), document.getElementById('w'), document.getElementById('x')];
+var named = [document.getElementById('a'), document.getElementById('b'), document.getElementById('c'), document.getElementById('d'), document.getElementById('e'), document.getElementById('h'), document.getElementById('i'), document.getElementById('j'), document.getElementById('k'), document.getElementById('l'), document.getElementById('m'), document.getElementById('f'), document.getElementById('g'), document.getElementById('n'), document.getElementById('o'), document.getElementById('p'), document.getElementById('q'), document.getElementById('r'), document.getElementById('s'), document.getElementById('t'), document.getElementById('w'), document.getElementById('x'), document.getElementById('u1'), document.getElementById('u2'), document.getElementById('v1'), document.getElementById('v2'), document.getElementById('z1'), document.getElementById('z2'), document.getElementById('y1'), document.getElementById('y2')];
 </script></body></html>"#;
 
 /// Chromium, `getBoundingClientRect()` at 900×800 and 450×800: `[x, y,
@@ -85,6 +89,17 @@ TestCase {
         check("t", 0, 540, 900, 20)
         check("w", 0, 560, 441, 20)
         check("x", 459, 560, 441, 20)
+        // Against a min-height or a percentage of an auto height, a flex
+        // container's percentage row gap is 0.
+        check("u1", 0, 580, 900, 20)
+        check("u2", 0, 600, 900, 20)
+        check("v1", 0, 780, 900, 20)
+        check("v2", 0, 800, 900, 20)
+        check("z1", 0, 820, 900, 20)
+        check("z2", 0, 840, 900, 20)
+        // A set height keeps its own in a px auto row; the row stays 100.
+        check("y1", 0, 1020, 200, 50)
+        check("y2", 200, 1020, 200, 100)
     }
 
     function test_gaps_follow_the_width() {
@@ -112,6 +127,17 @@ TestCase {
         check("t", 0, 540, 450, 20)
         check("w", 0, 560, 220.5, 20)
         check("x", 229.5, 560, 220.5, 20)
+        // Against a min-height or a percentage of an auto height, a flex
+        // container's percentage row gap is 0.
+        check("u1", 0, 580, 450, 20)
+        check("u2", 0, 600, 450, 20)
+        check("v1", 0, 780, 450, 20)
+        check("v2", 0, 800, 450, 20)
+        check("z1", 0, 820, 450, 20)
+        check("z2", 0, 840, 450, 20)
+        // A set height keeps its own in a px auto row; the row stays 100.
+        check("y1", 0, 1020, 200, 50)
+        check("y2", 200, 1020, 200, 100)
     }
 }
 }
