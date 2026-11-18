@@ -156,6 +156,19 @@ pub(crate) fn labeled_control(doc: &Document, label: NodeId) -> Option<NodeId> {
     }
 }
 
+/// Text in `obj` drawn in the button's own colour follows the palette, which
+/// scripts and hover states change.
+fn recolor(obj: &mut Object, own: &Value, to: &Value) {
+    for member in &mut obj.members {
+        if let Member::Child(child) = member {
+            if child.type_name == "Text" && child.get("color") == Some(own) {
+                child.set("color", to.clone());
+            }
+            recolor(child, own, to);
+        }
+    }
+}
+
 /// `control`'s `Accessible.name` from ARIA or its first `<label>`: what the
 /// label reads, without the control itself (a `<select>` inside its label
 /// would otherwise lend it every option's text).
@@ -491,11 +504,18 @@ impl Emitter<'_, '_> {
             Control::Range => self.slider(node, &id, reset),
             Control::CheckBox | Control::Radio => self.toggle(node, style, control, &id, reset),
             Control::Button { .. } => {
-                let drawn = matches!(b.content, Content::Inline(_));
+                let drawn = !matches!(b.content, Content::Empty);
                 let mut button = self.button(node, style, &id, drawn, line);
-                if let Content::Inline(items) = &b.content {
-                    let label = self.button_lines(b, items, &id, line);
-                    button.set("contentItem", object_value(label));
+                match &b.content {
+                    Content::Inline(items) => {
+                        let label = self.button_lines(b, items, &id, line);
+                        button.set("contentItem", object_value(label));
+                    }
+                    Content::Blocks(inside) => {
+                        let label = self.button_inside(inside, &id);
+                        button.set("contentItem", object_value(label));
+                    }
+                    Content::Empty => {}
                 }
                 button
             }
@@ -1066,6 +1086,35 @@ impl Emitter<'_, '_> {
         let id = self.ids.claim(&format!("{name} group"));
         self.radio_groups.insert(key, id.clone());
         id
+    }
+
+    /// A `<button>` whose children are boxes: they lay out in the content box
+    /// the Button's padding leaves, as the anonymous box `inside` arranges
+    /// them, centred like the button's own line.
+    fn button_inside(&mut self, inside: &[LayoutBox<'_>], id: &str) -> Object {
+        let mut holder = Object::new("Item");
+        for b in inside {
+            let mut obj = self.item(b, TextDecorationLine::default()).obj;
+            let item_id = self.item_id(&mut obj);
+            let own = color(b.style.color);
+            recolor(
+                &mut obj,
+                &own,
+                &Value::expr(format!("{id}.palette.buttonText")),
+            );
+            obj.set("x", Value::expr("Math.round((parent.width - width) / 2)"));
+            obj.set("y", Value::expr("Math.round((parent.height - height) / 2)"));
+            holder.set(
+                "implicitWidth",
+                Value::expr(format!("Math.ceil({item_id}.implicitWidth)")),
+            );
+            holder.set(
+                "implicitHeight",
+                Value::expr(format!("{item_id}.implicitHeight")),
+            );
+            holder.push_child(obj);
+        }
+        holder
     }
 
     /// A button's content when it holds more than text: its lines, centred as a
@@ -1663,6 +1712,30 @@ mod tests {
         assert!(!q.contains("Ctrl S"), "{q}");
         assert!(q.contains("text: \"Open ⌘O\""), "{q}");
         assert!(q.contains("Accessible.name: \"Open\""), "{q}");
+    }
+
+    #[test]
+    fn a_flex_button_lays_out_its_children_in_its_box() {
+        let (q, diags) = qml(
+            r#"<button style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px">
+                 <span>Go</span>
+                 <span style="width:12px;height:12px;background:#ffd400"></span>
+                 <b>bold</b>
+               </button>"#,
+        );
+        for want in [
+            "Button {",
+            "RowLayout {",
+            "Layout.leftMargin: 8",
+            "\"#ffd400\"",
+            "text: \"Go bold\"",
+        ] {
+            assert!(q.contains(want), "no `{want}` in\n{q}");
+        }
+        assert!(
+            !diags.iter().any(|d| d.contains("has element children")),
+            "{diags:?}"
+        );
     }
 
     #[test]

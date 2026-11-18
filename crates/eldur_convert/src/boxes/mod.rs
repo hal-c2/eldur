@@ -414,8 +414,11 @@ impl<'a> Builder<'a, '_> {
         }
         let mut children = Vec::new();
         self.children_of(node, &mut children);
-        if children.iter().any(|c| matches!(c, Child::Block(_))) {
+        let Some(own) = self.styles.computed(node).map(|c| &c.style) else {
             return Content::Empty;
+        };
+        if children.iter().any(|c| matches!(c, Child::Block(_))) {
+            return Content::Blocks(vec![button_inside(children, own)]);
         }
         let raw = children
             .into_iter()
@@ -424,9 +427,6 @@ impl<'a> Builder<'a, '_> {
                 Child::Block(_) => None,
             })
             .collect();
-        let Some(own) = self.styles.computed(node).map(|c| &c.style) else {
-            return Content::Empty;
-        };
         match inline_content(raw, own) {
             Content::Inline(items)
                 if crate::emit::has_atomic(&items)
@@ -982,6 +982,49 @@ pub(crate) fn is_fixed_containing_block(style: &ComputedStyle) -> bool {
 /// descendants (CSS 2.2 §10.1).
 pub(crate) fn is_containing_block(style: &ComputedStyle) -> bool {
     style.position != Position::Static || is_fixed_containing_block(style)
+}
+
+/// What lays out a `<button>`'s children when some are boxes (a flex button
+/// blockifies every child): an anonymous box with the button's own display and
+/// its flex or grid layout, inside the box the button draws (HTML §15.5.3:
+/// the button's anonymous content box). The button keeps its decoration and
+/// padding; this box only arranges.
+fn button_inside<'a>(children: Vec<Child<'a>>, button: &'a ComputedStyle) -> LayoutBox<'a> {
+    let display = match button.display {
+        Display::InlineFlex | Display::Flex => Display::Flex,
+        Display::InlineGrid | Display::Grid => Display::Grid,
+        _ => Display::Block,
+    };
+    let style = ComputedStyle {
+        display,
+        flex_direction: button.flex_direction,
+        flex_wrap: button.flex_wrap,
+        justify_content: button.justify_content,
+        align_items: button.align_items,
+        align_content: button.align_content,
+        justify_items: button.justify_items,
+        row_gap: button.row_gap.clone(),
+        column_gap: button.column_gap.clone(),
+        grid_template_columns: button.grid_template_columns.clone(),
+        grid_template_rows: button.grid_template_rows.clone(),
+        grid_template_areas: button.grid_template_areas.clone(),
+        grid_auto_flow_column: button.grid_auto_flow_column,
+        grid_auto_flow_dense: button.grid_auto_flow_dense,
+        grid_auto_columns: button.grid_auto_columns.clone(),
+        grid_auto_rows: button.grid_auto_rows.clone(),
+        ..anonymous_style(button)
+    };
+    // The children's anonymous boxes inherit from the button, as their
+    // parent in the box tree would have been.
+    let content = group(table::wrap_orphans(children, button), button);
+    LayoutBox {
+        node: None,
+        style: Cow::Owned(style),
+        kind: kind_of(display),
+        content,
+        marker: None,
+        pseudo: None,
+    }
 }
 
 /// The style of an anonymous block box: inherited properties from its
