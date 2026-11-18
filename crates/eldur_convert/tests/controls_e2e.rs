@@ -235,6 +235,8 @@ const PILL: &str = r#"<!DOCTYPE html><html><body style="margin:0;font:16px sans-
 <input type="submit" id="sub">
 <button id="restyle">Old<span aria-hidden="true">X</span></button>
 <p id="log">-</p>
+<button id="same" style="display:flex;gap:4px"><span>*</span>Save</button>
+<button id="dattr">Old<span aria-hidden="true">X</span></button>
 <script>
 document.getElementById('swap').addEventListener('click', function () {
   this.textContent = 'Done';
@@ -246,6 +248,12 @@ document.getElementById('mark').addEventListener('click', function () {
 });
 document.getElementById('restyle').addEventListener('click', function () {
   document.getElementById('restyle').innerHTML = '<b>New</b> <img src="x.png" alt="file"><span aria-hidden="true">⌘N</span>';
+});
+document.getElementById('same').addEventListener('click', function () {
+  document.getElementById('same').textContent = 'Save';
+});
+document.getElementById('dattr').addEventListener('click', function () {
+  document.getElementById('dattr').innerHTML = '<span data-aria-hidden="true">Kept</span> <b data-aria-label="x">Yes</b>';
 });
 document.getElementById('count').addEventListener('click', function () {
   document.getElementById('n').textContent = '4';
@@ -350,6 +358,28 @@ TestCase {
         compare(restyle.eldurContentName, "Old")
         mouseClick(restyle)
         tryCompare(restyle, "eldurContentName", "New file")
+    }
+
+    // Written text replaces every child, even when it is the text one of
+    // them already drew (Chromium: only "Save" is drawn).
+    function test_written_text_equal_to_a_childs_replaces_them_all() {
+        const same = find("same")
+        const star = under(same, i => i.text === "*" && i !== same)
+        verify(star && star.visible, "children drawn first")
+        mouseClick(same)
+        wait(0)
+        const save = under(same, i => i.text === "Save" && i !== same && i.visible)
+        verify(save, "written text drawn")
+        verify(!star.visible, "old children no longer drawn")
+    }
+
+    // Only the attributes themselves name: data-aria-hidden and
+    // data-aria-label are data (Chromium: "Kept Yes").
+    function test_data_attributes_do_not_name_written_markup() {
+        const dattr = find("dattr")
+        compare(dattr.eldurContentName, "Old")
+        mouseClick(dattr)
+        tryCompare(dattr, "eldurContentName", "Kept Yes")
     }
 
     // A set height is the column's to share (Chromium: y 0 and 180 in 200 px).
