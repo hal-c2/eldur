@@ -488,6 +488,17 @@ function objectRest(source, excludedKeys) {
 // ---------------------------------------------------------------------------
 
 var _root = null;
+// One more each time another page is the document: an event or key under way
+// when it changes is not the new one's, even when the page it started on is
+// the document again by the time it looks.
+var _docGen = 0;
+
+function _setRoot(root) {
+    if (root !== _root) {
+        _root = root;
+        ++_docGen;
+    }
+}
 // Every root `init` was given whose page may still be up, oldest first; `_root`
 // is the newest of them still alive.
 var _roots = [];
@@ -517,9 +528,12 @@ function init(rootItem, baseUrl, documentUrl) {
     // A page's start hooks may each call init; only a new root is a new page,
     // and it starts afresh only once every earlier page is gone: one still on
     // screen goes on hearing its listeners and running its timers.
+    // A page gone before anything ticked: the one under it is the document again
+    // first, and may be the one asking.
     if (rootItem && rootItem !== _root) {
-        // A page gone before anything ticked: the one under it is the document again first.
         _pageGone();
+    }
+    if (rootItem && rootItem !== _root) {
         _roots = _roots.filter(function(r) { return _live(r) && r !== rootItem; });
         _pageForgetDead();
         if (_roots.length === 0) {
@@ -539,7 +553,7 @@ function init(rootItem, baseUrl, documentUrl) {
         _roots.push(rootItem);
     }
     if (rootItem) {
-        _root = rootItem;
+        _setRoot(rootItem);
     }
     _warnedMissingTemplates = {};
     _componentProbeCache = new Map();
@@ -1070,6 +1084,7 @@ function _pageForgetDead() {
                 if (byRoot === _pageCaches) {
                     _detachAborts(value.documentListeners);
                     _detachAborts(value.windowListeners);
+                    _detachAborts(_itemMeta.get(root));
                 }
                 byRoot.delete(root);
             }
@@ -1086,8 +1101,10 @@ function _pageGone() {
     _roots = _roots.filter(_live);
     _detachAborts(_documentListeners);
     _detachAborts(_windowListeners);
+    // And those its `resize` and `scroll` listeners keep on its root.
+    _detachAborts(_itemMeta.get(_root));
     if (_roots.length > 0) {
-        _root = _roots[_roots.length - 1];
+        _setRoot(_roots[_roots.length - 1]);
         _in = _inLayers.get(_root) || null;
         var kept = _pageCaches.get(_root);
         if (kept) {
@@ -1097,7 +1114,7 @@ function _pageGone() {
         return false;
     }
     _resetPageState();
-    _root = null;
+    _setRoot(null);
     return true;
 }
 
@@ -7530,18 +7547,18 @@ function _dispatchDynamic(raw, type, qtEv) {
     domEv._path = path.map(_eventTarget);
     // A listener can make another page, which is the document then: the
     // event's remaining document and window listeners are not that page's.
-    var page = _root;
+    var gen = _docGen;
     for (var down = path.length - 1; down > 0 && !domEv._propagationStopped; --down) {
-        _runListeners(path[down], "capture:" + type, type, domEv, 1, page);
+        _runListeners(path[down], "capture:" + type, type, domEv, 1, gen);
     }
     if (!domEv._propagationStopped) {
-        _runListeners(raw, "capture:" + type, type, domEv, 2, page);
+        _runListeners(raw, "capture:" + type, type, domEv, 2, gen);
     }
     if (!domEv._propagationStopped) {
-        _runListeners(raw, type, type, domEv, 2, page);
+        _runListeners(raw, type, type, domEv, 2, gen);
     }
     for (var up = 1; up < path.length && domEv.bubbles && !domEv._propagationStopped; ++up) {
-        _runListeners(path[up], type, type, domEv, 3, page);
+        _runListeners(path[up], type, type, domEv, 3, gen);
     }
     domEv.currentTarget = null;
     domEv.eventPhase = 0;
@@ -7583,12 +7600,17 @@ function _eventPath(raw) {
     return path;
 }
 
-// `page` is the document's when the event started: `document` and `window`
-// hear it only while it still is, checked before each of their listeners,
-// also those of theirs kept on the root (`resize`, `scroll`).
-function _runListeners(raw, key, type, domEv, phase, page) {
-    var paged = raw === document || raw === window || (raw === page && _ROOT_HEARS[type] === true);
-    if (paged && _root !== page) {
+// `gen` is the document's when the event started: `document` and `window`
+// hear it only while it still is, checked before each of their listeners.
+// Those of theirs kept on a page's root (`resize`, `scroll`) also need that
+// page to be the document, whoever dispatched at it.
+function _runListeners(raw, key, type, domEv, phase, gen) {
+    var rootKept = _ROOT_HEARS[type] === true && _roots.indexOf(raw) !== -1;
+    var paged = raw === document || raw === window || rootKept;
+    var heard = function() {
+        return _docGen === gen && (!rootKept || raw === _root);
+    };
+    if (paged && !heard()) {
         return;
     }
     var m = _listenerMeta(raw);
@@ -7603,7 +7625,7 @@ function _runListeners(raw, key, type, domEv, phase, page) {
     var copy = list.slice();
     for (var i = 0; i < copy.length; ++i) {
         var fn = copy[i];
-        if (paged && _root !== page) {
+        if (paged && !heard()) {
             break;
         }
         // One removed by a listener before it runs does not run.
@@ -7611,11 +7633,13 @@ function _runListeners(raw, key, type, domEv, phase, page) {
         if (at === -1) {
             continue;
         }
+        // Its own registration's, before a once listener's goes.
+        var passive = _isPassive(m, key, fn, raw, type);
         // A once listener that ran is removed as any other, its signal's record too.
         if (onceList && onceList.indexOf(fn) !== -1) {
             _dropListener(m, key, fn);
         }
-        domEv._passive = _isPassive(m, key, fn, raw, type);
+        domEv._passive = passive;
         // With no script under it, a listener's end is where promises run.
         var native = _micro.native;
         _micro.native = false;
@@ -8172,6 +8196,10 @@ function _dropListener(m, type, handler) {
     if (reg) {
         m.aborts[type].delete(handler);
         _detachAbort(reg);
+    }
+    // What it said goes with it: the same function added again says its own.
+    if (m.passive && m.passive[type]) {
+        m.passive[type].delete(handler);
     }
     var list = m.listeners[type];
     if (!list) {
@@ -14527,16 +14555,18 @@ function _inInstall() {
         + "  WheelHandler { target: null; blocking: false; acceptedDevices: PointerDevice.AllDevices; onWheel: (ev) => parent.wheeled(ev) }\n"
         + "}", home, "eldur_input");
     _in.overlay = overlay;
-    overlay.pointed.connect(_inPointed);
+    // A page in another window still has its layer: its pointer is not the document's.
+    var pointed = _inOnPage(_root, _inPointed);
+    overlay.pointed.connect(pointed);
     // On what holds the page: Qt gives a hover to one branch, so one over the
     // page would leave every element's `:hover` and cursor without.
     var hover = Qt.createQmlObject("import QtQuick; HoverHandler { blocking: false }", home, "eldur_input_hover");
     hover.pointChanged.connect(function() {
         if (hover.hovered) {
-            _inPointed(hover.point.scenePosition, -1, hover.point.modifiers);
+            pointed(hover.point.scenePosition, -1, hover.point.modifiers);
         }
     });
-    overlay.wheeled.connect(_inWheel);
+    overlay.wheeled.connect(_inOnPage(_root, _inWheel));
     var probe = Qt.createQmlObject("import QtQuick; Item { readonly property Item held: Window.activeFocusItem; readonly property bool active: Window.active }",
         home, "eldur_input_focus");
     _in.focusProbe = probe;
@@ -15181,6 +15211,16 @@ function _inKeysOn(item) {
 
 // A key typed in a page that is not the document (another window still up
 // under it, say) is no key of the document's.
+// What a page's own layer hears, heard only while that page is the document.
+function _inOnPage(page, handler) {
+    return function() {
+        if (_pageGone() || _root !== page) {
+            return undefined;
+        }
+        return handler.apply(null, arguments);
+    };
+}
+
 function _inKeyedOn(page) {
     return function(qtEv, down) {
         if (_pageGone() || !_in || _root !== page) {
@@ -15450,13 +15490,12 @@ function _inKeysDone() {
 
 function _inKeyDown(qtEv) {
     var raw = _inKeyTarget();
-    var page = _root;
-    var layer = _in;
+    var gen = _docGen;
     if (_inKeyEvent("keydown", raw, qtEv).defaultPrevented) {
         return true;
     }
     // A keydown listener that made another page ended the key: the rest is not that page's.
-    if (_root !== page || _in !== layer) {
+    if (_docGen !== gen) {
         return true;
     }
     // keydown's listeners can have moved the focus: the rest happens there.
@@ -15472,6 +15511,10 @@ function _inKeyDown(qtEv) {
     var writes = !(qtEv.modifiers & (Qt.ControlModifier | Qt.AltModifier | Qt.MetaModifier))
         && (enter || (text.length > 0 && text.charCodeAt(0) >= 0x20 && text.charCodeAt(0) !== 0x7f));
     if (writes && _inKeyEvent("keypress", raw, qtEv).defaultPrevented) {
+        return true;
+    }
+    // So did a keypress listener: no default of the old page's runs on the new one.
+    if (_docGen !== gen) {
         return true;
     }
     if (key === Qt.Key_Tab || key === Qt.Key_Backtab) {
