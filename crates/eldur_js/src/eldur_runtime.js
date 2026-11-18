@@ -622,8 +622,10 @@ function init(rootItem, baseUrl, documentUrl) {
 // new page: what the last one listened to, the timers and frames it asked for, its
 // custom elements, the rules read from its root and the runtime's helpers that
 // served it all go, as they do when the last page goes with none after it. Every module-level variable that belongs to a page is reset here.
-// Two pages alive at once in one engine share one `document`, as before: the
-// later one adds to the state of the earlier, and stops none of it.
+// Two pages alive at once in one engine have one document, the newer: the
+// covered page's document and window listeners and fallback title are put
+// aside when another page takes over, and are its own again when it is the
+// document again. Its timers, frames and custom elements stay shared.
 function _resetPageState() {
     _dropHelper(_timerWake);
     _dropHelper(_rafAnim);
