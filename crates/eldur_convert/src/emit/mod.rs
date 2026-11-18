@@ -343,6 +343,21 @@ impl<'a, 'd> Emitter<'a, 'd> {
             }
             RootKind::Item => {
                 let mut item = Object::new("Item").with_id(ROOT_ID);
+                // An `Item` has no title of its own: the host shows the page's
+                // from here, and `document.title` reads and writes it, so each
+                // page keeps its own while another is up.
+                let title = self
+                    .doc
+                    .title()
+                    .map(|t| eldur_dom::collapse_whitespace(&t))
+                    .unwrap_or_default();
+                item.members.push(eldur_qml::Member::PropertyDecl {
+                    ty: "string".to_owned(),
+                    name: "title".to_owned(),
+                    value: Some(Value::String(title)),
+                    readonly: false,
+                    required: false,
+                });
                 item.push_child(
                     Object::new("Rectangle")
                         .prop("anchors.fill", Value::expr("parent"))
