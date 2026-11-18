@@ -513,6 +513,9 @@ fn static_page(name: &str) -> String {
 <p>{name}</p>
 <div style="height: 3000px"></div>
 <script>
+// The test makes the page a title names, inside the key's dispatch.
+document.addEventListener("keydown", function(e) {{ if (e.key === "s") document.title = "Next"; }});
+window.addEventListener("keydown", function(e) {{ if (e.key === "w") document.title = "Last"; }}, true);
 document.addEventListener("keydown", function(e) {{ console.log("LC {name} key " + e.key); }});
 window.addEventListener("resize", function() {{ console.log("LC {name} resize"); }});
 window.addEventListener("scroll", function() {{ console.log("LC {name} scroll"); }});
@@ -558,6 +561,18 @@ TestCase {
         return page
     }
 
+    // The page `file` made when `page`'s script sets its title to `file`.
+    function opened(page, file) {
+        const at = { made: null }
+        page.titleChanged.connect(function() {
+            if (page.title === file && !at.made) {
+                const component = Qt.createComponent(file + ".qml")
+                at.made = component.createObject(host, { width: 800, height: 600 })
+            }
+        })
+        return at
+    }
+
     // The page's root scroller: what moves when its document scrolls.
     function scroller(item) {
         for (let i = 0; i < item.children.length; ++i) {
@@ -600,6 +615,22 @@ TestCase {
         wait(50)
         keyClick(Qt.Key_D)
         wait(50)
+        // A listener that makes another page ends the event's document and
+        // window steps, the rest of its own list too: none is the new page's.
+        const next = opened(contact, "Next")
+        keyClick(Qt.Key_S)
+        wait(50)
+        console.log("LC key s made " + next.made.title)
+        const last = opened(next.made, "Last")
+        next.made.forceActiveFocus()
+        keyClick(Qt.Key_W)
+        wait(50)
+        console.log("LC key w made " + last.made.title)
+        last.made.destroy()
+        next.made.destroy()
+        wait(200)
+        // A scroll queued by a page that goes before the frame is not heard.
+        scroller(contact).contentY = 100
         contact.destroy()
         wait(200)
         home.forceActiveFocus()
@@ -629,6 +660,8 @@ const STATIC_WANT: &[&str] = &[
     "LC Contact key d",
     "LC Contact kept key d",
     "LC Contact again key d",
+    "LC key s made Next",
+    "LC key w made Last",
     "LC Home key h",
     "LC Home kept key h",
     "LC Home again key h",
@@ -648,7 +681,7 @@ fn a_page_made_after_one_went_with_nothing_ticking_hears_only_its_own_listeners(
     };
     let dir = std::env::temp_dir().join(format!("eldur-static-pages-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("temp dir");
-    for (at, name) in ["Home", "About", "Contact"].into_iter().enumerate() {
+    for (at, name) in ["Home", "About", "Contact", "Next", "Last"].into_iter().enumerate() {
         let out = eldur_convert::convert(
             &Input {
                 html: static_page(name),

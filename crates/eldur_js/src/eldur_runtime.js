@@ -1237,8 +1237,9 @@ function _ensureRafAnim() {
         var moved = _scrollEvents.slice();
         _scrollEvents.length = 0;
         for (var at = 0; at < moved.length; ++at) {
-            // Queued while its page was the document, which another may be now.
-            if (!_coveredRoot(moved[at])) {
+            // Queued while its page was the document, which another may be now,
+            // or by a page gone since.
+            if (_live(moved[at]) && !_coveredRoot(moved[at])) {
                 _dispatchDynamic(moved[at], "scroll", null);
             }
         }
@@ -7528,26 +7529,19 @@ function _dispatchDynamic(raw, type, qtEv) {
     var path = _eventPath(raw);
     domEv._path = path.map(_eventTarget);
     // A listener can make another page, which is the document then: the
-    // event's remaining document and window steps are not that page's.
+    // event's remaining document and window listeners are not that page's.
     var page = _root;
-    var steps = function(node) {
-        return (node !== document && node !== window) || _root === page;
-    };
     for (var down = path.length - 1; down > 0 && !domEv._propagationStopped; --down) {
-        if (steps(path[down])) {
-            _runListeners(path[down], "capture:" + type, type, domEv, 1);
-        }
+        _runListeners(path[down], "capture:" + type, type, domEv, 1, page);
     }
     if (!domEv._propagationStopped) {
-        _runListeners(raw, "capture:" + type, type, domEv, 2);
+        _runListeners(raw, "capture:" + type, type, domEv, 2, page);
     }
     if (!domEv._propagationStopped) {
-        _runListeners(raw, type, type, domEv, 2);
+        _runListeners(raw, type, type, domEv, 2, page);
     }
     for (var up = 1; up < path.length && domEv.bubbles && !domEv._propagationStopped; ++up) {
-        if (steps(path[up])) {
-            _runListeners(path[up], type, type, domEv, 3);
-        }
+        _runListeners(path[up], type, type, domEv, 3, page);
     }
     domEv.currentTarget = null;
     domEv.eventPhase = 0;
@@ -7589,7 +7583,13 @@ function _eventPath(raw) {
     return path;
 }
 
-function _runListeners(raw, key, type, domEv, phase) {
+// `page` is the document's when the event started: `document` and `window`
+// hear it only while it still is, checked before each of their listeners.
+function _runListeners(raw, key, type, domEv, phase, page) {
+    var paged = raw === document || raw === window;
+    if (paged && _root !== page) {
+        return;
+    }
     var m = _listenerMeta(raw);
     var list = m.listeners[key];
     if (!list || list.length === 0) {
@@ -7602,6 +7602,9 @@ function _runListeners(raw, key, type, domEv, phase) {
     var copy = list.slice();
     for (var i = 0; i < copy.length; ++i) {
         var fn = copy[i];
+        if (paged && _root !== page) {
+            break;
+        }
         // One removed by a listener before it runs does not run.
         var at = list.indexOf(fn);
         if (at === -1) {
@@ -8254,6 +8257,10 @@ function dispatchEvent(item, domEv) {
     }
     if (!item || !domEv || !domEv.type) {
         return true;
+    }
+    // Called from outside a tick or event, the document may still be a gone page's.
+    if (item === document || item === window) {
+        _pageGone();
     }
     return _dispatchDynamic(_listenerHome(item, domEv.type), String(domEv.type), domEv);
 }
