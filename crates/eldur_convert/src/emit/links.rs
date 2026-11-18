@@ -4,6 +4,7 @@
 use eldur_dom::NodeId;
 use eldur_qml::{Member, Object, Value};
 
+use super::accessible;
 use super::controls::js_string;
 use super::units::ROOT_ID;
 use super::{Emitter, FLICKABLE_ID};
@@ -35,18 +36,56 @@ impl Emitter<'_, '_> {
         }
     }
 
-    /// A link with a box of its own has no text run to carry it, so the box does.
+    /// A link with a box of its own has no text run to carry it, so the box
+    /// does, and it is the link assistive technology finds.
     pub(super) fn block_link(&mut self, obj: &mut Object, node: NodeId) {
-        let Some(element) = self.doc.element(node) else {
+        let Some(href) = self.href(node) else {
             return;
         };
-        if element.local_name() != "a" || obj.type_name == "Text" {
+        if obj.type_name == "Text" {
             return;
         }
-        let Some(href) = element.attr("href").map(str::to_owned) else {
+        self.link_handlers(obj, &href);
+        self.link_accessible(obj, node);
+    }
+
+    /// The `<a href>` an atomic inline (an icon) is drawn inside of, through
+    /// inline ancestors only: a link with a box of its own carries itself.
+    pub(super) fn inline_link(&self, node: NodeId) -> Option<NodeId> {
+        self.doc
+            .ancestors(node)
+            .take_while(|&n| {
+                self.styles
+                    .computed(n)
+                    .is_some_and(|c| c.style.display == eldur_css::Display::Inline)
+            })
+            .find(|&n| self.href(n).is_some())
+    }
+
+    /// An atomic inline in a link: the text run carries the link's text, but
+    /// not the box, which follows the link when tapped. The first box of a
+    /// link is the link assistive technology finds, named as a browser
+    /// names it, as a link that is only an icon has nothing else to read.
+    pub(super) fn atomic_link(&mut self, obj: &mut Object, link: NodeId, first: bool) {
+        let Some(href) = self.href(link) else {
             return;
         };
-        let follow = self.follow(&href);
+        self.link_handlers(obj, &href);
+        if first {
+            self.link_accessible(obj, link);
+        }
+    }
+
+    fn href(&self, node: NodeId) -> Option<String> {
+        let element = self.doc.element(node)?;
+        if !element.is_html() || element.local_name() != "a" {
+            return None;
+        }
+        element.attr("href").map(str::to_owned)
+    }
+
+    fn link_handlers(&mut self, obj: &mut Object, href: &str) {
+        let follow = self.follow(href);
         // This handler may hear the tap before the one a listener is on.
         let (params, body) = if self.runtime_dom {
             (
@@ -68,6 +107,21 @@ impl Emitter<'_, '_> {
         let mut hover = Object::new("HoverHandler");
         hover.set("cursorShape", Value::expr("Qt.PointingHandCursor"));
         obj.push_child(hover);
+    }
+
+    /// A link's role and name: its ARIA name, else what it reads (AccName
+    /// step 2F), visually hidden text included, `aria-hidden` icons not.
+    fn link_accessible(&self, obj: &mut Object, link: NodeId) {
+        if accessible::hidden(self.doc, self.styles, link) {
+            return;
+        }
+        let name = accessible::aria_name(self.doc, self.styles, link).unwrap_or_else(|| {
+            accessible::content_text(self.doc, self.styles, link, None, accessible::Reading::Read)
+        });
+        obj.set("Accessible.role", Value::expr("Accessible.Link"));
+        if !name.is_empty() {
+            obj.set("Accessible.name", Value::string(name));
+        }
     }
 
     /// `onLinkActivated` for a `Text` with links, some to `fragments`.

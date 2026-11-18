@@ -692,6 +692,8 @@ impl Emitter<'_, '_> {
             .collect();
         let mut run_index = 0;
         let mut runs = false;
+        // Links whose first box has been made the link that is read.
+        let mut named_links = std::collections::HashSet::new();
         for piece in list {
             match piece {
                 Piece::Run(items) => {
@@ -815,6 +817,17 @@ impl Emitter<'_, '_> {
                         placed.members.insert(0, pseudo);
                     }
                     vertical_align(&mut placed, &a.style);
+                    if let Some(link) = a.node.and_then(|n| self.inline_link(n)) {
+                        let first = named_links.insert(link);
+                        self.atomic_link(&mut placed, link, first);
+                        // The box is the link's item: its `:hover` and the
+                        // like bind there, as the text run has none.
+                        if self.markers && first && !part.own {
+                            placed
+                                .members
+                                .push(Member::Comment(super::dynamic::marker(link)));
+                        }
+                    }
                     if self.options.source_comments
                         && let Some(node) = a.node
                     {
