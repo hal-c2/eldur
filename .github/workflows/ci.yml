@@ -104,15 +104,22 @@ jobs:
           mkdir -p "$downloads"
           fetch() { # url sha256 -> path of the checked download
             local file="$downloads/${1##*/}"
-            [[ -f "$file" ]] || curl -fsSLo "$file" --retry 5 "$1"
-            echo "$2  $file" | sha256sum -c - >&2
+            # A stall cuts the transfer so --retry can start it again.
+            [[ -f "$file" ]] || curl -fsSLo "$file" --retry 5 --retry-all-errors \
+              --connect-timeout 30 --speed-limit 10000 --speed-time 30 "$1" || exit 1
+            # exit, not return: fetch runs in $(…), where -e does not reach, and
+            # a bad file must not be unpacked or cached.
+            echo "$2  $file" | sha256sum -c - >&2 || { rm -f "$file"; exit 1; }
             echo "$file"
           }
           fonts="$HOME/.local/share/fonts"
           mkdir -p "$fonts/noto-cjk"
-          unzip -qjo "$(fetch "$NOTO_SANS_CJK" "$NOTO_SANS_CJK_SHA256")" '*.ttc' -d "$fonts/noto-cjk"
-          unzip -qjo "$(fetch "$NOTO_SERIF_CJK" "$NOTO_SERIF_CJK_SHA256")" '*.ttc' -d "$fonts/noto-cjk"
-          tar -xJf "$(fetch "$NERD_FONTS" "$NERD_FONTS_SHA256")" -C "$fonts" \
+          sans_cjk=$(fetch "$NOTO_SANS_CJK" "$NOTO_SANS_CJK_SHA256")
+          serif_cjk=$(fetch "$NOTO_SERIF_CJK" "$NOTO_SERIF_CJK_SHA256")
+          nerd=$(fetch "$NERD_FONTS" "$NERD_FONTS_SHA256")
+          unzip -qjo "$sans_cjk" '*.ttc' -d "$fonts/noto-cjk"
+          unzip -qjo "$serif_cjk" '*.ttc' -d "$fonts/noto-cjk"
+          tar -xJf "$nerd" -C "$fonts" \
             JetBrainsMonoNerdFont-Regular.ttf JetBrainsMonoNerdFont-Bold.ttf \
             JetBrainsMonoNerdFont-Italic.ttf JetBrainsMonoNerdFont-BoldItalic.ttf
           sudo cp .github/fontconfig/50-omarchy.conf /etc/fonts/conf.d/50-omarchy.conf
@@ -126,16 +133,19 @@ jobs:
           fc-list -f '%{family[0]} %{style[0]} %{fontversion} %{file}\n' | grep -E 'Liberation|JetBrains|Nimbus Sans Regular|Noto Sans Regular|Noto Serif Regular' | sort
       - uses: Swatinem/rust-cache@v2.9.3
       - run: mise run setup
-      # Fails unless qmltestrunner, qmllint and qml6 are the pinned Qt 6.11.
+      # Fails if qmltestrunner, qmllint or qml6 is found but is not the pinned
+      # Qt 6.11. A missing one fails the next step, through ELDUR_REQUIRE_QT.
       - run: mise run setup --check
-      # Every *_e2e test but qmllint_e2e: the corpus passes Qt 6.12's
-      # qmllint but not 6.11's (hal-c2/eldur#49); drop the skip with its fix.
+      # Every *_e2e test of eldur_convert but qmllint_e2e, and eldur_js's
+      # qml_runtime: the corpus passes Qt 6.12's qmllint but not 6.11's
+      # (hal-c2/eldur#49); drop the skip with its fix.
       - name: mise run test (the e2e tests)
         timeout-minutes: 30
         run: |
           # A test waits on qmltestrunner without a timeout; if one hangs,
           # say which page (each runs from a temp dir named after it).
-          mise run test -- -p eldur_convert --test '*_e2e' --no-fail-fast \
+          mise run test -- -p eldur_convert -p eldur_js --test '*_e2e' \
+            --test qml_runtime --no-fail-fast \
             -- --skip converted_corpus_passes_qt6_qmllint &
           tests=$!
           for _ in $(seq 900); do kill -0 "$tests" 2>/dev/null || break; sleep 1; done
