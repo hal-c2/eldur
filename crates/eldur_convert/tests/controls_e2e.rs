@@ -245,7 +245,7 @@ document.getElementById('mark').addEventListener('click', function () {
   document.getElementById('sub').append(' now');
 });
 document.getElementById('restyle').addEventListener('click', function () {
-  this.innerHTML = '<b>New</b> <img src="x.png" alt="file"><span aria-hidden="true">⌘N</span>';
+  document.getElementById('restyle').innerHTML = '<b>New</b> <img src="x.png" alt="file"><span aria-hidden="true">⌘N</span>';
 });
 document.getElementById('count').addEventListener('click', function () {
   document.getElementById('n').textContent = '4';
