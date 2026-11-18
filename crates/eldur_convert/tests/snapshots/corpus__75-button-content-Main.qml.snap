@@ -81,6 +81,9 @@ ApplicationWindow {
                 // <button class="pill">
                 Button {
                     id: buttonControl
+                    property string eldurDomText: "Gobold"
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                     text: "Go bold"
                     palette.buttonText: "#ffffff"
                     font.family: EldurFonts.family("Arial")
@@ -94,7 +97,7 @@ ApplicationWindow {
                     rightPadding: 16
                     bottomPadding: 8
                     leftPadding: 16
-                    implicitHeight: 31
+                    implicitHeight: contentItem.implicitHeight + topPadding + bottomPadding
                     contentItem: Item {
                         implicitWidth: Math.ceil(rowlayout.implicitWidth)
                         implicitHeight: rowlayout.implicitHeight
@@ -167,12 +170,16 @@ ApplicationWindow {
                             }
                         }
                     }
-                    implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
+                    implicitWidth: contentItem.implicitWidth + leftPadding + rightPadding
                     Layout.topMargin: 16
+                    Layout.preferredHeight: implicitHeight
                 }
 
                 // <p>
                 Text {
+                    id: p
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                     text: "Hidden text is not drawn and not read; aria-label wins over content."
                     textFormat: Text.PlainText
                     color: "#000000"
@@ -186,7 +193,7 @@ ApplicationWindow {
                     bottomPadding: EldurFonts.slack(font, lineHeight)
                     wrapMode: Text.WordWrap
                     Layout.fillWidth: true
-                    Layout.topMargin: 16
+                    Layout.topMargin: 16 - buttonControl.eldurCarry
                     renderType: Text.NativeRendering
                 }
 
@@ -198,12 +205,14 @@ ApplicationWindow {
                     font.family: EldurFonts.family("sans-serif")
                     font.pixelSize: 16
                     Layout.fillWidth: true
-                    Layout.topMargin: 16
+                    Layout.topMargin: 16 - p.eldurCarry
                     Layout.preferredHeight: implicitHeight
 
                     // <button class="row">
                     Button {
                         id: buttonControl2
+                        property string eldurDomText: "SaveCtrl S"
+
                         text: "Save"
                         palette.buttonText: "#000000"
                         font.family: EldurFonts.family("Arial")
@@ -219,7 +228,7 @@ ApplicationWindow {
                         rightPadding: 8
                         bottomPadding: 3
                         leftPadding: 8
-                        implicitHeight: 21
+                        implicitHeight: contentItem.implicitHeight + topPadding + bottomPadding
                         contentItem: Item {
                             implicitWidth: Math.ceil(rowlayout2.implicitWidth)
                             implicitHeight: rowlayout2.implicitHeight
@@ -256,7 +265,7 @@ ApplicationWindow {
                                 }
                             }
                         }
-                        implicitWidth: contentItem.implicitWidth * 1.0256385 + leftPadding + rightPadding
+                        implicitWidth: contentItem.implicitWidth + leftPadding + rightPadding
                         width: Math.min(implicitWidth, blockFlow.width)
                     }
 
@@ -355,7 +364,7 @@ ApplicationWindow {
 
                 // <p>
                 Text {
-                    id: p
+                    id: p2
                     property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                     text: "A label names its control without the control's own text."
@@ -386,7 +395,7 @@ ApplicationWindow {
                     font.family: EldurFonts.family("sans-serif")
                     font.pixelSize: 16
                     Layout.fillWidth: true
-                    Layout.topMargin: 16 - p.eldurCarry
+                    Layout.topMargin: 16 - p2.eldurCarry
                     Layout.preferredHeight: implicitHeight
 
                     EldurRun {
