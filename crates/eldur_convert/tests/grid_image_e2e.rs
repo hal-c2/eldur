@@ -319,11 +319,10 @@ document.getElementById('h').classList.toggle('half');
     run(page, &places("ClassShare", checks), "grid_class_share");
 }
 
-/// A share takes no part in its track's size, so its keeper carries the
-/// track's `minmax()` minimum: the area keeps its 200 px at 300 px, the
-/// item is half of it, and the track is as wide as a plain item's. (Qt
-/// grows tracks from their preferred widths, so neither grid splits the
-/// rest as Chromium does, 200 and 100 px: that is #31.)
+/// A percentage width in a `minmax()` column is of its area, which keeps
+/// the track's minimum: at 300 px the columns are 200 and 100 px with a
+/// share in them or not (CSS Grid 2 §12.7.1), and the item is half of its
+/// area, as in Chromium.
 #[test]
 fn a_share_keeps_its_track_minimum() {
     let page = r#"<!DOCTYPE html><html><body style="margin:0">
@@ -336,13 +335,10 @@ fn a_share_keeps_its_track_minimum() {
 <script>
 var named = ['h', 'k', 'p', 'q'].map(function (id) { return document.getElementById(id); });
 </script></body></html>"#;
-    let checks = r#"        const h = findChild(page, "h")
-        const area = Array.from(h.parent.children).find(c => c.eldurKeeper === true)
-        verify(area, "a keeper for h")
-        verify(area.width >= 200, "h's area " + area.width + " is under its track's 200 px minimum")
-        verify(Math.abs(h.width - area.width / 2) <= 1, "h " + h.width + " is not half its area " + area.width)
-        const plain = findChild(page, "p")
-        verify(Math.abs(area.width - plain.width) <= 1, "h's area " + area.width + ", a plain item's track " + plain.width)"#;
+    let checks = r#"        check("h", 0, 0, 100)
+        check("k", 200, 0, 100)
+        check("p", 0, 20, 200)
+        check("q", 200, 20, 100)"#;
     run(page, &places("ShareMinimum", checks), "grid_share_minimum");
 }
 
