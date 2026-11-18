@@ -13,8 +13,8 @@ var b4=document.getElementById("b4");
 L("flex",JSON.stringify(b2.textContent),JSON.stringify(b4.textContent));
 L("rendered",JSON.stringify(b1.innerText),JSON.stringify(b3.innerText));
 b1.textContent="Done";
-L("set",JSON.stringify(b1.textContent),b1.childNodes.length,b1.firstChild.nodeType,JSON.stringify(b1.firstChild.textContent));
+L("set",JSON.stringify(b1.textContent),JSON.stringify(b1.innerText));
 var b6=document.getElementById("b6");
 b6.appendChild(document.createTextNode("!"));
-L("appended",JSON.stringify(b6.textContent.slice(-1)));
+L("appended",JSON.stringify(b6.textContent),JSON.stringify(b6.innerText));
 </script></body></html>
