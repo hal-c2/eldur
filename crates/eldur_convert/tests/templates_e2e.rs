@@ -146,11 +146,13 @@ TestCase {
     // An input's effects run over several turns of the event loop (the event, the
     // page's handler, the layout after it): the scene is read when a few more
     // turns change nothing, however long a loaded machine takes to turn them.
-    // Qt delivers hover to an item made under a still mouse in the next frame,
-    // as Chromium does after its layout: a frame is waited for before the turns.
+    // Qt delivers hover to an item made under a still mouse when it next draws
+    // a frame, as Chromium does after its layout: one is asked for and must
+    // come before the turns are counted.
     function quiet() {
         wait(settled)
-        waitForRendering(page, settled)
+        page.Window.window.update()
+        verify(waitForRendering(page, 5000), "no frame drawn after the input in 5 s")
         let was = look()
         for (let round = 0; round < 20; round++) {
             for (let turn = 0; turn < 3; turn++) wait(0)
