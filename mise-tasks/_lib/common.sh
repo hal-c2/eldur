@@ -172,7 +172,7 @@ qt_tool_runs() {
 # Qt is optional, so setup passes. Nothing when all are pinned, or for a
 # tool that is not there and not named.
 qt_pin_report() {
-  local name path version use fix why var
+  local name path shown version use fix why var
   for name in qmltestrunner qmllint qml6; do
     case "$name" in
       qml6)
@@ -192,6 +192,9 @@ qt_pin_report() {
         ;;
     esac
     [ -n "$path" ] || continue
+    # A record is one line: a newline in a value a variable gave is shown as
+    # \n, so it cannot start a record of its own.
+    shown="${path//$'\n'/\\n}"
     # A tool that is not there has no Qt to ask, and the Qt beside where it
     # would be is not proof of it.
     # Only a variable can name a tool that is not there: qt6_tool finds the
@@ -205,16 +208,18 @@ qt_pin_report() {
       var="$(printf '%s' "$name" | tr '[:lower:]' '[:upper:]')"
       case "$name" in
         qmltestrunner) use="mise run test fails on it" ;;
+        # The QML tests take a set QMLLINT as asked too.
+        qmllint) use="mise run qml:check and mise run test fail on it" ;;
         *) use="mise run qml:check fails on it" ;;
       esac
-      echo "SKIPPED $name ($path) $why, and $var names it, so $use: point $var at Qt $qt_pinned's $name, or unset it"
+      echo "SKIPPED $name ($shown) $why, and $var names it, so $use: point $var at Qt $qt_pinned's $name, or unset it"
       continue
     fi
     version="$(qt_version_of "$path")"
     case "$version" in
       "$qt_pinned".*) continue ;;
-      "") echo "NOTE $name: no Qt 6 version answered ($path), nor by a Qt tool beside it; $use it on a Qt that may be another than the pinned one" ;;
-      *) echo "NOTE $name: Qt $version found ($path); $use it" ;;
+      "") echo "NOTE $name: no Qt 6 version answered ($shown), nor by a Qt tool beside it; $use it on a Qt that may be another than the pinned one" ;;
+      *) echo "NOTE $name: Qt $version found ($shown); $use it" ;;
     esac
     echo "pinned: Qt $qt_pinned (qt_pinned in mise-tasks/_lib/common.sh, the Qt the QML tests, qml:check and docs/spec/ measure)"
     echo "for the pinned Qt: install Qt $qt_pinned (Qt's online installer, or aqt install-qt) and $fix"
