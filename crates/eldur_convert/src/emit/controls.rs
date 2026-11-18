@@ -7,13 +7,14 @@
 use std::collections::BTreeMap;
 
 use eldur_css::{
-    BorderSide, BorderStyle, BoxSizing, ComputedStyle, Length, Rgba, Size, TextAlign,
+    BorderSide, BorderStyle, BoxSizing, ComputedStyle, Length, Rgba, Size, StyleMap, TextAlign,
     TextDecorationLine,
 };
 use eldur_dom::{Document, NodeId};
 use eldur_js::TargetKind;
 use eldur_qml::{Member, Object, Value};
 
+use super::accessible::{self, Reading};
 use super::flow::{Emitted, MarginSet};
 
 use super::units::{color, number, round};
@@ -155,12 +156,17 @@ pub(crate) fn labeled_control(doc: &Document, label: NodeId) -> Option<NodeId> {
     }
 }
 
-/// The text of the first `<label>` of `control`, for `Accessible.name`.
-fn label_text(doc: &Document, control: NodeId) -> Option<String> {
+/// `control`'s `Accessible.name` from ARIA or its first `<label>`: what the
+/// label reads, without the control itself (a `<select>` inside its label
+/// would otherwise lend it every option's text).
+fn label_text(doc: &Document, styles: &StyleMap, control: NodeId) -> Option<String> {
+    if let Some(name) = accessible::aria_name(doc, styles, control) {
+        return Some(name);
+    }
     let label = doc
         .descendants(doc.root())
         .find(|&n| labeled_control(doc, n) == Some(control))?;
-    let text = eldur_dom::collapse_whitespace(&doc.text_content(label));
+    let text = accessible::content_text(doc, styles, label, Some(control), Reading::Read);
     (!text.is_empty()).then_some(text)
 }
 
@@ -524,7 +530,7 @@ impl Emitter<'_, '_> {
                 required: false,
             });
         }
-        if let Some(text) = label_text(self.doc, node) {
+        if let Some(text) = label_text(self.doc, self.styles, node) {
             obj.set("Accessible.name", Value::String(text));
         }
 
@@ -1136,7 +1142,12 @@ impl Emitter<'_, '_> {
                     ),
                 );
             }
-            eldur_dom::collapse_whitespace(&self.doc.text_content(node))
+            let drawn = accessible::content_text(self.doc, self.styles, node, None, Reading::Drawn);
+            let read = accessible::content_text(self.doc, self.styles, node, None, Reading::Read);
+            if read != drawn {
+                obj.set("Accessible.name", Value::String(read));
+            }
+            drawn
         };
         let beyond_latin = text.chars().any(|c| u32::from(c) >= 0x100);
         obj.set("text", Value::String(text));
@@ -1620,6 +1631,38 @@ mod tests {
             out.main_qml().expect("Main.qml").to_owned(),
             out.diagnostics.iter().map(ToString::to_string).collect(),
         )
+    }
+
+    #[test]
+    fn a_label_names_its_control_without_the_controls_text() {
+        let (q, _) = qml(
+            r#"<label>Select theme<select><option>Dark</option><option>Light</option></select></label>"#,
+        );
+        assert!(q.contains("Accessible.name: \"Select theme\""), "{q}");
+    }
+
+    #[test]
+    fn aria_labelledby_wins_over_aria_label_which_wins_over_content() {
+        let (q, _) = qml(r#"<span id=a>Hi</span><span id=b>there</span>
+               <button aria-labelledby="a b" aria-label="no">x</button>
+               <button aria-label=" Close  menu ">X</button>
+               <label>Name <input aria-label="Full name"></label>"#);
+        assert!(q.contains("Accessible.name: \"Hi there\""), "{q}");
+        assert!(q.contains("Accessible.name: \"Close menu\""), "{q}");
+        assert!(q.contains("Accessible.name: \"Full name\""), "{q}");
+        assert!(!q.contains("Accessible.name: \"no\""), "{q}");
+    }
+
+    #[test]
+    fn hidden_text_is_neither_drawn_nor_read_and_aria_hidden_is_only_drawn() {
+        let (q, _) = qml(
+            r#"<button>Save<kbd style="display:none">Ctrl S</kbd></button>
+               <button>Open<span aria-hidden="true"> ⌘O</span></button>"#,
+        );
+        assert!(q.contains("text: \"Save\""), "{q}");
+        assert!(!q.contains("Ctrl S"), "{q}");
+        assert!(q.contains("text: \"Open ⌘O\""), "{q}");
+        assert!(q.contains("Accessible.name: \"Open\""), "{q}");
     }
 
     #[test]

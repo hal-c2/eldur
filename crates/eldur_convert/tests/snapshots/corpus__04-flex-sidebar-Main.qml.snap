@@ -657,6 +657,7 @@ ApplicationWindow {
                                                         implicitWidth: 280
                                                         placeholderText: "Search projects"
                                                         placeholderTextColor: "#8a93a6"
+                                                        Accessible.name: "Search projects"
                                                         width: 280
                                                         renderType: Text.NativeRendering
                                                     }
