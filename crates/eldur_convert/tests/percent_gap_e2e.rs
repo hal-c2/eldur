@@ -29,9 +29,14 @@ div div { height: 20px }
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));grid-auto-rows:100px;width:400px"><div id=y1 style="height:50px"></div><div id=y2 style="height:auto"></div></div>
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));grid-auto-rows:100px;width:400px"><div id=y3 style="height:50px"></div><div id=y4 style="height:150px"></div><div id=y5 style="height:50px"></div><div id=y6 style="height:50px"></div><div id=y7 style="height:50px"></div></div>
 <div><div id=y8></div></div>
+<div style="display:flex;width:400px;max-width:200px;column-gap:10%"><div id=x1 style="width:50px"></div><div id=x2 style="width:50px"></div></div>
+<div style="display:flex;width:100px;min-width:300px;column-gap:10%"><div id=x3 style="width:50px"></div><div id=x4 style="width:50px"></div></div>
+<div style="display:grid;grid-template-columns:50px 50px;width:400px;max-width:200px;column-gap:10%"><div id=x5></div><div id=x6></div></div>
+<div style="display:flex;box-sizing:border-box;padding:0 20px;width:400px;max-width:240px;column-gap:10%"><div id=x7 style="width:50px"></div><div id=x8 style="width:50px"></div></div>
+<div style="display:flex;flex-direction:column;height:400px;max-height:200px;row-gap:10%"><div id=x9></div><div id=x10></div></div>
 <script>
 // Named so that they get an objectName the test can find.
-var named = [document.getElementById('a'), document.getElementById('b'), document.getElementById('c'), document.getElementById('d'), document.getElementById('e'), document.getElementById('h'), document.getElementById('i'), document.getElementById('j'), document.getElementById('k'), document.getElementById('l'), document.getElementById('m'), document.getElementById('f'), document.getElementById('g'), document.getElementById('n'), document.getElementById('o'), document.getElementById('p'), document.getElementById('q'), document.getElementById('r'), document.getElementById('s'), document.getElementById('t'), document.getElementById('w'), document.getElementById('x'), document.getElementById('u1'), document.getElementById('u2'), document.getElementById('v1'), document.getElementById('v2'), document.getElementById('z1'), document.getElementById('z2'), document.getElementById('y1'), document.getElementById('y2'), document.getElementById('y3'), document.getElementById('y4'), document.getElementById('y5'), document.getElementById('y6'), document.getElementById('y7'), document.getElementById('y8')];
+var named = [document.getElementById('a'), document.getElementById('b'), document.getElementById('c'), document.getElementById('d'), document.getElementById('e'), document.getElementById('h'), document.getElementById('i'), document.getElementById('j'), document.getElementById('k'), document.getElementById('l'), document.getElementById('m'), document.getElementById('f'), document.getElementById('g'), document.getElementById('n'), document.getElementById('o'), document.getElementById('p'), document.getElementById('q'), document.getElementById('r'), document.getElementById('s'), document.getElementById('t'), document.getElementById('w'), document.getElementById('x'), document.getElementById('u1'), document.getElementById('u2'), document.getElementById('v1'), document.getElementById('v2'), document.getElementById('z1'), document.getElementById('z2'), document.getElementById('y1'), document.getElementById('y2'), document.getElementById('y3'), document.getElementById('y4'), document.getElementById('y5'), document.getElementById('y6'), document.getElementById('y7'), document.getElementById('y8'), document.getElementById('x1'), document.getElementById('x2'), document.getElementById('x3'), document.getElementById('x4'), document.getElementById('x5'), document.getElementById('x6'), document.getElementById('x7'), document.getElementById('x8'), document.getElementById('x9'), document.getElementById('x10')];
 </script></body></html>"#;
 
 /// Chromium, `getBoundingClientRect()` at 900×800 and 450×800: `[x, y,
@@ -110,6 +115,17 @@ TestCase {
         check("y6", 300, 1120, 100, 50)
         check("y7", 0, 1220, 100, 50)
         check("y8", 0, 1320, 900, 20)
+        // A px max-/min- size bounds the box the percentage is of.
+        check("x1", 0, 1340, 50, 20)
+        check("x2", 70, 1340, 50, 20)
+        check("x3", 0, 1360, 50, 20)
+        check("x4", 80, 1360, 50, 20)
+        check("x5", 0, 1380, 50, 20)
+        check("x6", 70, 1380, 50, 20)
+        check("x7", 20, 1400, 50, 20)
+        check("x8", 90, 1400, 50, 20)
+        check("x9", 0, 1420, 900, 20)
+        check("x10", 0, 1460, 900, 20)
     }
 
     function test_gaps_follow_the_width() {
@@ -156,6 +172,17 @@ TestCase {
         check("y6", 300, 1120, 100, 50)
         check("y7", 0, 1220, 100, 50)
         check("y8", 0, 1320, 450, 20)
+        // A px max-/min- size bounds the box the percentage is of.
+        check("x1", 0, 1340, 50, 20)
+        check("x2", 70, 1340, 50, 20)
+        check("x3", 0, 1360, 50, 20)
+        check("x4", 80, 1360, 50, 20)
+        check("x5", 0, 1380, 50, 20)
+        check("x6", 70, 1380, 50, 20)
+        check("x7", 20, 1400, 50, 20)
+        check("x8", 90, 1400, 50, 20)
+        check("x9", 0, 1420, 450, 20)
+        check("x10", 0, 1460, 450, 20)
     }
 }
 }
