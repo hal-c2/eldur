@@ -7,8 +7,8 @@
 use std::collections::BTreeMap;
 
 use eldur_css::{
-    BorderSide, BorderStyle, BoxSizing, ComputedStyle, Length, Rgba, Size, StyleMap, TextAlign,
-    TextDecorationLine,
+    BorderSide, BorderStyle, BoxSizing, ComputedStyle, Display, Length, Rgba, Size, StyleMap,
+    TextAlign, TextDecorationLine,
 };
 use eldur_dom::{Document, NodeId};
 use eldur_js::TargetKind;
@@ -1121,6 +1121,12 @@ impl Emitter<'_, '_> {
                 &own,
                 &Value::expr(format!("{id}.palette.buttonText")),
             );
+            // A flex or grid box shares out the width the button sets (its
+            // anonymous content box fills the content box); for an auto-sized
+            // button that is its own implicit width.
+            if matches!(b.style.display, Display::Flex | Display::Grid) {
+                obj.set("width", Value::expr("parent.width"));
+            }
             obj.set("x", Value::expr("Math.round((parent.width - width) / 2)"));
             obj.set("y", Value::expr("Math.round((parent.height - height) / 2)"));
             holder.set(
