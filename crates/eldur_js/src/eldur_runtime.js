@@ -5071,6 +5071,12 @@ function _logicalParent(raw) {
         return _meta(raw).topFrom;
     }
     if (raw && raw.eldurInlineOwner !== undefined) {
+        // Off its line with an element a script took out, it is still that
+        // element's, and as disconnected as it is.
+        var heldBy = _itemMeta.get(raw);
+        if (heldBy && heldBy.vHeldBy) {
+            return heldBy.vHeldBy;
+        }
         var cutFrom = _vCutOwner(raw);
         if (cutFrom) {
             return cutFrom;
@@ -5444,14 +5450,33 @@ function _innerText(raw) {
 }
 
 // A button keeps its nodes' text (`eldurDomText`) while they are as the page
-// made them; a change to them at any depth leaves its drawn text to read.
+// made them; a change to them at any depth leaves its drawn text to read. A
+// name the converter read from its content (`eldurContentName`) is read again
+// from what it holds once the change is made.
 function _domTextStale(raw) {
     for (var at = raw, depth = 0; at && depth < 256; at = _logicalParent(at), ++depth) {
+        var named = typeof at.eldurContentName === "string";
+        if (named) {
+            _contentNameLater(at);
+        }
         if (typeof at.eldurDomText === "string") {
             _meta(at).ownText = true;
             return;
         }
+        if (named) {
+            return;
+        }
     }
+}
+
+// One closure per button: `Qt.callLater` keeps only the last arguments of a
+// function it already holds.
+function _contentNameLater(raw) {
+    Qt.callLater(function() {
+        if (typeof raw.eldurContentName === "string") {
+            raw.eldurContentName = _innerText(raw);
+        }
+    });
 }
 
 // A button whose content is its boxes (a flex button's children) has them in
@@ -5462,6 +5487,7 @@ function _buttonDrawsText(raw, format) {
     var held = raw.contentItem;
     if (held && _meta(held).buttonLabel) {
         held.textFormat = format;
+        held.text = Qt.binding(function() { return raw.text; });
         return;
     }
     if (!held || typeof held.text === "string" || raw.background === undefined || raw.palette === undefined) {
@@ -8841,13 +8867,24 @@ function _putDrawnText(raw, nodes, atStart) {
             _takeOut(n);
         }
     });
-    if (typeof raw.eldurDomText === "string" && !_meta(raw).ownText) {
-        raw.eldurDomText = atStart ? add + raw.eldurDomText : raw.eldurDomText + add;
+    function put(to, what) {
+        return atStart ? what + to : to + what;
     }
-    var had = _pseudoOwn(raw, raw.text);
-    var own = atStart ? add + had : had + add;
+    if (typeof raw.eldurDomText === "string" && !_meta(raw).ownText) {
+        raw.eldurDomText = put(raw.eldurDomText, add);
+    }
+    if (typeof raw.eldurContentName === "string") {
+        raw.eldurContentName = put(raw.eldurContentName, add);
+    }
+    var own = put(_pseudoOwn(raw, raw.text), add);
     _meta(raw).explicitText = own;
+    // A label drawing `innerHTML`'s markup draws the new text literally.
+    var label = raw.contentItem;
+    var markup = label && _meta(label).buttonLabel && label.textFormat === 4 ? label.text : null;
     raw.text = _pseudoWrapped(raw, own);
+    if (markup !== null) {
+        label.text = _pseudoWrapped(raw, put(_pseudoOwn(raw, markup), _vEscapeText(add)));
+    }
 }
 
 // `going`, when given, is the node the inserted ones replace: it leaves once
@@ -11569,16 +11606,11 @@ function _vAnyNode() {
     return true;
 }
 
-function _vDetachKids(c) {
-    _vDomTextStale(c);
-    var old = c.kids.slice();
-    var leaving = [];
-    var boxes = (c.boxes || []).filter(function(b) { return _vSlotOwner(b.item) === c; })
-        .map(function(b) { return b.item; });
-    c.boxes = [];
-    // Those of the elements going with them leave the line too, still their
-    // element's while a script holds it.
-    _vEachElement(old.filter(function(k) { return !k.gen; }), function(d) {
+// The boxes cut out of the lines of `nodes` and the elements inside them
+// leave the line with them, still their element's while a script holds it.
+function _vHoldBoxes(nodes) {
+    var boxes = [];
+    _vEachElement(nodes, function(d) {
         (d.boxes || []).forEach(function(b) {
             if (_vSlotOwner(b.item) === d) {
                 _meta(b.item).vHeldBy = d;
@@ -11586,6 +11618,17 @@ function _vDetachKids(c) {
             }
         });
     });
+    return boxes;
+}
+
+function _vDetachKids(c) {
+    _vDomTextStale(c);
+    var old = c.kids.slice();
+    var leaving = [];
+    var boxes = (c.boxes || []).filter(function(b) { return _vSlotOwner(b.item) === c; })
+        .map(function(b) { return b.item; });
+    c.boxes = [];
+    boxes.push.apply(boxes, _vHoldBoxes(old.filter(function(k) { return !k.gen; })));
     boxes.forEach(function(box) { leaving.push.apply(leaving, _ceLeaving(box)); });
     boxes.forEach(_takeOut);
     for (var j = 0; j < old.length; ++j) {
@@ -16874,11 +16917,16 @@ function _vRemove(node) {
         node.vparent = null;
         return;
     }
-    var owner = node.vparent || node.model;
+    var owner = node.__eldurInline ? node.vparent || node.model : null;
     if (!owner) {
         return;
     }
     _vDomTextStale(owner);
+    var boxes = node.vtext ? [] : _vHoldBoxes([node]);
+    var leaving = [];
+    boxes.forEach(function(box) { leaving.push.apply(leaving, _ceLeaving(box)); });
+    boxes.forEach(_takeOut);
+    _ceLeft(leaving);
     // A box cut out of the line stays in its gap: what leaves no longer
     // comes before it.
     (owner.boxes || []).forEach(function(b) {
@@ -16919,7 +16967,6 @@ function _vInsert(c, rawNodes, ref) {
     // Before a box cut out of `c`'s line: at its place among the nodes, and
     // each node put there comes before it, and before the boxes after it in
     // the same gap, from then on.
-    _vUnhold(rawNodes);
     var refBox = ref && !ref.__eldurInline ? (c.boxes || []).find(function(b) {
         return b.item === ref && _vSlotOwner(ref) === c;
     }) : null;
@@ -16933,8 +16980,10 @@ function _vInsert(c, rawNodes, ref) {
     for (var i = 0; i < rawNodes.length; ++i) {
         var node = _vAsNode(rawNodes[i]);
         if (!node) {
+            console.warn("eldur: a box the page made does not go into an inline element; it stays where it was");
             continue;
         }
+        _vUnhold([rawNodes[i]]);
         if (node === ref) {
             ref = null;
             var after = list.indexOf(node) + 1;
@@ -17341,8 +17390,10 @@ function _vPut(host, nodes, ref, going) {
     var held = _ceHold(nodes);
     var leaving = _ceMoving(nodes, going);
     _vInsert(host, nodes, ref);
-    if (going) {
+    if (going && going.__eldurInline) {
         _vRemove(going);
+    } else if (going) {
+        _takeOut(going);
     }
     _ceLeft(leaving);
     _ceInserted(held);

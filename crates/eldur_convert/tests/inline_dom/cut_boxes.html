@@ -11,6 +11,8 @@ function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
 <p id="p6"><span id="t6">a<select id="q6"><option>F</option></select>b</span></p>
 <p id="p7"><span id="t7"><select id="qa"><option>G</option></select><select id="qb"><option>H</option></select>z</span></p>
 <p id="p8"><span id="o8">a<span id="i8">b<input id="f8">c</span>d</span></p>
+<p id="p9"><span id="o9">a<input id="f9">b</span> c</p>
+<p id="p10"><span id="o10">a<select id="q10"><option>J</option></select>b</span></p>
 <p id="p2"><span id="s2"><select id="q2"><option>A</option></select> tail</span> after</p>
 <script>
 L("once",document.querySelectorAll("select").length,document.body.querySelectorAll("p,span,select,input,label").length);
@@ -46,4 +48,12 @@ L("adjacent",[].map.call(t7.childNodes,function(n){return n.id||n.textContent}).
 var o8=document.getElementById("o8"),i8=document.getElementById("i8");
 o8.textContent="New";
 L("nested",document.getElementById("p8").querySelectorAll("input").length,I(document.getElementById("f8")),JSON.stringify(document.getElementById("p8").textContent),I(i8.querySelector("input")));
+var f8=i8.querySelector("input");
+L("held",I(f8&&f8.parentNode),I(f8&&f8.parentElement),i8.contains(f8),o8.contains(i8));
+var o9=document.getElementById("o9"),f9=document.getElementById("f9");
+o9.remove();
+L("gone",I(document.getElementById("f9")),document.getElementById("p9").querySelectorAll("input").length,I(f9.parentNode),o9.contains(f9),JSON.stringify(document.getElementById("p9").textContent));
+var o10=document.getElementById("o10"),q10=document.getElementById("q10");
+o10.replaceChild(document.createTextNode("X"),q10);
+L("swap",JSON.stringify(o10.textContent),o10.children.length,I(document.getElementById("q10")),I(q10.parentNode));
 </script></body></html>

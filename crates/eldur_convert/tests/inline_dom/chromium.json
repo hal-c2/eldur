@@ -187,7 +187,7 @@
  },
  "cut_boxes": {
   "log": [
-   "LC once 9 31",
+   "LC once 10 37",
    "LC span b:1:doc",
    "LC kids 2 4 2 ts ti ti",
    "LC nodes a ts b ti",
@@ -202,7 +202,10 @@
    "LC replace 1 \"New\" 0 0",
    "LC move q6,b,a",
    "LC adjacent X,qa,Y,qb,z",
-   "LC nested 0 null \"New\" f8"
+   "LC nested 0 null \"New\" f8",
+   "LC held i8 i8 true false",
+   "LC gone null 0 o9 true \" c\"",
+   "LC swap \"aXb\" 0 null null"
   ],
   "clicks": []
  },
