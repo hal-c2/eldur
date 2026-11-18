@@ -72,14 +72,18 @@ jobs:
       # tables in docs/spec/layout.md); fonts_e2e also measures Nimbus Sans
       # (URW base35 20200910) and Noto Sans. Text widths and line heights
       # follow the font, so the runner gets the same files; the Nerd Font
-      # archive is pinned by checksum.
+      # archive is pinned by checksum. A glyph those faces lack (a ✓ in Arial)
+      # comes from fontconfig's fallback, which where the recordings were made
+      # is Noto CJK or the Nerd Font, never DejaVu: the runner's DejaVu is
+      # rejected, and Noto CJK and Noto Color Emoji are installed.
       - name: Install the fonts the recordings were measured with
         env:
           NERD_FONTS: https://github.com/ryanoasis/nerd-fonts/releases/download/v3.5.1/JetBrainsMono.tar.xz
           NERD_FONTS_SHA256: 04d5e8f903693f9dd13e16f867e994834e681eb3c72c0d337a770dcda09010cf
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends fontconfig fonts-liberation fonts-urw-base35 fonts-noto-core
+          sudo apt-get install -y --no-install-recommends fontconfig fonts-liberation fonts-urw-base35 fonts-noto-core \
+            fonts-noto-cjk fonts-noto-color-emoji
           archive="$RUNNER_TEMP/JetBrainsMono.tar.xz"
           curl -fsSLo "$archive" "$NERD_FONTS"
           echo "$NERD_FONTS_SHA256  $archive" | sha256sum -c -
@@ -88,8 +92,30 @@ jobs:
           tar -xJf "$archive" -C "$fonts" \
             JetBrainsMonoNerdFont-Regular.ttf JetBrainsMonoNerdFont-Bold.ttf \
             JetBrainsMonoNerdFont-Italic.ttf JetBrainsMonoNerdFont-BoldItalic.ttf
+          conf="${XDG_CONFIG_HOME:-$HOME/.config}/fontconfig/conf.d"
+          mkdir -p "$conf"
+          cat >"$conf/90-eldur-no-dejavu.conf" <<'EOF'
+          <?xml version="1.0"?>
+          <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
+          <fontconfig>
+            <selectfont><rejectfont><pattern>
+              <patelt name="family"><string>DejaVu Sans</string></patelt>
+            </pattern></rejectfont></selectfont>
+            <selectfont><rejectfont><pattern>
+              <patelt name="family"><string>DejaVu Serif</string></patelt>
+            </pattern></rejectfont></selectfont>
+            <selectfont><rejectfont><pattern>
+              <patelt name="family"><string>DejaVu Sans Mono</string></patelt>
+            </pattern></rejectfont></selectfont>
+          </fontconfig>
+          EOF
           fc-cache -f
-          fc-list -f '%{family[0]} %{style[0]} %{fontversion} %{file}\n' | grep -E 'Liberation|JetBrains|Nimbus Sans|Noto Sans|Noto Serif' | sort
+          echo "fallback for U+2713 after Liberation Sans:"
+          fc-match -s 'Liberation Sans:charset=2713' -f '  %{family[0]} %{file}\n' | head -5
+          echo "every family:"
+          fc-list -f '%{family[0]}\n' | sort -u | tr '\n' ';'
+          echo
+          fc-list -f '%{family[0]} %{style[0]} %{fontversion} %{file}\n' | grep -E 'Liberation|JetBrains|Nimbus Sans Regular|Noto Sans Regular|Noto Serif Regular' | sort
       - uses: Swatinem/rust-cache@v2.9.3
       - run: mise run setup
       # Fails unless qmltestrunner, qmllint and qml6 are the pinned Qt 6.11.
