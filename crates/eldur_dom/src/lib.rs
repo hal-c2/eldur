@@ -296,6 +296,81 @@ impl Document {
         Some(out)
     }
 
+    /// An `<svg>` element and its subtree as a standalone SVG document, for
+    /// an image loader: XML syntax, the SVG namespace (and `xlink` when an
+    /// attribute uses it) declared on the root, attribute names in their SVG
+    /// case (`viewBox`), childless elements self-closed. `value` sees each
+    /// attribute's local name and value, and each `<style>` element's text
+    /// with the name `"#style"`, and returns what is written.
+    #[must_use]
+    pub fn svg_markup(&self, id: NodeId, value: &dyn Fn(&str, &str) -> String) -> Option<String> {
+        let element = self.element(id).filter(|e| e.is_svg())?;
+        let xlink = self.descendants(id).any(|n| {
+            self.element(n)
+                .is_some_and(|e| e.attrs.iter().any(|a| a.name.ns == ns!(xlink)))
+        });
+        let mut out = String::new();
+        let mut root = String::from(" xmlns=\"http://www.w3.org/2000/svg\"");
+        if xlink {
+            root.push_str(" xmlns:xlink=\"http://www.w3.org/1999/xlink\"");
+        }
+        self.write_svg(id, element, &root, value, &mut out);
+        Some(out)
+    }
+
+    fn write_svg(
+        &self,
+        id: NodeId,
+        element: &Element,
+        declarations: &str,
+        value: &dyn Fn(&str, &str) -> String,
+        out: &mut String,
+    ) {
+        let escape = |s: &str| {
+            s.replace('&', "&amp;")
+                .replace('<', "&lt;")
+                .replace('>', "&gt;")
+                .replace('"', "&quot;")
+        };
+        out.push('<');
+        out.push_str(element.local_name());
+        out.push_str(declarations);
+        for attr in &element.attrs {
+            // The namespaces are declared once, on the root.
+            if attr.name.ns == ns!(xmlns) || &*attr.name.local == "xmlns" {
+                continue;
+            }
+            out.push(' ');
+            if attr.name.ns == ns!(xlink) {
+                out.push_str("xlink:");
+            } else if attr.name.ns == ns!(xml) {
+                out.push_str("xml:");
+            }
+            out.push_str(&attr.name.local);
+            out.push_str("=\"");
+            out.push_str(&escape(&value(&attr.name.local, &attr.value)));
+            out.push('"');
+        }
+        let children: Vec<NodeId> = self.children(id).collect();
+        if children.is_empty() {
+            out.push_str("/>");
+            return;
+        }
+        out.push('>');
+        let style = element.local_name() == "style";
+        for child in children {
+            match &self.node(child).data {
+                NodeData::Text(t) if style => out.push_str(&escape(&value("#style", t))),
+                NodeData::Text(t) => out.push_str(&escape(t)),
+                NodeData::Element(e) => self.write_svg(child, e, "", value, out),
+                _ => {}
+            }
+        }
+        out.push_str("</");
+        out.push_str(element.local_name());
+        out.push('>');
+    }
+
     fn write_markup(&self, id: NodeId, out: &mut String) {
         match &self.node(id).data {
             NodeData::Text(t) => {

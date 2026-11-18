@@ -88,6 +88,38 @@ fn svg_is_namespaced() {
 }
 
 #[test]
+fn svg_markup_is_a_standalone_svg_document() {
+    let doc = Document::parse(
+        "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor'>\
+         <style>path{stroke:currentColor}</style><linearGradient id=g><stop offset=0 /></linearGradient>\
+         <use xlink:href='#p' /><text>a &lt; b</text><path d='M0 0' title='\"' /></svg>",
+    );
+    let svg = doc
+        .descendants(doc.root())
+        .find(|&n| doc.element(n).is_some_and(Element::is_svg))
+        .expect("svg");
+    let upper = |name: &str, v: &str| {
+        if name == "fill" || name == "#style" {
+            v.replace("currentColor", "#123456")
+        } else {
+            v.to_owned()
+        }
+    };
+    assert_eq!(
+        doc.svg_markup(svg, &upper).as_deref(),
+        Some(
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" \
+             viewBox=\"0 0 24 24\" fill=\"#123456\"><style>path{stroke:#123456}</style>\
+             <linearGradient id=\"g\"><stop offset=\"0\"/></linearGradient>\
+             <use xlink:href=\"#p\"/><text>a &lt; b</text><path d=\"M0 0\" title=\"&quot;\"/></svg>"
+        )
+    );
+    // Not an svg element.
+    let body = doc.body().expect("body");
+    assert_eq!(doc.svg_markup(body, &upper), None);
+}
+
+#[test]
 fn fragment_parsing() {
     let doc = Document::parse_fragment("<li>a</li><li>b</li>");
     let html = doc.html().expect("html");
