@@ -49,6 +49,7 @@ document.addEventListener("keydown", function(e) {
   if (e.key === "b") {
     document.getElementById("tbl").classList.add("on");
   }
+  if (e.key === "i") { L("title now", JSON.stringify(document.title)); }
   // The timeline moves only while the runtime ticks for an animation; a
   // finished one's `currentTime` reads it. Nothing of this page is moving, so
   // two reads apart must agree: an animation left from a gone page would keep
@@ -93,12 +94,19 @@ L("loaded");
 // the first's rules, an address and a history entry of its own, and an
 // animation still running when it goes. It uses only what the first
 // page's runtime has, which both share.
-const OTHER: &str = r#"<!doctype html><html><head><meta charset="utf-8">
+const OTHER: &str = r#"<!doctype html><html><head><meta charset="utf-8"><title>Other</title>
 <style>#own::before { content: "OWN " }</style>
 </head><body>
 <p id="own">other</p>
 <script>
 console.log("LC other at " + location.href.slice(location.href.lastIndexOf("/") + 1));
+// The title is the page's own from its `<title>`, and what its script sets
+// is the page's too: the earlier page back as the document has its own.
+console.log("LC other title " + JSON.stringify(document.title));
+document.title = "other set";
+document.addEventListener("keydown", function(e) {
+  if (e.key === "t") { console.log("LC other key"); }
+});
 // Still running when the page goes, and an entry of its own on top of the
 // shared history.
 document.getElementById("own").animate([{ opacity: 0 }, { opacity: 1 }], { duration: 100000 });
@@ -192,6 +200,31 @@ TestCase {
         wait(700)
     }
 
+    // There is one document, as in a browser: the page that is it hears the
+    // document's and the window's keys, a page under it hears none until it is
+    // the document again, and a page gone hears none at all. The title is
+    // each page's own, where the host reads it too.
+    function test_6_covered_and_gone_pages_keys_and_title() {
+        const first = makePage("page 9")
+        const component = Qt.createComponent("Other.qml")
+        verify(component.status === Component.Ready, component.errorString())
+        const other = createTemporaryObject(component, host, { width: 800, height: 600 })
+        waitForRendering(other)
+        console.log("LC host reads " + JSON.stringify(other.title))
+        other.forceActiveFocus()
+        keyClick(Qt.Key_T)
+        wait(50)
+        console.log("LC covered page heard nothing")
+        other.destroy()
+        wait(300)
+        first.forceActiveFocus()
+        keyClick(Qt.Key_T)
+        wait(50)
+        keyClick(Qt.Key_I)
+        wait(50)
+        console.log("LC host reads " + JSON.stringify(first.title))
+    }
+
     // Whether some `Text` under `item` shows `text`.
     function shows(item, text) {
         if (typeof item.text === "string" && item.text.indexOf(text) >= 0) {
@@ -270,19 +303,18 @@ const WANT: &[&str] = &[
     "LC document key 1",
     "LC window key 1",
     "LC document click",
-    // Up beside page 3, page 4 shares its `document`: its custom elements, and
-    // a key or a click there is heard by both pages' listeners.
+    // Up beside page 3, page 4 shares its custom elements and its history, but
+    // is the document now: its own title, and a key or a click is heard by its
+    // listeners only.
     "LC page 4",
     "LC defined before true",
-    "LC title \"set\" history 2",
+    "LC title \"\" history 2",
     "LC back to Main.qml true",
     "LC loaded",
     "LC timer",
     "LC frame",
     "LC interval",
-    "LC document key 2",
     "LC document key 1",
-    "LC window key 2",
     "LC window key 1",
     "LC document click",
     "LC first still up true",
@@ -299,28 +331,22 @@ const WANT: &[&str] = &[
     "LC document click",
     "LC page 6",
     "LC defined before true",
-    "LC title \"set\" history 2",
+    "LC title \"\" history 2",
     "LC back to Main.qml true",
     "LC loaded",
     "LC timer",
     "LC frame",
     "LC interval",
-    "LC document key 2",
     "LC document key 1",
-    "LC window key 2",
     "LC window key 1",
     "LC document click",
-    // Page 5 is the document again, and still hears its key and its click.
-    // What page 6 added to the shared document stays with it.
+    // Page 5 is the document again, and hears its own key and click again,
+    // its second: it heard none under page 6. Page 6's listeners went with it.
     "LC page 6 gone",
-    "LC document key 3",
     "LC document key 2",
-    "LC window key 3",
     "LC window key 2",
     "LC document click",
-    // And restyles from its own rules, in its own line's model. Page 6's
-    // listener is still on the shared document, so it logs too.
-    "LC restyled rgb(220, 0, 0)",
+    // And restyles from its own rules, in its own line's model.
     "LC restyled rgb(220, 0, 0)",
     "LC drawn red true",
     "LC page 7",
@@ -335,6 +361,7 @@ const WANT: &[&str] = &[
     "LC window key 1",
     "LC document click",
     "LC other at Other.qml",
+    "LC other title \"Other\"",
     "LC kept generated true",
     // Page 7 is the document again: at its own address, with its own rules.
     "LC generated at Main.qml#seen",
@@ -343,6 +370,29 @@ const WANT: &[&str] = &[
     "LC generated drawn true",
     "LC column drawn true",
     "LC timeline still true",
+    "LC page 9",
+    "LC defined before false",
+    "LC title \"\" history 1",
+    "LC back to Main.qml true",
+    "LC loaded",
+    "LC timer",
+    "LC frame",
+    "LC interval",
+    "LC document key 1",
+    "LC window key 1",
+    "LC document click",
+    "LC other at Other.qml",
+    "LC other title \"Other\"",
+    "LC host reads \"other set\"",
+    // Page 9, under the other page, hears nothing of its key.
+    "LC other key",
+    "LC covered page heard nothing",
+    // The other page is gone: none of its listeners hear, page 9 hears its
+    // own again, and its title is the one its script set.
+    "LC document key 2",
+    "LC window key 2",
+    "LC title now \"set\"",
+    "LC host reads \"set\"",
 ];
 
 // Each test, by the line it starts with, and how many late timers run in it:
@@ -353,6 +403,7 @@ const LATE: &[(&str, usize)] = &[
     ("LC page 3", 2),
     ("LC page 5", 2),
     ("LC page 7", 1),
+    ("LC page 9", 1),
 ];
 
 #[test]
