@@ -33,7 +33,6 @@ const SELECTQUEUE: &str = "setSelectionRange then select() on a field: Chromium 
 const FOCUSREVEAL: &str = "select()'s focus scrolls Chromium's page by all of its overflow; here only as far as the field needs";
 const NONAVIGATION: &str =
     "form.submit() reloads the page in Chromium; a converted page does not navigate, and says so";
-const CLOSEDDETAILS: &str = "the margin of a closed details' hidden last child still collapses out of it, at conversion time";
 const DIALOGTEXT: &str =
     "the page logs a fractional text width: Qt's glyphs make 71.77, Chromium's 71.81";
 const MADEINLINE: &str = "controls from innerHTML stack as blocks: a created box is laid out by itself, without a line to share";
@@ -58,7 +57,6 @@ const KNOWN: &[(&str, &str, &str)] = &[
     ("input_forms", "*eldur: a form was submitted*", NONAVIGATION),
     ("input_script", "* #mc[*] x:", MADEINLINE),
     ("input_script", "* #mc[*] y:", MADEINLINE),
-    ("input_dialog", "* #stay[*] y:", CLOSEDDETAILS),
     (
         "input_real_invalid",
         "*eldur: b: Please fill out this field.*",
