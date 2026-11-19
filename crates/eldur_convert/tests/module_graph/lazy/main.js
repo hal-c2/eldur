@@ -22,8 +22,12 @@ import("./cb.js")
   .then((m) => {
     log("ta " + m.K + " " + m.n + " " + m.default + " " + m.readLate() + " " + typeof m.Box);
     try { m.assignK(); log("assignK ok"); } catch (e) { log("assignK " + e.name); }
+    try { m.destructureK(); log("destructureK ok"); } catch (e) { log("destructureK " + e.name); }
     m.setN(5);
     log("ta n " + m.n);
+    m.loopN();
+    m.destructure(m.n + 1);
+    log("ta n after loop and destructure " + m.n);
   })
   .then(() => import("./listens.js"))
   .then(() => new Promise((resolve) => setTimeout(resolve, 50)))

@@ -461,6 +461,17 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
         }
     }
 
+    /// `id` as a destructuring or `for (… of …)` target: a setter, so the
+    /// value is checked as an assignment of it is, when it is assigned.
+    fn tdz_target(&self, id: &IdentifierReference<'_>) -> Option<String> {
+        let binding = self.tdz_binding(id)?;
+        if binding.kind == TdzKind::Let && !self.tdz_check(id) {
+            return None;
+        }
+        let write = self.tdz_assignment(id, binding, AssignmentOperator::Assign, "__eldur_value");
+        Some(format!("({{ set v(__eldur_value) {{ {write}; }} }}).v"))
+    }
+
     fn tdz_update(
         &self,
         id: &IdentifierReference<'_>,
@@ -1008,17 +1019,18 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             && let Some(sym_id) = self.scoping.get_reference(rid).symbol_id()
             && self.tdz.contains_key(&sym_id)
         {
-            // A write is checked as a whole assignment or update.
-            let read = !self.scoping.get_reference(rid).is_write();
+            let reference = self.scoping.get_reference(rid);
             let name = self.tdz_emitted_name(it);
-            let checked = read
-                .then(|| {
-                    self.tdz_check(it)
-                        .then(|| self.shared.tdz_read(&name, &it.name))
-                })
-                .flatten()
-                .flatten();
-            if let Some(text) = checked {
+            let text = if reference.is_write() && !reference.is_read() {
+                // A destructuring or `for (… of …)` target; a plain
+                // assignment or an update is checked as a whole.
+                self.tdz_target(it)
+            } else if reference.is_read() && self.tdz_check(it) {
+                self.shared.tdz_read(&name, &it.name)
+            } else {
+                None
+            };
+            if let Some(text) = text {
                 self.editor.replace(it.span, text);
             } else if name != it.name.as_str() {
                 self.editor.replace(it.span, name);
