@@ -26286,15 +26286,29 @@ function _gPlaceRelative(raw, s) {
         dx = left !== null ? left : right !== null ? -right : 0;
         dy = top !== null ? top : bottom !== null ? -bottom : 0;
     }
+    if (!m.gShift) {
+        // The converter moved the box by its offset with one of its own.
+        for (var i = 0; i < raw.transform.length && !m.gShift; ++i) {
+            if (raw.transform[i].objectName === "eldurShift") {
+                m.gShift = raw.transform[i];
+            }
+        }
+    }
     if (!m.gShift && dx === 0 && dy === 0) {
         return;
     }
-    if (!m.gShift) {
-        m.gShift = Qt.createQmlObject("import QtQuick; Translate {}", raw, "eldur_shift");
+    var added = !m.gShift;
+    if (added) {
+        m.gShift = Qt.createQmlObject("import QtQuick; Translate { objectName: \"eldurShift\" }", raw, "eldur_shift");
         _gSetTransforms(raw);
     }
     m.gShift.x = dx;
     m.gShift.y = dy;
+    // A hoisted overlay's frame reads the shifts on its block's way, which
+    // a `transform` list does not say it has changed.
+    if (added && _root && typeof _root.eldurShifts === "number") {
+        ++_root.eldurShifts;
+    }
 }
 
 // A control keeps its form: the cascade reaches what it has.
