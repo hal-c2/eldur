@@ -186,7 +186,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[16.0, 50.0],
         toggled: &[50.0, 84.0],
-    }, // `el.style.display` reads the important declaration, which wins over
+    },
+    // `el.style.display` reads the important declaration, which wins over
     // the later one: the toggle clears it.
     Case {
         name: "important_display_read",
@@ -226,7 +227,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[16.0, 50.0],
         toggled: &[50.0, 84.0],
-    }, // `run-in` is no display Chromium or eldur_css takes: the `none` before it
+    },
+    // `run-in` is no display Chromium or eldur_css takes: the `none` before it
     // still hides the box.
     Case {
         name: "run_in_dropped",
@@ -267,7 +269,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[50.0, 84.0],
         toggled: &[16.0, 50.0],
-    }, // A comment ends a token: `block/**/flow` is `block flow`.
+    },
+    // A comment ends a token: `block/**/flow` is `block flow`.
     Case {
         name: "comment_between_keywords",
         body: r#"<p id="shy" style="display:none;display:block/**/flow" hidden><em>Shy</em></p>
@@ -286,12 +289,14 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[16.0, 50.0],
         toggled: &[50.0, 84.0],
-    }, // A quote in an unquoted `url(` opens no string: the `display` after it is
-    // its own declaration.
+    },
+    // A quote in an unquoted `url(` opens no string: the `display` after it is
+    // its own declaration, which keeps the box hidden once `hidden` is removed.
     Case {
         name: "quote_in_an_unquoted_url",
-        body: r#"<p id="shy" style="background:url(a'b);display:none"><em>Shy</em></p>
-<p id="after">After</p>"#,
+        body: r#"<p id="shy" style="background:url(a'b);display:none" hidden><em>Shy</em></p>
+<p id="after">After</p>
+<script>document.getElementById('shy').removeAttribute('hidden');</script>"#,
         ids: &["after", "t"],
         load: &[16.0, 50.0],
         toggled: &[50.0, 84.0],
