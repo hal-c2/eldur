@@ -211,7 +211,7 @@ fn is_phrasing(doc: &Document, node: NodeId) -> bool {
         .is_some_and(|e| PHRASING.contains(&e.local_name()))
 }
 
-fn only_phrasing_inside(doc: &Document, styles: &StyleMap, node: NodeId) -> bool {
+pub(crate) fn only_phrasing_inside(doc: &Document, styles: &StyleMap, node: NodeId) -> bool {
     doc.element_children(node).all(|child| {
         is_phrasing(doc, child)
             && styles
@@ -234,22 +234,28 @@ fn is_atomic_tag(doc: &Document, node: NodeId) -> bool {
 /// elements. What never renders whatever a script does (a `<script>`, a
 /// `<datalist>`) has no box to keep.
 pub(crate) fn hidden_elements(doc: &Document, styles: &StyleMap) -> Vec<NodeId> {
-    const NEVER: &[&str] = &[
-        "area", "base", "basefont", "datalist", "link", "meta", "noembed", "noframes", "noscript",
-        "param", "rp", "script", "source", "style", "title", "track",
-    ];
     let Some(body) = doc.body() else {
         return Vec::new();
     };
     doc.descendants(body)
         .filter(|&n| {
-            doc.element(n)
-                .is_some_and(|e| e.is_html() && !NEVER.contains(&e.local_name()))
+            renders_ever(doc, n)
                 && styles
                     .computed(n)
                     .is_some_and(|c| c.style.display == Display::None)
         })
         .collect()
+}
+
+/// Whether `node` is an HTML element a page can ever show: scripts, styles
+/// and the other metadata elements never get a box, whatever their style.
+pub(crate) fn renders_ever(doc: &Document, node: NodeId) -> bool {
+    const NEVER: &[&str] = &[
+        "area", "base", "basefont", "datalist", "link", "meta", "noembed", "noframes", "noscript",
+        "param", "rp", "script", "source", "style", "title", "track",
+    ];
+    doc.element(node)
+        .is_some_and(|e| e.is_html() && !NEVER.contains(&e.local_name()))
 }
 
 /// [`build`], also keeping a hidden box for each `display: none` element

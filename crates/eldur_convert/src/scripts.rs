@@ -336,12 +336,12 @@ pub(crate) fn collect(
     }
     let gains = Gains::of(doc, &analysis, &matches, &wanted);
     // The margins around what a `<details>` folds follow its `visible` (#70),
-    // so each has an item of its own.
+    // so each has an item of its own. A script or style it holds never
+    // renders, so it needs none.
     if has_details {
-        wanted.extend(
-            doc.descendants(doc.root())
-                .filter(|&n| details_fold(doc, n).is_some()),
-        );
+        wanted.extend(doc.descendants(doc.root()).filter(|&n| {
+            details_fold(doc, n).is_some() && crate::boxes::renders_ever(doc, n)
+        }));
     }
     Scripts {
         inputs,
