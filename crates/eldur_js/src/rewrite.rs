@@ -14,8 +14,8 @@ use oxc_syntax::scope::ScopeFlags;
 
 use crate::analyze::collect_unresolvable_module_diagnostics;
 use crate::lower::{
-    AstLowerer, SharedRewriteState, is_elidable_dom_declarator, sanitize_ident,
-    static_property_key_name,
+    AstLowerer, SharedRewriteState, TdzBinding, TdzKind, is_elidable_dom_declarator,
+    sanitize_ident, static_property_key_name,
 };
 use crate::named::QML_GLOBAL_NAMES;
 use crate::parse::{
@@ -425,12 +425,25 @@ impl<'a> PageBuilder<'a> {
             // Another module of its cycle, emitted above it, reads these
             // bindings: `var`, so QML does not take that for a use before
             // the declaration. Each name is the module's own.
+            // One that is lexical holds the sentinel until its declaration
+            // runs.
+            let sentinel = self.shared.tdz.as_ref().map(|h| h.sentinel.clone());
             for decl in &mut self.out.top_decls[decls_from..] {
-                if let Some(name) = decl.strip_prefix("let ").and_then(|d| d.strip_suffix(';'))
-                    && is_valid_js_ident(name)
-                {
-                    *decl = format!("var {name};");
+                let Some(list) = decl.strip_prefix("let ").and_then(|d| d.strip_suffix(';')) else {
+                    continue;
+                };
+                let names: Vec<&str> = list.split(", ").collect();
+                if !names.iter().all(|n| is_valid_js_ident(n)) {
+                    continue;
                 }
+                let vars: Vec<String> = names
+                    .iter()
+                    .map(|n| match &sentinel {
+                        Some(s) if self.shared.tdz_names.contains(*n) => format!("{n} = {s}"),
+                        _ => (*n).to_string(),
+                    })
+                    .collect();
+                *decl = format!("var {};", vars.join(", "));
             }
             let body = std::mem::replace(&mut self.out.init_stmts, outer);
             let mut lines = vec![
@@ -502,8 +515,12 @@ impl<'a> PageBuilder<'a> {
                 message: "the namespace of a module importing this one is not supported: it is empty here".to_string(),
             });
         }
+        let lazy = self.lazy_modules.contains(&dep);
         for name in names {
             let placeholder = self.cycle_placeholder(dep, &name);
+            if lazy {
+                self.shared.add_tdz_name(&placeholder);
+            }
             cycle_exports
                 .entry(dep)
                 .or_default()
@@ -647,7 +664,9 @@ impl<'a> PageBuilder<'a> {
             .unwrap_or_default();
         self.out.top_decls.push(format!(
             "function {name}() {{ return {name}.value || ({run}{name}.value = {}); }}",
-            format_live_namespace_object(exports)
+            // Made once the module has run to its end: every binding is
+            // initialized.
+            format_live_namespace_object(exports, None)
         ));
     }
 
@@ -821,6 +840,17 @@ impl<'a> PageBuilder<'a> {
             resolver,
             &mut self.shared,
         );
+        if is_lazy && !is_classic {
+            lowerer.tdz = lazy_module_tdz_bindings(
+                v,
+                &bindings,
+                resolver,
+                scripts,
+                module_exports,
+                &symbol_renames,
+                lowerer.shared,
+            );
+        }
         lowerer.symbol_renames = symbol_renames;
         lowerer.dynamic_imports = dynamic_imports;
         lowerer.after_load = is_lazy;
@@ -978,7 +1008,8 @@ impl<'a> PageBuilder<'a> {
                                 .shared
                                 .alloc_fn_name(&format!("__eldur_ns_{}", v.idx));
                             // Getters, so the namespace reads the live bindings.
-                            let obj_lit = format_live_namespace_object(dep_exports);
+                            let obj_lit =
+                                format_live_namespace_object(dep_exports, Some(&*lowerer.shared));
                             out.top_decls.push(format!("const {ns_ident} = {obj_lit};"));
                             if let Some(me) = mod_exports.as_deref_mut() {
                                 me.insert(alias_name.name().to_string(), ns_ident, false, false);
@@ -1566,6 +1597,7 @@ impl PageBuffers {
                         .shared
                         .alloc_fn_name(&format!("__eldur_default_{script_idx}"));
                     if lazy {
+                        lowerer.shared.add_tdz_name(&def_name);
                         self.top_decls.push(format!("let {def_name};"));
                         self.init_stmts.push(format!("{def_name} = {cls_str};"));
                     } else {
@@ -1613,6 +1645,9 @@ impl PageBuffers {
                             me.insert("default", def_name, false, false);
                         }
                     } else {
+                        if self.in_lazy_module {
+                            lowerer.shared.add_tdz_name(&def_name);
+                        }
                         self.top_decls.push(format!("let {def_name};"));
                         self.init_stmts.push(format!("{def_name} = {expr_str};"));
                         if let Some(me) = mod_exports {
@@ -1642,7 +1677,7 @@ impl PageBuffers {
                     if let Some((target_ident, deferred, _)) = dep_exports.entries.get(imported)
                         && target_ident != local
                     {
-                        self.emit_alias_binding(local, target_ident, *deferred);
+                        self.emit_alias_binding(local, target_ident, *deferred, &*lowerer.shared);
                     }
                 }
                 ImportDeclarationSpecifier::ImportDefaultSpecifier(def) => {
@@ -1650,23 +1685,34 @@ impl PageBuffers {
                     if let Some((target_ident, deferred, _)) = dep_exports.entries.get("default")
                         && target_ident != local
                     {
-                        self.emit_alias_binding(local, target_ident, *deferred);
+                        self.emit_alias_binding(local, target_ident, *deferred, &*lowerer.shared);
                     }
                 }
                 ImportDeclarationSpecifier::ImportNamespaceSpecifier(ns) => {
                     let local = lowerer.bound_name(&ns.local);
                     // Getters, so the namespace reads the live bindings.
-                    let obj_lit = format_live_namespace_object(dep_exports);
+                    let obj_lit = format_live_namespace_object(dep_exports, Some(&*lowerer.shared));
                     self.top_decls.push(format!("const {local} = {obj_lit};"));
                 }
             }
         }
     }
 
-    fn emit_alias_binding(&mut self, local: &str, target_ident: &str, deferred: bool) {
+    fn emit_alias_binding(
+        &mut self,
+        local: &str,
+        target_ident: &str,
+        deferred: bool,
+        shared: &SharedRewriteState,
+    ) {
         if deferred || !self.at_load() {
+            // A copy of a binding that may be uninitialized throws as a read
+            // of it does, rather than keep the sentinel.
+            let read = shared
+                .tdz_read(target_ident, local)
+                .unwrap_or_else(|| target_ident.to_string());
             self.top_decls.push(format!("let {local};"));
-            self.init_stmts.push(format!("{local} = {target_ident};"));
+            self.init_stmts.push(format!("{local} = {read};"));
         } else {
             self.top_decls
                 .push(format!("const {local} = {target_ident};"));
@@ -2582,19 +2628,153 @@ fn format_lifecycle_invocation(
     }
 }
 
+/// What a lazy module reads that can be uninitialized: its own `let`,
+/// `const` and `class` bindings, whose page names it adds to
+/// `shared.tdz_names`, and its live imports of other modules' ones. A copied
+/// import is checked where it is copied.
+#[allow(clippy::too_many_arguments)]
+fn lazy_module_tdz_bindings(
+    v: &ValidScript<'_>,
+    bindings: &ScriptQueryBindings<'_>,
+    resolver: &dyn DomResolver,
+    scripts: &[ScriptInput],
+    module_exports: &HashMap<usize, ModuleExports>,
+    symbol_renames: &HashMap<SymbolId, String>,
+    shared: &mut SharedRewriteState,
+) -> HashMap<SymbolId, TdzBinding> {
+    let mut tdz = HashMap::new();
+    let emitted = |id: &BindingIdentifier<'_>| -> Option<(SymbolId, String)> {
+        let sym_id = id.symbol_id.get()?;
+        let name = symbol_renames
+            .get(&sym_id)
+            .cloned()
+            .unwrap_or_else(|| id.name.to_string());
+        Some((sym_id, name))
+    };
+    let mut own =
+        |id: &BindingIdentifier<'_>, kind: TdzKind, end: u32, shared: &mut SharedRewriteState| {
+            if let Some((sym_id, name)) = emitted(id) {
+                shared.add_tdz_name(&name);
+                tdz.insert(
+                    sym_id,
+                    TdzBinding {
+                        kind,
+                        declared_at: Some(end),
+                    },
+                );
+            }
+        };
+    for stmt in &v.parsed.program.body {
+        let vd = match stmt {
+            Statement::VariableDeclaration(vd) => Some(&**vd),
+            Statement::ExportNamedDeclaration(exp) => match &exp.declaration {
+                Some(Declaration::VariableDeclaration(vd)) => Some(&**vd),
+                Some(Declaration::ClassDeclaration(cls)) => {
+                    if let Some(id) = &cls.id {
+                        own(id, TdzKind::Let, cls.span.end, shared);
+                    }
+                    None
+                }
+                _ => None,
+            },
+            Statement::ClassDeclaration(cls) => {
+                if let Some(id) = &cls.id {
+                    own(id, TdzKind::Let, cls.span.end, shared);
+                }
+                None
+            }
+            Statement::ExportDefaultDeclaration(exp) => {
+                if let ExportDefaultDeclarationKind::ClassDeclaration(cls) = &exp.declaration
+                    && let Some(id) = &cls.id
+                {
+                    own(id, TdzKind::Let, cls.span.end, shared);
+                }
+                None
+            }
+            _ => None,
+        };
+        let Some(vd) = vd else {
+            continue;
+        };
+        if vd.kind == VariableDeclarationKind::Var {
+            continue;
+        }
+        let kind = if vd.kind == VariableDeclarationKind::Const {
+            TdzKind::Const
+        } else {
+            TdzKind::Let
+        };
+        for decl in &vd.declarations {
+            // A DOM element it names is no binding at all.
+            if is_elidable_dom_declarator(decl, bindings, resolver) {
+                continue;
+            }
+            let mut idents = Vec::new();
+            collect_binding_identifiers(&decl.id, &mut idents);
+            for id in idents {
+                own(id, kind, vd.span.end, shared);
+            }
+        }
+    }
+    for stmt in &v.parsed.program.body {
+        let Statement::ImportDeclaration(imp) = stmt else {
+            continue;
+        };
+        let Some(dep_exports) =
+            resolve_module_specifier(v.input, imp.source.value.as_str(), scripts)
+                .and_then(|dep| module_exports.get(&dep))
+        else {
+            continue;
+        };
+        for spec in imp.specifiers.iter().flatten() {
+            let (imported, local) = match spec {
+                ImportDeclarationSpecifier::ImportSpecifier(named) => {
+                    (named.imported.name().as_str(), &named.local)
+                }
+                ImportDeclarationSpecifier::ImportDefaultSpecifier(def) => ("default", &def.local),
+                ImportDeclarationSpecifier::ImportNamespaceSpecifier(_) => continue,
+            };
+            let Some((target, _, _)) = dep_exports.entries.get(imported) else {
+                continue;
+            };
+            let Some((sym_id, name)) = emitted(local) else {
+                continue;
+            };
+            // Read under the exporter's own name: the import is live.
+            if name == *target && shared.tdz_names.contains(target) {
+                tdz.insert(
+                    sym_id,
+                    TdzBinding {
+                        kind: TdzKind::Import,
+                        declared_at: None,
+                    },
+                );
+            }
+        }
+    }
+    tdz
+}
+
 /// A module namespace for `import()`: getters read the live bindings, as a
 /// namespace's do, and the keys are sorted, as a namespace's are.
-fn format_live_namespace_object(exports: &ModuleExports) -> String {
+/// `checked` reads a binding that may be uninitialized through its check.
+fn format_live_namespace_object(
+    exports: &ModuleExports,
+    checked: Option<&SharedRewriteState>,
+) -> String {
     let mut keys: Vec<&String> = exports.ordered_keys.iter().collect();
     keys.sort_by(|a, b| a.encode_utf16().cmp(b.encode_utf16()));
     let fields: Vec<String> = keys
         .into_iter()
         .filter_map(|key| {
             let (target_ident, _, _) = exports.entries.get(key)?;
+            let read = checked
+                .and_then(|shared| shared.tdz_read(target_ident, key))
+                .unwrap_or_else(|| target_ident.clone());
             Some(if is_valid_js_ident(key) {
-                format!("get {key}() {{ return {target_ident}; }}")
+                format!("get {key}() {{ return {read}; }}")
             } else {
-                format!("get {key:?}() {{ return {target_ident}; }}")
+                format!("get {key:?}() {{ return {read}; }}")
             })
         })
         .collect();
