@@ -784,6 +784,11 @@ fn input_icon_links() {
 }
 
 #[test]
+fn input_text_links() {
+    page("input_text_links");
+}
+
+#[test]
 fn input_hit() {
     page("input_hit");
 }
