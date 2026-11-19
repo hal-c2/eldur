@@ -1,0 +1,37 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>fragment</title></head><body>
+<ul id="list"><li id="l0">zero</li></ul>
+<template id="tpl"><li id="t0">from template</li></template>
+<script>
+function L(k){console.log("OB "+k)}
+function N(n){return n ? (n.id || n.nodeName) : "null"}
+function R(r){
+  return r.type + ":" + r.target.id + ":+" + Array.prototype.map.call(r.addedNodes, N).join("|")
+    + ":-" + Array.prototype.map.call(r.removedNodes, N).join("|");
+}
+var list = document.getElementById("list");
+var mo = new MutationObserver(function(rs) { L("mo " + rs.map(R).join(" ")); });
+mo.observe(list, { childList: true });
+var f = document.createDocumentFragment();
+L("identity " + f.nodeName + " " + f.nodeType + " " + String(f.nodeValue) + " " + String(f.parentNode)
+  + " " + String(f.tagName));
+L("empty " + f.childNodes.length + " " + N(f.firstChild) + " [" + f.textContent + "]");
+function li(id, t) { var e = document.createElement("li"); e.id = id; e.textContent = t; return e; }
+f.appendChild(li("f1", "one"));
+f.appendChild(li("f2", "two"));
+f.appendChild(document.createTextNode("tail"));
+L("filled " + f.childNodes.length + " " + f.children.length + " " + N(f.firstChild) + " " + N(f.lastChild)
+  + " [" + f.textContent + "] " + N(f.firstChild.parentNode));
+L("query " + N(f.querySelector("#f2")) + " " + f.querySelectorAll("li").length + " " + N(f.getElementById("f1")));
+list.appendChild(f);
+L("moved " + f.childNodes.length + " " + N(f.firstChild) + " " + list.childNodes.length + " "
+  + Array.prototype.map.call(list.childNodes, N).join("|") + " " + N(document.getElementById("f1").parentNode));
+var t = document.getElementById("tpl").content;
+L("template " + t.nodeName + " " + t.nodeType + " " + t.childNodes.length + " " + N(t.firstChild));
+list.insertBefore(t.cloneNode(true), document.getElementById("l0"));
+var c = document.createDocumentFragment().cloneNode(false);
+L("clone " + c.nodeName + " " + c.nodeType + " " + list.children.length);
+setTimeout(function() {
+  L("done");
+  var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+}, 0);
+</script></body></html>
