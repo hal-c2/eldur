@@ -151,21 +151,35 @@ qt_version_of() {
   done
 }
 
-# `qt_tool_runs <tool>`: whether a Qt tool, named by its path or by a bare
-# name on PATH, is an executable file there to run. A bare name is looked
-# for only in PATH's absolute directories (type -P also reads an empty or
-# relative entry, as "." or from here), as the QML tests look for it
-# (crates/eldur_convert/tests/support), and a shell builtin
-# (QMLTESTRUNNER=:) is no tool.
-qt_tool_runs() {
-  local found
+# `qt_tool_path <tool>`: the Qt tool, named by its path or by a bare name
+# on PATH, as the executable file the QML tests run
+# (crates/eldur_convert/tests/support): a path as written, a bare name in
+# the first of PATH's absolute directories that has it as an executable
+# file. PATH is walked here because type -P stops at an empty or relative
+# entry ("." or from here), which the tests never read. Fails, printing
+# nothing, when there is none; a shell builtin (QMLTESTRUNNER=:) is none.
+qt_tool_path() {
+  local dir dirs=()
   case "$1" in
-    */*) [ -f "$1" ] && [ -x "$1" ] ;;
+    */*) [ -f "$1" ] && [ -x "$1" ] && printf '%s\n' "$1" ;;
     *)
-      found="$(type -P "$1" 2>/dev/null)" && [ -f "$found" ] && [ -x "$found" ] || return 1
-      case "$found" in /*) ;; *) return 1 ;; esac
+      IFS=: read -ra dirs <<<"${PATH:-}"
+      for dir in ${dirs[@]+"${dirs[@]}"}; do
+        case "$dir" in
+          /*) if [ -f "$dir/$1" ] && [ -x "$dir/$1" ]; then
+            printf '%s\n' "$dir/$1"
+            return 0
+          fi ;;
+        esac
+      done
+      return 1
       ;;
   esac
+}
+
+# `qt_tool_runs <tool>`: whether qt_tool_path finds that Qt tool.
+qt_tool_runs() {
+  qt_tool_path "$1" >/dev/null
 }
 
 # `qt_pin_report`: for each Qt tool the tasks run (found as they find it)
@@ -178,7 +192,7 @@ qt_tool_runs() {
 # Qt is optional, so setup passes. Nothing when all are pinned, or for a
 # tool that is not there and not named.
 qt_pin_report() {
-  local name path shown version use fix why var
+  local name path real shown version use fix why var
   for name in qmltestrunner qmllint qml6; do
     case "$name" in
       qml6)
@@ -207,7 +221,7 @@ qt_pin_report() {
     # Only a variable can name a tool that is not there: qt6_tool finds the
     # others on PATH or in Qt's directories. The task given that variable
     # takes it as asked and fails on it, so that is what is said.
-    if ! qt_tool_runs "$path"; then
+    if ! real="$(qt_tool_path "$path")"; then
       case "$path" in
         */*) why="is not an executable file" ;;
         *) why="is not on PATH" ;;
@@ -222,7 +236,8 @@ qt_pin_report() {
       printf '%s\n' "SKIPPED $name ($shown) $why, and $var names it, so $use: point $var at Qt $qt_pinned's $name, or unset it"
       continue
     fi
-    version="$(qt_version_of "$path")"
+    # The Qt asked is that of the file the tasks run, not what PATH finds.
+    version="$(qt_version_of "$real")"
     case "$version" in
       "$qt_pinned".*) continue ;;
       "") printf '%s\n' "NOTE $name: no Qt 6 version answered ($shown), nor by a Qt tool beside it; $use it on a Qt that may be another than the pinned one" ;;
