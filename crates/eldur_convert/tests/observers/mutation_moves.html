@@ -1,11 +1,12 @@
 <!DOCTYPE html><html><head><meta charset="utf-8"><title>mutation moves</title></head><body>
 <ul id="list"></ul>
 <div id="A"><div id="P"></div></div><div id="D"></div>
+<div id="Q"><div id="qa"></div><div id="qb"></div></div>
 <script>
 function L(k){console.log("OB "+k)}
 function N(n){return n ? (n.id || n.nodeName) : "null"}
 function R(r){
-  return r.type + ":" + (r.target === fr ? "fr" : r.target === fr2 ? "fr2" : r.target === fr3 ? "fr3" : r.target.id) + ":+" + Array.prototype.map.call(r.addedNodes, N).join("|")
+  return r.type + ":" + (r.target === fr ? "fr" : r.target === fr2 ? "fr2" : r.target === fr3 ? "fr3" : r.target === fr4 ? "fr4" : r.target.id) + ":+" + Array.prototype.map.call(r.addedNodes, N).join("|")
     + ":-" + Array.prototype.map.call(r.removedNodes, N).join("|") + ":" + N(r.previousSibling) + ":" + N(r.nextSibling);
 }
 // One child taken from a fragment is a plain removal there, siblings and all.
@@ -39,6 +40,16 @@ ko.observe(fr3, { childList: true });
 var dest = document.getElementById("D");
 dest.append(fr2, fr2);
 dest.append(fr3.firstChild, fr3.firstChild.nextSibling);
+// A node given twice leaves its old parent where it is first given, and a
+// fragment's first child given before the fragment leaves with the rest.
+var Q = document.getElementById("Q"), qa = document.getElementById("qa"), qb = document.getElementById("qb");
+var fr4 = document.createDocumentFragment();
+["m1", "m2"].forEach(function(id) { var e = document.createElement("div"); e.id = id; fr4.appendChild(e); });
+var qo = new MutationObserver(function(rs) { L("twice " + rs.map(R).join(" ")); });
+qo.observe(Q, { childList: true });
+qo.observe(fr4, { childList: true });
+dest.append(qa, qb, qa);
+dest.append(fr4.firstChild, fr4);
 // A microtask is called with no `this`.
 queueMicrotask(function() { "use strict"; L("this " + (this === undefined)); });
 setTimeout(function() {

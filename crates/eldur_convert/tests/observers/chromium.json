@@ -76,8 +76,9 @@
   "OB fr childList:fr:+:-g1:null:g2 childList:fr:+:-g2:null:g3 childList:fr:+g2:-:g3:null",
   "OB A childList:P:+:-X:null:null childList:A:+:-P:null:null",
   "OB args childList:fr2:+:-k1|k2:null:null childList:fr3:+:-h1:null:h2 childList:fr3:+:-h2:null:h3",
+  "OB twice childList:Q:+:-qa:null:qb childList:Q:+:-qb:null:null childList:fr4:+:-m1|m2:null:null",
   "OB this true",
-  "OB left 0 5",
+  "OB left 0 9",
   "OB done"
  ],
  "mutation_text": [
