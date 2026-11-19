@@ -54,9 +54,11 @@ function _microDrain() {
     _micro.draining = true;
     while (_micro.queue.length > 0) {
         var job = _micro.queue.shift();
+        var run = job.run;
         _micro.cause = job.cause;
         try {
-            job.run();
+            // Called bare, as a browser calls a microtask, with no `this`.
+            run();
         } catch (err) {
             console.error(err && err.stack ? err.stack : err);
         }
@@ -8000,13 +8002,17 @@ function _moDeliver(hits, raw, type, name, oldValue, added, removed, prev, next)
             _mo.pending.push(obs);
         }
     }
+    // Whether this notification holds a record the last one's callbacks made,
+    // directly or through promises they began. A chain an older callback
+    // began is not: it goes on outside the loop the guard is for. Any one
+    // such record counts, whoever queued the notification first.
+    var chained = _mo.cause !== null && _micro.cause === _mo.cause;
     if (!_mo.queued) {
         _mo.queued = true;
-        // Whether this notification is one the last one's callbacks made,
-        // directly or through promises they began. A chain an older callback
-        // began is not: it goes on outside the loop the guard is for.
-        _mo.chained = _mo.cause !== null && _micro.cause === _mo.cause;
+        _mo.chained = chained;
         _microEnqueue(_moNotify);
+    } else if (chained) {
+        _mo.chained = true;
     }
     return queued;
 }
@@ -8083,22 +8089,36 @@ function _moAttr(item, name, mode, write) {
 
 // The nodes an insertion takes from where they are: a fragment gives its
 // children, a string is a new text node, and so comes from nowhere.
-// `fromFragment` holds the ones a fragment argument gave.
+// `fromFragment` holds the ones a fragment argument gave. DOM takes the
+// arguments one by one, so a fragment given again has nothing left to give,
+// and a node given again is only where it was given last.
 function _moTaken(args) {
     var out = [];
     out.fromFragment = new Set();
+    var emptied = new Set();
+    var take = function(raw) {
+        var at = out.indexOf(raw);
+        if (at >= 0) {
+            out.splice(at, 1);
+        }
+        out.push(raw);
+    };
     for (var i = 0; i < args.length; ++i) {
         var raw = args[i] && typeof args[i] === "object" ? _unwrap(args[i]) : null;
         if (!raw) {
             continue;
         }
         if (!raw.__eldurInline && _meta(raw).isFragment) {
+            if (emptied.has(raw)) {
+                continue;
+            }
+            emptied.add(raw);
             _rawChildNodes(raw).forEach(function(kid) {
-                out.push(kid);
+                take(kid);
                 out.fromFragment.add(kid);
             });
         } else {
-            out.push(raw);
+            take(raw);
         }
     }
     return out;
@@ -8112,6 +8132,9 @@ function _moChildOp(parent, taken, op) {
     var moved = [];
     var removals = [];
     var fragments = new Map();
+    // Each source's children as they are once the removals before are done:
+    // DOM finds each removed node's siblings at its own removal.
+    var left = new Map();
     for (var t = 0; t < taken.length && _mo.regs.size > 0 && _mo.depth === 0; ++t) {
         var from = _logicalParent(taken[t]);
         if (!from) {
@@ -8130,10 +8153,14 @@ function _moChildOp(parent, taken, op) {
         }
         moved.push(taken[t]);
         if (_moWants(from, "childList")) {
-            var fromKids = _rawChildNodes(from);
+            if (!left.has(from)) {
+                left.set(from, _rawChildNodes(from));
+            }
+            var fromKids = left.get(from);
             var at = fromKids.indexOf(taken[t]);
             if (at >= 0) {
                 removals.push([from, [taken[t]], fromKids[at - 1] || null, fromKids[at + 1] || null]);
+                fromKids.splice(at, 1);
             }
         }
     }

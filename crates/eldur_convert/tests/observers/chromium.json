@@ -75,7 +75,9 @@
  "mutation_moves": [
   "OB fr childList:fr:+:-g1:null:g2 childList:fr:+:-g2:null:g3 childList:fr:+g2:-:g3:null",
   "OB A childList:P:+:-X:null:null childList:A:+:-P:null:null",
-  "OB left 0 1",
+  "OB args childList:fr2:+:-k1|k2:null:null childList:fr3:+:-h1:null:h2 childList:fr3:+:-h2:null:h3",
+  "OB this true",
+  "OB left 0 5",
   "OB done"
  ],
  "mutation_text": [

@@ -5,7 +5,7 @@
 function L(k){console.log("OB "+k)}
 function N(n){return n ? (n.id || n.nodeName) : "null"}
 function R(r){
-  return r.type + ":" + (r.target === fr ? "fr" : r.target.id) + ":+" + Array.prototype.map.call(r.addedNodes, N).join("|")
+  return r.type + ":" + (r.target === fr ? "fr" : r.target === fr2 ? "fr2" : r.target === fr3 ? "fr3" : r.target.id) + ":+" + Array.prototype.map.call(r.addedNodes, N).join("|")
     + ":-" + Array.prototype.map.call(r.removedNodes, N).join("|") + ":" + N(r.previousSibling) + ":" + N(r.nextSibling);
 }
 // One child taken from a fragment is a plain removal there, siblings and all.
@@ -26,6 +26,21 @@ P.appendChild(X);
 var ao = new MutationObserver(function(rs) { L("A " + rs.map(R).join(" ")); });
 ao.observe(A, { childList: true, subtree: true });
 document.getElementById("D").appendChild(X);
+// The arguments are taken one by one: a fragment given twice gives its
+// children once, and each node's siblings are those it has when it goes.
+var fr2 = document.createDocumentFragment(), fr3 = document.createDocumentFragment();
+["k1", "k2"].forEach(function(id) { var e = document.createElement("div"); e.id = id; fr2.appendChild(e); });
+["h1", "h2", "h3"].forEach(function(id) { var e = document.createElement("div"); e.id = id; fr3.appendChild(e); });
+var ko = new MutationObserver(function(rs) {
+  L("args " + rs.map(R).join(" "));
+});
+ko.observe(fr2, { childList: true });
+ko.observe(fr3, { childList: true });
+var dest = document.getElementById("D");
+dest.append(fr2, fr2);
+dest.append(fr3.firstChild, fr3.firstChild.nextSibling);
+// A microtask is called with no `this`.
+queueMicrotask(function() { "use strict"; L("this " + (this === undefined)); });
 setTimeout(function() {
   L("left " + A.children.length + " " + document.getElementById("D").children.length);
   L("done");
