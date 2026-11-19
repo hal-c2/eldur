@@ -250,12 +250,7 @@ pub(crate) fn drawable(bytes: Vec<u8>) -> Vec<u8> {
 /// `viewBox` with a zero side stays: it disables rendering, in Chromium as
 /// in Qt. `None` when there is nothing to drop.
 pub(crate) fn without_invalid_root(text: &str) -> Option<String> {
-    let start = text.match_indices("<svg").map(|(at, _)| at).find(|at| {
-        text[at + 4..]
-            .chars()
-            .next()
-            .is_some_and(|c| c.is_whitespace() || c == '>' || c == '/')
-    })?;
+    let start = root_start(text)?;
     let negative = |value: &str| {
         // The number is the longest start that reads as one: `-8em` is -8,
         // `1e-3px` is 0.001.
@@ -319,8 +314,8 @@ pub(crate) fn without_invalid_root(text: &str) -> Option<String> {
             }
         }
         let invalid = match name {
-            "width" | "height" => negative(value),
-            "viewBox" => broken_view_box(value),
+            "width" | "height" => negative(&unescape(value)),
+            "viewBox" => broken_view_box(&unescape(value)),
             _ => false,
         };
         if invalid {
@@ -338,6 +333,83 @@ pub(crate) fn without_invalid_root(text: &str) -> Option<String> {
     }
     out.push_str(&text[from..]);
     Some(out)
+}
+
+/// Where the root `<svg` start tag begins: the first `<svg` element tag
+/// outside a comment, a CDATA section or a `<!DOCTYPE …>` (whose internal
+/// subset may name one too).
+fn root_start(text: &str) -> Option<usize> {
+    let mut at = 0;
+    while let Some(lt) = text[at..].find('<') {
+        let tag = at + lt;
+        let rest = &text[tag..];
+        let skip = |end: &str| rest.find(end).map(|e| e + end.len());
+        at = tag
+            + if rest.starts_with("<!--") {
+                skip("-->")?
+            } else if rest.starts_with("<![CDATA[") {
+                skip("]]>")?
+            } else if rest.starts_with("<!") {
+                match (rest.find('['), rest.find('>')) {
+                    (Some(open), Some(close)) if open < close => skip("]>")?,
+                    (_, close) => close? + 1,
+                }
+            } else if rest.starts_with("<svg")
+                && rest[4..]
+                    .chars()
+                    .next()
+                    .is_some_and(|c| c.is_whitespace() || c == '>' || c == '/')
+            {
+                return Some(tag);
+            } else {
+                1
+            };
+    }
+    None
+}
+
+/// An attribute value with its character and predefined entity references
+/// replaced, as an XML reader gives it (XML 1.0 §4.6, §4.1). An unknown or
+/// malformed reference stays as written.
+fn unescape(value: &str) -> std::borrow::Cow<'_, str> {
+    if !value.contains('&') {
+        return value.into();
+    }
+    let mut out = String::with_capacity(value.len());
+    let mut rest = value;
+    while let Some(amp) = rest.find('&') {
+        out.push_str(&rest[..amp]);
+        rest = &rest[amp..];
+        let decoded = rest.find(';').and_then(|semi| {
+            let name = &rest[1..semi];
+            let c = match name {
+                "amp" => Some('&'),
+                "lt" => Some('<'),
+                "gt" => Some('>'),
+                "quot" => Some('"'),
+                "apos" => Some('\''),
+                _ => name
+                    .strip_prefix("#x")
+                    .map(|h| u32::from_str_radix(h, 16))
+                    .or_else(|| name.strip_prefix('#').map(str::parse))
+                    .and_then(Result::ok)
+                    .and_then(char::from_u32),
+            }?;
+            Some((c, semi + 1))
+        });
+        match decoded {
+            Some((c, len)) => {
+                out.push(c);
+                rest = &rest[len..];
+            }
+            None => {
+                out.push('&');
+                rest = &rest[1..];
+            }
+        }
+    }
+    out.push_str(rest);
+    out.into()
 }
 
 /// A raster image's width and height, or what an SVG's root `width`,
@@ -404,7 +476,7 @@ pub(crate) fn svg_natural(text: &str) -> Natural {
 /// has no `<svg` tag.
 #[allow(clippy::type_complexity)]
 fn svg_root(text: &str) -> Option<(Option<f32>, Option<f32>, Option<(f32, f32)>)> {
-    let start = text.find("<svg")?;
+    let start = root_start(text)?;
     let end = text[start..].find('>')?;
     let tag = &text[start..start + end];
     let attr = |name: &str| {
@@ -419,18 +491,19 @@ fn svg_root(text: &str) -> Option<(Option<f32>, Option<f32>, Option<(f32, f32)>)
             let value = rest.trim_start().strip_prefix('=')?.trim_start();
             let quote = value.chars().next().filter(|c| *c == '"' || *c == '\'')?;
             let value = &value[1..];
-            return Some(&value[..value.find(quote)?]);
+            return Some(unescape(&value[..value.find(quote)?]));
         }
     };
     // Only absolute lengths size the image; `100%` defers to the viewBox.
     // A negative one is kept; `svg_natural` reads it as zero.
     let length = |name: &str| {
         attr(name)
+            .as_deref()
             .map(|v| v.trim().trim_end_matches("px"))
             .and_then(|v| v.parse::<f32>().ok())
             .filter(|v| v.is_finite())
     };
-    let view_box = attr("viewBox").and_then(|v| {
+    let view_box = attr("viewBox").as_deref().and_then(|v| {
         let n: Vec<f32> = v
             .split(|c: char| c == ',' || c.is_whitespace())
             .filter(|s| !s.is_empty())
@@ -571,6 +644,27 @@ mod tests {
         ] {
             assert_eq!(drop(kept), None, "{kept}");
         }
+        // The root is the first `<svg` tag outside a comment, a CDATA section
+        // or a doctype, and a reference in a value counts as what it reads.
+        assert_eq!(
+            drop(r#"<!-- an <svg> --><!DOCTYPE svg [<!ENTITY e "<svg x">]><svg width="&#45;8">"#)
+                .as_deref(),
+            Some(r#"<!-- an <svg> --><!DOCTYPE svg [<!ENTITY e "<svg x">]><svg>"#)
+        );
+        for kept in [
+            r#"<svg viewBox="0 0 &#48; 10">"#,
+            r#"<svg viewBox="0&#x20;0&#32;20 10" width="&amp;-1">"#,
+        ] {
+            assert_eq!(drop(kept), None, "{kept}");
+        }
+        assert_eq!(
+            svg_natural(r#"<!-- <svg width="9"> --><svg width="&#56;0" height="40">"#),
+            Natural {
+                width: Some(80.0),
+                height: Some(40.0),
+                ratio: Some(0.5)
+            }
+        );
         // A raster file is never touched.
         let png = vec![0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
         assert_eq!(drawable(png.clone()), png);
