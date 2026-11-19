@@ -88,7 +88,7 @@ TestCase {
 
     property var page
     readonly property var painted: ["b", "c", "d", "f", "i", "j", "l", "m", "o", "p", "t", "u", "w", "vd", "src", "mv", "vs", "rm", "gone", "vr",
-        "c1", "o1", "c2", "o2", "c3", "o3", "hv", "o4", "fc", "o5", "c6", "o6", "c7", "o7", "e8", "o8",
+        "c1", "o1", "c2", "o2", "c3", "o3", "hv", "o4", "fc", "o5", "c6", "o6", "c7", "o7", "e8", "o8", "c9", "o9",
         "k1", "v1", "k2", "v2", "k3", "v3", "k4", "v4", "k5", "m5", "v5",
         "c1", "v1", "c2", "v2", "c3", "v3", "c4", "e4", "v4", "e5", "v5", "a6", "a7", "h8", "a8", "h9", "h10",
         "p1", "p2", "r2", "a2",
@@ -179,6 +179,7 @@ div { height: 40px; width: 200px }
 #hv:hover { z-index: 3 }
 #fc:focus { z-index: 3 }
 [data-up] { z-index: 3 }
+.hide #c9 { display: none }
 </style></head><body>
 <div id=a1><div id=c1 class=in></div></div><div id=o1 class=over></div>
 <div class=gap></div>
@@ -195,11 +196,14 @@ div { height: 40px; width: 200px }
 <div id=a7></div><div id=o7 class=over></div>
 <div class=gap></div>
 <div id=a8><div id=e8 class=in></div></div><div id=o8 class=over></div>
+<div class=gap></div>
+<div id=a9><div id=c9 class="in up"></div></div><div id=o9 class=over></div>
 <script>
-var named = ['a1','c1','o1','a2','c2','o2','a3','c3','o3','a4','hv','o4','a5','fc','o5','a6','c6','o6','a7','o7','a8','e8','o8'].map(function (id) { return document.getElementById(id); });
+var named = ['a1','c1','o1','a2','c2','o2','a3','c3','o3','a4','hv','o4','a5','fc','o5','a6','c6','o6','a7','o7','a8','e8','o8','a9','c9','o9'].map(function (id) { return document.getElementById(id); });
 // A class added, set and taken away; focus; an attribute; a box made
 // with a level of its own; and a fixed one with a level, painted over the
-// window, which lifts nothing it is in. The hover is the test's.
+// window, which lifts nothing it is in; and a raised box a class on its
+// block hides. The hover is the test's.
 document.getElementById('c1').classList.add('up');
 document.getElementById('c2').className = 'in up';
 document.getElementById('c3').classList.remove('up');
@@ -213,6 +217,7 @@ var fixed = document.createElement('div');
 fixed.id = 'f8';
 fixed.style.cssText = 'position: fixed; top: 1150px; left: 600px; width: 50px; z-index: 10; background: green';
 document.getElementById('a8').appendChild(fixed);
+document.getElementById('a9').classList.add('hide');
 </script></body></html>"#;
 
 /// Chromium's fronts, with the pointer over `#hv`.
@@ -228,12 +233,13 @@ const PATHS_TEST: &str = r##"
         compare(front(page, 100, 630), "c6", "attribute set")
         compare(front(page, 100, 750), "c7", "a box put in with a level")
         compare(front(page, 100, 870), "o8", "a fixed box put in lifts nothing")
+        compare(front(page, 100, 990), "o9", "a raised box a class hides")
     }
 }
 }
 "##;
 
-/// With no script and no pointer, Chromium's fronts are `o1 o2 c3 o4 o5 o6 o7 o8`.
+/// With no script and no pointer, Chromium's fronts are `o1 o2 c3 o4 o5 o6 o7 o8 c9`.
 const PATHS_UNSCRIPTED: &str = r##"
     function test_levels_follow_what_the_boxes_hold() {
         compare(front(page, 100, 30), "o1")
@@ -244,6 +250,7 @@ const PATHS_UNSCRIPTED: &str = r##"
         compare(front(page, 100, 630), "o6")
         compare(front(page, 100, 750), "o7")
         compare(front(page, 100, 870), "o8")
+        compare(front(page, 100, 990), "c9")
     }
 }
 }

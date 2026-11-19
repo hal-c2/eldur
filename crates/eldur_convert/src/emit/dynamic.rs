@@ -1954,19 +1954,24 @@ fn border_strips(styles: &[Box<ComputedStyle>]) -> Option<[bool; 4]> {
     Some(union)
 }
 
-/// Whether some combination paints the box, or they differ in what makes
-/// a wrapper (padding, border, shadow, radius).
-/// Whether a class or state changes a box's level, its positioning, or
-/// whether it makes a stacking context at `auto`.
+/// Whether a class or state changes a box's level, its positioning,
+/// whether it makes a stacking context at `auto`, or whether it has a box
+/// at all: a hidden one rises in no world, so it rises in none.
 fn restacks(styles: &[Box<ComputedStyle>]) -> bool {
     let first = &styles[0];
+    let gone = |s: &ComputedStyle| {
+        s.display == Display::None || s.visibility == eldur_css::Visibility::Collapse
+    };
     styles.iter().any(|s| {
         s.z_index != first.z_index
             || s.position != first.position
             || crate::boxes::is_context_at_auto(s) != crate::boxes::is_context_at_auto(first)
+            || gone(s) != gone(first)
     })
 }
 
+/// Whether some combination paints the box, or they differ in what makes
+/// a wrapper (padding, border, shadow, radius).
 fn is_sticky(styles: &[Box<ComputedStyle>]) -> bool {
     let paints = |s: &ComputedStyle| {
         !s.background_color.is_transparent()
