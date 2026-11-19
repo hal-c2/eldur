@@ -30,7 +30,7 @@ enum TopDeclKind {
 pub(crate) fn source_type_for(kind: &ScriptKind) -> SourceType {
     match kind {
         ScriptKind::Classic => SourceType::script(),
-        ScriptKind::Module => SourceType::mjs(),
+        ScriptKind::Module | ScriptKind::ImportedModule => SourceType::mjs(),
         // HTML event handler attributes execute inside an implicit function body,
         // so top-level `return false` is valid syntax.
         ScriptKind::HandlerAttribute { .. } => SourceType::cjs(),
@@ -390,9 +390,9 @@ impl<'a> Visit<'a> for UnsupportedChecker<'_> {
             walk::walk_import_expression(self, it);
             return;
         }
-        let what = match &it.source {
-            Expression::StringLiteral(spec) => format!("import('{}')", spec.value),
-            _ => "import() of a computed specifier".to_string(),
+        let what = match extract_string_literal(&it.source) {
+            Some(spec) => format!("import('{spec}')"),
+            None => "import() of a computed specifier".to_string(),
         };
         self.report(
             it.span,
@@ -661,9 +661,57 @@ pub(crate) fn dynamic_import_of_page_module(
     if it.options.is_some() {
         return None;
     }
-    let Expression::StringLiteral(spec) = &it.source else {
-        return None;
-    };
-    crate::resolve::resolve_module_specifier(importer, spec.value.as_str(), scripts)
-        .filter(|&idx| matches!(scripts[idx].kind, ScriptKind::Module))
+    let spec = extract_string_literal(&it.source)?;
+    crate::resolve::resolve_module_specifier(importer, &spec, scripts)
+        .filter(|&idx| scripts[idx].kind.is_module())
+}
+
+/// The modules a script asks for, in source order, each once: a module's
+/// static `import`/`export ... from` specifiers, and any script's `import()`
+/// specifiers that are literal strings. A script that does not parse asks for
+/// nothing; its parse errors are reported where it is converted.
+pub(crate) fn module_requests(input: &ScriptInput) -> Vec<String> {
+    let allocator = Allocator::default();
+    let ret = Parser::new(&allocator, &input.source, source_type_for(&input.kind)).parse();
+    if ret.panicked {
+        return Vec::new();
+    }
+    let mut finder = RequestFinder::default();
+    if input.kind.is_module() {
+        for stmt in &ret.program.body {
+            let source = match stmt {
+                Statement::ImportDeclaration(d) => Some(&d.source),
+                Statement::ExportAllDeclaration(d) => Some(&d.source),
+                Statement::ExportFromDeclaration(d) => Some(&d.source),
+                _ => None,
+            };
+            if let Some(source) = source {
+                finder.push(source.value.to_string());
+            }
+        }
+    }
+    finder.visit_program(&ret.program);
+    finder.requests
+}
+
+#[derive(Default)]
+struct RequestFinder {
+    requests: Vec<String>,
+}
+
+impl RequestFinder {
+    fn push(&mut self, spec: String) {
+        if !self.requests.contains(&spec) {
+            self.requests.push(spec);
+        }
+    }
+}
+
+impl<'a> Visit<'a> for RequestFinder {
+    fn visit_import_expression(&mut self, it: &ImportExpression<'a>) {
+        if let Some(spec) = extract_string_literal(&it.source) {
+            self.push(spec);
+        }
+        walk::walk_import_expression(self, it);
+    }
 }

@@ -49,7 +49,7 @@ pub(crate) fn analyze(scripts: &[ScriptInput]) -> Analysis {
             continue;
         }
 
-        if matches!(input.kind, ScriptKind::Module) {
+        if input.kind.is_module() {
             collect_unresolvable_module_diagnostics(
                 input,
                 &parsed.program,

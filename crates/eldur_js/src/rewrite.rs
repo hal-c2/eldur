@@ -101,6 +101,14 @@ struct PageBuilder<'a> {
     /// Module index -> the top-level function returning its namespace, for
     /// `import()` of a module the page inlines.
     module_namespaces: HashMap<usize, String>,
+    /// Modules only an `import()` reaches, or only modules that are themselves
+    /// lazy: they run on their first import, not at load.
+    lazy_modules: HashSet<usize>,
+    /// Lazy module index -> the function that runs it once.
+    lazy_runs: HashMap<usize, String>,
+    /// `(module, export)` -> the name a module in a cycle uses for an export of
+    /// one still being emitted, replaced by the export's own name once known.
+    cycle_placeholders: HashMap<(usize, String), String>,
     diagnostics: Vec<Diagnostic>,
 }
 
@@ -174,7 +182,7 @@ pub(crate) fn rewrite(
             continue;
         }
 
-        if matches!(input.kind, ScriptKind::Module) {
+        if input.kind.is_module() {
             collect_unresolvable_module_diagnostics(
                 input,
                 &parsed.program,
@@ -291,6 +299,9 @@ pub(crate) fn rewrite(
         visiting_modules: HashSet::new(),
         module_exports: HashMap::new(),
         module_namespaces: HashMap::new(),
+        lazy_modules: lazy_modules(&valid_scripts, scripts),
+        lazy_runs: HashMap::new(),
+        cycle_placeholders: HashMap::new(),
         diagnostics,
     };
 
@@ -298,13 +309,73 @@ pub(crate) fn rewrite(
         match &v.input.kind {
             ScriptKind::Classic => builder.process_classic_or_module(pos, None),
             ScriptKind::Module => builder.ensure_module_emitted(v.idx),
+            // A module the converter read runs when a module imports it, not
+            // at a place on the page.
+            ScriptKind::ImportedModule => {}
             ScriptKind::HandlerAttribute { element, event } => {
                 builder.process_handler_attribute(v, *element, event);
             }
         }
     }
+    // The lazy modules some `import()` names, and those their `import()`s name
+    // in turn. One nothing names is not emitted: it would never run.
+    loop {
+        let mut wanted: Vec<usize> = builder
+            .module_namespaces
+            .keys()
+            .copied()
+            .filter(|idx| !builder.emitted_modules.contains(idx))
+            .filter(|idx| builder.lazy_modules.contains(idx))
+            .collect();
+        if wanted.is_empty() {
+            break;
+        }
+        wanted.sort_unstable();
+        for idx in wanted {
+            builder.ensure_module_emitted(idx);
+        }
+    }
 
     builder.finish()
+}
+
+/// The modules the converter read that run lazily: those no module script
+/// reaches through static imports.
+fn lazy_modules(valid_scripts: &[ValidScript<'_>], scripts: &[ScriptInput]) -> HashSet<usize> {
+    let by_idx: HashMap<usize, &ValidScript<'_>> = valid_scripts.iter().map(|v| (v.idx, v)).collect();
+    let mut eager: HashSet<usize> = HashSet::new();
+    let mut work: Vec<usize> = valid_scripts
+        .iter()
+        .filter(|v| matches!(v.input.kind, ScriptKind::Module))
+        .map(|v| v.idx)
+        .collect();
+    while let Some(idx) = work.pop() {
+        if !eager.insert(idx) {
+            continue;
+        }
+        let Some(v) = by_idx.get(&idx) else {
+            continue;
+        };
+        for spec in static_module_specifiers(&v.parsed.program) {
+            if let Some(dep) = resolve_module_specifier(&v.input.name, spec, scripts) {
+                work.push(dep);
+            }
+        }
+    }
+    valid_scripts
+        .iter()
+        .filter(|v| matches!(v.input.kind, ScriptKind::ImportedModule) && !eager.contains(&v.idx))
+        .map(|v| v.idx)
+        .collect()
+}
+
+fn static_module_specifiers<'p>(program: &'p oxc_ast::ast::Program<'_>) -> impl Iterator<Item = &'p str> {
+    program.body.iter().filter_map(|stmt| match stmt {
+        Statement::ImportDeclaration(imp) => Some(imp.source.value.as_str()),
+        Statement::ExportAllDeclaration(exp) => Some(exp.source.value.as_str()),
+        Statement::ExportFromDeclaration(exp) => Some(exp.source.value.as_str()),
+        _ => None,
+    })
 }
 
 impl<'a> PageBuilder<'a> {
@@ -318,7 +389,32 @@ impl<'a> PageBuilder<'a> {
         };
         self.visiting_modules.insert(script_idx);
         let mut exports = ModuleExports::default();
-        self.process_classic_or_module(pos, Some(&mut exports));
+        if self.lazy_modules.contains(&script_idx) {
+            // Its top-level statements become a function run on the first
+            // import, once; an error it threw is thrown again to every later
+            // import, as a browser's module map keeps it.
+            let run = self.lazy_run(script_idx);
+            let outer = std::mem::take(&mut self.out.init_stmts);
+            self.process_classic_or_module(pos, Some(&mut exports));
+            let body = std::mem::replace(&mut self.out.init_stmts, outer);
+            let mut lines = vec![
+                format!("if ({run}.state === 2) throw {run}.error;"),
+                format!("if ({run}.state) return;"),
+                format!("{run}.state = 1;"),
+            ];
+            if !body.is_empty() {
+                lines.push(format!(
+                    "try {{\n{}\n}} catch (err) {{\n    {run}.state = 2;\n    {run}.error = err;\n    throw err;\n}}",
+                    indent_block(&body.join("\n"), 4)
+                ));
+            }
+            self.out.top_decls.push(format!(
+                "function {run}() {{\n{}\n}}",
+                indent_block(&lines.join("\n"), 4)
+            ));
+        } else {
+            self.process_classic_or_module(pos, Some(&mut exports));
+        }
         self.visiting_modules.remove(&script_idx);
         self.emitted_modules.insert(script_idx);
         self.module_exports.insert(script_idx, exports);
@@ -326,8 +422,89 @@ impl<'a> PageBuilder<'a> {
         self.declare_module_namespace(script_idx);
     }
 
+    /// What `stmt` takes from `dep`, a module further up a cycle, under
+    /// placeholder names. A namespace of such a module is not supported.
+    fn add_cycle_exports(
+        &mut self,
+        importer: &ScriptInput,
+        stmt: &Statement<'_>,
+        dep: usize,
+        cycle_exports: &mut HashMap<usize, ModuleExports>,
+    ) {
+        let mut names: Vec<String> = Vec::new();
+        let mut namespace_span = None;
+        match stmt {
+            Statement::ImportDeclaration(imp) => {
+                for spec in imp.specifiers.iter().flatten() {
+                    match spec {
+                        ImportDeclarationSpecifier::ImportSpecifier(named) => {
+                            names.push(named.imported.name().to_string());
+                        }
+                        ImportDeclarationSpecifier::ImportDefaultSpecifier(_) => {
+                            names.push("default".to_string());
+                        }
+                        ImportDeclarationSpecifier::ImportNamespaceSpecifier(ns) => {
+                            namespace_span = Some(ns.span);
+                        }
+                    }
+                }
+            }
+            Statement::ExportFromDeclaration(exp) => {
+                names.extend(exp.specifiers.iter().map(|s| s.local.name().to_string()));
+            }
+            Statement::ExportAllDeclaration(exp) if exp.exported.is_some() => {
+                namespace_span = Some(exp.span);
+            }
+            _ => {}
+        }
+        if let Some(span) = namespace_span {
+            self.diagnostics.push(Diagnostic {
+                severity: Severity::Unsupported,
+                source: importer.name.clone(),
+                line: Some(crate::parse::line_for_span(importer, span)),
+                message: "the namespace of a module importing this one is not supported: it is empty here".to_string(),
+            });
+        }
+        for name in names {
+            let placeholder = self.cycle_placeholder(dep, &name);
+            cycle_exports
+                .entry(dep)
+                .or_default()
+                .insert(name, placeholder, true, true);
+        }
+    }
+
+    fn lazy_run(&mut self, script_idx: usize) -> String {
+        if let Some(run) = self.lazy_runs.get(&script_idx) {
+            return run.clone();
+        }
+        let run = self.shared.alloc_fn_name(&format!("__eldur_run_m{script_idx}"));
+        self.lazy_runs.insert(script_idx, run.clone());
+        run
+    }
+
+    /// The name a module uses for `name`, exported by `dep`, which is being
+    /// emitted further up a cycle and has no export map yet.
+    fn cycle_placeholder(&mut self, dep: usize, name: &str) -> String {
+        let key = (dep, name.to_string());
+        if let Some(found) = self.cycle_placeholders.get(&key) {
+            return found.clone();
+        }
+        let mut n = self.cycle_placeholders.len();
+        let placeholder = loop {
+            let candidate = format!("__eldur_cycle{n}_");
+            if self.shared.used_names.insert(candidate.clone()) {
+                break candidate;
+            }
+            n += 1;
+        };
+        self.cycle_placeholders.insert(key, placeholder.clone());
+        placeholder
+    }
+
     /// The page modules `v` imports with `import("literal")`, mapped from
-    /// specifier to the function that returns its namespace. The module is
+    /// specifier to the expression the call becomes. The function that returns
+    /// the module's namespace is declared once the module is emitted. The module is
     /// not emitted here: `import()` never runs a module ahead of its importer,
     /// so each one stays at its own place on the page and its namespace
     /// function is declared once it has been emitted there.
@@ -366,7 +543,14 @@ impl<'a> PageBuilder<'a> {
                     name
                 }
             };
-            namespaces.insert(spec, name);
+            // A lazy module loads after the code that imported it has run, and
+            // its microtasks; one already loaded resolves to its namespace.
+            let call = if self.lazy_modules.contains(&dep_idx) {
+                format!("Eldur.importModule({name})")
+            } else {
+                format!("Eldur.Promise.resolve({name}())")
+            };
+            namespaces.insert(spec, call);
         }
         namespaces
     }
@@ -381,8 +565,13 @@ impl<'a> PageBuilder<'a> {
         ) else {
             return;
         };
+        let run = self
+            .lazy_runs
+            .get(&script_idx)
+            .map(|run| format!("{run}(), "))
+            .unwrap_or_default();
         self.out.top_decls.push(format!(
-            "function {name}() {{ return {name}.value || ({name}.value = {}); }}",
+            "function {name}() {{ return {name}.value || ({run}{name}.value = {}); }}",
             format_live_namespace_object(exports)
         ));
     }
@@ -458,6 +647,7 @@ impl<'a> PageBuilder<'a> {
         let bindings =
             ScriptQueryBindings::build(v.input, &v.parsed.program, scoping, self.cross_script);
 
+        let mut cycle_exports: HashMap<usize, ModuleExports> = HashMap::new();
         // Pre-inline any imported local modules in source order before lowering statements.
         if !is_classic {
             for stmt in &v.parsed.program.body {
@@ -472,20 +662,39 @@ impl<'a> PageBuilder<'a> {
                         resolve_module_specifier(&v.input.name, spec, self.scripts)
                 {
                     if self.visiting_modules.contains(&dep_idx) {
-                        self.diagnostics.push(Diagnostic {
-                            severity: Severity::Unsupported,
-                            source: v.input.name.clone(),
-                            line: Some(v.input.line_offset.max(1)),
-                            message: format!("circular module import '{spec}' is not supported"),
-                        });
+                        // Further up a cycle: it runs after this module, and
+                        // this one reads its bindings by placeholder names.
+                        if let Statement::ExportAllDeclaration(exp) = stmt
+                            && exp.exported.is_none()
+                        {
+                            self.diagnostics.push(Diagnostic {
+                                severity: Severity::Unsupported,
+                                source: v.input.name.clone(),
+                                line: Some(crate::parse::line_for_span(v.input, exp.span)),
+                                message: format!(
+                                    "export * from '{spec}', a module importing this one, is not supported: its names are not re-exported"
+                                ),
+                            });
+                        }
+                        self.add_cycle_exports(v.input, stmt, dep_idx, &mut cycle_exports);
                     } else {
                         self.ensure_module_emitted(dep_idx);
+                        if let Some(run) = self.lazy_runs.get(&dep_idx) {
+                            self.out.init_stmts.push(format!("{run}();"));
+                        }
                     }
                 }
             }
         }
+        // Only while this module is emitted; its own map comes when it is done.
+        for (dep, exports) in &cycle_exports {
+            self.module_exports.insert(*dep, exports.clone());
+        }
 
         let dynamic_imports = self.dynamic_import_namespaces(v);
+        // A lazy module runs after the page has loaded: a listener it adds for
+        // `DOMContentLoaded` or `load` never hears it, as in a browser.
+        let is_lazy = self.lazy_modules.contains(&v.idx);
 
         let scripts = self.scripts;
         let resolver = self.resolver;
@@ -713,7 +922,9 @@ impl<'a> PageBuilder<'a> {
                 }
 
                 Statement::ExpressionStatement(es) => {
-                    if out.try_handle_special_top_expr(&es.expression, &mut lowerer, scoping) {
+                    if !is_lazy
+                        && out.try_handle_special_top_expr(&es.expression, &mut lowerer, scoping)
+                    {
                         continue;
                     }
                     lowerer.visit_statement(stmt);
@@ -795,15 +1006,51 @@ impl<'a> PageBuilder<'a> {
 
         let mut page_js = sections.join("\n\n");
         page_js.push('\n');
+        let mut diagnostics = self.diagnostics;
+        let mut placeholders: Vec<(&(usize, String), &String)> =
+            self.cycle_placeholders.iter().collect();
+        placeholders.sort_by(|a, b| a.1.cmp(b.1));
+        for ((dep, name), placeholder) in placeholders {
+            let ident = cycle_export_ident(&self.module_exports, &self.cycle_placeholders, *dep, name);
+            let ident = ident.unwrap_or_else(|| {
+                let source = self.scripts[*dep].name.clone();
+                diagnostics.push(Diagnostic {
+                    severity: Severity::Unsupported,
+                    source,
+                    line: None,
+                    message: format!("a module in a cycle imports '{name}', which this module does not export: it reads undefined"),
+                });
+                "undefined".to_string()
+            });
+            page_js = page_js.replace(placeholder.as_str(), &ident);
+        }
 
         JsOutput {
             redispatching_slots: self.shared.redispatching_slots,
             page_js,
             init_function,
             bindings: self.shared.bindings,
-            diagnostics: self.diagnostics,
+            diagnostics,
         }
     }
+}
+
+/// The name `dep`'s export `name` has in page.js, following re-exports that
+/// were themselves placeholders.
+fn cycle_export_ident(
+    module_exports: &HashMap<usize, ModuleExports>,
+    placeholders: &HashMap<(usize, String), String>,
+    dep: usize,
+    name: &str,
+) -> Option<String> {
+    let mut ident = module_exports.get(&dep)?.entries.get(name)?.0.clone();
+    for _ in 0..placeholders.len() {
+        let Some((key, _)) = placeholders.iter().find(|(_, p)| **p == ident) else {
+            return Some(ident);
+        };
+        ident = module_exports.get(&key.0)?.entries.get(&key.1)?.0.clone();
+    }
+    None
 }
 
 impl PageBuffers {
@@ -1867,7 +2114,10 @@ fn prescan_on_prop_assignments(
         };
 
         // Count top-level simple `el.on<ev> = fn` and `el.addEventListener(ev, fn)` statements in classic/module scripts.
-        if matches!(v.input.kind, ScriptKind::Classic | ScriptKind::Module) {
+        if matches!(
+            v.input.kind,
+            ScriptKind::Classic | ScriptKind::Module | ScriptKind::ImportedModule
+        ) {
             for stmt in &v.parsed.program.body {
                 if let Statement::ExpressionStatement(es) = stmt {
                     let expr = unwrap_parens(&es.expression);
@@ -2252,9 +2502,9 @@ impl<'a> Visit<'a> for DynamicImports<'_> {
     fn visit_import_expression(&mut self, it: &oxc_ast::ast::ImportExpression<'a>) {
         if let Some(idx) =
             crate::parse::dynamic_import_of_page_module(self.importer, it, self.scripts)
-            && let Expression::StringLiteral(spec) = &it.source
+            && let Some(spec) = extract_string_literal(&it.source)
         {
-            self.found.push((spec.value.to_string(), idx, it.span));
+            self.found.push((spec, idx, it.span));
         }
         walk::walk_import_expression(self, it);
     }

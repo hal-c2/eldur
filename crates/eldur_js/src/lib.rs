@@ -36,10 +36,24 @@ pub enum ScriptKind {
     /// `<script type="module">`: imports are inlined when they resolve
     /// to files given to the converter, else reported.
     Module,
+    /// A module no `<script>` holds: a file a module script reached by a
+    /// static import or any script by a literal `import()`, which the
+    /// converter read beside its importer (`name` is its resolved URL or path,
+    /// as for `<script src>`). It runs as a dependency of a module that imports
+    /// it statically, or on the first `import()` of it, never at a place on the
+    /// page.
+    ImportedModule,
     /// An event handler attribute: `<button onclick="go(this)">`.
     /// `element` is the converter's key for the element (its QML id once
     /// resolved through [`DomResolver::element`]).
     HandlerAttribute { element: ElementKey, event: String },
+}
+
+impl ScriptKind {
+    /// Whether the script is a module (its imports and exports mean something).
+    pub fn is_module(&self) -> bool {
+        matches!(self, ScriptKind::Module | ScriptKind::ImportedModule)
+    }
 }
 
 /// Opaque key the converter uses for a DOM element (it is the
@@ -401,6 +415,27 @@ pub struct Diagnostic {
 #[must_use]
 pub fn analyze(scripts: &[ScriptInput]) -> Analysis {
     analyze::analyze(scripts)
+}
+
+/// The module specifiers a script asks for by a literal: those of its static
+/// `import`s and `export … from`s when it is a module, and of every `import()`
+/// whose specifier is a string or a template with no substitutions, in source
+/// order, each once. The converter reads the files they name ([`ScriptKind::ImportedModule`]).
+/// A script that does not parse asks for nothing.
+#[must_use]
+pub fn module_requests(input: &ScriptInput) -> Vec<String> {
+    parse::module_requests(input)
+}
+
+/// Whether a module specifier names a file relative to its importer or to the
+/// site's root (`./x.js`, `../x.js`, `/x.js`), the only kind a page without an
+/// import map can load. Bare names (`lodash`) and other hosts (`//cdn/x.js`,
+/// `https://…`) are not.
+#[must_use]
+pub fn is_path_specifier(specifier: &str) -> bool {
+    specifier.starts_with("./")
+        || specifier.starts_with("../")
+        || (specifier.starts_with('/') && !specifier.starts_with("//"))
 }
 
 pub use named::resolve_named_elements;

@@ -469,7 +469,30 @@ function dynamicImport(specifier) {
     } catch (err) {
         return Promise.reject(err);
     }
+    if (!/^(\.{0,2}\/|[a-zA-Z][a-zA-Z0-9+.-]*:)/.test(spec)) {
+        return Promise.reject(new TypeError("Failed to resolve module specifier \"" + spec
+            + "\". Relative references must start with either \"/\", \"./\", or \"../\"."));
+    }
     return Promise.reject(new TypeError("Failed to fetch dynamically imported module: " + spec));
+}
+
+// `import()` of a module the page inlines but has not run: `namespace` runs it
+// on its first call and returns its namespace, or throws what it threw. It runs
+// in a task of its own, after the importing code and its microtasks, as a
+// browser loads a module; one already run resolves to its namespace.
+function importModule(namespace) {
+    if (namespace.value) {
+        return Promise.resolve(namespace.value);
+    }
+    return new Promise(function(resolve, reject) {
+        setTimeout(function() {
+            try {
+                resolve(namespace());
+            } catch (err) {
+                reject(err);
+            }
+        }, 0);
+    });
 }
 
 // Helper for lowered object rest destructuring: `const { a, ...rest } = src`.

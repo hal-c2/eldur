@@ -2944,6 +2944,126 @@ fn a_lazily_imported_module_runs_at_its_own_place_on_the_page() {
     );
 }
 
+fn imported_module(name: &str, source: &str) -> ScriptInput {
+    ScriptInput {
+        source: source.to_string(),
+        name: name.to_string(),
+        kind: ScriptKind::ImportedModule,
+        line_offset: 1,
+    }
+}
+
+/// The modules a page's module script reaches (hal-c2/eldur#22): one it imports
+/// statically runs before it, at load, found by the path its specifier makes
+/// beside the importer; one only `import()` names runs on that import, in a
+/// function of its own, and never at a place on the page.
+#[test]
+fn an_imported_module_runs_before_its_importer_and_a_lazy_one_on_its_first_import() {
+    let resolver = FakeResolver::default();
+    let main = module_script(
+        "/site/js/main.js",
+        "import { label } from \"./lib/../helper.js\";\nconsole.log('main', label(2));\nimport(`./chunk.js`).then((m) => console.log(m.word));\n",
+    );
+    let helper = imported_module(
+        "/site/js/helper.js",
+        "console.log('helper');\nexport function label(n) { return 'n=' + n; }\n",
+    );
+    let decoy = imported_module("/site/js/lib/helper.js", "export function label() { return 'no'; }\n");
+    let chunk = imported_module(
+        "/site/js/chunk.js",
+        "console.log('chunk');\nwindow.addEventListener('load', () => console.log('never'));\nexport const word = 'chunk';\n",
+    );
+    let out = run_rewrite(&[main, helper, decoy, chunk], &resolver);
+    let init = out.page_js.find("function __eldur_init").expect("init");
+    let helper_at = out.page_js.rfind("console.log('helper')").expect("helper");
+    let main_at = out.page_js.find("console.log('main'").expect("main");
+    assert!(init < helper_at && helper_at < main_at, "{}", out.page_js);
+    assert!(!out.page_js.contains("'no'"), "{}", out.page_js);
+    let run = out.page_js.find("function __eldur_run_m3()").expect("chunk's run function");
+    let chunk_at = out.page_js.find("console.log('chunk')").expect("chunk");
+    assert!(run < chunk_at && chunk_at < init, "{}", out.page_js);
+    // Its load listener goes through the runtime, which has fired load by then.
+    assert!(!out.page_js[init..].contains("never"), "{}", out.page_js);
+    assert!(
+        out.page_js.contains("Eldur.importModule(__eldur_module_namespace)")
+            && out.page_js.contains("__eldur_run_m3(), __eldur_module_namespace.value ="),
+        "{}",
+        out.page_js
+    );
+    assert!(
+        !out.diagnostics
+            .iter()
+            .any(|d| d.message.contains("import") || d.message.contains("module")),
+        "{:?}",
+        out.diagnostics
+    );
+}
+
+/// A lazy module's own static imports that are lazy too run, in order, when it
+/// does; the module an inline handler's `import()` names is found from the page.
+#[test]
+fn a_lazy_modules_lazy_dependencies_run_first_and_a_handler_imports_from_the_page() {
+    let resolver = FakeResolver::default().with_element(1, "go", TargetKind::Button);
+    let main = module_script("/order/main.js", "export const later = () => import('./lazy.js');\n");
+    let lazy = imported_module(
+        "/order/lazy.js",
+        "import { only } from './lazydep.js';\nconsole.log('lazy', only);\nexport const word = 'chunk';\n",
+    );
+    let dep = imported_module("/order/lazydep.js", "console.log('lazydep');\nexport const only = 'dep';\n");
+    let click = imported_module("/order/click.js", "export const word = 'clicked';\n");
+    let go = handler(1, "click", "import('./click.js').then((m) => console.log(m.word))");
+    let out = run_rewrite(&[main, lazy, dep, click, go], &resolver);
+    let dep_run = out.page_js.find("function __eldur_run_m2()").expect("lazydep runs");
+    let lazy_run = out.page_js.find("function __eldur_run_m1()").expect("lazy runs");
+    let calls_dep = out.page_js[lazy_run..].find("__eldur_run_m2();").expect("lazy runs lazydep") + lazy_run;
+    let lazy_log = out.page_js.find("console.log('lazy'").expect("lazy");
+    assert!(dep_run < lazy_run && calls_dep < lazy_log, "{}", out.page_js);
+    assert!(out.page_js.contains("function __eldur_run_m3()"), "{}", out.page_js);
+    assert!(!out.page_js.contains("dynamicImport"), "{}", out.page_js);
+}
+
+/// A cycle: `a` imports `b`, which imports `a` back. Chromium runs `b` first,
+/// and `b` already sees `a`'s hoisted function; so it does here, through the
+/// name `a`'s export ends up with.
+#[test]
+fn a_module_in_a_cycle_reads_the_bindings_of_the_one_that_imports_it() {
+    let resolver = FakeResolver::default();
+    let main = module_script("/m/main.js", "import { ping } from './a.js';\nconsole.log(ping());\n");
+    let a = imported_module(
+        "/m/a.js",
+        "import { pong } from './b.js';\nexport function ping() { return 'ping' + pong(); }\n",
+    );
+    let b = imported_module(
+        "/m/b.js",
+        "import { ping } from './a.js';\nexport { ping as again } from './a.js';\nconsole.log('b', typeof ping);\nexport function pong() { return 'pong'; }\n",
+    );
+    let out = run_rewrite(&[main, a, b], &resolver);
+    assert!(!out.page_js.contains("__eldur_cycle"), "{}", out.page_js);
+    assert!(out.page_js.contains("console.log('b', typeof ping)"), "{}", out.page_js);
+    assert!(
+        !out.diagnostics.iter().any(|d| d.message.contains("circular") || d.message.contains("cycle")),
+        "{:?}",
+        out.diagnostics
+    );
+}
+
+/// What a cycle cannot give here is said: `export *` from a module further up
+/// it re-exports nothing.
+#[test]
+fn export_star_from_a_module_that_imports_this_one_is_reported() {
+    let resolver = FakeResolver::default();
+    let a = module_script("/m/a.js", "import { b } from './b.js';\nexport const a = 1;\nconsole.log(b);\n");
+    let b = imported_module("/m/b.js", "export * from './a.js';\nexport const b = 2;\n");
+    let out = run_rewrite(&[a, b], &resolver);
+    assert!(
+        out.diagnostics
+            .iter()
+            .any(|d| d.message.starts_with("export * from './a.js', a module importing this one")),
+        "{:?}",
+        out.diagnostics
+    );
+}
+
 /// In a browser a property set on the window is a global binding: after
 /// `window.X = v`, a bare `X` in any script or handler is that property, read
 /// or written. A name a classic script declares is its own binding, a

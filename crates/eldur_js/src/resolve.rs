@@ -263,15 +263,25 @@ pub(crate) fn kebab_to_camel(s: &str) -> String {
 }
 
 /// Resolves an ES module import specifier against the slice of [`ScriptInput`]s
-/// provided to the converter.
+/// provided to the converter. A module is preferred to a classic script of the
+/// same name, and the most exact match wins: the name itself, then the path the
+/// specifier makes beside its importer, then a name ending in the specifier's
+/// path, the shortest first. The last is what an importer that is no file needs
+/// (an inline script or a handler, whose modules were read beside the page).
 pub(crate) fn resolve_module_specifier(
     importer_name: &str,
     specifier: &str,
     scripts: &[ScriptInput],
 ) -> Option<usize> {
-    if let Some(exact) = scripts.iter().position(|s| {
-        matches!(s.kind, ScriptKind::Module | ScriptKind::Classic) && s.name == specifier
-    }) {
+    let ranked = |pick: &dyn Fn(&ScriptInput) -> bool| {
+        let found = |module: bool| {
+            scripts
+                .iter()
+                .position(|s| is_loadable(s) && s.kind.is_module() == module && pick(s))
+        };
+        found(true).or_else(|| found(false))
+    };
+    if let Some(exact) = ranked(&|s| s.name == specifier) {
         return Some(exact);
     }
 
@@ -287,38 +297,47 @@ pub(crate) fn resolve_module_specifier(
     // was explicitly named with that exact bare path or filename.
     let is_relative_or_abs =
         specifier.starts_with("./") || specifier.starts_with("../") || specifier.starts_with('/');
+    if !is_relative_or_abs {
+        return None;
+    }
 
-    let resolved_rel = if is_relative_or_abs {
-        Some(normalize_rel_path(importer_name, specifier))
-    } else {
-        None
-    };
+    let rel = normalize_rel_path(importer_name, specifier);
+    if let Some(idx) = ranked(&|s| {
+        let norm = normalize_slashes(&s.name);
+        norm.trim_start_matches("./").trim_start_matches('/') == rel || norm == rel
+    }) {
+        return Some(idx);
+    }
+
     let stripped_spec = specifier.trim_start_matches("./").trim_start_matches('/');
-
+    if stripped_spec.is_empty() {
+        return None;
+    }
+    let mut best: Option<(bool, usize, usize)> = None;
     for (idx, candidate) in scripts.iter().enumerate() {
-        if !matches!(candidate.kind, ScriptKind::Module | ScriptKind::Classic) {
+        if !is_loadable(candidate) {
             continue;
         }
         let cand_norm = normalize_slashes(&candidate.name);
         let cand_stripped = cand_norm.trim_start_matches("./").trim_start_matches('/');
-
-        if let Some(rel) = &resolved_rel
-            && (cand_stripped == rel.as_str() || cand_norm == rel.as_str())
-        {
-            return Some(idx);
+        let ends_in_spec = cand_stripped == stripped_spec
+            || cand_stripped
+                .strip_suffix(stripped_spec)
+                .is_some_and(|prefix| prefix.ends_with('/'));
+        if !ends_in_spec {
+            continue;
         }
-
-        if is_relative_or_abs
-            && !stripped_spec.is_empty()
-            && (cand_stripped == stripped_spec
-                || cand_stripped
-                    .strip_suffix(stripped_spec)
-                    .is_some_and(|prefix| prefix.ends_with('/')))
-        {
-            return Some(idx);
+        let rank = (!candidate.kind.is_module(), cand_stripped.len(), idx);
+        if best.is_none_or(|b| rank < b) {
+            best = Some(rank);
         }
     }
-    None
+    best.map(|(_, _, idx)| idx)
+}
+
+/// A script a specifier can name: a file or inline script, not a handler.
+fn is_loadable(script: &ScriptInput) -> bool {
+    !matches!(script.kind, ScriptKind::HandlerAttribute { .. })
 }
 
 fn normalize_slashes(path: &str) -> String {
