@@ -7,8 +7,14 @@
 //! qmltestrunner on the software renderer, and the real pixels are compared
 //! with a Chromium screenshot's at each `data-pixel` point;
 //! `tests/svg_invalid_root/chromium.json` is recorded by
-//! `node crates/eldur_convert/tests/svg_invalid_root/gen.mjs`. The files get
-//! their size from CSS, so the pixels test the painting, not the sizing.
+//! `node crates/eldur_convert/tests/svg_invalid_root/gen.mjs`. The `<img>`
+//! files get their size from CSS; the inline `jf` takes its height from its
+//! own `height` beside a negative `width`, as Chromium does.
+//!
+//! `bg` is a `background-image`, which a ShapePath fills from the file. The
+//! software renderer these tests run on fills a ShapePath from no file at all,
+//! a PNG included, so `bg` is checked by its file decoding, not by its pixels.
+//! Its pixels were compared on the GPU renderer by hand.
 
 mod support;
 
@@ -32,6 +38,20 @@ TestCase {
     // The two painters smooth an edge differently; the points are inside.
     readonly property int tolerance: 16
 
+    // Cases whose pixels the software renderer cannot show, by the file they
+    // draw from.
+    readonly property var decodes: ({ bg: "assets/vb-negw.svg" })
+
+    function test_decodes() {
+        for (const id in decodes) {
+            const image = createTemporaryQmlObject(
+                'import QtQuick; Image { source: "' + Qt.resolvedUrl(decodes[id]) + '" }', host)
+            tryVerify(() => image.status !== Image.Loading)
+            verify(image.status === Image.Ready && image.sourceSize.width > 0,
+                id + ": " + decodes[id] + " does not decode")
+        }
+    }
+
     function test_paint() {
         const data = DATA
         const component = Qt.createComponent("Main.qml")
@@ -41,6 +61,8 @@ TestCase {
         wait(50)
         const image = grabImage(page)
         for (const id in data) {
+            if (id in decodes)
+                continue
             for (const p of data[id].pixels) {
                 const got = image.pixel(p.x, p.y)
                 const near = Math.abs(got.r * 255 - p.rgb[0]) <= tolerance
