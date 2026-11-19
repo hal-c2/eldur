@@ -406,6 +406,27 @@ mod tests {
             natural(r#"<svg viewBox="0 0 64 32">"#),
             n(None, None, Some(0.5))
         );
+        // A negative length is a zero one (Chromium).
+        assert_eq!(
+            natural(r#"<svg width="-80" height="40" viewBox="0 0 20 10">"#),
+            n(Some(0.0), Some(0.0), Some(0.5))
+        );
+        assert_eq!(
+            natural(r#"<svg width="80" height="-40" viewBox="0 0 20 10">"#),
+            n(Some(80.0), Some(40.0), Some(0.5))
+        );
+        assert_eq!(
+            natural(r#"<svg width="-80" height="-40">"#),
+            n(Some(0.0), Some(0.0), None)
+        );
+        // A viewBox with a zero or negative size gives no ratio.
+        for view_box in ["0 0 0 10", "0 0 20 -10", "0 0 -20 10", "0 0 20 0"] {
+            assert_eq!(
+                natural(&format!(r#"<svg width="80" viewBox="{view_box}">"#)),
+                n(Some(80.0), None, None),
+                "{view_box}"
+            );
+        }
         assert_eq!(natural("<svg>"), Natural::default());
     }
 

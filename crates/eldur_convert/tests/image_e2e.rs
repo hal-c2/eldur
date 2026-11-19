@@ -291,9 +291,16 @@ img { display: block }
 <img id=zn src="z040vb.svg" style="width:100px">
 <img id=zo src="both.svg">
 <img id=zp src="both.svg" style="width:100px">
+<img id=zq src="negw-vb.svg">
+<img id=zr src="negh-vb.svg">
+<img id=zs src="vb-0w.svg">
+<img id=zt src="vb-negh.svg">
+<img id=zu src="vb-negw.svg">
+<img id=zv src="negwh.svg">
+<img id=zw src="vb-negw.svg" style="width:100px">
 <script>
 // Named so that they get an objectName the test can find.
-var named = "n o p q r s t za zb zc zd ze zf zg zh zi zj zk zl zm zn zo zp".split(" ").map(function (id) { return document.getElementById(id) });
+var named = "n o p q r s t za zb zc zd ze zf zg zh zi zj zk zl zm zn zo zp zq zr zs zt zu zv zw".split(" ").map(function (id) { return document.getElementById(id) });
 </script></body></html>"#;
 
 /// Chromium, `getBoundingClientRect()` at 1280×800.
@@ -365,12 +372,24 @@ TestCase {
         compareBox("zo", [0, 1155.5, 80, 20])
         compareBox("zp", [0, 1175.5, 100, 25])
     }
+
+    // A negative length is a zero one; a viewBox with a zero or negative
+    // size is no viewBox.
+    function test_negative_lengths_and_empty_view_boxes() {
+        compareBox("zq", [0, 1200.5, 0, 0])
+        compareBox("zr", [0, 1200.5, 80, 40])
+        compareBox("zs", [0, 1240.5, 80, 150])
+        compareBox("zt", [0, 1390.5, 80, 150])
+        compareBox("zu", [0, 1540.5, 300, 150])
+        compareBox("zv", [0, 1690.5, 0, 0])
+        compareBox("zw", [0, 1690.5, 100, 150])
+    }
 }
 }
 "##;
 
 /// SVG files with a zero or a single natural dimension (SVG 2 §8.2).
-const SVG_FILES: [(&str, &str); 11] = [
+const SVG_FILES: [(&str, &str); 17] = [
     ("z80x0.svg", r#"width="80" height="0""#),
     ("z0x80.svg", r#"width="0" height="80""#),
     ("w80.svg", r#"width="80""#),
@@ -382,6 +401,18 @@ const SVG_FILES: [(&str, &str); 11] = [
     ("w0vb.svg", r#"width="0" viewBox="0 0 20 10""#),
     ("h0vb.svg", r#"height="0" viewBox="0 0 20 10""#),
     ("both.svg", r#"width="80" height="20" viewBox="0 0 20 10""#),
+    (
+        "negw-vb.svg",
+        r#"width="-80" height="40" viewBox="0 0 20 10""#,
+    ),
+    (
+        "negh-vb.svg",
+        r#"width="80" height="-40" viewBox="0 0 20 10""#,
+    ),
+    ("vb-0w.svg", r#"width="80" viewBox="0 0 0 10""#),
+    ("vb-negh.svg", r#"width="80" viewBox="0 0 20 -10""#),
+    ("vb-negw.svg", r#"viewBox="0 0 -20 10""#),
+    ("negwh.svg", r#"width="-80" height="-40""#),
 ];
 
 struct Bare;
@@ -454,6 +485,21 @@ fn ratio_attributes_are_dimension_values() {
         implicit_size(qml, "zj"),
         size("0", "0"),
         "zeros and a viewBox"
+    );
+    assert_eq!(
+        implicit_size(qml, "zq"),
+        size("0", "0"),
+        "a negative width is a zero one"
+    );
+    assert_eq!(
+        implicit_size(qml, "zv"),
+        size("0", "0"),
+        "negative lengths are zeros"
+    );
+    assert_eq!(
+        implicit_size(qml, "zs"),
+        size("80", "150"),
+        "a zero-width viewBox is none"
     );
 }
 
