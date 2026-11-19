@@ -900,6 +900,7 @@ impl Dynamic<'_, '_> {
             no_item(self.cx.doc, &self.conds[usize::from(c)].cond, self.diags);
         }
         let worlds = self.worlds(&unmarked);
+        let lattice = Lattice::of(&worlds);
         let mut trees = Vec::with_capacity(worlds.len());
         for flipped in &worlds[1..] {
             let (styles, collapsed) = self.world(flipped, &shown);
@@ -937,7 +938,7 @@ impl Dynamic<'_, '_> {
                 change,
                 path,
                 &diffs,
-                &worlds,
+                &lattice,
                 &markers,
                 &mut sources,
                 &mut root,
@@ -1141,7 +1142,7 @@ impl Dynamic<'_, '_> {
         change: &Change,
         path: &Path,
         diffs: &Diffs,
-        worlds: &[Vec<u16>],
+        lattice: &Lattice,
         markers: &HashMap<usize, Path>,
         sources: &mut Sources,
         root: &mut Object,
@@ -1151,29 +1152,21 @@ impl Dynamic<'_, '_> {
         // somewhere; being flipped together with one that does is not
         // enough (`.a.on + .b` makes `b` depend on `a`, not on `b`'s
         // next sibling).
-        let index: HashMap<&[u16], usize> = worlds
-            .iter()
-            .enumerate()
-            .map(|(i, w)| (w.as_slice(), i))
-            .collect();
         let value = |w: usize| {
             (w == 0 || diffs.known(path, w)).then(|| change.worlds.get(&w).unwrap_or(&change.base))
         };
         let mut deps = BTreeSet::new();
-        for (w, set) in worlds.iter().enumerate() {
-            let Some(here) = value(w) else {
-                continue;
-            };
-            for c in 0..self.conds.len() {
-                let c = u16::try_from(c).expect("conditions fit u16");
-                if set.contains(&c) || deps.contains(&c) {
+        // Two worlds where the value is not set apart both have the
+        // document's, so only a pair with one of those can differ.
+        for &w in change.worlds.keys() {
+            let above = lattice.up[w].iter().map(|&(c, o)| (w, c, o));
+            let below = lattice.down[w].iter().map(|&(c, l)| (l, c, w));
+            for (lower, c, upper) in above.chain(below) {
+                if deps.contains(&c) {
                     continue;
                 }
-                let mut with = set.clone();
-                with.push(c);
-                with.sort_unstable();
-                if let Some(&other) = index.get(with.as_slice())
-                    && value(other).is_some_and(|there| there != here)
+                if let Some(here) = value(lower)
+                    && value(upper).is_some_and(|there| there != here)
                 {
                     deps.insert(c);
                 }
@@ -1370,6 +1363,39 @@ impl Dynamic<'_, '_> {
 }
 
 /// The key of a leaf: whether each condition of `order` holds.
+/// The worlds one flipped condition apart.
+struct Lattice {
+    /// For each world, the conditions that flipped too make another world,
+    /// and that world.
+    up: Vec<Vec<(u16, usize)>>,
+    /// For each world, the conditions it flips whose unflipping makes
+    /// another world, and that world.
+    down: Vec<Vec<(u16, usize)>>,
+}
+
+impl Lattice {
+    fn of(worlds: &[Vec<u16>]) -> Self {
+        let index: HashMap<&[u16], usize> = worlds
+            .iter()
+            .enumerate()
+            .map(|(i, w)| (w.as_slice(), i))
+            .collect();
+        let mut up = vec![Vec::new(); worlds.len()];
+        let mut down = vec![Vec::new(); worlds.len()];
+        for (upper, set) in worlds.iter().enumerate() {
+            for (at, &c) in set.iter().enumerate() {
+                let mut without = set.clone();
+                without.remove(at);
+                if let Some(&lower) = index.get(without.as_slice()) {
+                    up[lower].push((c, upper));
+                    down[upper].push((c, lower));
+                }
+            }
+        }
+        Lattice { up, down }
+    }
+}
+
 fn holds_key(order: &[u16], mask: usize) -> Vec<u16> {
     order
         .iter()
