@@ -410,9 +410,8 @@ TestCase {
 // The page of #29 as written, with a paragraph after the hidden one and a
 // toggle. Chromium, after the head script: `.shy` is `display: none`, out of
 // the flow; toggled to `dark`, `.shy` is 18 px tall in `#c1c3c8` and
-// `#after` is 34 px lower; toggled back, it is gone again. Of the 34 px, the
-// 16 px margin is #51: a block hidden after conversion leaves the next one's
-// margin as converted, however it was hidden. This asks for `.shy`'s line.
+// `#after` is 34 px lower, `.shy`'s line and the 16 px margin it brings back
+// (#51); toggled back, it is gone again and so is that margin.
 // `#kept` is `.shy` too, but a script wrote its display: it shows throughout.
 const SHY_PAGE: &str = r##"<style>
 :root { --fg: #c1c3c8; }
@@ -508,9 +507,9 @@ TestCase {
                "dark: #kept is " + (kept.visible ? "painted " + kept.color : "hidden"))
         settle(() => pageY(page, after) > light)
         // Chromium: 34 px, .shy's 18 px line and the 16 px margin (#51).
-        compare(pageY(page, after) - light, shy.height,
+        compare(pageY(page, after) - light, shy.height + 16,
                 "dark: #after moved " + (pageY(page, after) - light) + " px for a .shy "
-                + shy.height + " px tall")
+                + shy.height + " px tall and its 16 px margin")
 
         button.clicked()
         hidden(page, shy, "light")
