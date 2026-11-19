@@ -6257,6 +6257,12 @@ function _inlinePaint(raw, target, prop, str) {
 }
 
 function _inlinePx(raw, target, prop, str) {
+    // An item that says the width its line clamps (`eldurBasis`, an
+    // `EldurFlow`'s item) takes a new width as that basis, so it still
+    // shrinks to a narrower line, as a flex item's `width` does.
+    if (prop === "width" && typeof target.eldurBasis === "number") {
+        prop = "eldurBasis";
+    }
     var px = parseFloat(str);
     if (isNaN(px)) {
         _inlineRelease(raw, target, prop);
