@@ -151,7 +151,8 @@ fn observers_match_chromium() {
 /// Chromium, so this page has no recording: Eldur stops the loop after a
 /// thousand notifications in a row, says so, and the page goes on, with its
 /// observer still hearing later changes. A callback that awaits before it
-/// writes is the same loop and stops the same way.
+/// writes is the same loop and stops the same way, even while another
+/// writer's records share its notifications.
 #[test]
 fn a_runaway_mutation_loop_stops() {
     if support::no_qt() {
@@ -166,6 +167,7 @@ fn a_runaway_mutation_loop_stops() {
             "OB calls 1000 1000",
             "OB later true",
             "OB async 1000 1000",
+            "OB both true 3000",
             "OB done",
         ],
     )
