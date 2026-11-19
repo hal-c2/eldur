@@ -17,6 +17,32 @@ ApplicationWindow {
     width: 1280
     height: 800
 
+    function scrollToFragment(eldurLink) {
+        let eldurName = eldurLink.slice(1);
+        const eldurTargets = Object.assign(Object.create(null), {
+            "mixed": mixed
+        });
+        flickableInput.forceActiveFocus();
+        if (!(eldurName in eldurTargets)) {
+            try {
+                eldurName = decodeURIComponent(eldurName);
+            } catch (e) {
+                eldurName = null;
+            }
+        }
+        const eldurTarget = eldurName === null ? undefined : eldurTargets[eldurName];
+        if (eldurTarget) {
+            for (let eldurAt = eldurTarget.parent; eldurAt && eldurAt !== flickable; eldurAt = eldurAt.parent) {
+                if (eldurAt instanceof Flickable)
+                    eldurAt.contentY = Math.max(0, Math.min(eldurTarget.mapToItem(eldurAt.contentItem, 0, 0).y, eldurAt.contentHeight - eldurAt.height));
+            }
+            const eldurY = eldurTarget.mapToItem(flickable.contentItem, 0, 0).y;
+            flickable.contentY = Math.max(0, Math.min(eldurY, flickable.contentHeight - flickable.height));
+        } else if (eldurName !== null && (eldurName === "" || eldurName.toLowerCase() === "top")) {
+            flickable.contentY = 0;
+        }
+    }
+
     Flickable {
         id: flickable
         anchors.fill: parent
@@ -518,6 +544,8 @@ ApplicationWindow {
                             radius: 6
                             implicitWidth: buttonText.implicitWidth + 40
                             implicitHeight: buttonText.implicitHeight + 20
+                            Accessible.role: Accessible.Link
+                            Accessible.name: "Get started"
                             width: Math.min(implicitWidth, centeredFlow.width)
                             antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
@@ -545,6 +573,14 @@ ApplicationWindow {
                                 anchors.topMargin: 10
                                 renderType: Text.NativeRendering
                             }
+
+                            TapHandler {
+                                onTapped: root.scrollToFragment("#start")
+                            }
+
+                            HoverHandler {
+                                cursorShape: Qt.PointingHandCursor
+                            }
                         }
 
                         EldurRun {
@@ -562,6 +598,8 @@ ApplicationWindow {
                             implicitHeight: buttonText2.implicitHeight + 24
                             border.width: 2
                             border.color: "#2563eb"
+                            Accessible.role: Accessible.Link
+                            Accessible.name: "Read the docs"
                             width: Math.min(implicitWidth, centeredFlow.width)
                             antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
@@ -588,6 +626,14 @@ ApplicationWindow {
                                 anchors.rightMargin: 22
                                 anchors.topMargin: 12
                                 renderType: Text.NativeRendering
+                            }
+
+                            TapHandler {
+                                onTapped: root.scrollToFragment("#docs")
+                            }
+
+                            HoverHandler {
+                                cursorShape: Qt.PointingHandCursor
                             }
                         }
                     }

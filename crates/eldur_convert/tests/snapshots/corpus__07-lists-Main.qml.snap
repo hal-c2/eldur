@@ -17,6 +17,30 @@ ApplicationWindow {
     width: 1280
     height: 800
 
+    function scrollToFragment(eldurLink) {
+        let eldurName = eldurLink.slice(1);
+        const eldurTargets = Object.create(null);
+        flickableInput.forceActiveFocus();
+        if (!(eldurName in eldurTargets)) {
+            try {
+                eldurName = decodeURIComponent(eldurName);
+            } catch (e) {
+                eldurName = null;
+            }
+        }
+        const eldurTarget = eldurName === null ? undefined : eldurTargets[eldurName];
+        if (eldurTarget) {
+            for (let eldurAt = eldurTarget.parent; eldurAt && eldurAt !== flickable; eldurAt = eldurAt.parent) {
+                if (eldurAt instanceof Flickable)
+                    eldurAt.contentY = Math.max(0, Math.min(eldurTarget.mapToItem(eldurAt.contentItem, 0, 0).y, eldurAt.contentHeight - eldurAt.height));
+            }
+            const eldurY = eldurTarget.mapToItem(flickable.contentItem, 0, 0).y;
+            flickable.contentY = Math.max(0, Math.min(eldurY, flickable.contentHeight - flickable.height));
+        } else if (eldurName !== null && (eldurName === "" || eldurName.toLowerCase() === "top")) {
+            flickable.contentY = 0;
+        }
+    }
+
     Flickable {
         id: flickable
         anchors.fill: parent
@@ -1050,6 +1074,8 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText.implicitWidth + 28
                                                     implicitHeight: aText.implicitHeight + 12
+                                                    Accessible.role: Accessible.Link
+                                                    Accessible.name: "Performance"
                                                     width: Math.min(implicitWidth, liFlow.width)
                                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
@@ -1077,6 +1103,14 @@ ApplicationWindow {
                                                         renderType: Text.NativeRendering
                                                     }
 
+                                                    TapHandler {
+                                                        onTapped: root.scrollToFragment("#")
+                                                    }
+
+                                                    HoverHandler {
+                                                        cursorShape: Qt.PointingHandCursor
+                                                    }
+
                                                     HoverHandler {
                                                         id: aHover
                                                     }
@@ -1099,6 +1133,8 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText2.implicitWidth + 28
                                                     implicitHeight: aText2.implicitHeight + 12
+                                                    Accessible.role: Accessible.Link
+                                                    Accessible.name: "Accessibility"
                                                     width: Math.min(implicitWidth, liFlow2.width)
                                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
@@ -1126,6 +1162,14 @@ ApplicationWindow {
                                                         renderType: Text.NativeRendering
                                                     }
 
+                                                    TapHandler {
+                                                        onTapped: root.scrollToFragment("#")
+                                                    }
+
+                                                    HoverHandler {
+                                                        cursorShape: Qt.PointingHandCursor
+                                                    }
+
                                                     HoverHandler {
                                                         id: a2Hover
                                                     }
@@ -1148,6 +1192,8 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText3.implicitWidth + 28
                                                     implicitHeight: aText3.implicitHeight + 12
+                                                    Accessible.role: Accessible.Link
+                                                    Accessible.name: "Localization"
                                                     width: Math.min(implicitWidth, liFlow3.width)
                                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
@@ -1175,6 +1221,14 @@ ApplicationWindow {
                                                         renderType: Text.NativeRendering
                                                     }
 
+                                                    TapHandler {
+                                                        onTapped: root.scrollToFragment("#")
+                                                    }
+
+                                                    HoverHandler {
+                                                        cursorShape: Qt.PointingHandCursor
+                                                    }
+
                                                     HoverHandler {
                                                         id: a3Hover
                                                     }
@@ -1197,6 +1251,8 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText4.implicitWidth + 28
                                                     implicitHeight: aText4.implicitHeight + 12
+                                                    Accessible.role: Accessible.Link
+                                                    Accessible.name: "Security"
                                                     width: Math.min(implicitWidth, liFlow4.width)
                                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
@@ -1224,6 +1280,14 @@ ApplicationWindow {
                                                         renderType: Text.NativeRendering
                                                     }
 
+                                                    TapHandler {
+                                                        onTapped: root.scrollToFragment("#")
+                                                    }
+
+                                                    HoverHandler {
+                                                        cursorShape: Qt.PointingHandCursor
+                                                    }
+
                                                     HoverHandler {
                                                         id: a4Hover
                                                     }
@@ -1246,6 +1310,8 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText5.implicitWidth + 28
                                                     implicitHeight: aText5.implicitHeight + 12
+                                                    Accessible.role: Accessible.Link
+                                                    Accessible.name: "Release notes"
                                                     width: Math.min(implicitWidth, liFlow5.width)
                                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
@@ -1273,6 +1339,14 @@ ApplicationWindow {
                                                         renderType: Text.NativeRendering
                                                     }
 
+                                                    TapHandler {
+                                                        onTapped: root.scrollToFragment("#")
+                                                    }
+
+                                                    HoverHandler {
+                                                        cursorShape: Qt.PointingHandCursor
+                                                    }
+
                                                     HoverHandler {
                                                         id: a5Hover
                                                     }
@@ -1295,6 +1369,8 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText6.implicitWidth + 28
                                                     implicitHeight: aText6.implicitHeight + 12
+                                                    Accessible.role: Accessible.Link
+                                                    Accessible.name: "Rollback"
                                                     width: Math.min(implicitWidth, liFlow6.width)
                                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
@@ -1322,6 +1398,14 @@ ApplicationWindow {
                                                         renderType: Text.NativeRendering
                                                     }
 
+                                                    TapHandler {
+                                                        onTapped: root.scrollToFragment("#")
+                                                    }
+
+                                                    HoverHandler {
+                                                        cursorShape: Qt.PointingHandCursor
+                                                    }
+
                                                     HoverHandler {
                                                         id: a6Hover
                                                     }
@@ -1344,6 +1428,8 @@ ApplicationWindow {
                                                     radius: 999
                                                     implicitWidth: aText7.implicitWidth + 28
                                                     implicitHeight: aText7.implicitHeight + 12
+                                                    Accessible.role: Accessible.Link
+                                                    Accessible.name: "Telemetry"
                                                     width: Math.min(implicitWidth, liFlow7.width)
                                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
@@ -1369,6 +1455,14 @@ ApplicationWindow {
                                                         anchors.rightMargin: 14
                                                         anchors.topMargin: 6
                                                         renderType: Text.NativeRendering
+                                                    }
+
+                                                    TapHandler {
+                                                        onTapped: root.scrollToFragment("#")
+                                                    }
+
+                                                    HoverHandler {
+                                                        cursorShape: Qt.PointingHandCursor
                                                     }
 
                                                     HoverHandler {

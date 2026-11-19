@@ -313,6 +313,8 @@ ApplicationWindow {
                                             }
                                         }
                                     }
+                                    Accessible.role: Accessible.Link
+                                    Accessible.name: "Sign in"
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.preferredHeight: 40
@@ -343,6 +345,14 @@ ApplicationWindow {
                                         anchors.topMargin: 2
                                         anchors.bottomMargin: 2
                                         renderType: Text.NativeRendering
+                                    }
+
+                                    TapHandler {
+                                        onTapped: root.scrollToFragment("#signin")
+                                    }
+
+                                    HoverHandler {
+                                        cursorShape: Qt.PointingHandCursor
                                     }
 
                                     HoverHandler {
@@ -572,6 +582,8 @@ ApplicationWindow {
                                                         }
                                                     }
                                                 }
+                                                Accessible.role: Accessible.Link
+                                                Accessible.name: "Start free trial"
                                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
                                                 height: 52
 
@@ -602,6 +614,14 @@ ApplicationWindow {
                                                     renderType: Text.NativeRendering
                                                 }
 
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#signup")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
+                                                }
+
                                                 HoverHandler {
                                                     id: btn2Hover
                                                 }
@@ -628,6 +648,8 @@ ApplicationWindow {
                                                         }
                                                     }
                                                 }
+                                                Accessible.role: Accessible.Link
+                                                Accessible.name: "Watch the demo"
                                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
                                                 height: 52
 
@@ -656,6 +678,14 @@ ApplicationWindow {
                                                     anchors.topMargin: 2
                                                     anchors.bottomMargin: 2
                                                     renderType: Text.NativeRendering
+                                                }
+
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#demo")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
 
                                                 HoverHandler {
@@ -1918,6 +1948,8 @@ ApplicationWindow {
                                                         }
                                                     }
                                                 }
+                                                Accessible.role: Accessible.Link
+                                                Accessible.name: "Get started"
                                                 Layout.fillWidth: true
                                                 Layout.maximumWidth: Math.ceil(implicitWidth)
                                                 Layout.preferredHeight: 52
@@ -1949,6 +1981,14 @@ ApplicationWindow {
                                                     anchors.topMargin: 2
                                                     anchors.bottomMargin: 2
                                                     renderType: Text.NativeRendering
+                                                }
+
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#signup")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
 
                                                 HoverHandler {

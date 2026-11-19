@@ -243,6 +243,30 @@ ApplicationWindow {
         return heights
     }
 
+    function scrollToFragment(eldurLink) {
+        let eldurName = eldurLink.slice(1);
+        const eldurTargets = Object.create(null);
+        flickableInput.forceActiveFocus();
+        if (!(eldurName in eldurTargets)) {
+            try {
+                eldurName = decodeURIComponent(eldurName);
+            } catch (e) {
+                eldurName = null;
+            }
+        }
+        const eldurTarget = eldurName === null ? undefined : eldurTargets[eldurName];
+        if (eldurTarget) {
+            for (let eldurAt = eldurTarget.parent; eldurAt && eldurAt !== flickable; eldurAt = eldurAt.parent) {
+                if (eldurAt instanceof Flickable)
+                    eldurAt.contentY = Math.max(0, Math.min(eldurTarget.mapToItem(eldurAt.contentItem, 0, 0).y, eldurAt.contentHeight - eldurAt.height));
+            }
+            const eldurY = eldurTarget.mapToItem(flickable.contentItem, 0, 0).y;
+            flickable.contentY = Math.max(0, Math.min(eldurY, flickable.contentHeight - flickable.height));
+        } else if (eldurName !== null && (eldurName === "" || eldurName.toLowerCase() === "top")) {
+            flickable.contentY = 0;
+        }
+    }
+
     Flickable {
         id: flickable
         anchors.fill: parent
@@ -454,6 +478,8 @@ ApplicationWindow {
 
                                         implicitWidth: aText.implicitWidth + 16
                                         implicitHeight: aText.implicitHeight + 8
+                                        Accessible.role: Accessible.Link
+                                        Accessible.name: "Installation"
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: implicitHeight
 
@@ -479,6 +505,14 @@ ApplicationWindow {
                                             anchors.topMargin: 4
                                             renderType: Text.NativeRendering
                                         }
+
+                                        TapHandler {
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
+                                        }
                                     }
                                 }
 
@@ -499,6 +533,8 @@ ApplicationWindow {
 
                                         implicitWidth: aText2.implicitWidth + 16
                                         implicitHeight: aText2.implicitHeight + 8
+                                        Accessible.role: Accessible.Link
+                                        Accessible.name: "Quick start"
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: implicitHeight
 
@@ -524,6 +560,14 @@ ApplicationWindow {
                                             anchors.topMargin: 4
                                             renderType: Text.NativeRendering
                                         }
+
+                                        TapHandler {
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
+                                        }
                                     }
                                 }
 
@@ -546,6 +590,8 @@ ApplicationWindow {
                                         radius: 6
                                         implicitWidth: activeText.implicitWidth + 16
                                         implicitHeight: activeText.implicitHeight + 8
+                                        Accessible.role: Accessible.Link
+                                        Accessible.name: "Configuration"
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: implicitHeight
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
@@ -572,6 +618,14 @@ ApplicationWindow {
                                             anchors.rightMargin: 8
                                             anchors.topMargin: 4
                                             renderType: Text.NativeRendering
+                                        }
+
+                                        TapHandler {
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
                                         }
                                     }
                                 }
@@ -637,6 +691,8 @@ ApplicationWindow {
 
                                         implicitWidth: aText3.implicitWidth + 16
                                         implicitHeight: aText3.implicitHeight + 8
+                                        Accessible.role: Accessible.Link
+                                        Accessible.name: "Scheduling jobs"
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: implicitHeight
 
@@ -662,6 +718,14 @@ ApplicationWindow {
                                             anchors.topMargin: 4
                                             renderType: Text.NativeRendering
                                         }
+
+                                        TapHandler {
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
+                                        }
                                     }
                                 }
 
@@ -682,6 +746,8 @@ ApplicationWindow {
 
                                         implicitWidth: aText4.implicitWidth + 16
                                         implicitHeight: aText4.implicitHeight + 8
+                                        Accessible.role: Accessible.Link
+                                        Accessible.name: "Retries and backoff"
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: implicitHeight
 
@@ -707,6 +773,14 @@ ApplicationWindow {
                                             anchors.topMargin: 4
                                             renderType: Text.NativeRendering
                                         }
+
+                                        TapHandler {
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
+                                        }
                                     }
                                 }
 
@@ -727,6 +801,8 @@ ApplicationWindow {
 
                                         implicitWidth: aText5.implicitWidth + 16
                                         implicitHeight: aText5.implicitHeight + 8
+                                        Accessible.role: Accessible.Link
+                                        Accessible.name: "Observability"
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: implicitHeight
 
@@ -751,6 +827,14 @@ ApplicationWindow {
                                             anchors.rightMargin: 8
                                             anchors.topMargin: 4
                                             renderType: Text.NativeRendering
+                                        }
+
+                                        TapHandler {
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
                                         }
                                     }
                                 }
@@ -813,6 +897,8 @@ ApplicationWindow {
 
                                         implicitWidth: aText6.implicitWidth + 16
                                         implicitHeight: aText6.implicitHeight + 8
+                                        Accessible.role: Accessible.Link
+                                        Accessible.name: "CLI"
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: implicitHeight
 
@@ -838,6 +924,14 @@ ApplicationWindow {
                                             anchors.topMargin: 4
                                             renderType: Text.NativeRendering
                                         }
+
+                                        TapHandler {
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
+                                        }
                                     }
                                 }
 
@@ -858,6 +952,8 @@ ApplicationWindow {
 
                                         implicitWidth: aText7.implicitWidth + 16
                                         implicitHeight: aText7.implicitHeight + 8
+                                        Accessible.role: Accessible.Link
+                                        Accessible.name: "HTTP API"
                                         Layout.fillWidth: true
                                         Layout.preferredHeight: implicitHeight
 
@@ -882,6 +978,14 @@ ApplicationWindow {
                                             anchors.rightMargin: 8
                                             anchors.topMargin: 4
                                             renderType: Text.NativeRendering
+                                        }
+
+                                        TapHandler {
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
                                         }
                                     }
                                 }

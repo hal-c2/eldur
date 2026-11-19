@@ -17,6 +17,36 @@ ApplicationWindow {
     width: 1280
     height: 800
 
+    function scrollToFragment(eldurLink) {
+        let eldurName = eldurLink.slice(1);
+        const eldurTargets = Object.assign(Object.create(null), {
+            "t-curve": tCurve,
+            "t-delayed": tDelayed,
+            "t-linear": tLinear,
+            "t-starting": tStarting,
+            "t-stepped": tStepped
+        });
+        flickableInput.forceActiveFocus();
+        if (!(eldurName in eldurTargets)) {
+            try {
+                eldurName = decodeURIComponent(eldurName);
+            } catch (e) {
+                eldurName = null;
+            }
+        }
+        const eldurTarget = eldurName === null ? undefined : eldurTargets[eldurName];
+        if (eldurTarget) {
+            for (let eldurAt = eldurTarget.parent; eldurAt && eldurAt !== flickable; eldurAt = eldurAt.parent) {
+                if (eldurAt instanceof Flickable)
+                    eldurAt.contentY = Math.max(0, Math.min(eldurTarget.mapToItem(eldurAt.contentItem, 0, 0).y, eldurAt.contentHeight - eldurAt.height));
+            }
+            const eldurY = eldurTarget.mapToItem(flickable.contentItem, 0, 0).y;
+            flickable.contentY = Math.max(0, Math.min(eldurY, flickable.contentHeight - flickable.height));
+        } else if (eldurName !== null && (eldurName === "" || eldurName.toLowerCase() === "top")) {
+            flickable.contentY = 0;
+        }
+    }
+
     Flickable {
         id: flickable
         anchors.fill: parent
@@ -60,6 +90,8 @@ ApplicationWindow {
                         color: tLinearHover.hovered ? "#55aa88" : "#335566"
                         implicitWidth: tLinearText.implicitWidth + 16
                         implicitHeight: tLinearText.implicitHeight + 16
+                        Accessible.role: Accessible.Link
+                        Accessible.name: "Linear"
                         Layout.preferredWidth: 256
                         Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
 
@@ -92,6 +124,14 @@ ApplicationWindow {
                             renderType: Text.NativeRendering
                         }
 
+                        TapHandler {
+                            onTapped: root.scrollToFragment("#a")
+                        }
+
+                        HoverHandler {
+                            cursorShape: Qt.PointingHandCursor
+                        }
+
                         HoverHandler {
                             id: tLinearHover
                         }
@@ -103,6 +143,8 @@ ApplicationWindow {
                         color: tDelayedHover.hovered ? "#88aa55" : "#336655"
                         implicitWidth: tDelayedText.implicitWidth + 16
                         implicitHeight: tDelayedText.implicitHeight + 16
+                        Accessible.role: Accessible.Link
+                        Accessible.name: "Delayed"
                         Layout.preferredWidth: 256
                         Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
                         Layout.topMargin: 8
@@ -144,6 +186,14 @@ ApplicationWindow {
                             renderType: Text.NativeRendering
                         }
 
+                        TapHandler {
+                            onTapped: root.scrollToFragment("#b")
+                        }
+
+                        HoverHandler {
+                            cursorShape: Qt.PointingHandCursor
+                        }
+
                         HoverHandler {
                             id: tDelayedHover
                         }
@@ -155,6 +205,8 @@ ApplicationWindow {
                         color: tSteppedHover.hovered ? "#aa5588" : "#663355"
                         implicitWidth: tSteppedText.implicitWidth + 16
                         implicitHeight: tSteppedText.implicitHeight + 16
+                        Accessible.role: Accessible.Link
+                        Accessible.name: "Stepped"
                         Layout.preferredWidth: 256
                         Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
                         Layout.topMargin: 8
@@ -190,6 +242,14 @@ ApplicationWindow {
                             renderType: Text.NativeRendering
                         }
 
+                        TapHandler {
+                            onTapped: root.scrollToFragment("#c")
+                        }
+
+                        HoverHandler {
+                            cursorShape: Qt.PointingHandCursor
+                        }
+
                         HoverHandler {
                             id: tSteppedHover
                         }
@@ -201,6 +261,8 @@ ApplicationWindow {
                         color: "#553366"
                         implicitWidth: tStartingText.implicitWidth + 16
                         implicitHeight: tStartingText.implicitHeight + 16
+                        Accessible.role: Accessible.Link
+                        Accessible.name: "Steps at the start, delayed"
                         Layout.preferredWidth: 256
                         Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
                         Layout.topMargin: 8
@@ -243,6 +305,14 @@ ApplicationWindow {
                             renderType: Text.NativeRendering
                         }
 
+                        TapHandler {
+                            onTapped: root.scrollToFragment("#d")
+                        }
+
+                        HoverHandler {
+                            cursorShape: Qt.PointingHandCursor
+                        }
+
                         HoverHandler {
                             id: tStartingHover
                         }
@@ -254,6 +324,8 @@ ApplicationWindow {
                         color: "#665533"
                         implicitWidth: tCurveText.implicitWidth + 16
                         implicitHeight: tCurveText.implicitHeight + 16
+                        Accessible.role: Accessible.Link
+                        Accessible.name: "A curve"
                         Layout.preferredWidth: 256
                         Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
                         Layout.topMargin: 8
@@ -289,6 +361,14 @@ ApplicationWindow {
                             anchors.rightMargin: 8
                             anchors.topMargin: 8
                             renderType: Text.NativeRendering
+                        }
+
+                        TapHandler {
+                            onTapped: root.scrollToFragment("#e")
+                        }
+
+                        HoverHandler {
+                            cursorShape: Qt.PointingHandCursor
                         }
 
                         HoverHandler {
