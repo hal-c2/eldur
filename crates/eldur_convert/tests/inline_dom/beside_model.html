@@ -1,0 +1,18 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+em{color:rgb(200,0,0)}
+</style></head><body>
+<p id="plain">one</p>
+<span id="tagged">one</span>
+<p id="mixed">one <em>e</em></p>
+<script>
+// A block put into an element whose text is a line of nodes is an item beside
+// that line: the element's text and markup are still all its nodes', in order.
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+["plain", "tagged", "mixed"].forEach(function(id) {
+  var p = document.getElementById(id);
+  var e = document.createElement("em"); e.textContent = "x"; p.appendChild(e);
+  L(id, "inline", JSON.stringify(p.textContent), p.innerHTML);
+  var d = document.createElement("div"); d.textContent = "two"; p.appendChild(d);
+  L(id, "block", JSON.stringify(p.textContent), p.innerHTML, p.childNodes.length);
+});
+</script></body></html>

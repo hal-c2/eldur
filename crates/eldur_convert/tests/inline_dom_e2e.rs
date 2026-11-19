@@ -145,6 +145,11 @@ fn created_and_removed_inline_nodes_match_chromium() {
     page("mutate");
 }
 
+#[test]
+fn a_block_put_beside_a_line_of_nodes_is_in_its_elements_text_and_markup() {
+    page("beside_model");
+}
+
 // #18: the text the converter wrote on the element is one of its children.
 #[test]
 fn replace_children_replaces_the_text_the_page_was_written_with() {
