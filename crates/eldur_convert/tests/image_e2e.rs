@@ -264,9 +264,9 @@ const BARE: &str = r##"<svg xmlns="http://www.w3.org/2000/svg"><rect width="1000
 /// is 45, while `+80`, a percentage or a zero gives no ratio. A natural
 /// width or height the file lacks is the default object size's, 300×150
 /// (CSS 2.2 §10.3.2, §10.6.2); a zero one is kept.
-const BARE_PAGE: &str = r#"<!doctype html><html><head><style>
+const BARE_PAGE: &str = r##"<!doctype html><html><head><style>
 body { margin: 0 }
-img { display: block }
+img, svg { display: block }
 </style></head><body>
 <img id=n src="bare.svg" width="80junk" height="40" style="height:auto">
 <img id=o src="bare.svg" width="80" height="40.5px" style="width:auto">
@@ -298,10 +298,13 @@ img { display: block }
 <img id=zu src="vb-negw.svg">
 <img id=zv src="negwh.svg">
 <img id=zw src="vb-negw.svg" style="width:100px">
+<svg id=ia xmlns="http://www.w3.org/2000/svg" width="-80" height="40" viewBox="0 0 20 10"><rect width="20" height="10" fill="#c60"/></svg>
+<svg id=ib xmlns="http://www.w3.org/2000/svg" width="80" height="-40" viewBox="0 0 20 10"><rect width="20" height="10" fill="#c60"/></svg>
+<svg id=ic xmlns="http://www.w3.org/2000/svg" width="-80" height="-40"><rect width="20" height="10" fill="#c60"/></svg>
 <script>
 // Named so that they get an objectName the test can find.
-var named = "n o p q r s t za zb zc zd ze zf zg zh zi zj zk zl zm zn zo zp zq zr zs zt zu zv zw".split(" ").map(function (id) { return document.getElementById(id) });
-</script></body></html>"#;
+var named = "n o p q r s t za zb zc zd ze zf zg zh zi zj zk zl zm zn zo zp zq zr zs zt zu zv zw ia ib ic".split(" ").map(function (id) { return document.getElementById(id) });
+</script></body></html>"##;
 
 /// Chromium, `getBoundingClientRect()` at 1280×800.
 const BARE_TEST: &str = r##"
@@ -383,6 +386,14 @@ TestCase {
         compareBox("zu", [0, 1540.5, 300, 150])
         compareBox("zv", [0, 1690.5, 0, 0])
         compareBox("zw", [0, 1690.5, 100, 150])
+    }
+
+    // Inline, a negative length is ignored rather than read as zero: the
+    // other side and the viewBox decide, and with neither it is 0×0.
+    function test_inline_svg_negative_lengths() {
+        compareBox("ia", [0, 1840.5, 80, 40])
+        compareBox("ib", [0, 1880.5, 80, 40])
+        compareBox("ic", [0, 1920.5, 0, 0])
     }
 }
 }
