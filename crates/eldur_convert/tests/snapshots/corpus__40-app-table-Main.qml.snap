@@ -653,7 +653,7 @@ ApplicationWindow {
                     objectName: "summary"
                     Layout.preferredHeight: text === "" ? 0 : -1
                     Layout.fillWidth: true
-                    Layout.topMargin: 10
+                    Layout.topMargin: (summary.text !== "" || summary.children.length > 0) ? 10 : 0
                     renderType: Text.NativeRendering
                 }
             }
