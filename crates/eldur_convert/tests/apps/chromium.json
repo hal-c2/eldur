@@ -38105,8 +38105,8 @@
     "#a": [
      {
       "box": [
-       8,
-       8,
+       12,
+       12,
        23.42,
        21
       ],
@@ -38128,8 +38128,8 @@
     "#a": [
      {
       "box": [
-       8,
-       8,
+       12,
+       12,
        23.42,
        21
       ],
@@ -38153,8 +38153,8 @@
     "#a": [
      {
       "box": [
-       8,
-       8,
+       12,
+       12,
        23.42,
        21
       ],
@@ -38178,8 +38178,8 @@
     "#a": [
      {
       "box": [
-       8,
-       8,
+       12,
+       12,
        23.42,
        21
       ],
@@ -38203,8 +38203,8 @@
     "#a": [
      {
       "box": [
-       8,
-       8,
+       12,
+       12,
        23.42,
        21
       ],
@@ -38228,8 +38228,8 @@
     "#a": [
      {
       "box": [
-       8,
-       8,
+       12,
+       12,
        23.42,
        21
       ],
@@ -38249,8 +38249,8 @@
     "#a": [
      {
       "box": [
-       8,
-       8,
+       12,
+       12,
        23.42,
        21
       ],
@@ -38278,8 +38278,8 @@
     "#a": [
      {
       "box": [
-       8,
-       8,
+       12,
+       12,
        23.42,
        21
       ],
@@ -38303,8 +38303,8 @@
     "#a": [
      {
       "box": [
-       8,
-       8,
+       12,
+       12,
        23.42,
        21
       ],
@@ -38328,8 +38328,8 @@
     "#a": [
      {
       "box": [
-       8,
-       8,
+       12,
+       12,
        23.42,
        21
       ],
@@ -38353,8 +38353,8 @@
     "#a": [
      {
       "box": [
-       8,
-       8,
+       12,
+       12,
        23.42,
        21
       ],
@@ -38382,8 +38382,8 @@
     "#a": [
      {
       "box": [
-       8,
-       8,
+       12,
+       12,
        23.42,
        21
       ],
@@ -38403,8 +38403,8 @@
     "#a": [
      {
       "box": [
-       8,
-       8,
+       12,
+       12,
        23.42,
        21
       ],
@@ -38428,8 +38428,8 @@
     "#a": [
      {
       "box": [
-       8,
-       8,
+       12,
+       12,
        23.42,
        21
       ],
@@ -38456,8 +38456,8 @@
     "#a": [
      {
       "box": [
-       8,
-       8,
+       12,
+       12,
        23.42,
        21
       ],
@@ -38481,8 +38481,8 @@
     "#a": [
      {
       "box": [
-       8,
-       8,
+       12,
+       12,
        23.42,
        21
       ],
@@ -38509,8 +38509,8 @@
     "#a": [
      {
       "box": [
-       8,
-       8,
+       12,
+       12,
        23.42,
        21
       ],
@@ -38534,8 +38534,8 @@
     "#a": [
      {
       "box": [
-       8,
-       8,
+       12,
+       12,
        23.42,
        21
       ],
@@ -38559,8 +38559,8 @@
     "#a": [
      {
       "box": [
-       8,
-       8,
+       12,
+       12,
        23.42,
        21
       ],
@@ -38569,6 +38569,193 @@
      }
     ],
     "(focus)": "u"
+   }
+  },
+  {
+   "name": "x1 hides itself, its blur focuses y1",
+   "log": [
+    "blur u from x1 active BODY",
+    "focusout u from x1 active BODY",
+    "focus x1 from u active x1",
+    "focusin x1 from u active x1",
+    "click x1",
+    "blur x1 from - active BODY",
+    "focus y1 from - active y1",
+    "focusin y1 from - active y1",
+    "focusout x1 from - active y1"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       12,
+       12,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "y1"
+   }
+  },
+  {
+   "name": "x2 disables itself, its blur focuses and blurs y2",
+   "log": [
+    "blur y1 from x2 active BODY",
+    "focusout y1 from x2 active BODY",
+    "focus x2 from y1 active x2",
+    "focusin x2 from y1 active x2",
+    "click x2",
+    "blur x2 from - active BODY",
+    "focus y2 from - active y2",
+    "focusin y2 from - active y2",
+    "blur y2 from - active BODY",
+    "focusout y2 from - active BODY",
+    "focusout x2 from - active BODY"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       12,
+       12,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "x3 disables itself, its blur focuses y3",
+   "log": [
+    "focus x3 from - active x3",
+    "focusin x3 from - active x3",
+    "click x3",
+    "blur x3 from - active BODY",
+    "focus y3 from - active y3",
+    "focusin y3 from - active y3",
+    "focusout x3 from - active y3"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       12,
+       12,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "y3"
+   }
+  },
+  {
+   "name": "click x4",
+   "log": [
+    "blur y3 from x4 active BODY",
+    "focusout y3 from x4 active BODY",
+    "focus x4 from y3 active x4",
+    "focusin x4 from y3 active x4",
+    "click x4"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       12,
+       12,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "x4"
+   }
+  },
+  {
+   "name": "press y4, which hides x4, whose blur focuses z4",
+   "log": [
+    "blur x4 from y4 active BODY",
+    "focus z4 from - active z4",
+    "focusin z4 from - active z4",
+    "focusout x4 from - active z4",
+    "click y4"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       12,
+       12,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "z4"
+   }
+  },
+  {
+   "name": "click x5",
+   "log": [
+    "blur z4 from x5 active BODY",
+    "focusout z4 from x5 active BODY",
+    "focus x5 from z4 active x5",
+    "focusin x5 from z4 active x5",
+    "click x5"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       12,
+       12,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "x5"
+   }
+  },
+  {
+   "name": "press y5, which hides x5, whose blur blurs y5",
+   "log": [
+    "blur x5 from y5 active BODY",
+    "focusout x5 from y5 active BODY",
+    "focus y5 from x5 active y5",
+    "focusin y5 from x5 active y5",
+    "click y5"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       12,
+       12,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "y5"
    }
   }
  ],

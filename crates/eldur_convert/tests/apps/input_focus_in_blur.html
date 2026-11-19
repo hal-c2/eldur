@@ -2,7 +2,7 @@
 <html>
 <head><style>
 body { margin: 8px; font: 16px sans-serif; }
-button, input { display: block; margin: 4px 0; }
+button, input { margin: 4px; }
 </style></head>
 <body>
 <button id="a">a</button>
@@ -29,6 +29,17 @@ button, input { display: block; margin: 4px 0; }
 <button id="t">t</button>
 <button id="arm8">arm8</button>
 <button id="u">u</button>
+<button id="x1">x1</button>
+<button id="y1">y1</button>
+<button id="x2">x2</button>
+<button id="y2">y2</button>
+<button id="x3">x3</button>
+<button id="y3">y3</button>
+<button id="x4">x4</button>
+<button id="y4">y4</button>
+<button id="z4">z4</button>
+<button id="x5">x5</button>
+<button id="y5">y5</button>
 <script>
 // Listeners that move the focus while the page hears that it moved.
 function id(el) { return el && el.id ? el.id : el ? el.nodeName : "-"; }
@@ -77,6 +88,30 @@ on("arm7").addEventListener("click", function () {
 // Blurring where the Tab goes before it gets there does nothing.
 on("arm8").addEventListener("click", function () {
   on("arm8").addEventListener("blur", function () { on("u").blur(); }, { once: true });
+});
+// A focused control hidden or disabled by a script loses the focus a
+// moment later: its blur listener moves it on, or focuses and blurs again.
+on("x1").addEventListener("click", function () {
+  on("x1").addEventListener("blur", function () { on("y1").focus(); }, { once: true });
+  on("x1").style.display = "none";
+});
+on("x2").addEventListener("click", function () {
+  on("x2").addEventListener("blur", function () { on("y2").focus(); on("y2").blur(); }, { once: true });
+  on("x2").disabled = true;
+});
+on("x3").addEventListener("click", function () {
+  on("x3").addEventListener("blur", function () { on("y3").focus(); }, { once: true });
+  on("x3").disabled = true;
+});
+// Hidden by the press that moves the focus to another control: its blur
+// listener, heard late, still moves the focus on, or blurs where it went.
+on("x4").addEventListener("click", function () {
+  on("x4").addEventListener("blur", function () { on("z4").focus(); }, { once: true });
+  on("y4").addEventListener("mousedown", function () { on("x4").style.visibility = "hidden"; }, { once: true });
+});
+on("x5").addEventListener("click", function () {
+  on("x5").addEventListener("blur", function () { on("y5").blur(); }, { once: true });
+  on("y5").addEventListener("mousedown", function () { on("x5").style.visibility = "hidden"; }, { once: true });
 });
 document.addEventListener("click", function (ev) {
   console.log("click", id(ev.target));
