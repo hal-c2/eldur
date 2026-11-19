@@ -17158,7 +17158,9 @@ function _inWindowActive() {
 // over at the page's first stop of no number.
 function _inTabFrom(stops, from, back) {
     var order = _elementsUnder(_root, function(node) { return !node.__eldurInline; }, false);
-    var here = order.indexOf(from);
+    // A focused link in a line that is no stop (tabindex -1, focused by a
+    // script) still stands where its icon does.
+    var here = order.indexOf(from && from.__eldurInline ? _inInlineHolder(from) : from);
     var best = -1;
     var bestAt = back ? -1 : order.length;
     for (var i = 0; i < stops.length; ++i) {

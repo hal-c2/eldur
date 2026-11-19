@@ -4,6 +4,8 @@
  {"name":"tab past skip","key":"Tab"},
  {"name":"tab to after","key":"Tab"},
  {"name":"back to frag","key":"Shift+Tab"},
- {"name":"enter on frag","key":"Enter","settle":200}
+ {"name":"enter on frag","key":"Enter","settle":200},
+ {"name":"script focuses skip","click":"#toskip"},
+ {"name":"tab on from skip","key":"Tab"}
 ],
 "watch":[{"sel":"#end"}]}

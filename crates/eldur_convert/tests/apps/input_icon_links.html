@@ -12,12 +12,14 @@ body { margin: 8px; font: 16px sans-serif; }
 <button id="after">after</button></p>
 <div id="tall"></div>
 <div id="end">end</div>
+<button id="toskip">focus skip</button>
 <script>
 function line(ev) {
   console.log(ev.type, ev.target.id, ev.currentTarget === document ? "document" : ev.currentTarget.id, ev.detail, ev.defaultPrevented, location.hash);
 }
 document.getElementById("keep").addEventListener("click", function (ev) { line(ev); ev.preventDefault(); });
 document.addEventListener("click", line);
+document.getElementById("toskip").addEventListener("click", function () { document.getElementById("skip").focus(); });
 document.addEventListener("focusin", function (ev) { console.log("focus", ev.target.id); });
 </script>
 </body>

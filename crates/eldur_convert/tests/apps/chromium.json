@@ -40532,7 +40532,7 @@
      {
       "box": [
        8,
-       774,
+       753,
        1264,
        18
       ],
@@ -40541,6 +40541,50 @@
      }
     ],
     "(focus)": ""
+   }
+  },
+  {
+   "name": "script focuses skip",
+   "log": [
+    "focus toskip",
+    "focus skip",
+    "click toskip document 1 false #end"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1554,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "skip"
+   }
+  },
+  {
+   "name": "tab on from skip",
+   "log": [
+    "focus frag"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1554,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "frag"
    }
   }
  ],
