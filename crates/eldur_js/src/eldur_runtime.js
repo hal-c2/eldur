@@ -18848,13 +18848,19 @@ function _vSettle() {
     }
 }
 
-// The model already holding `raw`'s text.
 // A block put into an element whose text is a model is a real item beside
 // that model: the element's text and markup are then its child nodes', in order.
+// Most such elements hold no item but their text, which is told by a count.
 function _vBesideModel(raw, run) {
-    return _rawKids(raw, true).some(function(k) { return k !== run; });
+    var container = _childContainer(raw);
+    var own = run && run.parent === container ? 1 : 0;
+    if (!container || !container.children || container.children.length <= own) {
+        return false;
+    }
+    return _rawKids(raw, true).some(function(k) { return k !== run && !k.__eldurInline; });
 }
 
+// The model already holding `raw`'s text.
 function _vExisting(raw) {
     if (!_vHasRules() && typeof raw.eldurInline !== "string" && !_itemMeta.has(raw)) {
         return null;
