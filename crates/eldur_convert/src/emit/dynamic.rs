@@ -603,11 +603,11 @@ struct Diffs {
 }
 
 impl Diffs {
-    fn diff(
+    fn diff<'o>(
         &mut self,
         world: usize,
-        base: &Object,
-        other: &Object,
+        base: &'o Object,
+        other: &'o Object,
         path: &mut Path,
         owner: Option<NodeId>,
         doc: &Document,
@@ -626,31 +626,31 @@ impl Diffs {
             self.reshaped.insert(owner);
             return;
         }
-        let props = |o: &Object| -> Vec<(String, Value)> {
+        fn props(o: &Object) -> Vec<(&str, &Value)> {
             o.members
                 .iter()
                 .filter_map(|m| match m {
-                    Member::Property { name, value } => Some((name.clone(), value.clone())),
+                    Member::Property { name, value } => Some((name.as_str(), value)),
                     _ => None,
                 })
                 .collect()
-        };
+        }
         let (bp, op) = (props(base), props(other));
-        let mut names: Vec<&str> = bp.iter().map(|(n, _)| n.as_str()).collect();
-        for (n, _) in &op {
-            if !names.contains(&n.as_str()) {
+        let mut names: Vec<&str> = bp.iter().map(|&(n, _)| n).collect();
+        for &(n, _) in &op {
+            if !names.contains(&n) {
                 names.push(n);
             }
         }
-        let get = |list: &[(String, Value)], name: &str| {
-            list.iter().find(|(n, _)| n == name).map(|(_, v)| v.clone())
+        let get = |list: &[(&str, &'o Value)], name: &str| -> Option<&'o Value> {
+            list.iter().find(|(n, _)| *n == name).map(|&(_, v)| v)
         };
         for name in names {
             let (b, o) = (get(&bp, name), get(&op, name));
             if b == o {
                 continue;
             }
-            match (&b, &o) {
+            match (b, o) {
                 (Some(Value::Object(b)), Some(Value::Object(o))) => {
                     path.push(Step::Prop(name.to_owned()));
                     self.diff(world, b, o, path, owner, doc);
@@ -678,10 +678,10 @@ impl Diffs {
                         .or_insert_with(|| Change {
                             owner,
                             ty: base.type_name.clone(),
-                            base: b.clone(),
+                            base: b.cloned(),
                             worlds: BTreeMap::new(),
                         });
-                    change.worlds.insert(world, o);
+                    change.worlds.insert(world, o.cloned());
                 }
             }
         }
