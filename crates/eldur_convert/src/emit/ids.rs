@@ -1,6 +1,6 @@
 //! Unique QML ids.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::OnceLock;
 
 use super::qt_members::QT_MEMBERS;
@@ -10,6 +10,10 @@ use super::qt_members::QT_TYPES;
 #[derive(Debug, Default)]
 pub(crate) struct Ids {
     used: HashSet<String>,
+    /// The number after the last one `claim` gave each base: the ones below
+    /// are taken for good, as ids are never given back, so a page with a
+    /// thousand `p`s does not try `p2` to `p999` for the thousandth.
+    next: HashMap<String, usize>,
 }
 
 impl Ids {
@@ -32,13 +36,14 @@ impl Ids {
         if self.used.insert(first.clone()) {
             return first;
         }
-        let mut n = 2;
+        let mut n = self.next.get(&base).copied().unwrap_or(2);
         loop {
             let candidate = format!("{base}{n}");
+            n += 1;
             if !is_member(&candidate) && self.used.insert(candidate.clone()) {
+                self.next.insert(base, n);
                 return candidate;
             }
-            n += 1;
         }
     }
 
@@ -121,5 +126,18 @@ mod tests {
         assert_eq!(ids.claim("scroller"), "scroller_");
         assert_eq!(ids.claim("card"), "card");
         assert!(!ids.try_exact("width"));
+    }
+
+    #[test]
+    fn a_number_taken_another_way_is_skipped_however_the_ids_go() {
+        let mut ids = Ids::default();
+        ids.reserve("p3");
+        assert_eq!(ids.claim("p"), "p");
+        assert_eq!(ids.claim("p"), "p2");
+        assert!(ids.try_exact("p5"));
+        assert_eq!(ids.claim("p"), "p4");
+        assert_eq!(ids.claim("p"), "p6");
+        assert_eq!(ids.claim("p1"), "p1");
+        assert_eq!(ids.claim("p"), "p7");
     }
 }
