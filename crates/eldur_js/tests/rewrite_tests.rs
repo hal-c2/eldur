@@ -63,6 +63,7 @@ fn classic(name: &str, source: &str) -> ScriptInput {
         name: name.to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
     }
 }
 
@@ -72,6 +73,7 @@ fn module_script(name: &str, source: &str) -> ScriptInput {
         name: name.to_string(),
         kind: ScriptKind::Module,
         line_offset: 1,
+        imports: Vec::new(),
     }
 }
 
@@ -84,6 +86,7 @@ fn handler(key: u32, event: &str, source: &str) -> ScriptInput {
             event: event.to_string(),
         },
         line_offset: 1,
+        imports: Vec::new(),
     }
 }
 
@@ -801,7 +804,7 @@ function formatPx(n) {
 }
 const fmt = formatPx;
 const mul2 = double;
-const MathNs = { UNIT: UNIT, double: double, default: formatPx };
+const MathNs = { get UNIT() { return UNIT; }, get default() { return formatPx; }, get double() { return double; } };
 const VERSION = 1;
 
 function __eldur_init(rootItem) {
@@ -2193,8 +2196,10 @@ console.log(count, renamedSkipped, ns.count);
         "importer must alias the hoisted exports:\n{js}"
     );
     assert!(
-        js.contains("count: __eldur_m1_count, renamedSkipped: __eldur_m1_skipped"),
-        "namespace object must carry the hoisted exports:\n{js}"
+        js.contains(
+            "get count() { return __eldur_m1_count; }, get renamedSkipped() { return __eldur_m1_skipped; }"
+        ),
+        "namespace object must read the hoisted exports live:\n{js}"
     );
     assert!(
         js.contains("var inner = 1;"),
@@ -2950,6 +2955,7 @@ fn imported_module(name: &str, source: &str) -> ScriptInput {
         name: name.to_string(),
         kind: ScriptKind::ImportedModule,
         line_offset: 1,
+        imports: Vec::new(),
     }
 }
 

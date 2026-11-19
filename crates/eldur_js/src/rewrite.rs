@@ -84,6 +84,9 @@ struct PageBuffers {
     load_entries: Vec<LoadEntry>,
     window_onload_has_slot: bool,
     window_onload_value: Option<String>,
+    /// Emitting a lazy module: a class it declares does not exist until the
+    /// module runs, so it is assigned there rather than declared at load.
+    defer_classes: bool,
 }
 
 struct PageBuilder<'a> {
@@ -97,6 +100,16 @@ struct PageBuilder<'a> {
     claimed_top_names: HashSet<String>,
     emitted_modules: HashSet<usize>,
     visiting_modules: HashSet<usize>,
+    /// The modules being emitted, outermost first: a back-edge to one of them
+    /// closes a cycle through every module after it.
+    visiting_stack: Vec<usize>,
+    /// Lazy module index -> the cycle it is part of. A module that throws
+    /// fails every module of its cycle, as a browser's module map records.
+    cycle_groups: HashMap<usize, usize>,
+    /// Lazy module index -> the statement in its run function's `catch`
+    /// replaced, once the cycles are known, by marking the rest of its cycle
+    /// failed too.
+    cycle_failure_markers: HashMap<usize, String>,
     module_exports: HashMap<usize, ModuleExports>,
     /// Module index -> the top-level function returning its namespace, for
     /// `import()` of a module the page inlines.
@@ -297,6 +310,9 @@ pub(crate) fn rewrite(
         claimed_top_names,
         emitted_modules: HashSet::new(),
         visiting_modules: HashSet::new(),
+        visiting_stack: Vec::new(),
+        cycle_groups: HashMap::new(),
+        cycle_failure_markers: HashMap::new(),
         module_exports: HashMap::new(),
         module_namespaces: HashMap::new(),
         lazy_modules: lazy_modules(&valid_scripts, scripts),
@@ -358,7 +374,7 @@ fn lazy_modules(valid_scripts: &[ValidScript<'_>], scripts: &[ScriptInput]) -> H
             continue;
         };
         for spec in static_module_specifiers(&v.parsed.program) {
-            if let Some(dep) = resolve_module_specifier(&v.input.name, spec, scripts) {
+            if let Some(dep) = resolve_module_specifier(v.input, spec, scripts) {
                 work.push(dep);
             }
         }
@@ -391,14 +407,20 @@ impl<'a> PageBuilder<'a> {
             return;
         };
         self.visiting_modules.insert(script_idx);
+        self.visiting_stack.push(script_idx);
         let mut exports = ModuleExports::default();
         if self.lazy_modules.contains(&script_idx) {
             // Its top-level statements become a function run on the first
             // import, once; an error it threw is thrown again to every later
             // import, as a browser's module map keeps it.
             let run = self.lazy_run(script_idx);
+            let marker = self.unique_page_name(&format!("__eldur_cycle_failed_m{script_idx}_"));
+            self.cycle_failure_markers
+                .insert(script_idx, marker.clone());
             let outer = std::mem::take(&mut self.out.init_stmts);
+            let outer_defer = std::mem::replace(&mut self.out.defer_classes, true);
             self.process_classic_or_module(pos, Some(&mut exports));
+            self.out.defer_classes = outer_defer;
             let body = std::mem::replace(&mut self.out.init_stmts, outer);
             let mut lines = vec![
                 format!("if ({run}.state === 2) throw {run}.error;"),
@@ -407,7 +429,7 @@ impl<'a> PageBuilder<'a> {
             ];
             if !body.is_empty() {
                 lines.push(format!(
-                    "try {{\n{}\n}} catch (err) {{\n    {run}.state = 2;\n    {run}.error = err;\n    throw err;\n}}",
+                    "try {{\n{}\n}} catch (err) {{\n    {run}.state = 2;\n    {run}.error = err;\n    {marker}\n    throw err;\n}}",
                     indent_block(&body.join("\n"), 4)
                 ));
             }
@@ -418,6 +440,7 @@ impl<'a> PageBuilder<'a> {
         } else {
             self.process_classic_or_module(pos, Some(&mut exports));
         }
+        self.visiting_stack.pop();
         self.visiting_modules.remove(&script_idx);
         self.emitted_modules.insert(script_idx);
         self.module_exports.insert(script_idx, exports);
@@ -495,16 +518,52 @@ impl<'a> PageBuilder<'a> {
         if let Some(found) = self.cycle_placeholders.get(&key) {
             return found.clone();
         }
-        let mut n = self.cycle_placeholders.len();
-        let placeholder = loop {
-            let candidate = format!("__eldur_cycle{n}_");
-            if self.shared.used_names.insert(candidate.clone()) {
-                break candidate;
-            }
-            n += 1;
-        };
+        let n = self.cycle_placeholders.len();
+        let placeholder = self.unique_page_name(&format!("__eldur_cycle{n}_"));
         self.cycle_placeholders.insert(key, placeholder.clone());
         placeholder
+    }
+
+    /// A name `finish` can replace throughout page.js: no other name has it,
+    /// and no script's text holds it, inside a string or a comment either.
+    fn unique_page_name(&mut self, base: &str) -> String {
+        let mut n = 0usize;
+        loop {
+            let candidate = if n == 0 {
+                base.to_string()
+            } else {
+                format!("{base}{n}_")
+            };
+            n += 1;
+            if self.scripts.iter().any(|s| s.source.contains(&candidate)) {
+                continue;
+            }
+            if self.shared.used_names.insert(candidate.clone()) {
+                return candidate;
+            }
+        }
+    }
+
+    /// `dep`, a module being emitted, is imported by the module emitted last:
+    /// every module from `dep` on is one cycle.
+    fn join_cycle(&mut self, dep: usize) {
+        let Some(at) = self.visiting_stack.iter().position(|m| *m == dep) else {
+            return;
+        };
+        let members: Vec<usize> = self.visiting_stack[at..].to_vec();
+        let merged: HashSet<usize> = members
+            .iter()
+            .filter_map(|m| self.cycle_groups.get(m).copied())
+            .collect();
+        let group = merged.iter().copied().min().unwrap_or(dep);
+        for g in self.cycle_groups.values_mut() {
+            if merged.contains(g) {
+                *g = group;
+            }
+        }
+        for m in members {
+            self.cycle_groups.insert(m, group);
+        }
     }
 
     /// The page modules `v` imports with `import("literal")`, mapped from
@@ -515,7 +574,7 @@ impl<'a> PageBuilder<'a> {
     /// function is declared once it has been emitted there.
     fn dynamic_import_namespaces(&mut self, v: &ValidScript<'a>) -> HashMap<String, String> {
         let mut found = DynamicImports {
-            importer: &v.input.name,
+            importer: v.input,
             scripts: self.scripts,
             found: Vec::new(),
         };
@@ -653,6 +712,7 @@ impl<'a> PageBuilder<'a> {
             ScriptQueryBindings::build(v.input, &v.parsed.program, scoping, self.cross_script);
 
         let mut cycle_exports: HashMap<usize, ModuleExports> = HashMap::new();
+        let mut unresolved_static = false;
         // Pre-inline any imported local modules in source order before lowering statements.
         if !is_classic {
             for stmt in &v.parsed.program.body {
@@ -662,9 +722,13 @@ impl<'a> PageBuilder<'a> {
                     Statement::ExportFromDeclaration(exp) => Some(exp.source.value.as_str()),
                     _ => None,
                 };
-                if let Some(spec) = spec_opt
-                    && let Some(dep_idx) =
-                        resolve_module_specifier(&v.input.name, spec, self.scripts)
+                let Some(spec) = spec_opt else {
+                    continue;
+                };
+                let Some(dep_idx) = resolve_module_specifier(v.input, spec, self.scripts) else {
+                    unresolved_static = true;
+                    continue;
+                };
                 {
                     if self.visiting_modules.contains(&dep_idx) {
                         // Further up a cycle: it runs after this module, and
@@ -682,6 +746,12 @@ impl<'a> PageBuilder<'a> {
                             });
                         }
                         self.add_cycle_exports(v.input, stmt, dep_idx, &mut cycle_exports);
+                        self.join_cycle(dep_idx);
+                        // Run on its own, as the target of an `import()`, this
+                        // module still runs the far side of the cycle first.
+                        if let Some(run) = self.lazy_runs.get(&dep_idx) {
+                            self.out.init_stmts.push(format!("{run}();"));
+                        }
                     } else {
                         self.ensure_module_emitted(dep_idx);
                         if let Some(run) = self.lazy_runs.get(&dep_idx) {
@@ -690,6 +760,18 @@ impl<'a> PageBuilder<'a> {
                     }
                 }
             }
+        }
+        // A module of its graph could not be fetched, so none of it runs and
+        // `import()` of it rejects, as a browser's does. An eager module has
+        // said so in a diagnostic.
+        if unresolved_static && self.lazy_modules.contains(&v.idx) {
+            self.out.init_stmts.insert(
+                0,
+                format!(
+                    "throw new TypeError(\"Failed to fetch dynamically imported module: \" + {:?});",
+                    v.input.name
+                ),
+            );
         }
         // Only while this module is emitted; its own map comes when it is done.
         for (dep, exports) in &cycle_exports {
@@ -730,6 +812,7 @@ impl<'a> PageBuilder<'a> {
         );
         lowerer.symbol_renames = symbol_renames;
         lowerer.dynamic_imports = dynamic_imports;
+        lowerer.after_load = is_lazy;
 
         for stmt in &v.parsed.program.body {
             match stmt {
@@ -774,7 +857,7 @@ impl<'a> PageBuilder<'a> {
 
                 Statement::ImportDeclaration(imp) => {
                     let spec = imp.source.value.as_str();
-                    if let Some(dep_idx) = resolve_module_specifier(&v.input.name, spec, scripts)
+                    if let Some(dep_idx) = resolve_module_specifier(v.input, spec, scripts)
                         && let Some(dep_exports) = module_exports.get(&dep_idx)
                     {
                         out.emit_import_bindings(
@@ -858,7 +941,7 @@ impl<'a> PageBuilder<'a> {
 
                 Statement::ExportFromDeclaration(exp) => {
                     if let Some(dep_idx) =
-                        resolve_module_specifier(&v.input.name, exp.source.value.as_str(), scripts)
+                        resolve_module_specifier(v.input, exp.source.value.as_str(), scripts)
                         && let Some(dep_exports) = module_exports.get(&dep_idx)
                         && let Some(me) = mod_exports.as_deref_mut()
                     {
@@ -876,27 +959,18 @@ impl<'a> PageBuilder<'a> {
 
                 Statement::ExportAllDeclaration(exp) => {
                     if let Some(dep_idx) =
-                        resolve_module_specifier(&v.input.name, exp.source.value.as_str(), scripts)
+                        resolve_module_specifier(v.input, exp.source.value.as_str(), scripts)
                         && let Some(dep_exports) = module_exports.get(&dep_idx)
                     {
                         if let Some(alias_name) = &exp.exported {
                             let ns_ident = lowerer
                                 .shared
                                 .alloc_fn_name(&format!("__eldur_ns_{}", v.idx));
-                            let (obj_lit, any_deferred) = format_namespace_object(dep_exports);
-                            if any_deferred {
-                                out.top_decls.push(format!("let {ns_ident};"));
-                                out.init_stmts.push(format!("{ns_ident} = {obj_lit};"));
-                            } else {
-                                out.top_decls.push(format!("const {ns_ident} = {obj_lit};"));
-                            }
+                            // Getters, so the namespace reads the live bindings.
+                            let obj_lit = format_live_namespace_object(dep_exports);
+                            out.top_decls.push(format!("const {ns_ident} = {obj_lit};"));
                             if let Some(me) = mod_exports.as_deref_mut() {
-                                me.insert(
-                                    alias_name.name().to_string(),
-                                    ns_ident,
-                                    any_deferred,
-                                    false,
-                                );
+                                me.insert(alias_name.name().to_string(), ns_ident, false, false);
                             }
                         } else if let Some(me) = mod_exports.as_deref_mut() {
                             for key in &dep_exports.ordered_keys {
@@ -1031,6 +1105,27 @@ impl<'a> PageBuilder<'a> {
             page_js = page_js.replace(placeholder.as_str(), &ident);
         }
 
+        for (idx, marker) in &self.cycle_failure_markers {
+            let others: Vec<String> = match self.cycle_groups.get(idx) {
+                Some(group) => {
+                    let mut members: Vec<usize> = self
+                        .cycle_groups
+                        .iter()
+                        .filter(|(m, g)| *g == group && *m != idx)
+                        .map(|(m, _)| *m)
+                        .collect();
+                    members.sort_unstable();
+                    members
+                        .into_iter()
+                        .filter_map(|m| self.lazy_runs.get(&m))
+                        .map(|run| format!("{run}.state = 2; {run}.error = err;"))
+                        .collect()
+                }
+                None => Vec::new(),
+            };
+            page_js = page_js.replace(marker.as_str(), &others.join(" "));
+        }
+
         JsOutput {
             redispatching_slots: self.shared.redispatching_slots,
             page_js,
@@ -1112,7 +1207,14 @@ impl PageBuffers {
             .extract_and_consume(cls.span)
             .trim()
             .to_string();
-        self.top_decls.push(cls_str);
+        let deferred = self.defer_classes && cls.id.is_some();
+        if deferred && let Some(id) = &cls.id {
+            let emitted_name = lowerer.bound_name(id).to_string();
+            self.top_decls.push(format!("let {emitted_name};"));
+            self.init_stmts.push(format!("{emitted_name} = {cls_str};"));
+        } else {
+            self.top_decls.push(cls_str);
+        }
 
         if let Some(static_stmts) = lowerer
             .post_class_static_inits
@@ -1136,7 +1238,7 @@ impl PageBuffers {
                     .symbol_id
                     .get()
                     .is_some_and(|sid| scoping.symbol_is_mutated(sid));
-                me.insert(orig_name, emitted_name, false, is_mutated);
+                me.insert(orig_name, emitted_name, deferred, is_mutated);
             }
         }
     }
@@ -1521,13 +1623,9 @@ impl PageBuffers {
                 }
                 ImportDeclarationSpecifier::ImportNamespaceSpecifier(ns) => {
                     let local = lowerer.bound_name(&ns.local);
-                    let (obj_lit, any_deferred) = format_namespace_object(dep_exports);
-                    if any_deferred || !self.init_stmts.is_empty() {
-                        self.top_decls.push(format!("let {local};"));
-                        self.init_stmts.push(format!("{local} = {obj_lit};"));
-                    } else {
-                        self.top_decls.push(format!("const {local} = {obj_lit};"));
-                    }
+                    // Getters, so the namespace reads the live bindings.
+                    let obj_lit = format_live_namespace_object(dep_exports);
+                    self.top_decls.push(format!("const {local} = {obj_lit};"));
                 }
             }
         }
@@ -1754,7 +1852,7 @@ fn prepare_module_symbol_renames<'a>(
         match stmt {
             Statement::ImportDeclaration(imp) => {
                 let spec = imp.source.value.as_str();
-                let Some(dep_idx) = resolve_module_specifier(&v.input.name, spec, scripts) else {
+                let Some(dep_idx) = resolve_module_specifier(v.input, spec, scripts) else {
                     continue;
                 };
                 let Some(dep_exports) = module_exports.get(&dep_idx) else {
@@ -2452,28 +2550,6 @@ fn format_lifecycle_invocation(
     }
 }
 
-fn format_namespace_object(exports: &ModuleExports) -> (String, bool) {
-    let mut fields = Vec::with_capacity(exports.ordered_keys.len());
-    let mut any_deferred = false;
-    for key in &exports.ordered_keys {
-        if let Some((target_ident, deferred, _)) = exports.entries.get(key) {
-            if *deferred {
-                any_deferred = true;
-            }
-            if is_valid_js_ident(key) {
-                fields.push(format!("{key}: {target_ident}"));
-            } else {
-                fields.push(format!("{key:?}: {target_ident}"));
-            }
-        }
-    }
-    if fields.is_empty() {
-        ("{}".to_string(), any_deferred)
-    } else {
-        (format!("{{ {} }}", fields.join(", ")), any_deferred)
-    }
-}
-
 /// A module namespace for `import()`: getters read the live bindings, as a
 /// namespace's do, and the keys are sorted, as a namespace's are.
 fn format_live_namespace_object(exports: &ModuleExports) -> String {
@@ -2499,7 +2575,7 @@ fn format_live_namespace_object(exports: &ModuleExports) -> String {
 
 /// Every `import("literal")` in a script that names a page module.
 struct DynamicImports<'s> {
-    importer: &'s str,
+    importer: &'s ScriptInput,
     scripts: &'s [ScriptInput],
     found: Vec<(String, usize, oxc_span::Span)>,
 }

@@ -187,8 +187,11 @@ impl eldur_convert::Resources for FsResources {
 
         match fs::read(&path) {
             Ok(bytes) => {
+                // A file read twice (two modules import it) is converted from
+                // its first read, so that read's fingerprint is the one kept.
                 self.recorded
-                    .insert(path.clone(), eldur_cache::Input::new(path.clone(), &bytes));
+                    .entry(path.clone())
+                    .or_insert_with(|| eldur_cache::Input::new(path.clone(), &bytes));
                 Some(eldur_convert::Resource {
                     resolved: path.to_string_lossy().into_owned(),
                     bytes,

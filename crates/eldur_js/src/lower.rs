@@ -228,6 +228,10 @@ pub(crate) struct AstLowerer<'a, 'b> {
     /// the expression the call becomes: one resolving to that module's
     /// namespace, loading it first when it is lazy.
     pub dynamic_imports: HashMap<String, String>,
+    /// Lowering a module that runs after the page has loaded: a `load` or
+    /// `DOMContentLoaded` listener it adds goes to the runtime, which never
+    /// fires either again, instead of running as soon as it is added.
+    pub after_load: bool,
 }
 
 impl<'a, 'b> AstLowerer<'a, 'b> {
@@ -258,6 +262,7 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
             method_fn_spans: HashSet::new(),
             symbol_renames: HashMap::new(),
             dynamic_imports: HashMap::new(),
+            after_load: false,
         }
     }
 
@@ -474,7 +479,7 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
         if let Some(ev) = known_dom_event_from_on_prop(prop)
             && op == AssignmentOperator::Assign
         {
-            if is_global_window(member_obj, self.scoping) && ev == "load" {
+            if !self.after_load && is_global_window(member_obj, self.scoping) && ev == "load" {
                 let rhs_str = self.rewrite_listener_callback_expr(right, None);
                 self.editor
                     .replace(full_span, format!("Eldur.queueMicrotask({rhs_str})"));
@@ -1182,6 +1187,7 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                     return;
                 }
                 if method == "addEventListener"
+                    && !self.after_load
                     && let Some(ev) = it
                         .arguments
                         .first()
@@ -1204,6 +1210,7 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
             // 4. `window.addEventListener('load'/'DOMContentLoaded', ...)`
             if is_global_window(&member.object, self.scoping)
                 && method == "addEventListener"
+                && !self.after_load
                 && let Some(ev) = it
                     .arguments
                     .first()

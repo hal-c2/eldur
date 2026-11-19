@@ -263,16 +263,29 @@ pub(crate) fn kebab_to_camel(s: &str) -> String {
 }
 
 /// Resolves an ES module import specifier against the slice of [`ScriptInput`]s
-/// provided to the converter. A module is preferred to a classic script of the
-/// same name, and the most exact match wins: the name itself, then the path the
-/// specifier makes beside its importer, then a name ending in the specifier's
-/// path, the shortest first. The last is what an importer that is no file needs
-/// (an inline script or a handler, whose modules were read beside the page).
+/// provided to the converter. The converter's answer for the importer
+/// ([`ScriptInput::imports`]) is final: the module it read, or nothing for a
+/// file it could not read, which then rejects as in a browser rather than
+/// binding to a file of the same name elsewhere. A specifier it did not answer
+/// (a caller with no converter) is matched by name: a module is preferred to a
+/// classic script of the same name, and the most exact match wins, the name
+/// itself, then the path the specifier makes beside its importer, then a name
+/// ending in the specifier's path, the shortest first.
 pub(crate) fn resolve_module_specifier(
-    importer_name: &str,
+    importer: &ScriptInput,
     specifier: &str,
     scripts: &[ScriptInput],
 ) -> Option<usize> {
+    if let Some((_, answer)) = importer.imports.iter().find(|(spec, _)| spec == specifier) {
+        let name = answer.as_deref()?;
+        let named = |module: bool| {
+            scripts
+                .iter()
+                .position(|s| is_loadable(s) && s.kind.is_module() == module && s.name == name)
+        };
+        return named(true).or_else(|| named(false));
+    }
+    let importer_name = importer.name.as_str();
     let ranked = |pick: &dyn Fn(&ScriptInput) -> bool| {
         let found = |module: bool| {
             scripts

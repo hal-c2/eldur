@@ -163,7 +163,11 @@ TestCase {
 fn run(page: &str, read: &[&str]) -> (Vec<String>, Vec<(String, String)>) {
     let mut site = Site::new();
     let out = convert(page, &mut site);
-    let dir = std::env::temp_dir().join(format!("eldur-modules-{page}-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!(
+        "eldur-modules-{}-{}",
+        page.replace('/', "-"),
+        std::process::id()
+    ));
     std::fs::create_dir_all(&dir).expect("temp dir");
     for file in &out.files {
         std::fs::write(dir.join(&file.path), &file.contents).expect("write output");
@@ -269,4 +273,31 @@ fn root_relative_specifiers_resolve_under_the_site_root() {
     }
     let read = ["a", "b"];
     assert_eq!(run("rooted", &read), wanted("rooted", &read));
+}
+
+/// Lazily imported modules among themselves: a cycle entered from either side
+/// runs its far side first; a module that throws fails its whole cycle; a
+/// module whose own import is missing rejects before any of it runs; a class
+/// exists once its module has run; a listener for `load` or
+/// `DOMContentLoaded` added after the page loaded never hears either; and a
+/// namespace import reads the module's live bindings.
+#[test]
+fn lazily_imported_modules_link_and_fail_as_in_chromium() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("lazy", &read), wanted("lazy", &read));
+}
+
+/// A page in a subdirectory: its inline module's `../` import is found above
+/// it, and an `import()` of a file that is not beside it rejects even though a
+/// file of that name is loaded from another directory.
+#[test]
+fn a_nested_pages_imports_resolve_from_its_own_directory() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["a", "b"];
+    assert_eq!(run("nested/page", &read), wanted("nested", &read));
 }

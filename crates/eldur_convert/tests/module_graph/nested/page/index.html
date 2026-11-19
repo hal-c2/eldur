@@ -1,0 +1,7 @@
+<!DOCTYPE html><html><body><p id="a">static</p><p id="b">lazy</p>
+<script type="module">
+import { word, where } from "../shared.js";
+document.getElementById("a").textContent = word + " " + where;
+import("./util.js").then((m) => { document.getElementById("b").textContent = "util " + m.where; },
+                         (e) => { document.getElementById("b").textContent = e.name; });
+</script></body></html>

@@ -386,7 +386,7 @@ impl<'a> Visit<'a> for UnsupportedChecker<'_> {
 
     fn visit_import_expression(&mut self, it: &ImportExpression<'a>) {
         // The rewrite reports the rare page module it still cannot resolve.
-        if dynamic_import_of_page_module(&self.input.name, it, self.scripts).is_some() {
+        if dynamic_import_of_page_module(self.input, it, self.scripts).is_some() {
             walk::walk_import_expression(self, it);
             return;
         }
@@ -654,7 +654,7 @@ fn detect_unsupported_regex_syntax(pattern: &str) -> Option<&'static str> {
 /// with no options and it resolves to one of the page's module scripts: one the
 /// converter inlines, so the import can resolve to its namespace.
 pub(crate) fn dynamic_import_of_page_module(
-    importer: &str,
+    importer: &ScriptInput,
     it: &ImportExpression<'_>,
     scripts: &[ScriptInput],
 ) -> Option<usize> {
@@ -686,31 +686,31 @@ pub(crate) fn module_requests(input: &ScriptInput) -> Vec<String> {
                 _ => None,
             };
             if let Some(source) = source {
-                finder.push(source.value.to_string());
+                finder
+                    .requests
+                    .push((source.span.start, source.value.to_string()));
             }
         }
     }
     finder.visit_program(&ret.program);
-    finder.requests
+    finder.requests.sort_by_key(|(at, _)| *at);
+    let mut seen = std::collections::HashSet::new();
+    finder
+        .requests
+        .into_iter()
+        .filter_map(|(_, spec)| seen.insert(spec.clone()).then_some(spec))
+        .collect()
 }
 
 #[derive(Default)]
 struct RequestFinder {
-    requests: Vec<String>,
-}
-
-impl RequestFinder {
-    fn push(&mut self, spec: String) {
-        if !self.requests.contains(&spec) {
-            self.requests.push(spec);
-        }
-    }
+    requests: Vec<(u32, String)>,
 }
 
 impl<'a> Visit<'a> for RequestFinder {
     fn visit_import_expression(&mut self, it: &ImportExpression<'a>) {
         if let Some(spec) = extract_string_literal(&it.source) {
-            self.push(spec);
+            self.requests.push((it.span.start, spec));
         }
         walk::walk_import_expression(self, it);
     }

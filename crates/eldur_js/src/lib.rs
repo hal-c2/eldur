@@ -73,6 +73,13 @@ pub struct ScriptInput {
     pub kind: ScriptKind,
     /// 1-based line in the HTML where inline code starts (for diagnostics).
     pub line_offset: u32,
+    /// The converter's answer for each module specifier this script names
+    /// ([`module_requests`]): the [`ScriptInput::name`] of the module it read,
+    /// or `None` when nothing could be read there. Only the converter knows
+    /// where an inline script or a handler lives, and what a server rooted
+    /// somewhere returns, so its answer is taken as is; a specifier it did not
+    /// answer is looked up by name among the scripts.
+    pub imports: Vec<(String, Option<String>)>,
 }
 
 /// A DOM query found in the scripts with a literal argument.

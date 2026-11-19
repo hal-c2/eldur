@@ -42,5 +42,36 @@
       "b": "rooted chunk"
     },
     "errors": []
+  },
+  "lazy": {
+    "lines": [
+      "live 0",
+      "live after bump 1",
+      "ca runs",
+      "cb runs after A",
+      "cb B",
+      "ca A",
+      "xa runs",
+      "xb runs after 1",
+      "xb rejected xb boom",
+      "xa rejected xb boom",
+      "broken TypeError true",
+      "shape runs",
+      "shape 9",
+      "listens runs",
+      "done"
+    ],
+    "text": {
+      "out": "done"
+    },
+    "errors": []
+  },
+  "nested": {
+    "lines": [],
+    "text": {
+      "a": "shared other",
+      "b": "TypeError"
+    },
+    "errors": []
   }
 }

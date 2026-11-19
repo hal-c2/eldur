@@ -190,6 +190,7 @@ document.getElementById("label").textContent = greeting;
         name: "app.js".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
     };
 
     let scripts = [script];
@@ -298,6 +299,7 @@ document.addEventListener("DOMContentLoaded", () => {
         name: "s1.js".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
     };
 
     let s2 = ScriptInput {
@@ -343,6 +345,7 @@ window.addEventListener("load", () => {
         name: "s2.js".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
     };
 
     let handler_attr = ScriptInput {
@@ -354,6 +357,7 @@ window.addEventListener("load", () => {
             event: "onkeydown".to_string(),
         },
         line_offset: 1,
+        imports: Vec::new(),
     };
 
     let inputs = vec![s1, s2, handler_attr];
@@ -451,6 +455,7 @@ fn qml6_executes_controls_modules_classes_raf_and_dynamic_listen() {
         name: "src/util.js".to_string(),
         kind: ScriptKind::Module,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 export class Tracker {
     base = 10;
@@ -477,6 +482,7 @@ export default function fmt(tag, val) {
         name: "src/main.js".to_string(),
         kind: ScriptKind::Module,
         line_offset: 1,
+        imports: Vec::new(),
         source: r##"
 import fmt, { Tracker as Trk } from "./util.js";
 
@@ -608,6 +614,7 @@ fn qml6_unifies_resolved_target_add_remove_dispatch_and_dedup_listeners() {
         name: "listeners.js".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 let hits = 0;
 let log = [];
@@ -713,6 +720,7 @@ fn qml6_retains_uninitialized_top_level_let_with_script_order_reset() {
         name: "state.js".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 setState("before_decl");
 console.log("boot");
@@ -784,6 +792,7 @@ fn qml6_executes_compound_and_logical_dom_assignments_with_short_circuiting() {
         name: "compound_logical.js".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
         source: r##"
 let rhsCalls = 0;
 function rhs(val) {
@@ -952,6 +961,7 @@ fn qml6_assignment_expressions_return_dom_values_and_evaluate_operands_once() {
         name: "assign_expr_values.js".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
         source: r##"
 let rhsCalls = 0;
 let order = [];
@@ -1132,6 +1142,7 @@ fn qml6_executes_classic_block_nested_var_hoisting() {
         name: "s1.js".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 if (false) {
     var falseVar = "skipped";
@@ -1161,6 +1172,7 @@ function checkFunctionLocal() {
         name: "s2.js".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 var out = document.getElementById("out");
 var summary = [
@@ -1247,6 +1259,7 @@ fn qml6_executes_colliding_modules_classic_globals_shared_imports_and_shadowing(
         name: "src/shared.js".to_string(),
         kind: ScriptKind::Module,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 const step = 2;
 export let ticks = 0;
@@ -1265,6 +1278,7 @@ bump("S");
         name: "src/mod_a.js".to_string(),
         kind: ScriptKind::Module,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 import { bump, ticks as seenTicks } from "./shared.js";
 const factor = 2;
@@ -1299,6 +1313,7 @@ bump("A");
         name: "src/mod_b.js".to_string(),
         kind: ScriptKind::Module,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 import { bump, ticks as seenTicks } from "./shared.js";
 const factor = 3;
@@ -1329,6 +1344,7 @@ bump("B");
         name: "src/classic.js".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 const factor = 1000;
 let offset = 500;
@@ -1355,6 +1371,7 @@ function readClassic(v) {
         name: "src/main.js".to_string(),
         kind: ScriptKind::Module,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 import { calc as calcA, token as tokenA, shadowA } from "./mod_a.js";
 import { calc as calcB, token as tokenB } from "./mod_b.js";
@@ -1446,6 +1463,7 @@ fn qml6_executes_top_level_destructured_var_across_scripts_in_statement_order() 
         name: "s1.js".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 var trace = [];
 var a = 1;
@@ -1465,6 +1483,7 @@ step("s1-post");
         name: "s2.js".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 var a = 4;
 step("s2-scalar");
@@ -1549,6 +1568,7 @@ fn qml6_executes_uninitialized_nested_var_in_control_flow_and_for_headers() {
         name: "s1.js".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 var trace = [];
 if (false) var branchSingle;
@@ -1659,6 +1679,7 @@ fn qml6_unifies_mixed_onclick_and_add_event_listener_across_qml_and_dispatch_eve
         name: "mixed_events.js".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 let log = [];
 let mode = "normal";
@@ -1830,6 +1851,7 @@ fn qml6_executes_shorthand_property_key_preservation_across_literals_bindings_an
         name: "app.js".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 const btn = document.getElementById("save-btn");
 const statusEl = document.getElementById("status");
@@ -1876,6 +1898,7 @@ function checkClassic(input) {
         name: "m1.js".to_string(),
         kind: ScriptKind::Module,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 export const shared = "m1";
 "#
@@ -1886,6 +1909,7 @@ export const shared = "m1";
         name: "m2.js".to_string(),
         kind: ScriptKind::Module,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 const btn = document.getElementById("save-btn");
 const shared = "m2";
@@ -1984,12 +2008,14 @@ fn qml6_executes_module_exports_of_block_nested_var() {
         name: "c.js".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
         source: "var count = 'classic';\n".to_string(),
     };
     let a = ScriptInput {
         name: "a.js".to_string(),
         kind: ScriptKind::Module,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 { var count = 10; }
 if (false) { var skipped = 1; }
@@ -2001,6 +2027,7 @@ export { count, skipped as renamedSkipped };
         name: "b.js".to_string(),
         kind: ScriptKind::Module,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 import { count, renamedSkipped } from "./a.js";
 import * as ns from "./a.js";
@@ -2073,6 +2100,7 @@ fn run_page_allowing_unsupported(
         name: "inline script #1".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
     }];
     let analysis = analyze(&scripts);
     let out = rewrite(&scripts, &analysis, resolver);
@@ -2103,6 +2131,7 @@ fn run_page(resolver: &FakeResolver, script: &str, main: &str) -> (String, JsOut
         name: "inline script #1".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
     }];
     let analysis = analyze(&scripts);
     let out = rewrite(&scripts, &analysis, resolver);
@@ -4993,12 +5022,14 @@ fn qml6_dynamic_import_of_an_inlined_module_resolves_to_its_live_namespace() {
         name: "chunk.js".to_string(),
         kind: ScriptKind::Module,
         line_offset: 1,
+        imports: Vec::new(),
         source: "export let count = 1;\nexport function bump() { count += 1; return count; }\nexport default \"chunk\";\n".to_string(),
     };
     let main = ScriptInput {
         name: "main.js".to_string(),
         kind: ScriptKind::Module,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 import { bump } from "./chunk.js";
 bump();
@@ -5068,6 +5099,7 @@ fn qml6_a_lazily_imported_module_runs_at_its_own_place_on_the_page() {
         name: name.to_string(),
         kind,
         line_offset: 1,
+        imports: Vec::new(),
         source: source.to_string(),
     };
     let scripts = [
@@ -5126,6 +5158,7 @@ fn qml6_a_name_set_on_the_window_is_a_global_in_every_script() {
         name: "inline script #1".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 window.Provider = (() => ({ n: 1, bump() { return ++this.n; } }))();
 globalThis["Other"] = "o";
@@ -5138,6 +5171,7 @@ self.Late = "late";
         name: "inline script #2".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 var log = [];
 log.push(typeof Provider, Provider.n, Provider.bump(), Other, later());
@@ -5194,6 +5228,7 @@ fn qml6_a_polyfilled_browser_global_is_callable_bare() {
         name: "inline script #1".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 window.requestIdleCallback = window.requestIdleCallback || function (cb) { return setTimeout(cb, 1); };
 window.cancelIdleCallback = window.cancelIdleCallback || function (id) { clearTimeout(id); };
@@ -5205,6 +5240,7 @@ window.JSON = window.JSON || {};
         name: "inline script #2".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
         source: r#"
 var log = [typeof requestIdleCallback, typeof cancelIdleCallback, JSON.stringify([1])];
 cancelIdleCallback(requestIdleCallback(function () {}));
