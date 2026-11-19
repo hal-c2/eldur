@@ -1,6 +1,10 @@
 //! Tokenisation of CSS declaration value strings via `swc_css_parser` and a
 //! lightweight backtracking cursor over [`ComponentValue`] slices.
 
+use std::cell::RefCell;
+use std::collections::HashMap;
+use std::rc::Rc;
+
 use swc_common::{BytePos, input::StringInput};
 use swc_css_ast::{
     ComponentValue, Function, ListOfComponentValues, NumberType, SimpleBlock, Token,
@@ -11,12 +15,106 @@ use swc_css_parser::{error::ErrorKind, parse_string_input, parser::ParserConfig}
 /// Protects recursive value parsers against stack overflow on hostile input.
 pub(crate) const MAX_NESTING_DEPTH: usize = 32;
 
+/// Value texts parsed during one cascade, so that the many elements one
+/// declaration styles share a single parse of it (eldur #9). Installed by
+/// [`ParseMemo::enter`]; without one every call parses.
+#[derive(Default)]
+struct Memo {
+    values: HashMap<Box<str>, Result<Rc<Vec<ComponentValue>>, String>>,
+    /// `expand`'s results by property name and value text.
+    expansions: HashMap<(Box<str>, Box<str>), Rc<Expansion>>,
+}
+
+pub(crate) type Expansion = Result<Vec<(super::Longhand, String)>, String>;
+
+/// `expand(name, value)`, done once per cascade for each pair.
+pub(crate) fn memo_expansion(
+    name: &str,
+    value: &str,
+    expand: impl FnOnce() -> Expansion,
+) -> Rc<Expansion> {
+    let key = (Box::<str>::from(name), Box::<str>::from(value));
+    let known = MEMO.with(|m| {
+        m.borrow()
+            .as_ref()
+            .map(|memo| memo.expansions.get(&key).cloned())
+    });
+    match known {
+        Some(Some(done)) => done,
+        Some(None) => {
+            // Not borrowed while expanding: expansion parses, which uses the memo.
+            let done = Rc::new(expand());
+            MEMO.with(|m| {
+                if let Some(memo) = m.borrow_mut().as_mut() {
+                    memo.expansions.insert(key, Rc::clone(&done));
+                }
+            });
+            done
+        }
+        None => Rc::new(expand()),
+    }
+}
+
+thread_local! {
+    static MEMO: RefCell<Option<Memo>> = const { RefCell::new(None) };
+}
+
+/// Keeps parsed values for as long as it lives: one cascade's run, so the
+/// memo grows with the page's distinct value texts and goes with it.
+pub(crate) struct ParseMemo {
+    installed: bool,
+}
+
+impl ParseMemo {
+    /// The memo of the cascade already running, or a new one.
+    pub(crate) fn enter() -> Self {
+        let installed = MEMO.with(|m| {
+            let mut m = m.borrow_mut();
+            let fresh = m.is_none();
+            if fresh {
+                *m = Some(Memo::default());
+            }
+            fresh
+        });
+        Self { installed }
+    }
+}
+
+impl Drop for ParseMemo {
+    fn drop(&mut self) {
+        if self.installed {
+            MEMO.with(|m| m.borrow_mut().take());
+        }
+    }
+}
+
 /// Parses a CSS value text (already `var()`-substituted, comments allowed) into
 /// top-level [`ComponentValue`]s.
 ///
 /// Rejects lexing/syntax errors, unmatched closing brackets, semicolons, and
 /// excessive nesting so downstream property parsers only see well-formed trees.
-pub(crate) fn parse_component_values(value: &str) -> Result<Vec<ComponentValue>, String> {
+pub(crate) fn parse_component_values(value: &str) -> Result<Rc<Vec<ComponentValue>>, String> {
+    let known = MEMO.with(|m| {
+        m.borrow()
+            .as_ref()
+            .map(|memo| memo.values.get(value).cloned())
+    });
+    match known {
+        Some(Some(parsed)) => parsed,
+        Some(None) => {
+            let parsed = parse_uncached(value).map(Rc::new);
+            MEMO.with(|m| {
+                if let Some(memo) = m.borrow_mut().as_mut() {
+                    memo.values.insert(value.into(), parsed.clone());
+                }
+            });
+            parsed
+        }
+        None => parse_uncached(value).map(Rc::new),
+    }
+}
+
+fn parse_uncached(value: &str) -> Result<Vec<ComponentValue>, String> {
     let len =
         u32::try_from(value.len()).map_err(|_| "CSS value exceeds maximum length".to_owned())?;
     #[cfg(test)]

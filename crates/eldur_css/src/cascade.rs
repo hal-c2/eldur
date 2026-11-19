@@ -529,6 +529,7 @@ pub(crate) fn compute_styles(
     sheets: &[Stylesheet],
     viewport: &Viewport,
 ) -> StyleMap {
+    let _memo = properties::ParseMemo::enter();
     let Prepared {
         engine,
         diagnostics,
@@ -1623,15 +1624,15 @@ fn select_winning_longhand_action(
                         }
                     }
                 }
-                match properties::expand(prop_name, trimmed) {
-                    Ok(pairs) => {
-                        if let Some((_, val)) = pairs.into_iter().find(|(lh, _)| *lh == target) {
-                            return ResolvedAction::Value(val);
-                        }
-                        return ResolvedAction::Unset;
-                    }
-                    Err(_) => return ResolvedAction::Unset,
-                }
+                return match &*properties::expand_shared(prop_name, trimmed) {
+                    Ok(pairs) => pairs
+                        .iter()
+                        .find(|(lh, _)| *lh == target)
+                        .map_or(ResolvedAction::Unset, |(_, val)| {
+                            ResolvedAction::Value(val.clone())
+                        }),
+                    Err(_) => ResolvedAction::Unset,
+                };
             }
         }
     }
