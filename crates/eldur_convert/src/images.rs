@@ -283,7 +283,7 @@ pub(crate) fn svg_natural(text: &str) -> Natural {
 }
 
 /// The root `<svg>`'s absolute `width` and `height` as written (zero and
-/// negative included; each caller reads them by its own rule) and its
+/// negative included; `svg_natural` reads a negative one as zero) and its
 /// `viewBox` size when both of its sides are positive; `None` when the text
 /// has no `<svg` tag.
 #[allow(clippy::type_complexity)]
@@ -307,7 +307,7 @@ fn svg_root(text: &str) -> Option<(Option<f32>, Option<f32>, Option<(f32, f32)>)
         }
     };
     // Only absolute lengths size the image; `100%` defers to the viewBox.
-    // A negative one is kept: a file reads it as zero, inline it is no size.
+    // A negative one is kept; `svg_natural` reads it as zero.
     let length = |name: &str| {
         attr(name)
             .map(|v| v.trim().trim_end_matches("px"))
