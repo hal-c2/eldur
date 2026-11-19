@@ -38467,6 +38467,109 @@
     ],
     "(focus)": "n"
    }
+  },
+  {
+   "name": "click arm7",
+   "log": [
+    "blur n from arm7 active BODY",
+    "focusout n from arm7 active BODY",
+    "focus arm7 from n active arm7",
+    "focusin arm7 from n active arm7",
+    "click arm7"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       8,
+       8,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "arm7"
+   }
+  },
+  {
+   "name": "tab while arm7's blur starts moves within moves",
+   "log": [
+    "blur arm7 from r active BODY",
+    "focus q from - active q",
+    "blur q from s active BODY",
+    "focus t from - active t",
+    "focusin t from - active t",
+    "focusout q from - active t",
+    "focusout arm7 from - active t",
+    "now t"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       8,
+       8,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "t"
+   }
+  },
+  {
+   "name": "click arm8",
+   "log": [
+    "blur t from arm8 active BODY",
+    "focusout t from arm8 active BODY",
+    "focus arm8 from t active arm8",
+    "focusin arm8 from t active arm8",
+    "click arm8"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       8,
+       8,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "arm8"
+   }
+  },
+  {
+   "name": "tab while arm8's blur blurs where it goes",
+   "log": [
+    "blur arm8 from u active BODY",
+    "focusout arm8 from u active BODY",
+    "focus u from arm8 active u",
+    "focusin u from arm8 active u",
+    "now u"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       8,
+       8,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "u"
+   }
   }
  ],
  "input_forms": [
