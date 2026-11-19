@@ -6588,17 +6588,30 @@ function _camelToKebab(propName) {
 }
 
 // `name: value` pairs of a declaration text, names in kebab case.
-// A declaration list split at its `;`s, not those in strings or `url(...)`.
+// A declaration list split at its `;`s, not those in strings or `url(...)`,
+// without its comments, which the tokenizer drops along with any quote or
+// bracket in them.
 function _splitDecls(text) {
     var out = [];
-    var start = 0;
+    var cur = "";
     var depth = 0;
     var quote = "";
     for (var i = 0; i < text.length; ++i) {
         var c = text.charAt(i);
+        if (!quote && c === "/" && text.charAt(i + 1) === "*") {
+            var end = text.indexOf("*/", i + 2);
+            i = end < 0 ? text.length : end + 1;
+            continue;
+        }
+        if (c === ";" && !quote && depth === 0) {
+            out.push(cur);
+            cur = "";
+            continue;
+        }
+        cur += c;
         if (c === "\\") {
             // An escaped character is never a quote, a bracket or a `;`.
-            ++i;
+            cur += text.charAt(++i);
         } else if (quote) {
             if (c === quote) {
                 quote = "";
@@ -6609,12 +6622,9 @@ function _splitDecls(text) {
             ++depth;
         } else if (c === ")") {
             depth = Math.max(0, depth - 1);
-        } else if (c === ";" && depth === 0) {
-            out.push(text.slice(start, i));
-            start = i + 1;
         }
     }
-    out.push(text.slice(start));
+    out.push(cur);
     return out;
 }
 
@@ -6662,9 +6672,11 @@ function _styleDecls(raw, m) {
     return out;
 }
 
-var _DISPLAY_ONE = /^(none|contents|block|inline|run-in|flow|flow-root|flex|grid|table|ruby|math|list-item|inline-block|inline-flex|inline-grid|inline-table|table-row-group|table-header-group|table-footer-group|table-row|table-cell|table-column-group|table-column|table-caption|ruby-base|ruby-text|ruby-base-container|ruby-text-container|inherit|initial|unset|revert|revert-layer)$/;
-var _DISPLAY_OUTSIDE = /^(block|inline|run-in)$/;
-var _DISPLAY_INSIDE = /^(flow|flow-root|flex|grid|table|ruby)$/;
+// The keywords eldur_css's `parse_display` takes, so the runtime and the
+// converter agree on which declaration wins (`eldurStyleHides`).
+var _DISPLAY_ONE = /^(none|contents|block|inline|flow|flow-root|flex|grid|table|list-item|inline-block|inline-flex|inline-grid|inline-table|table-row-group|table-header-group|table-footer-group|table-row|table-cell|table-column-group|table-column|table-caption|inherit|initial|unset|revert|revert-layer)$/;
+var _DISPLAY_OUTSIDE = /^(block|inline)$/;
+var _DISPLAY_INSIDE = /^(flow|flow-root|flex|grid|table)$/;
 
 // A single keyword, or at most one outside and one inside keyword and
 // `list-item`, as CSS Display 3 allows: `list-item` goes with a flow inside
@@ -6695,6 +6707,18 @@ function _validDisplay(v) {
     return outside !== "" && inside !== "";
 }
 
+// `v` with its CSS escapes decoded, as the tokenizer reads an identifier.
+function _unescapeIdent(v) {
+    return v.replace(/\\([0-9a-fA-F]{1,6})[ \t\n\r\f]?|\\([^\n\r\f])/g, function(all, hex, ch) {
+        if (!hex) {
+            return ch;
+        }
+        var cp = parseInt(hex, 16);
+        return cp === 0 || cp > 0x10ffff || (cp >= 0xd800 && cp <= 0xdfff)
+            ? "\ufffd" : String.fromCodePoint(cp);
+    });
+}
+
 // The declaration of `name` that wins among `decls`, as the cascade picks it:
 // an important one over a normal one, then the last; an invalid `display` is
 // dropped, as the parser drops it. Its value has no priority, and a
@@ -6711,9 +6735,13 @@ function _winningDecl(decls, name) {
             v = v.slice(0, bang.index).trim();
         }
         if (name === "display") {
-            v = v.toLowerCase().replace(/\s+/g, " ");
-            if (!_validDisplay(v)) {
-                continue;
+            // A `var()` is checked only once substituted, so it wins here as
+            // it does in eldur_css, and hides nothing.
+            if (!/var\(/i.test(v)) {
+                v = _unescapeIdent(v).toLowerCase().replace(/\s+/g, " ");
+                if (!_validDisplay(v)) {
+                    continue;
+                }
             }
         }
         if (bang || !(won && won.important)) {
