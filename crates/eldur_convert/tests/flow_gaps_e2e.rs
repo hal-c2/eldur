@@ -359,6 +359,136 @@ fn scripts_see_the_wrapping_items_as_in_chromium() {
     assert!(!stderr.contains("recursive rearrange"), "{text}");
 }
 
+const ALONE_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+// EldurFlow on its own, against `Flow` where it copies it.
+Item {
+    width: 500
+    height: 300
+
+    EldurFlow {
+        id: free
+        spacing: 10
+        rowSpacing: 5
+        Rectangle { width: 80; height: 20 }
+    }
+    Flow {
+        id: freeFlow
+        spacing: 10
+        Rectangle { width: 80; height: 20 }
+    }
+    EldurFlow {
+        id: fixed
+        width: 80
+        spacing: 10
+        rowSpacing: 5
+        Rectangle { width: 80; height: 20 }
+    }
+    Item {
+        id: ancestor
+        EldurFlow {
+            id: box
+            y: 100
+            width: 400
+            spacing: 30
+            rowSpacing: 5
+            Rectangle { id: k1; width: 150; height: 20 }
+            Rectangle { width: 150; height: 20 }
+            Rectangle { id: k3; width: 150; height: 20 }
+        }
+    }
+    Item {
+        visible: false
+        EldurFlow {
+            id: born
+            width: 100
+            Rectangle { width: 60; height: 20 }
+            Rectangle { width: 60; height: 20 }
+        }
+        Flow {
+            id: bornFlow
+            width: 100
+            Rectangle { width: 60; height: 20 }
+            Rectangle { width: 60; height: 20 }
+        }
+    }
+    Component {
+        id: kid
+        Rectangle { width: 80; height: 20 }
+    }
+
+    TestCase {
+        name: "EldurFlowAlone"
+        when: windowShown
+
+        // With no width set, the items stay on one line, as in `Flow`: the
+        // last pass's widest line is no bound. A set width still wraps.
+        function test_no_width_keeps_one_line() {
+            const added = kid.createObject(free)
+            kid.createObject(freeFlow)
+            kid.createObject(fixed)
+            wait(50)
+            compare(freeFlow.implicitHeight, 20, "Flow")
+            compare(free.implicitHeight, 20, "EldurFlow")
+            compare(added.x, 90)
+            compare(fixed.implicitHeight, 45, "a set width wraps")
+        }
+
+        // A kid hidden on its own stays out of the lines while the box or an
+        // ancestor is hidden, and a box born hidden counts its kids as `Flow`
+        // does.
+        function test_hiding() {
+            compare(born.implicitHeight, bornFlow.implicitHeight, "born hidden")
+            compare(box.implicitHeight, 45)
+            k1.visible = false
+            wait(30)
+            compare(box.implicitHeight, 20, "kid hidden")
+            box.visible = false
+            wait(30)
+            compare(box.implicitHeight, 20, "box hidden")
+            box.visible = true
+            compare(box.implicitHeight, 20, "box shown")
+            ancestor.visible = false
+            k1.visible = true
+            wait(30)
+            compare(box.implicitHeight, 20, "kept while the ancestor is hidden")
+            ancestor.visible = true
+            compare(box.implicitHeight, 45, "placed at once when shown")
+            compare(k3.y, 25)
+        }
+    }
+}
+"##;
+
+/// The box's own rules, with no page around it: the converter ships
+/// `EldurFlow.qml` with any page that has one.
+#[test]
+fn an_eldur_flow_alone_keeps_flow_rules() {
+    if support::no_qt() {
+        return;
+    }
+    let out = convert_str(PAGE, &Options::default());
+    let dir = std::env::temp_dir().join(format!("eldur-flow-alone-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    write(&dir, &out);
+    std::fs::write(dir.join("tst_eldur_flow_alone.qml"), ALONE_TEST).expect("write test");
+    let output = support::qmltestrunner()
+        .args(["-platform", "offscreen", "-input"])
+        .arg(dir.join("tst_eldur_flow_alone.qml"))
+        .env("QT_FORCE_STDERR_LOGGING", "1")
+        .output()
+        .expect("run qmltestrunner");
+    let text = format!(
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    std::fs::remove_dir_all(&dir).expect("remove temp dir");
+    assert!(output.status.success(), "{text}");
+}
+
 fn write(dir: &Path, out: &eldur_convert::Output) {
     for file in &out.files {
         std::fs::write(dir.join(&file.path), &file.contents).expect("write output");
