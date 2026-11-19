@@ -1,0 +1,98 @@
+{
+ "intersection": [
+  "OB thresholds 0,0.5,1 margin 0px 0px 0px 0px root null",
+  "OB sync calls 0",
+  "OB io a:true:1:0,100:0,100:number clipped:false:0:160,40:0,0:number gone:false:0:0,0:0,0:number h:true:0.5:750,100:750,50:number c:false:0:1850,100:0,0:number self:true root:0,800",
+  "OB step scroll 20",
+  "OB io a:true:0.8:-20,100:0,80:number self:true root:0,800",
+  "OB step scroll 1200",
+  "OB io a:false:0:-1200,100:0,0:number h:false:0:-450,100:0,0:number c:true:1:650,100:650,100:number self:true root:0,800",
+  "OB step unobserve a, scroll 0",
+  "OB io h:true:0.5:750,100:750,50:number c:false:0:1850,100:0,0:number self:true root:0,800",
+  "OB step disconnect, scroll 1200",
+  "OB takeRecords 0 calls 4",
+  "OB done"
+ ],
+ "intersection_root": [
+  "OB margin 0px 0px 50px 0px root true thresholds 0",
+  "OB io i0:true:1 i1:true:1 i2:true:0.5 i3:false:0 i4:false:0 i5:false:0 root:0,250",
+  "OB step scrollTop 250",
+  "OB io i0:false:0 i1:false:0 i3:true:1 i4:true:1 i5:true:0 root:0,250",
+  "OB scrolled 250",
+  "OB done"
+ ],
+ "mutation_attributes": [
+  "OB sync",
+  "OB takeRecords attributes:q:data-a:null:null attributes:q:data-b:null:null then 0",
+  "OB errors TypeError,TypeError,TypeError",
+  "OB promise before",
+  "OB mo 10 self:true attributes:a:title:t0:null attributes:a:title:t1:null attributes:a:title:t1:null attributes:a:class:null:null attributes:a:class:k:null attributes:a:data-v:null:null attributes:a:data-v:1:null attributes:a:hidden:null:null attributes:a:id:a:null attributes:a:style:null:null",
+  "OB tree attributes:kid:data-x:null:null attributes:leaf:title:null:null attributes:tree:data-x:null:null",
+  "OB taken fired 3",
+  "OB again attributes:q:data-a:null:null attributes:q:data-one:null:null",
+  "OB chain attributes:q:data-one:null:null",
+  "OB promise after",
+  "OB taken fired 1",
+  "OB again attributes:q:data-two:null:null",
+  "OB chain attributes:q:data-two:null:null",
+  "OB done"
+ ],
+ "mutation_children": [
+  "OB sync 5",
+  "OB mo 10",
+  "OB   childList:list:+l1:-:l0:null",
+  "OB   childList:list:+l2:-:null:l0",
+  "OB   childList:list:+:-l0:l2:l1",
+  "OB   childList:other:+:-moved:null:null",
+  "OB   childList:list:+moved:-:l1:null",
+  "OB   childList:list:+l3|l4:-:moved:null",
+  "OB   childList:list:+l5:-:null:l2",
+  "OB   childList:list:+:-l1:l2:moved",
+  "OB   childList:list:+l6:-l3:moved:l4",
+  "OB   childList:list:+l7:-l4:l6:null",
+  "OB after timer",
+  "OB mo 3",
+  "OB   childList:list:+l8:-l5|l2|moved|l6|l7:null:null",
+  "OB   childList:list:+l9|l10:-l8:null:null",
+  "OB   childList:list:+:-l9|l10:null:null",
+  "OB flat childList:tree:+B:-:kid:null",
+  "OB deep childList:kid:+made:-:null:null childList:tree:+B:-:kid:null",
+  "OB done"
+ ],
+ "mutation_text": [
+  "OB text newest",
+  "OB mo characterData:#text:old text:+:- characterData:#text:new text:+:- characterData:#text:newer:+:-",
+  "OB kids childList:u:null:+#text:-#text",
+  "OB text second",
+  "OB done"
+ ],
+ "repro": [
+  "OB sync waiting 0",
+  "OB order ro,mo1:data-w,mo1:data-m,mo1:data-m,io",
+  "OB text seen true",
+  "OB data 1264 1",
+  "OB done"
+ ],
+ "resize": [
+  "OB sync calls 0",
+  "OB ro box:8,10,200,50:200,50:218,68 bb:5,5,88,28:88,28:100,40 none:0,0,0,0:0,0:0,0 zero:0,0,0,0:0,0:0,0 self:true",
+  "OB step widen box, heighten bb",
+  "OB ro box:8,10,300,50:300,50:318,68 bb:5,5,88,48:88,48:100,60 self:true",
+  "OB step same height",
+  "OB step unobserve bb, show none",
+  "OB ro none:0,0,30,30:30,30:30,30 self:true",
+  "OB step hide none",
+  "OB ro none:0,0,0,0:0,0:0,0 self:true",
+  "OB step disconnect",
+  "OB calls 4",
+  "OB done"
+ ],
+ "toc_lazy": [
+  "OB scrollY 0 active n1 loaded p1,p2",
+  "OB scrollY 700 active n2 loaded p1,p2,p3",
+  "OB scrollY 1400 active n3 loaded p1,p2,p3,p4",
+  "OB scrollY 1000 active n2 loaded p1,p2,p3,p4",
+  "OB scrollY 1600 active n4 loaded p1,p2,p3,p4",
+  "OB done"
+ ]
+}

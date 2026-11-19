@@ -1,0 +1,27 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>mutation text</title></head><body>
+<p id="t">old text</p>
+<p id="u">first</p>
+<script>
+function L(k){console.log("OB "+k)}
+function N(n){return n ? (n.id || n.nodeName) : "null"}
+function R(r){
+  return r.type + ":" + N(r.target) + ":" + r.oldValue + ":+" + Array.prototype.map.call(r.addedNodes, N).join("|")
+    + ":-" + Array.prototype.map.call(r.removedNodes, N).join("|");
+}
+var t = document.getElementById("t"), u = document.getElementById("u");
+var mo = new MutationObserver(function(rs) { L("mo " + rs.map(R).join(" ")); });
+mo.observe(t, { characterData: true, characterDataOldValue: true, subtree: true });
+t.firstChild.data = "new text";
+t.firstChild.nodeValue = "newer";
+t.firstChild.textContent = "newest";
+L("text " + t.textContent);
+// Replacing an element's text is a child change, not a character one.
+var kids = new MutationObserver(function(rs) { L("kids " + rs.map(R).join(" ")); });
+kids.observe(u, { childList: true, characterData: true });
+u.textContent = "second";
+setTimeout(function() {
+  L("text " + u.textContent);
+  L("done");
+  var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+}, 0);
+</script></body></html>

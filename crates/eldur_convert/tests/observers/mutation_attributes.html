@@ -1,0 +1,66 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>mutation attributes</title></head><body>
+<div id="a" title="t0"></div>
+<div id="tree"><div id="kid"><span id="leaf">x</span></div></div>
+<div id="q"></div>
+<script>
+function L(k){console.log("OB "+k)}
+function R(r){return r.type + ":" + r.target.id + ":" + r.attributeName + ":" + r.oldValue + ":" + r.attributeNamespace}
+var a = document.getElementById("a");
+var mo = new MutationObserver(function(rs, o) {
+  L("mo " + rs.length + " self:" + (o === mo) + " " + rs.map(R).join(" "));
+});
+Promise.resolve().then(function() { L("promise before"); });
+mo.observe(a, { attributes: true, attributeOldValue: true });
+a.setAttribute("title", "t1");
+a.setAttribute("title", "t1");
+a.removeAttribute("title");
+a.removeAttribute("title");
+a.className = "k";
+a.classList.add("j");
+a.dataset.v = "1";
+delete a.dataset.v;
+a.toggleAttribute("hidden");
+a.id = "a";
+a.style.color = "red";
+Promise.resolve().then(function() { L("promise after"); });
+L("sync");
+// Only the attributes named, anywhere below.
+var tree = new MutationObserver(function(rs) { L("tree " + rs.map(R).join(" ")); });
+tree.observe(document.getElementById("tree"), { subtree: true, attributeFilter: ["data-x", "title"] });
+document.getElementById("kid").setAttribute("data-x", "1");
+document.getElementById("kid").setAttribute("data-y", "1");
+document.getElementById("leaf").title = "deep";
+document.getElementById("tree").setAttribute("data-x", "2");
+// takeRecords empties the queue, and disconnect drops what was left.
+var q = document.getElementById("q");
+var taken = new MutationObserver(function(rs) { L("taken fired " + rs.length); });
+taken.observe(q, { attributes: true });
+q.setAttribute("data-a", "1");
+q.setAttribute("data-b", "1");
+L("takeRecords " + taken.takeRecords().map(R).join(" ") + " then " + taken.takeRecords().length);
+var dropped = new MutationObserver(function(rs) { L("dropped fired " + rs.length); });
+dropped.observe(q, { attributes: true });
+q.setAttribute("data-c", "1");
+dropped.disconnect();
+// A second observe of a node replaces the first's options.
+var again = new MutationObserver(function(rs) { L("again " + rs.map(R).join(" ")); });
+again.observe(q, { attributes: true, attributeOldValue: true });
+again.observe(q, { attributes: true });
+q.setAttribute("data-a", "2");
+// A record made in a callback is delivered in a callback after it.
+var chain = new MutationObserver(function(rs) {
+  L("chain " + rs.map(R).join(" "));
+  if (rs[0].attributeName === "data-one") q.setAttribute("data-two", "1");
+});
+chain.observe(q, { attributeFilter: ["data-one", "data-two"] });
+q.setAttribute("data-one", "1");
+var errs = [];
+try { new MutationObserver(function() {}).observe(q, {}); } catch (e) { errs.push(e.name); }
+try { new MutationObserver(function() {}).observe(q, { attributeOldValue: true, attributes: false }); } catch (e) { errs.push(e.name); }
+try { new MutationObserver(); } catch (e) { errs.push(e.name); }
+L("errors " + errs.join(","));
+setTimeout(function() {
+  L("done");
+  var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+}, 0);
+</script></body></html>

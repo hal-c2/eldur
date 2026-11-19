@@ -1,0 +1,51 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>mutation children</title></head><body>
+<ul id="list"><li id="l0">zero</li></ul>
+<div id="other"><span id="moved">m</span></div>
+<div id="tree"><div id="kid"></div></div>
+<p id="t">old text</p>
+<script>
+function L(k){console.log("OB "+k)}
+function N(n){return n ? (n.id || n.nodeName) : "null"}
+function R(r){
+  return r.type + ":" + r.target.id + ":+" + Array.prototype.map.call(r.addedNodes, N).join("|")
+    + ":-" + Array.prototype.map.call(r.removedNodes, N).join("|") + ":" + N(r.previousSibling) + ":" + N(r.nextSibling);
+}
+var list = document.getElementById("list");
+var mo = new MutationObserver(function(rs) {
+  L("mo " + rs.length);
+  rs.forEach(function(r) { L("  " + R(r)); });
+});
+mo.observe(list, { childList: true });
+mo.observe(document.getElementById("other"), { childList: true });
+function li(id) { var e = document.createElement("li"); e.id = id; return e; }
+var l0 = document.getElementById("l0");
+list.appendChild(li("l1"));
+list.insertBefore(li("l2"), l0);
+list.removeChild(l0);
+list.appendChild(document.getElementById("moved"));
+list.append(li("l3"), li("l4"));
+list.prepend(li("l5"));
+document.getElementById("l1").remove();
+document.getElementById("l3").replaceWith(li("l6"));
+list.replaceChild(li("l7"), document.getElementById("l4"));
+L("sync " + list.children.length);
+setTimeout(function() {
+  list.replaceChildren(li("l8"));
+  list.innerHTML = '<li id="l9">nine</li><li id="l10">ten</li>';
+  list.textContent = "";
+  L("after timer");
+  // Nothing below the target without `subtree`; everything with it.
+  var tree = document.getElementById("tree"), kid = document.getElementById("kid");
+  var flat = new MutationObserver(function(rs) { L("flat " + rs.map(R).join(" ")); });
+  flat.observe(tree, { childList: true });
+  var deep = new MutationObserver(function(rs) { L("deep " + rs.map(R).join(" ")); });
+  deep.observe(tree, { childList: true, subtree: true });
+  var made = document.createElement("i"); made.id = "made";
+  kid.appendChild(made);
+  tree.appendChild(document.createElement("b"));
+  setTimeout(function() {
+    L("done");
+    var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+  }, 0);
+}, 0);
+</script></body></html>
