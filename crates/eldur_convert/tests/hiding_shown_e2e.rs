@@ -112,6 +112,26 @@ const CASES: &[Case] = &[
         load: &[58.0, 86.0, 104.0],
         toggled: &[28.0, 28.0, 46.0],
     },
+    // Hidden by its `style` attribute and by `hidden`: clearing its display
+    // leaves the `[hidden]` rule hiding it.
+    Case {
+        name: "hidden_attribute_stays",
+        body: r#"<p id="shy" style="display:none" hidden><em>Shy</em></p>
+<p id="after">After</p>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[16.0, 50.0],
+    },
+    // The same with `hidden` set by a script before the toggle.
+    Case {
+        name: "hidden_set_stays",
+        body: r#"<p id="shy" style="display:none"><em>Shy</em></p>
+<p id="after">After</p>
+<script>document.getElementById('shy').hidden = true;</script>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[16.0, 50.0],
+    },
 ];
 
 fn page(case: &Case) -> String {
@@ -282,4 +302,14 @@ fn an_earlier_hiding_block_does_not_decide_what_a_column_passes_on() {
 #[test]
 fn a_wrapper_after_a_hideable_block_takes_its_own_first_blocks_cases() {
     run(case("wrapper_after_hideable"));
+}
+
+#[test]
+fn clearing_the_display_of_a_hidden_attributed_block_keeps_it_hidden() {
+    run(case("hidden_attribute_stays"));
+}
+
+#[test]
+fn clearing_the_display_of_a_block_a_script_set_hidden_keeps_it_hidden() {
+    run(case("hidden_set_stays"));
 }
