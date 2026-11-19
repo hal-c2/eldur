@@ -390,7 +390,8 @@ const OUT_OF_FLOW_MOVES_UNSCRIPTED: &str = r##"
 /// at its own level; a box with no box (`display: none`) lifts nothing; a
 /// fixed box is painted over the window, not in its block. And an overlay
 /// taken out of its block keeps its place at its block, and at the
-/// positioned box its block is in.
+/// positioned box its block is in, and at a block its `position: relative`
+/// offset moves (`#h8`, painted 30px under where the flow has it).
 const CONTEXTS: &str = r#"<!doctype html><html><head><style>
 body { margin: 0 }
 div { height: 40px; width: 200px }
@@ -406,6 +407,7 @@ div { height: 40px; width: 200px }
 #f5 { position: fixed; top: 1150px; left: 600px; z-index: 10; width: 50px; background: green }
 #h6 { position: relative; margin-left: 40px }
 #o7 { position: relative; margin-left: 30px }
+#h8 { position: relative; top: 30px; margin-left: 40px }
 </style></head><body>
 <div id=t1 class=tf><div id=c1 class=in></div></div><div id=v1 class=over></div>
 <div class=gap></div>
@@ -420,8 +422,10 @@ div { height: 40px; width: 200px }
 <div id=h6><div id=a6 class=ab></div></div><div id=v6 class="over aside"></div>
 <div class=gap></div>
 <div id=o7><div id=h7 class=rel><div id=a7 class=ab></div></div></div><div id=v7 class="over aside"></div>
+<div class=gap></div>
+<div id=h8><div id=a8 class=ab></div></div>
 <script>
-var named = ['t1','c1','v1','t2','c2','v2','t3','c3','v3','p4','c4','e4','v4','p5','e5','f5','v5','h6','a6','v6','o7','h7','a7','v7'].map(function (id) { return document.getElementById(id); });
+var named = ['t1','c1','v1','t2','c2','v2','t3','c3','v3','p4','c4','e4','v4','p5','e5','f5','v5','h6','a6','v6','o7','h7','a7','v7','h8','a8'].map(function (id) { return document.getElementById(id); });
 // A box raised inside a transformed box at `auto`, which keeps it in; a
 // box that lifted its block hidden.
 document.getElementById('c1').style.zIndex = '10';
@@ -440,6 +444,9 @@ const CONTEXTS_TEST: &str = r##"
         compare(front(page, 20, 610), "", "not at its stop")
         compare(front(page, 70, 730), "a7", "at its block in a positioned box")
         compare(front(page, 10, 730), "", "not at that box's stop")
+        compare(front(page, 70, 890), "a8", "at its block, moved by its offset")
+        compare(front(page, 150, 890), "h8", "the block, moved")
+        compare(front(page, 70, 850), "", "not where the flow has the block")
     }
 }
 }
@@ -457,6 +464,9 @@ const CONTEXTS_UNSCRIPTED: &str = r##"
         compare(front(page, 20, 610), "")
         compare(front(page, 70, 730), "a7")
         compare(front(page, 10, 730), "")
+        compare(front(page, 70, 890), "a8")
+        compare(front(page, 150, 890), "h8")
+        compare(front(page, 70, 850), "")
     }
 }
 }
