@@ -2667,9 +2667,9 @@ fn lazy_module_tdz_bindings(
     for stmt in &v.parsed.program.body {
         let vd = match stmt {
             Statement::VariableDeclaration(vd) => Some(&**vd),
-            Statement::ExportNamedDeclaration(exp) => match &exp.declaration {
-                Some(Declaration::VariableDeclaration(vd)) => Some(&**vd),
-                Some(Declaration::ClassDeclaration(cls)) => {
+            Statement::ExportDeclaration(exp) => match &exp.declaration {
+                Declaration::VariableDeclaration(vd) => Some(&**vd),
+                Declaration::ClassDeclaration(cls) => {
                     if let Some(id) = &cls.id {
                         own(id, TdzKind::Let, cls.span.end, shared);
                     }
