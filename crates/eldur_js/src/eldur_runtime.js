@@ -7296,7 +7296,8 @@ function focus(item) {
     // Asked by a listener while the page hears of a focus change: Qt is still
     // telling its probe of that change, and one more now would be lost to a
     // binding loop. The page hears of this one at once, and Qt is told after.
-    if (_in && _in.focusShift && _in.focused !== raw) {
+    // The element the change moves to has not heard of it yet: it hears now.
+    if (_in && _in.focusShift && (_in.focused !== raw || raw === _in.untold)) {
         _inFocusWhileHeard(raw);
         return;
     }
@@ -7353,15 +7354,31 @@ function focus(item) {
 }
 
 function _inFocusWhileHeard(raw) {
+    // What the change moved to was never told it had the focus: it hears no blur.
     var before = _in.focused;
+    var told = before && before !== _in.untold ? before : null;
+    if (raw === _in.untold) {
+        _in.untold = null;
+    }
     _in.focused = raw;
     _in.focusMoves++;
+    _in.focusPending = raw;
     _activeElement = raw;
     if (raw.__eldurInline) {
         _in.inlineFocus = raw;
     }
+    if (_inIsField(raw)) {
+        _meta(raw).changeBase = String(raw.text);
+    }
+    _inWatchHidden(raw);
     Qt.callLater(function() {
-        if (_pageGone() || !_in || _in.focused !== raw) {
+        if (_pageGone() || !_in) {
+            return;
+        }
+        if (_in.focusPending === raw) {
+            _in.focusPending = null;
+        }
+        if (_in.focused !== raw) {
             return;
         }
         var holder = raw.__eldurInline ? _inInlineHolder(raw) : raw;
@@ -7369,10 +7386,13 @@ function _inFocusWhileHeard(raw) {
             holder.forceActiveFocus();
         }
     });
-    if (before) {
-        _inFocusEvents(before, raw, "blur", "focusout");
+    if (told) {
+        _in.shiftTo = null;
+        _inFocusEvents(told, raw, "blur", "focusout");
     }
-    _inFocusEvents(raw, before, "focus", "focusin");
+    // Its own listeners find it focused.
+    _in.shiftTo = raw;
+    _inFocusEvents(raw, told, "focus", "focusin");
 }
 
 function blur(item) {
@@ -7381,6 +7401,21 @@ function blur(item) {
     }
     var raw = _unwrap(item);
     if (!raw) {
+        return;
+    }
+    // Focused by a listener and not yet by Qt (`_inFocusWhileHeard`): the page
+    // lets it go, and Qt is never asked.
+    if (_in && _in.focusPending === raw && _in.focused === raw) {
+        _in.focusPending = null;
+        _in.focused = null;
+        _in.shiftTo = null;
+        if (_in.inlineFocus === raw) {
+            _in.inlineFocus = null;
+        }
+        if (_activeElement === raw) {
+            _activeElement = null;
+        }
+        _inFocusEvents(raw, null, "blur", "focusout");
         return;
     }
     // A link in a line holds its focus through the item that holds it for it
@@ -16552,7 +16587,7 @@ function _inInstall() {
         page: _root, overlay: null, held: 0, last: null, pressed: false, hoverP: null, hoverM: null,
         downTarget: {}, noMouse: false, count: 0, countButton: -1, countAt: null, countTime: 0,
         capture: null, captureNext: null, defaults: [], scrolled: null, restoreFocus: null,
-        restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusMoves: 0, focusShift: false,
+        restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusMoves: 0, focusShift: false, focusPending: null, untold: null, shiftTo: null,
         spaceDown: null, typing: null, popovers: [], radioLast: {}, focusProbe: null
     };
     _inLayers.set(_root, _in);
@@ -18010,6 +18045,7 @@ function _inFocusChanged() {
     }
     _in.focused = now;
     _in.focusMoves++;
+    var moves = _in.focusMoves;
     // Focus somewhere is where the next Tab starts, whatever a fragment said before.
     if (now && _nodeTag(now) !== "body") {
         _in.tabFrom = null;
@@ -18020,6 +18056,8 @@ function _inFocusChanged() {
     if (now) {
         _inWatchHidden(now);
     }
+    _in.untold = now;
+    _in.shiftTo = null;
     _in.focusShift = true;
     if (was) {
         if (_inIsField(was)) {
@@ -18028,7 +18066,11 @@ function _inFocusChanged() {
             _meta(was).numberDirty = false;
             _dispatchDynamic(was, "change", null);
         }
-        var heard = function() { _inFocusEvents(was, now, "blur", "focusout"); };
+        // A blur listener that moved the focus leaves focusout no element it goes to.
+        var heard = function() {
+            _inFocusEvents(was, now, "blur");
+            _inFocusEvents(was, _in.shiftTo ? null : now, "focusout");
+        };
         // A script's change to what stays shown holds nothing back: focus moves in one go.
         if (was.__eldurInline || (was.visible && was.enabled)) {
             heard();
@@ -18037,9 +18079,15 @@ function _inFocusChanged() {
         }
     }
     _in.focusShift = false;
-    // A blur listener focused something else: the focus is there now.
-    if (_in.focused !== now) {
-        return;
+    _in.untold = null;
+    _in.shiftTo = null;
+    // A blur listener focused something else: the focus is there now. One that
+    // focused something and let it go again lets the change go on.
+    if (_in.focusMoves !== moves) {
+        if (_in.focused) {
+            return;
+        }
+        _in.focused = now;
     }
     _activeElement = now;
     if (now) {
@@ -18086,7 +18134,7 @@ function _inInlineFocusLook(model) {
 }
 
 function _inFocusEvents(raw, other, one, two) {
-    [one, two].forEach(function(type) {
+    (two ? [one, two] : [one]).forEach(function(type) {
         var ev = event(type, wrap(raw), {});
         ev.bubbles = type === "focusin" || type === "focusout";
         ev.cancelable = false;
@@ -20407,7 +20455,11 @@ var document = {
     },
     get activeElement() {
         if (_in) {
-            return _in.focused && !_in.focusShift ? wrap(_in.focused) : document.body;
+            // Mid-change, only what a listener focused is: the rest is not yet.
+            if (_in.focusShift) {
+                return _in.shiftTo ? wrap(_in.shiftTo) : document.body;
+            }
+            return _in.focused ? wrap(_in.focused) : document.body;
         }
         if (_focusHeld && (_focusHeld.visible === false || _focusHeld.activeFocus)) {
             return wrap(_focusHeld);
