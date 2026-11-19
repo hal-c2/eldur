@@ -974,6 +974,15 @@ pub(crate) fn is_fixed_containing_block(style: &ComputedStyle) -> bool {
     !style.transform.is_empty() || style.filter.is_some()
 }
 
+/// Whether a box is a stacking context whatever its `z-index` (CSS 2.2
+/// Appendix E, CSS Transforms 1 §2, Filter Effects 1 §3, CSS Color 4
+/// §11.2, CSS Position 3 §3): at `auto` it keeps what it holds in, as at 0.
+pub(crate) fn is_context_at_auto(style: &ComputedStyle) -> bool {
+    is_fixed_containing_block(style)
+        || style.opacity < 1.0
+        || matches!(style.position, Position::Sticky | Position::Fixed)
+}
+
 /// Whether a box is the containing block of its `position: absolute`
 /// descendants (CSS 2.2 §10.1).
 pub(crate) fn is_containing_block(style: &ComputedStyle) -> bool {

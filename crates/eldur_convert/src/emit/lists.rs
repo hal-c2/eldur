@@ -332,9 +332,15 @@ impl Emitter<'_, '_> {
         // At `auto`, by what it holds too, as nothing in it makes a context
         // to keep that in.
         let inside = self.overlay_inside.take();
-        let lift = style
-            .z_index
-            .map_or_else(|| inside.unwrap_or(1).max(1), |z| z.max(0) + 1);
+        let lift = style.z_index.map_or_else(
+            || {
+                inside
+                    .filter(|_| !boxes::is_context_at_auto(style))
+                    .unwrap_or(1)
+                    .max(1)
+            },
+            |z| z.max(0) + 1,
+        );
         if node.is_some() && hoist.is_none() {
             self.above_flow = Some(self.above_flow.map_or(lift, |n| n.max(lift)));
         }
@@ -662,9 +668,13 @@ impl Emitter<'_, '_> {
         let style = &*b.style;
         // Overlays stack by their `z-index`, and one at `auto` is at 0 with
         // what it holds over it: a kid's level is its `z-index` plus one.
-        let z = style
-            .z_index
-            .or_else(|| self.overlay_inside.map(|n| n - 1).filter(|&n| n > 0));
+        // A stacking context at `auto` keeps that in, at 0.
+        let context = boxes::is_context_at_auto(style);
+        let z = style.z_index.or_else(|| {
+            self.overlay_inside
+                .map(|n| n - 1)
+                .filter(|&n| n > 0 && !context)
+        });
         if let Some(z) = z {
             obj.set("z", Value::Number(f64::from(z)));
         }

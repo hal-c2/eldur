@@ -4972,6 +4972,10 @@ function _takeOut(raw) {
 // Sets whether a node shows of itself. A box painted away from its DOM parent
 // still goes when that parent does.
 function _setShown(raw, shown) {
+    _zShowing(raw, function() { _setShownNow(raw, shown); });
+}
+
+function _setShownNow(raw, shown) {
     _holdFocus();
     _layoutChanged(raw.parent);
     var slot = raw.eldurSlot;
@@ -6407,6 +6411,15 @@ function _stackHolds(s) {
         || (s.filter !== undefined && s.filter !== "none");
 }
 
+// A box that is a stacking context whatever its `z-index`: at `auto` it
+// keeps what it holds in, as at 0 (CSS 2.2 Appendix E).
+function _stackContext(s) {
+    return (s.transform !== undefined && s.transform !== "none")
+        || (s.filter !== undefined && s.filter !== "none")
+        || (s.opacity !== undefined && parseFloat(s.opacity) < 1)
+        || s.position === "sticky" || s.position === "fixed";
+}
+
 // The least level a box at `z-index: auto` has, whatever it holds.
 function _stackHold(s) {
     if (s.position === "absolute" || s.position === "fixed" || _stackHolds(s)) {
@@ -6445,6 +6458,31 @@ function _zOwn(raw) {
     return null;
 }
 
+// Without the rules, the converter marks a box that is one (`eldurContext`).
+function _zContext(raw) {
+    if (_zStyled(raw)) {
+        return _stackContext(_gStyle(raw));
+    }
+    return raw.eldurContext === true;
+}
+
+// A fixed box is painted over the window, outside the page and its
+// stacking order, so it lifts nothing it is in.
+function _zOverWindow(raw) {
+    return _blockOf(raw) === "window" || (_zStyled(raw) && _gStyle(raw).position === "fixed");
+}
+
+// A box shown or hidden (`change`) lifts the box it is in, or stops lifting
+// it, as a box put in or taken out does.
+function _zShowing(raw, change) {
+    var was = raw.visible;
+    var before = _zOutOfFlow(raw) ? undefined : _zLift(raw);
+    change();
+    if (typeof raw.z === "number" && raw.visible !== was) {
+        _zRelevel(raw, before);
+    }
+}
+
 function _zHold(raw) {
     if (_zStyled(raw)) {
         return _stackHold(_gStyle(raw));
@@ -6456,8 +6494,12 @@ function _zHold(raw) {
 // an in-flow box by its own `z`, which is already its level; an
 // out-of-flow one, painted elsewhere, by its level over the flow, and at
 // `auto` by what it holds too, as nothing in it makes a context to keep
-// that in. A level under 1 lifts nothing.
+// that in. A level under 1 lifts nothing, and nor does a box with no box
+// (`display: none`) or one over the window.
 function _zLift(raw) {
+    if (raw.visible === false || _zOverWindow(raw)) {
+        return null;
+    }
     if (!_zOutOfFlow(raw)) {
         var z = raw.z;
         return typeof z === "number" && Math.floor(z) === z && z >= 1 ? z : null;
@@ -6466,7 +6508,7 @@ function _zLift(raw) {
     if (own !== null) {
         return Math.max(own, 0) + 1;
     }
-    return Math.max(1, _zInside(raw));
+    return _zContext(raw) ? 1 : Math.max(1, _zInside(raw));
 }
 
 // The item that took an overlay out to its stop's column, as its block
@@ -6492,16 +6534,18 @@ function _zInside(raw) {
     return top;
 }
 
-// A box at `auto`: its hold, raised over its later siblings by what it holds.
+// A box at `auto`: its hold, raised over its later siblings by what it
+// holds; a stacking context only to over the flow.
 function _zAuto(raw, hold) {
-    return Math.max(hold, _zInside(raw));
+    var inside = _zInside(raw);
+    return Math.max(hold, _zContext(raw) ? Math.min(inside, 1) : inside);
 }
 
 // An overlay at `auto`, among its block's overlays, which stack by their
 // `z-index`: at 0, with what it holds over it, as it makes no context to
 // keep that in; a kid's lift is its `z-index` plus one.
 function _zOverlayAuto(raw) {
-    return Math.max(0, _zInside(raw) - 1);
+    return _zContext(raw) ? 0 : Math.max(0, _zInside(raw) - 1);
 }
 
 function _zPage(raw) {
@@ -6518,7 +6562,7 @@ function _zRelevel(box, before) {
     var after = _zLift(box);
     var host = _zHost(box);
     if (host) {
-        host.z = after;
+        host.z = after === null ? 0 : after;
         return;
     }
     var x = _logicalParent(box);
@@ -6541,7 +6585,7 @@ function _zRelevel(box, before) {
             after = _zLift(x);
             var took = _zHost(x);
             if (took) {
-                took.z = after;
+                took.z = after === null ? 0 : after;
                 return;
             }
             x = _logicalParent(x);
@@ -6554,7 +6598,10 @@ function _zRelevel(box, before) {
         // or whose lift was not known, leaves its kids to scan.
         var cur = x.z;
         var next;
-        if (after !== null && after >= cur) {
+        if (_zContext(x)) {
+            // What it holds stays in it: only whether it holds any counts.
+            next = _zAuto(x, _zHold(x));
+        } else if (after !== null && after >= cur) {
             next = after;
         } else if (before !== undefined && (before === null || before < cur)) {
             next = cur;
@@ -6708,8 +6755,10 @@ function _setStyleAt(item, prop, value) {
                 // `hidden` attribute still hides it.
                 _setShown(raw, !hiddenAttribute(raw));
             } else if (str === "") {
-                _layoutChanged(raw.parent);
-                _inlineRelease(raw, raw, "visible");
+                _zShowing(raw, function() {
+                    _layoutChanged(raw.parent);
+                    _inlineRelease(raw, raw, "visible");
+                });
             } else {
                 _setShown(raw, !_displayHides(raw, str));
                 _gShownInline(raw, str === "inline");
@@ -27521,6 +27570,13 @@ function _gShowAsRules(raw) {
             _setShown(raw, display !== "none");
         }
     } else {
+        _zShowing(raw, function() { _gShowUnslotted(raw, display); });
+    }
+    _gShownInline(raw, display === "inline");
+}
+
+function _gShowUnslotted(raw, display) {
+    {
         _holdFocus();
         _layoutChanged(raw.parent);
         _inlineRelease(raw, raw, "visible");
@@ -27539,7 +27595,6 @@ function _gShowAsRules(raw) {
             }
         }
     }
-    _gShownInline(raw, display === "inline");
 }
 
 // The converter made a hidden element a box, not knowing what it would display

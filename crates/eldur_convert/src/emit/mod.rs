@@ -642,9 +642,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             .is_some_and(|n| Some(n) == self.doc.body() || Some(n) == self.root_node);
         let stop = page
             || ((boxes::is_containing_block(style) || layout_item) && style.z_index.is_some())
-            || !style.transform.is_empty()
-            || style.filter.is_some()
-            || style.opacity < 1.0;
+            || boxes::is_context_at_auto(style);
         let keeps = !stop
             && column_child
             && b.kind == BoxKind::Block
@@ -1187,6 +1185,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
             // when it levels that block again.
             if self.writes_z_index && !page {
                 push_z_markers(obj, style.z_index, 1);
+                if boxes::is_context_at_auto(style) {
+                    push_context_marker(obj);
+                }
             }
             self.overlay_inside = self.above_flow;
             self.above_flow = outer;
@@ -1195,7 +1196,14 @@ impl<'a, 'd> Emitter<'a, 'd> {
         let holds = boxes::is_containing_block(style);
         let stacks = holds || (layout_item && style.z_index.is_some());
         let inside = self.above_flow;
-        let at_auto = inside.or(holds.then_some(1));
+        // A stacking context at `auto` keeps what it holds in: it is over
+        // the flow, as at `z-index: 0`, but no higher for what it holds.
+        let context = boxes::is_context_at_auto(style);
+        let at_auto = if context {
+            (holds || inside.is_some()).then_some(1)
+        } else {
+            inside.or(holds.then_some(1))
+        };
         let own = match style.z_index {
             // `z-index: 0` is still over what is not positioned.
             Some(z) if stacks && z >= 0 => Some(z + 1),
@@ -1208,8 +1216,11 @@ impl<'a, 'd> Emitter<'a, 'd> {
         // page with no DOM the runtime has no rules to tell it this box is
         // one it applies to, what clearing it goes back to, or the least
         // level it has at `auto`; what it holds it sees itself.
-        if (holds || layout_item) && self.writes_z_index && !page {
+        if (holds || layout_item || context) && self.writes_z_index && !page {
             push_z_markers(obj, own, i32::from(holds));
+            if context {
+                push_context_marker(obj);
+            }
         }
         if own == Some(0) {
             self.above_flow = outer;
@@ -1845,6 +1856,18 @@ fn over(top: eldur_css::Rgba, under: eldur_css::Rgba) -> eldur_css::Rgba {
 /// What the runtime levels a box by on a page with no rules at run time:
 /// `eldurHoldZ`, the least level it has at `auto`, on every box it levels,
 /// and `eldurRuleZ`, its rule's own level, only on one that has one.
+/// Without the rules, the runtime reads here that a box at `auto` is a
+/// stacking context, so what it holds does not lift it.
+fn push_context_marker(obj: &mut Object) {
+    obj.members.push(Member::PropertyDecl {
+        ty: "bool".to_owned(),
+        name: "eldurContext".to_owned(),
+        value: Some(Value::Bool(true)),
+        readonly: true,
+        required: false,
+    });
+}
+
 fn push_z_markers(obj: &mut Object, own: Option<i32>, hold: i32) {
     let own = own.map(|z| ("eldurRuleZ", z));
     for (name, z) in own.into_iter().chain([("eldurHoldZ", hold)]) {
