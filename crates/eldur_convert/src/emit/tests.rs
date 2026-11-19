@@ -2541,12 +2541,16 @@ fn only_a_block_its_own_style_attribute_hides_is_shown_when_a_script_clears_it()
         r#"<p id="a" style="display:none">a</p>
 <p id="b" style="display:none" hidden>b</p>
 <p id="c" class="k" style="display:none">c</p>
+<p id="d" style="display:none!important;display:block">d</p>
+<p id="e" style="display:none !IMPORTANT">e</p>
+<p id="f" style="display:none;font-family:'a;display:block'">f</p>
 <button id="t">t</button>
 <script>
 document.getElementById('t').addEventListener('click', () => {
   document.getElementById('a').style.display = '';
   document.getElementById('b').style.display = '';
   document.getElementById('c').classList.toggle('on');
+  for (const id of ['d', 'e', 'f']) document.getElementById(id).style.display = '';
 });
 </script>"#,
     ));
@@ -2560,8 +2564,14 @@ document.getElementById('t').addEventListener('click', () => {
             .contains("property bool eldurStyleHides: true")
     };
     assert!(hides("a"), "{qml}");
-    // The UA's `[hidden]` rule hides it too.
-    assert!(!hides("b"), "{qml}");
+    // The runtime keeps it hidden while the `hidden` attribute is there.
+    assert!(hides("b"), "{qml}");
     // Its classes decide, through the binding the converter wrote.
     assert!(!hides("c"), "{qml}");
+    // The important declaration wins over the later one.
+    assert!(hides("d"), "{qml}");
+    // A priority is matched without regard to case.
+    assert!(hides("e"), "{qml}");
+    // A `;` in a string does not end the declaration.
+    assert!(hides("f"), "{qml}");
 }
