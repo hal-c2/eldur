@@ -14,7 +14,7 @@ use super::flow::{Emitted, MarginSet};
 use super::units::{fmt_number, number, round};
 use super::{Emitter, hint};
 use crate::boxes::LayoutBox;
-use crate::images::{ImageAsset, svg_natural};
+use crate::images::{ImageAsset, svg_natural, without_invalid_root};
 
 impl Emitter<'_, '_> {
     pub(super) fn image(&mut self, b: &LayoutBox<'_>, node: NodeId, line: Option<u32>) -> Emitted {
@@ -229,8 +229,11 @@ impl Emitter<'_, '_> {
             }
         };
         let markup = self.doc.svg_markup(node, used, &resolve)?;
-        let source = format!("assets/svg-{:016x}.svg", fnv1a(markup.as_bytes()));
+        // Sized as written; the file drops what Chromium ignores, which Qt
+        // would refuse to draw at all.
         let natural = svg_natural(&markup);
+        let markup = without_invalid_root(&markup).unwrap_or(markup);
+        let source = format!("assets/svg-{:016x}.svg", fnv1a(markup.as_bytes()));
         self.svgs
             .entry(source.clone())
             .or_insert_with(|| markup.into_bytes());

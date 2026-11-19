@@ -90,13 +90,15 @@ pub(crate) fn collect(
             continue;
         }
         let path = unique_path(asset_path(src), &images.files);
+        // The size is read from the file as written, before the copy drops
+        // what Chromium ignores: how Chromium sizes it depends on those.
         let asset = ImageAsset {
             source: path.to_string_lossy().replace('\\', "/"),
             natural: Some(intrinsic_size(&resource.bytes)),
         };
         images.files.push(OutputFile {
             path,
-            contents: resource.bytes,
+            contents: drawable(resource.bytes),
         });
         copied.insert(resource.resolved, asset.clone());
         images.by_node.insert(node, asset);
@@ -160,7 +162,7 @@ pub(crate) fn add_background_files(
         let bases =
             std::iter::once(base).chain(sheets.iter().filter_map(|s| s.base_url.as_deref()));
         let found = bases.into_iter().find_map(|b| resources.read(&url, b));
-        let Some(resource) = found else {
+        let Some(mut resource) = found else {
             diags.warning(
                 "css",
                 None,
@@ -168,6 +170,7 @@ pub(crate) fn add_background_files(
             );
             continue;
         };
+        resource.bytes = drawable(resource.bytes);
         let known = images
             .by_node
             .values()
@@ -222,6 +225,119 @@ fn unique_path(path: PathBuf, files: &[OutputFile]) -> PathBuf {
         .map(|n| path.with_file_name(format!("{stem}-{n}{ext}")))
         .find(|p| !taken(p))
         .expect("an unused name")
+}
+
+/// `bytes` as Qt can draw them: an SVG whose root has an attribute Chromium
+/// ignores as invalid, without it. Qt's SVG reader refuses the whole file
+/// over a negative `width` or `height` or a broken `viewBox`, where Chromium
+/// draws as if the attribute were not there. Anything else is unchanged.
+pub(crate) fn drawable(bytes: Vec<u8>) -> Vec<u8> {
+    if imagesize::blob_size(&bytes).is_ok() {
+        return bytes;
+    }
+    match std::str::from_utf8(&bytes)
+        .ok()
+        .and_then(without_invalid_root)
+    {
+        Some(text) => text.into_bytes(),
+        None => bytes,
+    }
+}
+
+/// `text` without the root `<svg>` attributes Chromium ignores: a negative
+/// `width` or `height` (SVG 2 §8.3, a negative length is an error) and a
+/// `viewBox` that is not four numbers or has a negative side (§8.6). A
+/// `viewBox` with a zero side stays: it disables rendering, in Chromium as
+/// in Qt. `None` when there is nothing to drop.
+pub(crate) fn without_invalid_root(text: &str) -> Option<String> {
+    let start = text.match_indices("<svg").map(|(at, _)| at).find(|at| {
+        text[at + 4..]
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_whitespace() || c == '>' || c == '/')
+    })?;
+    let negative = |value: &str| {
+        // The number is the longest start that reads as one: `-8em` is -8,
+        // `1e-3px` is 0.001.
+        let v = value.trim();
+        (1..=v.len())
+            .rev()
+            .filter(|&end| v.is_char_boundary(end))
+            .find_map(|end| v[..end].parse::<f64>().ok())
+            .is_some_and(|n| n < 0.0)
+    };
+    let broken_view_box = |value: &str| {
+        let n: Vec<Option<f64>> = value
+            .split(|c: char| c == ',' || c.is_whitespace())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.parse().ok().filter(|n: &f64| n.is_finite()))
+            .collect();
+        !matches!(n.as_slice(), [Some(_), Some(_), Some(w), Some(h)] if *w >= 0.0 && *h >= 0.0)
+    };
+    let mut drop = Vec::new();
+    let mut at = start + 4;
+    loop {
+        let rest = &text[at..];
+        let ws = rest.len() - rest.trim_start().len();
+        let attr_start = at;
+        at += ws;
+        let rest = &text[at..];
+        if rest.is_empty() || rest.starts_with('>') || rest.starts_with("/>") {
+            break;
+        }
+        let name_len = rest
+            .find(|c: char| c.is_whitespace() || matches!(c, '=' | '>' | '/'))
+            .unwrap_or(rest.len());
+        if name_len == 0 {
+            // A stray `/` inside the tag; step over it.
+            at += 1;
+            continue;
+        }
+        let name = &rest[..name_len];
+        at += name_len;
+        let after = &text[at..];
+        let eq = after.len() - after.trim_start().len();
+        let mut value = "";
+        if after.trim_start().starts_with('=') {
+            at += eq + 1;
+            let after = &text[at..];
+            at += after.len() - after.trim_start().len();
+            let after = &text[at..];
+            match after.chars().next() {
+                Some(q @ ('"' | '\'')) => {
+                    let end = after[1..].find(q)?;
+                    value = &after[1..=end];
+                    at += end + 2;
+                }
+                _ => {
+                    let end = after
+                        .find(|c: char| c.is_whitespace() || c == '>')
+                        .unwrap_or(after.len());
+                    value = &after[..end];
+                    at += end;
+                }
+            }
+        }
+        let invalid = match name {
+            "width" | "height" => negative(value),
+            "viewBox" => broken_view_box(value),
+            _ => false,
+        };
+        if invalid {
+            drop.push(attr_start..at);
+        }
+    }
+    if drop.is_empty() {
+        return None;
+    }
+    let mut out = String::with_capacity(text.len());
+    let mut from = 0;
+    for range in drop {
+        out.push_str(&text[from..range.start]);
+        from = range.end;
+    }
+    out.push_str(&text[from..]);
+    Some(out)
 }
 
 /// A raster image's width and height, or what an SVG's root `width`,
@@ -424,6 +540,40 @@ mod tests {
             );
         }
         assert_eq!(natural("<svg>"), Natural::default());
+    }
+
+    #[test]
+    fn invalid_root_attributes_are_dropped() {
+        let drop = |t: &str| without_invalid_root(t);
+        assert_eq!(
+            drop(r#"<svg xmlns="x" width="-80" height="40"><rect/></svg>"#).as_deref(),
+            Some(r#"<svg xmlns="x" height="40"><rect/></svg>"#)
+        );
+        assert_eq!(
+            drop(r#"<?xml version="1.0"?><svg width='-8em' height = "-4px" viewBox="0 0 20 10">"#)
+                .as_deref(),
+            Some(r#"<?xml version="1.0"?><svg viewBox="0 0 20 10">"#)
+        );
+        for broken in ["0 0 -20 10", "0,0,20,-10", "0 0 20", "a b c d", ""] {
+            assert_eq!(
+                drop(&format!(r#"<svg width="80" viewBox="{broken}">"#)).as_deref(),
+                Some(r#"<svg width="80">"#),
+                "{broken}"
+            );
+        }
+        // What Chromium keeps stays as written: a zero length or viewBox
+        // side, `-0`, a percentage, and `stroke-width` or a child's width.
+        for kept in [
+            r#"<svg width="0" height="-0" viewBox="0 0 0 10">"#,
+            r#"<svg width="100%" stroke-width="-1"><rect width="-5"/></svg>"#,
+            r#"<svgx width="-1"><svg/>"#,
+            "no svg here",
+        ] {
+            assert_eq!(drop(kept), None, "{kept}");
+        }
+        // A raster file is never touched.
+        let png = vec![0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
+        assert_eq!(drawable(png.clone()), png);
     }
 
     #[test]
