@@ -1112,7 +1112,6 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 || self.cascade_rules
                 || self.by_path
                 || b.style.visibility == eldur_css::Visibility::Collapse
-                || self.collapsed.contains(&node)
             {
                 crate::metadata::declare_style(&mut e.obj, self.doc, node);
             }
@@ -1130,6 +1129,14 @@ impl<'a, 'd> Emitter<'a, 'd> {
             }
             if self.collapsed.contains(&node) {
                 e.obj.set("visible", false);
+                // Its own `style` attribute may be what hides it: clearing
+                // that from a script shows it.
+                let declared = e.obj.members.iter().any(
+                    |m| matches!(m, Member::PropertyDecl { name, .. } if name == "eldurStyle"),
+                );
+                if !declared {
+                    crate::metadata::declare_style(&mut e.obj, self.doc, node);
+                }
             }
             if self.markers {
                 e.obj.members.push(Member::Comment(dynamic::marker(node)));
