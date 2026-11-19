@@ -874,6 +874,8 @@ function _resetPageState() {
     _ce.upgrading = null;
     _ce.making = false;
     _ce.any = false;
+    _ce.reactions = null;
+    _ce.queues = new Map();
     _linesKnown = null;
     _linesLaidOut = false;
     _layoutDirty = [];
@@ -8077,9 +8079,14 @@ var _ce = {
     // `new X()` making its own element: `createElement` must not upgrade it.
     making: false,
     any: false,
-    // While a watched tree operation runs, the callbacks it causes, run as it
-    // returns: DOM's [CEReactions], after the operation's own record.
+    // While a watched tree operation runs, the elements whose callbacks it
+    // causes, called as it returns: DOM's [CEReactions], after the
+    // operation's own record.
     reactions: null,
+    // Each element's callbacks still to run, in the order they came: one an
+    // inner operation causes runs after the element's earlier ones, as DOM's
+    // element reaction queue does.
+    queues: new Map(),
     // While an element's item is swapped for another (a restyle that takes it
     // out of flow, say): its children are carried over, not inserted, and the
     // custom elements among them never left the document.
@@ -8165,13 +8172,43 @@ function _ceReport(err) {
 }
 
 function _ceCall(raw, method, args) {
-    if (_ce.reactions) {
-        // Held by its record: a callback run before it may restyle the
-        // element onto a new item, which its call then goes to.
-        var held = _itemMeta.get(raw);
-        _ce.reactions.push([held && held.raw === raw ? held : raw, method, args]);
+    // Held by its record: a callback run before it may restyle the element
+    // onto a new item, which its call then goes to.
+    var held = _itemMeta.get(raw);
+    var key = held && held.raw === raw ? held : raw;
+    var queue = _ce.queues.get(key);
+    if (!_ce.reactions && !queue) {
+        _ceInvoke(raw, method, args);
         return;
     }
+    if (!queue) {
+        queue = [];
+        _ce.queues.set(key, queue);
+    }
+    queue.push([method, args]);
+    if (_ce.reactions) {
+        if (_ce.reactions.indexOf(key) < 0) {
+            _ce.reactions.push(key);
+        }
+        return;
+    }
+    // Caused outside any operation while the element still has callbacks to
+    // run: those run first, then this one.
+    _ceDrain(key);
+}
+
+function _ceDrain(key) {
+    var queue = _ce.queues.get(key);
+    while (queue && queue.length > 0) {
+        var next = queue.shift();
+        _ceInvoke(_ceNow(key), next[0], next[1]);
+    }
+    if (queue && queue.length === 0 && _ce.queues.get(key) === queue) {
+        _ce.queues.delete(key);
+    }
+}
+
+function _ceInvoke(raw, method, args) {
     var w = wrap(raw);
     if (typeof w[method] !== "function") {
         return;
@@ -8671,7 +8708,7 @@ function _moOwn(op, record) {
 
 function _ceReact(reactions) {
     for (var c = 0; c < reactions.length; ++c) {
-        _ceCall(_ceNow(reactions[c][0]), reactions[c][1], reactions[c][2]);
+        _ceDrain(reactions[c]);
     }
 }
 
