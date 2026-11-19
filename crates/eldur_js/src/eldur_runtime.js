@@ -1093,7 +1093,7 @@ function _detailsShow(raw, open) {
         }
         if (summary) {
             seenSummary = true;
-            _detailsTurnMarker(kid, open);
+            _detailsMark(kid, open);
             _detailsWire(kid);
         }
     });
@@ -1115,6 +1115,49 @@ function _detailsOwnShown(kid) {
         hidden = !m.detailsFolded && kid.visible === false;
     }
     return !hidden && _ownDisplay(kid, m) !== "none" && _gStyleAllowsShow(kid);
+}
+
+// A details' first summary shows the marker turned as it is open. A form the
+// converter made has one; the form an open page makes from its rules has none
+// (#74), so it is given one, as the converter's: the triangle on the first
+// line's baseline and that line moved in by its width.
+function _detailsMark(summary, open) {
+    if (_detailsTurnMarker(summary, open)) {
+        return;
+    }
+    var text = _detailsFirstText(summary);
+    if (!text) {
+        return;
+    }
+    var marker = Qt.createQmlObject("import QtQuick; import \".\"; EldurDisclosure {"
+        + " color: parent.color; em: parent.font.pixelSize;"
+        + " y: Math.round(parent.baselineOffset) - height }", text, Qt.resolvedUrl("eldur_disclosure"));
+    marker.open = open;
+    text.lineLaidOut.connect(function(line) {
+        // A handler moves a fixed line's leading; it goes back to the top.
+        if (text.lineHeightMode === 1) { // Text.FixedHeight
+            line.y = line.number * text.lineHeight;
+        }
+        if (line.number === 0) {
+            line.x += marker.width;
+            line.width -= marker.width;
+        }
+    });
+    text.forceLayout();
+}
+
+function _detailsFirstText(item) {
+    if (typeof item.text === "string" && item.lineLaidOut !== undefined) {
+        return item;
+    }
+    var kids = item.children || [];
+    for (var i = 0; i < kids.length; ++i) {
+        var got = _detailsFirstText(kids[i]);
+        if (got) {
+            return got;
+        }
+    }
+    return null;
 }
 
 // It hangs off whichever item holds the summary's first line.
@@ -12342,6 +12385,11 @@ function _swapRawItemCarried(oldRaw, component, fallbackQmlSrc) {
         scrollArea(next);
     }
     _connectControls(next);
+    // A restyled first summary is a new form: it needs its marker again.
+    var at = _nodeTag(next) === "summary" ? _elementParent(next) : null;
+    if (at && _detailsSetUp(at) && _detailsSummary(at) === next) {
+        _detailsMark(next, _meta(at).detailsOpen);
+    }
 
     return next;
 }
