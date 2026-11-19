@@ -690,7 +690,9 @@ impl Emitter<'_, '_> {
                     layout.push_child(slot);
                     self.hoisted.push((to, host));
                 }
-                None => layout.push_child(obj),
+                None => {
+                    layout.push_child(obj);
+                }
             }
             last = Some(layout.members.len() - 1);
             pending = emitted.bottom;
