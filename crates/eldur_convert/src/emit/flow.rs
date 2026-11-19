@@ -530,6 +530,7 @@ impl Emitter<'_, '_> {
                 && !self.no_carry
                 && !collapsed
                 && !child.node.is_some_and(|n| self.script_hides.contains(&n))
+                && !child.node.is_some_and(|n| self.restacks.contains(&n))
                 && matches!(child.style.position, Position::Relative | Position::Sticky)
                 && child.style.z_index.is_some_and(|z| z > 0);
             self.rise_out = rise;

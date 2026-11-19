@@ -207,6 +207,10 @@ pub(crate) struct Emitter<'a, 'd> {
     /// What an author rule still hides once a script clears the element's
     /// own `display` or `hidden` (`Scripts::rules_hide`).
     pub rules_hide: HashSet<NodeId>,
+    /// Boxes a class or state may re-level or make a stacking context, and
+    /// what they hold: they stay in their block, as a block raised out in
+    /// one world and not in another leaves the worlds no common shape.
+    restacks: HashSet<NodeId>,
     /// The page holds the rule table: the runtime computes styles of its own.
     pub cascade_rules: bool,
     /// The boxes a script may put block children in.
@@ -332,6 +336,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             writes_z_index: false,
             script_hides: HashSet::new(),
             rules_hide: HashSet::new(),
+            restacks: HashSet::new(),
             cascade_rules: false,
             gains: HashSet::new(),
             live_tables: HashSet::new(),
