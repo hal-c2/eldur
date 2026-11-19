@@ -439,6 +439,35 @@ fn img_hints(elem: &eldur_dom::Element) -> Option<String> {
 /// dimension values): leading digits and a fraction, `%` after them making it
 /// a percentage; whatever follows is ignored (`80px` is 80).
 fn dimension(value: &str) -> Option<String> {
+    let (number, percent) = dimension_parts(value)?;
+    Some(format!("{number}{}", if percent { "%" } else { "px" }))
+}
+
+/// An HTML dimension value (WHATWG HTML §2.3.4.4): a length in px or a
+/// percentage.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum HtmlDimension {
+    Length(f32),
+    Percentage(f32),
+}
+
+/// Parses `value` by the rules for parsing dimension values (WHATWG HTML
+/// §2.3.4.4), the rule `<img>`'s `width` and `height` are hints with and map
+/// to `aspect-ratio` with (§15.4.3): `80junk` is 80, `60e1` is 60, `+80` and
+/// `.5` are no dimension.
+pub fn html_dimension(value: &str) -> Option<HtmlDimension> {
+    let (number, percent) = dimension_parts(value)?;
+    let n = number.parse().ok()?;
+    Some(if percent {
+        HtmlDimension::Percentage(n)
+    } else {
+        HtmlDimension::Length(n)
+    })
+}
+
+/// The number's text and whether a `%` follows it, for [`dimension`] and
+/// [`html_dimension`].
+fn dimension_parts(value: &str) -> Option<(&str, bool)> {
     let value = value.trim_start_matches([' ', '\t', '\n', '\x0c', '\r']);
     let int = value.bytes().take_while(u8::is_ascii_digit).count();
     if int == 0 {
@@ -454,13 +483,7 @@ fn dimension(value: &str) -> Option<String> {
         },
         None => (int, int),
     };
-    let number = &value[..number_len];
-    let unit = if value[unit_at..].starts_with('%') {
-        "%"
-    } else {
-        "px"
-    };
-    Some(format!("{number}{unit}"))
+    Some((&value[..number_len], value[unit_at..].starts_with('%')))
 }
 
 /// An `<svg>`'s `width` and `height` attributes as the `width` and `height`
@@ -2211,6 +2234,21 @@ mod tests {
         assert_eq!(of("a").font_size, 10.0);
         assert_eq!(of("a").font_family, vec!["serif".to_owned()]);
         assert_eq!(of("b").font_size, 20.0);
+    }
+
+    #[test]
+    fn html_dimension_values_parse_as_html_parses_them() {
+        use HtmlDimension::{Length, Percentage};
+        assert_eq!(html_dimension("80junk"), Some(Length(80.0)));
+        assert_eq!(html_dimension(" 30.5"), Some(Length(30.5)));
+        assert_eq!(html_dimension("60e1"), Some(Length(60.0)));
+        assert_eq!(html_dimension("45."), Some(Length(45.0)));
+        assert_eq!(html_dimension("40.5px"), Some(Length(40.5)));
+        assert_eq!(html_dimension("50%"), Some(Percentage(50.0)));
+        assert_eq!(html_dimension("50.%"), Some(Percentage(50.0)));
+        assert_eq!(html_dimension("+80"), None);
+        assert_eq!(html_dimension(".5"), None);
+        assert_eq!(html_dimension(""), None);
     }
 
     #[test]
