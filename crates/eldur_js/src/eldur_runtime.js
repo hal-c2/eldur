@@ -7299,7 +7299,7 @@ function focus(item) {
     // telling its probe of that change, and one more now would be lost to a
     // binding loop. The page hears of this one at once, and Qt is told after.
     // The element the change moves to has not heard of it yet: it hears now.
-    if (_in && _in.focusShift && (_in.focused !== raw || raw === _in.untold)) {
+    if (_in && _in.focusShift && (_in.focused !== raw || _in.untold.indexOf(raw) >= 0)) {
         _inFocusWhileHeard(raw);
         return;
     }
@@ -7356,19 +7356,12 @@ function focus(item) {
 }
 
 function _inFocusWhileHeard(raw) {
-    // What the change moved to was never told it had the focus: it hears no blur.
+    // What a move went to and has not told yet hears no blur.
     var before = _in.focused;
-    var told = before && before !== _in.untold ? before : null;
-    if (raw === _in.untold) {
-        _in.untold = null;
-    }
-    _in.focused = raw;
-    _in.focusMoves++;
+    var told = before && _in.untold.indexOf(before) < 0 ? before : null;
+    _inUntoldDrop(raw);
+    _inFocusTake(raw);
     var moves = _in.focusMoves;
-    _in.focusPending = raw;
-    _activeElement = raw;
-    // What holds a link's focus for it, focused itself, is no longer the link's.
-    _in.inlineFocus = raw.__eldurInline ? raw : null;
     if (_inIsField(raw)) {
         _meta(raw).changeBase = String(raw.text);
     }
@@ -7389,8 +7382,20 @@ function _inFocusWhileHeard(raw) {
         }
     });
     if (told) {
+        _in.untold.push(raw);
         _in.shiftTo = null;
-        _inFocusEvents(told, raw, "blur", "focusout");
+        _inFocusEvents(told, raw, "blur");
+        _inFocusEvents(told, _in.shiftTo ? null : raw, "focusout");
+        _inUntoldDrop(raw);
+        // A blur listener moved the focus on: this move is over, untold. One
+        // that focused something and let it go again lets it go on.
+        if (_in.focusMoves !== moves) {
+            if (_in.focused) {
+                return;
+            }
+            _inFocusTake(raw);
+            moves = _in.focusMoves;
+        }
     }
     // Its own listeners find it focused, and one that moves the focus on, or
     // lets it go, leaves it no focusin.
@@ -7401,12 +7406,33 @@ function _inFocusWhileHeard(raw) {
     }
 }
 
+// The page's focus goes to `raw` within a change, and Qt's after it.
+function _inFocusTake(raw) {
+    _in.focused = raw;
+    _in.focusMoves++;
+    _in.focusPending = raw;
+    _activeElement = raw;
+    // What holds a link's focus for it, focused itself, is no longer the link's.
+    _in.inlineFocus = raw.__eldurInline ? raw : null;
+}
+
+function _inUntoldDrop(raw) {
+    var at = _in.untold.indexOf(raw);
+    if (at >= 0) {
+        _in.untold.splice(at, 1);
+    }
+}
+
 function blur(item) {
     if (item && !_isDomTarget(item) && typeof item.blur === "function") {
         return item.blur();
     }
     var raw = _unwrap(item);
     if (!raw) {
+        return;
+    }
+    // What a change is moving to has no focus to let go of yet.
+    if (_in && _in.focusShift && _in.untold.indexOf(raw) >= 0) {
         return;
     }
     // Focused by a listener and not yet by Qt (`_inFocusWhileHeard`): the page
@@ -8187,7 +8213,8 @@ function _ceCall(raw, method, args) {
     }
     queue.push([method, args]);
     if (_ce.reactions) {
-        if (_ce.reactions.indexOf(key) < 0) {
+        if (!_ce.reactions.seen.has(key)) {
+            _ce.reactions.seen.add(key);
             _ce.reactions.push(key);
         }
         return;
@@ -8683,6 +8710,7 @@ function _moNotify() {
 function _moOwn(op, record) {
     var outer = _ce.reactions;
     var reactions = [];
+    reactions.seen = new Set();
     _ce.reactions = reactions;
     _mo.depth++;
     var out;
@@ -16628,7 +16656,7 @@ function _inInstall() {
         page: _root, overlay: null, held: 0, last: null, pressed: false, hoverP: null, hoverM: null,
         downTarget: {}, noMouse: false, count: 0, countButton: -1, countAt: null, countTime: 0,
         capture: null, captureNext: null, defaults: [], scrolled: null, restoreFocus: null,
-        restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusMoves: 0, focusShift: false, focusPending: null, untold: null, shiftTo: null,
+        restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusMoves: 0, focusShift: false, focusPending: null, untold: [], shiftTo: null,
         spaceDown: null, typing: null, popovers: [], radioLast: {}, focusProbe: null
     };
     _inLayers.set(_root, _in);
@@ -18097,7 +18125,7 @@ function _inFocusChanged() {
     if (now) {
         _inWatchHidden(now);
     }
-    _in.untold = now;
+    _in.untold = now ? [now] : [];
     _in.shiftTo = null;
     _in.focusShift = true;
     if (was) {
@@ -18120,7 +18148,7 @@ function _inFocusChanged() {
         }
     }
     _in.focusShift = false;
-    _in.untold = null;
+    _in.untold = [];
     _in.shiftTo = null;
     // A blur listener focused something else: the focus is there now. One that
     // focused something and let it go again lets the change go on.
