@@ -366,6 +366,17 @@ mod tests {
             (Some((20.0, 40.0)), None)
         );
         assert_eq!(svg_size(r#"<svg viewBox="0 0 64 32">"#), (None, Some(0.5)));
+        // `svg_root` reads a negative length as zero for files; inline, the
+        // non-positive one is ignored and the other side and the viewBox
+        // decide, as Chromium sizes an inline `<svg>` (80×40 for both).
+        assert_eq!(
+            svg_size(r#"<svg width="-80" height="40" viewBox="0 0 20 10">"#),
+            (Some((80.0, 40.0)), None)
+        );
+        assert_eq!(
+            svg_size(r#"<svg width="80" height="-40" viewBox="0 0 20 10">"#),
+            (Some((80.0, 40.0)), None)
+        );
     }
 
     #[test]
