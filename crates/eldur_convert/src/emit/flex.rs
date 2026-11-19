@@ -801,7 +801,10 @@ impl Emitter<'_, '_> {
         // one, so an `inline-flex` box with a set width gets one too.
         let fixed_inline = style.display == Display::InlineFlex
             && matches!(&style.width, Size::Length(l) if l.as_px().is_some());
-        let own = row_gap != column_gap || fixed_inline;
+        // Compared in px: equal percentages still resolve against
+        // different axes, the column gap the width and the row gap the
+        // height, so only two fixed gaps of one length make a `Flow`.
+        let own = row_gap.px().is_none() || row_gap.px() != column_gap.px() || fixed_inline;
         let mut flow = Object::new(if own { "EldurFlow" } else { "Flow" });
         flow.set("spacing", column_gap.value("width"));
         if own {
