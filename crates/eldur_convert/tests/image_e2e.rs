@@ -255,6 +255,146 @@ fn image_attributes_are_hints_as_in_chromium() {
     run(&dir, &out, "tst_image_hints.qml", HINTS_TEST);
 }
 
+/// An SVG with no `width`, `height` or `viewBox`: no natural size and no
+/// natural ratio, so only the `img` attributes can give it a ratio.
+const BARE: &str = r##"<svg xmlns="http://www.w3.org/2000/svg"><rect width="1000" height="1000" fill="#c60"/></svg>"##;
+
+/// The attributes map to `aspect-ratio` through the same rule they are
+/// hints with (HTML §15.4.3, §2.3.4.4): `80junk` is 80, `60e1` is 60, `45.`
+/// is 45, while `+80`, a percentage or a zero gives no ratio. With neither
+/// a natural size nor a ratio, the image is 300×150 (CSS 2.2 §10.3.2,
+/// §10.6.2).
+const BARE_PAGE: &str = r#"<!doctype html><html><head><style>
+body { margin: 0 }
+img { display: block }
+</style></head><body>
+<img id=n src="bare.svg" width="80junk" height="40" style="height:auto">
+<img id=o src="bare.svg" width="80" height="40.5px" style="width:auto">
+<img id=p src="bare.svg" width=" 120" height="60e1" style="height:auto">
+<img id=q src="bare.svg" width="90" height="45." style="height:auto">
+<div style="width:300px"><img id=r src="bare.svg" width="50%" height="40" style="height:auto"></div>
+<img id=s src="bare.svg" width="80" height="0" style="height:auto">
+<img id=t src="bare.svg" width="+80" height="40" style="height:auto">
+<script>
+// Named so that they get an objectName the test can find.
+var named = "nopqrst".split("").map(function (id) { return document.getElementById(id) });
+</script></body></html>"#;
+
+/// Chromium, `getBoundingClientRect()` at 1280×800.
+const BARE_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 1280
+    height: 800
+
+TestCase {
+    name: "ImageRatioAttributes"
+    when: windowShown
+
+    property var page
+    function box(name) {
+        const item = findChild(page, name)
+        verify(item, name)
+        const p = item.mapToItem(page, 0, 0)
+        return [p.x, p.y, item.width, item.height]
+    }
+    // Qt Layouts round each cell up to whole pixels: y within a pixel.
+    function compareBox(name, expected) {
+        const b = box(name)
+        compare([b[0], b[2], b[3]], [expected[0], expected[2], expected[3]], name)
+        fuzzyCompare(b[1], expected[1], 1.5, name + " y")
+    }
+
+    function init() {
+        const component = Qt.createComponent("Main.qml")
+        verify(component.status === Component.Ready, component.errorString())
+        page = createTemporaryObject(component, host, { width: 1280, height: 800 })
+        waitForRendering(page)
+    }
+
+    function test_attributes_give_the_ratio_as_dimension_values() {
+        compareBox("n", [0, 0, 80, 40])
+        compareBox("o", [0, 40, 80, 40.5])
+        compareBox("p", [0, 80.5, 120, 60])
+        compareBox("q", [0, 140.5, 90, 45])
+    }
+
+    function test_no_ratio_takes_the_default_size() {
+        compareBox("r", [0, 185.5, 150, 150])
+        compareBox("s", [0, 335.5, 80, 150])
+        compareBox("t", [0, 485.5, 300, 150])
+    }
+}
+}
+"##;
+
+struct Bare;
+
+impl Resources for Bare {
+    fn read(&mut self, url: &str, _base: &str) -> Option<Resource> {
+        (url == "bare.svg").then(|| Resource {
+            resolved: "/page/bare.svg".to_owned(),
+            bytes: BARE.as_bytes().to_vec(),
+        })
+    }
+}
+
+fn convert_bare() -> eldur_convert::Output {
+    let options = Options {
+        root: RootKind::Item,
+        ..Options::default()
+    };
+    eldur_convert::convert(
+        &Input {
+            html: BARE_PAGE.to_owned(),
+            url: "/page/index.html".to_owned(),
+        },
+        &options,
+        &mut Bare,
+    )
+}
+
+/// The emitted `implicitWidth`/`implicitHeight` of `<img id=…>`.
+fn implicit_size(qml: &str, id: &str) -> (String, String) {
+    let start = qml
+        .find(&format!("// <img id=\"{id}\">"))
+        .unwrap_or_else(|| panic!("no img {id} in\n{qml}"));
+    let block = &qml[start..];
+    let value = |name: &str| {
+        let at = block.find(&format!("{name}: ")).expect(name) + name.len() + 2;
+        block[at..].lines().next().unwrap_or_default().to_owned()
+    };
+    (value("implicitWidth"), value("implicitHeight"))
+}
+
+#[test]
+fn ratio_attributes_are_dimension_values() {
+    let out = convert_bare();
+    let qml = out.main_qml().expect("Main.qml");
+    let size = |w: &str, h: &str| (w.to_owned(), h.to_owned());
+    assert_eq!(implicit_size(qml, "n"), size("80", "40"), "80junk is 80");
+    assert_eq!(implicit_size(qml, "p"), size("120", "60"), "60e1 is 60");
+    assert_eq!(implicit_size(qml, "q"), size("90", "45"), "45. is 45");
+    assert_eq!(
+        implicit_size(qml, "t"),
+        size("300", "150"),
+        "+80 is no width"
+    );
+}
+
+#[test]
+fn image_ratio_attributes_match_chromium() {
+    if support::no_qt() {
+        return;
+    }
+    let out = convert_bare();
+    let dir = std::env::temp_dir().join(format!("eldur-image-bare-{}", std::process::id()));
+    run(&dir, &out, "tst_image_bare.qml", BARE_TEST);
+}
+
 /// Writes `out` and `test` to `dir` and runs the test in qmltestrunner.
 fn run(dir: &Path, out: &eldur_convert::Output, name: &str, test: &str) {
     std::fs::create_dir_all(dir).expect("temp dir");
