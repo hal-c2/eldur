@@ -5,8 +5,11 @@
 // everything already there. The first 300 of 600 appends are timed on their
 // own: if each append costs the same, all 600 take twice as long as the first
 // 300; if each walks its siblings, four times as long. A browser is done in a
-// few milliseconds, too fast for the ratio to mean anything.
+// few milliseconds, too fast for the ratio to mean anything. A script's text
+// in the page sends each append through the lines text takes, which once
+// read every child of body too.
 function L(k){console.log("OB "+k)}
+document.getElementById("t").textContent = "rows below";
 function row(i) { var d = document.createElement("div"); d.textContent = "row " + i; document.body.appendChild(d); }
 var t0 = Date.now(), t300 = 0;
 for (var i = 0; i < 600; ++i) {

@@ -10794,16 +10794,19 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
     var m = _meta(oldRaw);
     var parentContainer = oldRaw.parent || null;
 
+    // What follows the old item, read from the end: an item just appended is
+    // last, and reading from the front would cost as many steps as it has
+    // siblings.
     var tail = [];
     if (parentContainer && parentContainer.children) {
         var pKids = parentContainer.children;
-        var foundOld = false;
-        for (var pk = 0; pk < pKids.length; ++pk) {
+        var after = [];
+        for (var pk = pKids.length - 1; pk >= 0; --pk) {
             if (pKids[pk] === oldRaw) {
-                foundOld = true;
-            } else if (foundOld) {
-                tail.push(pKids[pk]);
+                tail = after.reverse();
+                break;
             }
+            after.push(pKids[pk]);
         }
     }
 
@@ -18871,19 +18874,20 @@ function _vHostOf(raw, nodes, ref) {
     if (raw.__eldurInline) {
         return raw;
     }
-    if (_holdsLines(raw)) {
-        if (ref || !nodes.every(function(n) { return n.__eldurInline || _vStaysInline(n, raw, ref); })) {
-            return null;
-        }
-        return _vLinesTail(raw) || _vNewLinesTail(raw);
-    }
     // A block breaks out of a line of text; what is a node of a model has no box
-    // to break out with.
+    // to break out with. Asked first: finding `raw`'s line or text reads all its
+    // children, and a block appended to a long page would pay for each of them.
     var joinsModel = function(n) {
         return n.__eldurInline || _vStaysInline(n, raw, ref);
     };
+    if (!nodes.every(joinsModel)) {
+        return null;
+    }
+    if (_holdsLines(raw)) {
+        return ref ? null : _vLinesTail(raw) || _vNewLinesTail(raw);
+    }
     var known = _vExisting(raw);
-    if (known && nodes.every(joinsModel)) {
+    if (known) {
         return known;
     }
     if (!nodes.every(function(n) { return _vStaysInline(n, raw, ref); })) {
