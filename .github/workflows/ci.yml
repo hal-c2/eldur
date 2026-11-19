@@ -136,17 +136,14 @@ jobs:
       # Fails if qmltestrunner, qmllint or qml6 is found but is not the pinned
       # Qt 6.11. A missing one fails the next step, through ELDUR_REQUIRE_QT.
       - run: mise run setup --check
-      # Every *_e2e test of eldur_convert but qmllint_e2e, and eldur_js's
-      # qml_runtime: the corpus passes Qt 6.12's qmllint but not 6.11's
-      # (hal-c2/eldur#49); drop the skip with its fix.
+      # Every *_e2e test of eldur_convert, and eldur_js's qml_runtime.
       - name: mise run test (the e2e tests)
         timeout-minutes: 30
         run: |
           # A test waits on qmltestrunner without a timeout; if one hangs,
           # say which page (each runs from a temp dir named after it).
           mise run test -- -p eldur_convert -p eldur_js --test '*_e2e' \
-            --test qml_runtime --no-fail-fast \
-            -- --skip converted_corpus_passes_qt6_qmllint &
+            --test qml_runtime --no-fail-fast &
           tests=$!
           for _ in $(seq 900); do kill -0 "$tests" 2>/dev/null || break; sleep 1; done
           if kill -0 "$tests" 2>/dev/null; then

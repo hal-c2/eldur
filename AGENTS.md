@@ -52,9 +52,8 @@ run mise in. Outputs go under cargo's target directory (`CARGO_TARGET_DIR` is
 respected). CI (`.github/workflows/ci.yml`) runs `setup`, `check`, `test` and
 `tasks:smoke` in its `tasks` job, without Qt, so the QML end-to-end tests skip
 there. Its `qml-e2e` job installs Qt 6.11 and runs every `*_e2e` test of
-`eldur_convert` except `qmllint_e2e` (hal-c2/eldur#49), and `eldur_js`'s
-`qml_runtime`, with `ELDUR_REQUIRE_QT=1`, which makes a test that would skip
-fail instead.
+`eldur_convert`, and `eldur_js`'s `qml_runtime`, with `ELDUR_REQUIRE_QT=1`,
+which makes a test that would skip fail instead.
 
 ## Conventions
 

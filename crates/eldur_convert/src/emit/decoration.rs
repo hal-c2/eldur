@@ -559,20 +559,23 @@ impl Emitter<'_, '_> {
                 ("anchors.rightMargin", insets.right),
             ];
             match cell_align {
-                Some(eldur_css::VerticalAlign::Middle) => {
-                    inner.set(
-                        "anchors.verticalCenter",
-                        Value::expr("parent.verticalCenter"),
-                    );
-                    margins.push((
-                        "anchors.verticalCenterOffset",
-                        (insets.top - insets.bottom) / 2.0,
-                    ));
-                    // By default Qt rounds an odd height's centre up, on both
-                    // the cell and the content, where CSS centres exactly
-                    // (layout.md §1.2).
-                    inner.set("anchors.alignWhenCentered", false);
-                    wrapper.set("anchors.alignWhenCentered", false);
+                Some(eldur_css::VerticalAlign::Middle) if !fill_height => {
+                    // CSS centres exactly, where Qt's centre anchor rounds an
+                    // odd height's centre up unless both the content and the
+                    // cell say `alignWhenCentered: false` (layout.md §1.2). The
+                    // cell is placed by its table's layout, and anchors on a
+                    // layout's item are a qmllint warning, so the content
+                    // works its exact place out itself.
+                    let offset = (insets.top - insets.bottom) / 2.0;
+                    let centre = "(parent.height - height) / 2";
+                    let y = if offset == 0.0 {
+                        centre.to_owned()
+                    } else if offset < 0.0 {
+                        format!("{centre} - {}", fmt_number(f64::from(-offset)))
+                    } else {
+                        format!("{centre} + {}", fmt_number(f64::from(offset)))
+                    };
+                    inner.set("y", Value::expr(y));
                 }
                 Some(eldur_css::VerticalAlign::Bottom) => {
                     inner.set("anchors.bottom", Value::expr("parent.bottom"));
