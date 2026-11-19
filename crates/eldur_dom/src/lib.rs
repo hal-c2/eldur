@@ -339,10 +339,13 @@ impl Document {
         }
         let used = used.map(|(w, h)| [fmt_length(w), fmt_length(h)]);
         let root_size = ["width", "height"].map(|name| element.attr(name).and_then(svg_length));
+        // The box the page lays it out in wins over the attributes, which
+        // are presentation attributes in SVG 2 that CSS overrides: `width: 48px` on
+        // `<svg width=24>` draws it at 48.
         let root_size = [0, 1].map(|axis| {
-            root_size[axis]
-                .clone()
-                .or_else(|| used.as_ref().map(|u| u[axis].clone()))
+            used.as_ref()
+                .map(|u| u[axis].clone())
+                .or_else(|| root_size[axis].clone())
         });
         let mut sizes = self.svg_symbol_sizes(id, element, &root_size, &copies);
         if let [Some(width), Some(height)] = &root_size {
@@ -351,6 +354,7 @@ impl Document {
         let svg = SvgWriter {
             value,
             sizes: &sizes,
+            root: id,
         };
         svg.write(self, id, element, &root, None, &mut out);
         if !copies.is_empty() {
@@ -634,6 +638,8 @@ struct SvgWriter<'a> {
     value: &'a dyn Fn(&str, &str, Option<&str>) -> String,
     /// The symbols written with a width and height, and those lengths.
     sizes: &'a [(NodeId, String, String)],
+    /// The `<svg>` being written, whose size is always the one in `sizes`.
+    root: NodeId,
 }
 
 impl SvgWriter<'_> {
@@ -683,7 +689,7 @@ impl SvgWriter<'_> {
             }
             if size.is_some_and(|size| size.iter().any(|(n, _)| &*attr.name.local == *n))
                 && attr.name.ns == ns!()
-                && svg_length(&attr.value).is_none()
+                && (id == self.root || svg_length(&attr.value).is_none())
             {
                 continue;
             }
@@ -699,7 +705,7 @@ impl SvgWriter<'_> {
             out.push('"');
         }
         for (name, length) in size.into_iter().flatten() {
-            if element.attr(name).and_then(svg_length).is_none() {
+            if id == self.root || element.attr(name).and_then(svg_length).is_none() {
                 out.push_str(&format!(" {name}=\"{length}\""));
             }
         }

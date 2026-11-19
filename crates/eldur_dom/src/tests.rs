@@ -445,13 +445,15 @@ fn a_used_symbol_is_sized_where_it_is_drawn() {
          <svg id=inside width=40 height=40><symbol id=i viewBox='0 0 8 8'/><use href='#i'/></svg>\
          <svg id=unsized><use href='#s'/></svg>\
          <svg id=css class=icon><use href='#s'/></svg>\
-         <svg id=wide width=100% viewBox='0 0 24 24'><use href='#s'/></svg>",
+         <svg id=wide width=100% viewBox='0 0 24 24'><use href='#s'/></svg>\
+         <svg id=over width=24 height=24><rect width=12 height=12 /></svg>",
     );
     let same = |_: &str, v: &str, _: Option<&str>| v.to_owned();
     // What the layout gives a CSS-sized icon (`.icon { width: 48px }`).
     let used = |id: &str| match id {
         "css" => Some((48.0, 47.5)),
         "wide" => Some((300.0, 300.0)),
+        "over" => Some((48.0, 48.0)),
         _ => None,
     };
     let symbol = |id: &str| {
@@ -493,6 +495,12 @@ fn a_used_symbol_is_sized_where_it_is_drawn() {
     assert_eq!(
         root("wide"),
         format!("{ns} id=\"wide\" viewBox=\"0 0 24 24\" width=\"300\" height=\"300\">")
+    );
+    // CSS overrides the attributes: Chromium draws the 12-unit rect of a
+    // 48px box with `width=24` and no viewBox at 12px, not scaled to 24.
+    assert_eq!(
+        root("over"),
+        format!("{ns} id=\"over\" width=\"48\" height=\"48\">")
     );
     assert_eq!(
         root("px"),
