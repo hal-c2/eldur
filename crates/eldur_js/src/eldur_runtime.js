@@ -25903,14 +25903,30 @@ function _gFoldedAway(raw) {
         && _nodeTag(raw) !== "summary";
 }
 
+// An out-of-flow box a layer above the page paints: a slot stands for it
+// among its DOM siblings (`_setShown`).
+function _gSlotted(raw) {
+    return Boolean(raw.eldurSlot) && raw.eldurBlock === undefined;
+}
+
+function _gUnderHiddenSlot(raw) {
+    var dom = raw.eldurSlot.parent;
+    return Boolean(dom) && dom.visible === false;
+}
+
 function _gShowAsRules(raw) {
     if (_gFoldedAway(raw)) {
         return;
     }
     var display = _gStyle(raw).display;
-    if (raw.eldurSlot && raw.eldurBlock === undefined) {
+    if (_gSlotted(raw)) {
         var parent = raw.parent;
-        if ((display === "none") === (raw.visible === true) && (!parent || parent.visible !== false)) {
+        if (_gUnderHiddenSlot(raw)) {
+            // Its `visible` follows its slot's parent, so it reads false under a
+            // hidden one whatever it was told: it is told what the rules say,
+            // for when that parent shows.
+            _setShown(raw, display !== "none");
+        } else if ((display === "none") === (raw.visible === true) && (!parent || parent.visible !== false)) {
             _setShown(raw, display !== "none");
         }
     } else {
@@ -26087,6 +26103,12 @@ function _gStaticChanges() {
 // its rules hide it, for a hold that keeps it hidden once the parent shows.
 function _gShowIfMoved(raw) {
     if (!raw || raw.__eldurInline || !raw.parent) {
+        return;
+    }
+    // What it was told under a hidden slot's parent is not read back from
+    // `visible`, so it is told again.
+    if (_gSlotted(raw) && _gUnderHiddenSlot(raw)) {
+        _gShowAsRules(raw);
         return;
     }
     var none = _gStyle(raw).display === "none";
