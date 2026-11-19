@@ -5,7 +5,9 @@
 //! A `<details open>` a script makes, by `innerHTML` or by `createElement` and
 //! `setAttribute`, is an open disclosure like one the page wrote: its summary
 //! shows the open marker, its content keeps its margins through the end of the
-//! `<details>` and its host, and its summary closes and opens it (#63).
+//! `<details>` and its host, and its summary closes and opens it (#63). What a
+//! script moves into, out of or within a `<details>` shows as its own `hidden`
+//! and the fold it is in say, on pages the runtime lays out too.
 //!
 //! Chromium's places, at 18 px lines and 16 px paragraph margins: a block after
 //! a closed `<details>` is one line below the summary; open, the paragraph is a
@@ -290,6 +292,213 @@ SUPPORT
 }
 "##;
 
+// A script moving and taking out a `<details>`' children: each shows as
+// Chromium shows it, as its own `hidden` says and as the fold it is now in says.
+const CHANGE_PAGE: &str = r##"<!doctype html>
+<style>body { font: 16px/18px sans-serif; }</style>
+<details id="o" open><summary>Open summary</summary><p hidden>Kept hidden</p><p>Open body</p></details>
+<details id="c"><summary>First summary</summary><summary>Second summary</summary><p id="mover">Mover</p></details>
+<div id="away">Away host</div>
+<button id="add">Add</button>
+<button id="swap">Swap</button>
+<button id="drop">Drop</button>
+<button id="out">Out</button>
+<button id="back">Back</button>
+<button id="over">Over</button>
+<script>
+const o = document.getElementById('o');
+const c = document.getElementById('c');
+const mover = document.getElementById('mover');
+document.getElementById('add').addEventListener('click', () => {
+  const d = document.createElement('div');
+  d.textContent = 'Added';
+  o.append(d);
+});
+// The second summary put first: it is the toggle now, and the first is folded.
+document.getElementById('swap').addEventListener('click', () => c.prepend(c.querySelectorAll('summary')[1]));
+// The first summary taken out: the one left is the toggle.
+document.getElementById('drop').addEventListener('click', () => c.querySelector('summary').remove());
+document.getElementById('out').addEventListener('click', () => document.getElementById('away').append(mover));
+document.getElementById('back').addEventListener('click', () => c.append(mover));
+document.getElementById('over').addEventListener('click', () => o.append(mover));
+</script>
+"##;
+
+const CHANGE_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 800
+    height: 600
+
+TestCase {
+    name: "DetailsChanged"
+    when: windowShown
+SUPPORT
+
+    function press(page, label) {
+        const button = find(page, i => i.eldurTag === "button" && i.text === label)
+        verify(button !== null, "no " + label)
+        mouseClick(button)
+        wait(100)
+    }
+
+    function test_changed_children() {
+        const page = load(Qt.createComponent("Main.qml"))
+        const kept = textOf(page, "Kept hidden")
+        const first = textOf(page, "First summary")
+        const second = textOf(page, "Second summary")
+        const mover = textOf(page, "Mover")
+        verify(kept && first && second && mover, "lines")
+        verify(!kept.visible, "Kept hidden shows on load")
+        verify(first.visible && !second.visible && !mover.visible, "closed details on load")
+
+        press(page, "Add")
+        verify(textOf(page, "Added").visible, "Added is hidden")
+        verify(!kept.visible, "Kept hidden shows once something is appended")
+
+        press(page, "Swap")
+        verify(second.visible, "Second summary is hidden once first")
+        verify(!first.visible, "First summary shows once it is no longer first")
+        verify(!mover.visible, "Mover shows in the closed details")
+
+        press(page, "Drop")
+        verify(first.visible, "First summary is hidden once the other is gone")
+        mouseClick(first, 60, first.height / 2)
+        wait(100)
+        verify(mover.visible, "First summary does not open it once first again")
+        mouseClick(first, 60, first.height / 2)
+        wait(100)
+        verify(!mover.visible, "First summary does not close it")
+
+        press(page, "Out")
+        verify(mover.visible, "Mover stays hidden out of the closed details")
+        press(page, "Back")
+        verify(!mover.visible, "Mover shows back in the closed details")
+        press(page, "Over")
+        verify(mover.visible, "Mover stays hidden in the open details")
+    }
+}
+}
+"##;
+
+// No rule the runtime reads: `hidden` lives in the item alone, and a block a
+// script moves into an open `<details>` does not show its hidden sibling.
+const KEPT_PAGE: &str = r##"<!doctype html>
+<style>body { font: 16px/18px sans-serif; }</style>
+<details id="o" open><summary>Open summary</summary><p hidden>Kept hidden</p><p>Open body</p></details>
+<div id="extra">Added</div>
+<button id="add">Add</button>
+<script>
+document.getElementById('add').addEventListener('click', () => {
+  document.getElementById('o').append(document.getElementById('extra'));
+});
+</script>
+"##;
+
+const KEPT_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 800
+    height: 600
+
+TestCase {
+    name: "DetailsKept"
+    when: windowShown
+SUPPORT
+
+    function test_hidden_stays_hidden() {
+        const page = load(Qt.createComponent("Main.qml"))
+        verify(page.eldurCascadeRules === undefined, "the page has rules the runtime reads")
+        const kept = textOf(page, "Kept hidden")
+        const added = textOf(page, "Added")
+        verify(kept && added, "lines")
+        verify(!kept.visible, "Kept hidden shows on load")
+        const button = find(page, i => i.eldurTag === "button" && i.text === "Add")
+        mouseClick(button)
+        wait(100)
+        verify(added.visible, "Added is hidden in the open details")
+        verify(!kept.visible, "Kept hidden shows once something is appended")
+    }
+}
+}
+"##;
+
+// A page whose created elements the runtime lays out (`eldurOpenElements`):
+// its layout passes keep a closed `<details>`' content folded.
+const LAID_PAGE: &str = r##"<!doctype html>
+<style>
+body { font: 16px/18px sans-serif; }
+:root[data-theme='light'] .shy { display: none; }
+.lifted { position: absolute; left: 0; top: 300px; }
+</style>
+<script>document.documentElement.dataset.theme = 'light';</script>
+<p class="shy"><em>Shy</em></p>
+<div id="host"></div>
+<div id="after">After</div>
+<button id="make">Make</button>
+<button id="lift">Lift</button>
+<script>
+document.getElementById('make').addEventListener('click', () => {
+  document.getElementById('host').innerHTML =
+    '<details><summary>Shut summary</summary><p><em>Shut inside</em></p></details>';
+});
+// Out of flow, the summary is another item, and still the toggle.
+document.getElementById('lift').addEventListener('click', () => {
+  document.querySelector('summary').classList.add('lifted');
+});
+</script>
+"##;
+
+const LAID_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 800
+    height: 600
+
+TestCase {
+    name: "DetailsLaidOut"
+    when: windowShown
+SUPPORT
+
+    function test_closed_stays_folded() {
+        const page = load(Qt.createComponent("Main.qml"))
+        verify(page.eldurOpenElements === true, "the runtime does not lay this page out")
+        const button = find(page, i => i.eldurTag === "button" && i.text === "Make")
+        mouseClick(button)
+        wait(200)
+        const summary = textOf(page, "Shut summary")
+        const inside = textOf(page, "Shut inside")
+        verify(summary && inside, "made lines")
+        verify(summary.visible, "Shut summary is hidden")
+        verify(!inside.visible, "Shut inside shows in a closed details after layout")
+        mouseClick(summary, 40, summary.height / 2)
+        wait(200)
+        verify(inside.visible, "Shut inside is hidden once open")
+        mouseClick(summary, 40, summary.height / 2)
+        wait(200)
+        verify(!inside.visible, "Shut inside shows once closed again")
+        const lift = find(page, i => i.eldurTag === "button" && i.text === "Lift")
+        mouseClick(lift)
+        wait(200)
+        const lifted = textOf(page, "Shut summary")
+        verify(lifted && lifted.visible, "the lifted summary is hidden")
+        mouseClick(lifted, 40, lifted.height / 2)
+        wait(200)
+        verify(textOf(page, "Shut inside").visible, "the lifted summary does not open it")
+    }
+}
+}
+"##;
+
 #[test]
 fn a_closed_details_brings_no_margin_of_what_it_folds() {
     run(CLOSED_PAGE, CLOSED_TEST, "eldur-details-closed");
@@ -303,6 +512,21 @@ fn an_open_details_whose_last_block_a_rule_hides_brings_no_margin_of_it() {
 #[test]
 fn a_details_a_script_makes_open_is_an_open_disclosure() {
     run(MADE_PAGE, MADE_TEST, "eldur-details-made");
+}
+
+#[test]
+fn a_details_children_a_script_moves_show_as_they_and_their_fold_say() {
+    run(CHANGE_PAGE, CHANGE_TEST, "eldur-details-changed");
+}
+
+#[test]
+fn a_hidden_child_stays_hidden_when_a_block_moves_into_its_open_details() {
+    run(KEPT_PAGE, KEPT_TEST, "eldur-details-kept");
+}
+
+#[test]
+fn a_closed_details_the_runtime_lays_out_keeps_its_content_folded() {
+    run(LAID_PAGE, LAID_TEST, "eldur-details-laid");
 }
 
 fn run(page: &str, test: &str, name: &str) {

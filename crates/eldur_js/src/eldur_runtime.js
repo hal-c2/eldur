@@ -1227,13 +1227,15 @@ function _detailsWire(summary) {
     }
     m.detailsWired = true;
     wrap(summary).addEventListener("click", function(ev) {
-        var at = _elementParent(summary);
-        if (!at || _nodeTag(at) !== "details" || _detailsSummary(at) !== summary) {
+        // A restyle may have made it another item, which took the listener.
+        var now = m.raw || summary;
+        var at = _elementParent(now);
+        if (!at || _nodeTag(at) !== "details" || _detailsSummary(at) !== now) {
             return;
         }
         // Last on its element, and the page's listeners further up have yet to
         // run: the toggle waits for what they say.
-        summary.forceActiveFocus();
+        now.forceActiveFocus();
         _afterThisDispatch(ev, function() {
             wrap(at).open = !_meta(at).detailsOpen;
         });
@@ -1242,21 +1244,56 @@ function _detailsWire(summary) {
 
 // What a script puts in the document, held by records as `_ceHold` holds
 // nodes, since an element its new place restyles is made another item.
+// The set-up `<details>` they leave are held too, to be folded again.
 function _detailsHold(nodes) {
-    return nodes.map(function(n) {
+    var held = nodes.map(function(n) {
         var m = _itemMeta.get(n);
         return m && m.raw === n ? m : n;
     });
+    held.left = [];
+    nodes.forEach(function(n) {
+        var up = _isQObject(n) && !n.__eldurInline ? _elementParent(n) : null;
+        if (up && _detailsSetUp(up) && held.left.indexOf(up) === -1) {
+            held.left.push(up);
+        }
+    });
+    return held;
+}
+
+function _detailsSetUp(raw) {
+    return _nodeTag(raw) === "details" && _itemMeta.has(raw) && _meta(raw).detailsOpen !== undefined;
+}
+
+// What a `<details>` held before a script took it away or put it elsewhere
+// shows as its own state says, and the fold is redone over what is left.
+function _detailsLeft(from, nodes, to) {
+    for (var i = 0; i < from.length; ++i) {
+        if (from[i] !== to) {
+            _detailsShow(from[i], _meta(from[i]).detailsOpen);
+        }
+    }
+    if (from.length === 0 || (to && _detailsSetUp(to))) {
+        return;
+    }
+    for (var k = 0; k < nodes.length; ++k) {
+        var raw = _ceNow(nodes[k]);
+        if (raw && raw.visible === false && _isQObject(raw) && !raw.__eldurInline && _detailsOwnShown(raw)) {
+            raw.visible = true;
+        }
+        if (raw && _itemMeta.has(raw)) {
+            _meta(raw).detailsFolded = false;
+        }
+    }
 }
 
 // After `held` went into `parent`: each `<details>` among them is set up, and
 // what went into a set-up one is folded with the rest while it is closed.
 function _detailsInserted(parent, held) {
+    _detailsLeft(held.left || [], held, parent);
     // The whole of it again: a summary put first makes the one before it
     // content, folded while closed and no longer the toggle.
-    var open = _nodeTag(parent) === "details" ? _meta(parent).detailsOpen : undefined;
-    if (open !== undefined) {
-        _detailsShow(parent, open);
+    if (_detailsSetUp(parent)) {
+        _detailsShow(parent, _meta(parent).detailsOpen);
     }
     for (var i = 0; i < held.length; ++i) {
         _detailsSetUpUnder(_ceNow(held[i]), true);
@@ -1300,18 +1337,42 @@ function _detailsShow(raw, open) {
     if (_gHasCascade()) {
         _gTouch(raw);
     }
-    // Only its first summary stays out of the fold (HTML §4.11.1).
+    // Only its first summary stays out of the fold (HTML §4.11.1). Each shows
+    // as itself says otherwise: `hidden` and `display: none` still hide it.
+    // Only what changes is written, so a binding the converter wrote stays.
     var seenSummary = false;
     _rawElementChildren(raw).forEach(function(kid) {
-        if (_nodeTag(kid) !== "summary" || seenSummary) {
-            kid.visible = open && _gStyleAllowsShow(kid);
-        } else {
+        var summary = _nodeTag(kid) === "summary" && !seenSummary;
+        var own = _detailsOwnShown(kid);
+        var shown = (open || summary) && own;
+        _meta(kid).detailsFolded = own && !shown;
+        if (kid.visible !== shown) {
+            kid.visible = shown;
+        }
+        if (summary) {
             seenSummary = true;
             _detailsTurnMarker(kid, open);
             _detailsWire(kid);
         }
     });
     _layoutChanged(raw);
+}
+
+// Whether it shows of itself. A page's own `hidden` is in its item alone, as
+// `visible: false`, so what the fold hid is marked to tell the two apart.
+function _detailsOwnShown(kid) {
+    var m = _meta(kid);
+    var hidden = getAttribute(kid, "hidden") !== null;
+    if (hidden) {
+        return false;
+    }
+    if (m.explicitHidden !== undefined || m.createdTag || m.styles.display !== undefined
+        || typeof kid.eldurStyle === "string") {
+        hidden = m.explicitHidden === true;
+    } else {
+        hidden = !m.detailsFolded && kid.visible === false;
+    }
+    return !hidden && _ownDisplay(kid, m) !== "none" && _gStyleAllowsShow(kid);
 }
 
 // It hangs off whichever item holds the summary's first line.
@@ -5538,6 +5599,7 @@ function _takeOut(raw) {
     }
     _gTouch();
     var zFrom = _zLeaving([raw]);
+    var from = _elementParent(raw);
     var box = raw.eldurBox || raw;
     var place = _slotOf(box) || box;
     if (place.parent) {
@@ -5548,6 +5610,10 @@ function _takeOut(raw) {
         box.parent = null;
     }
     _zLeft(zFrom);
+    // Its first summary gone, the next one is the toggle.
+    if (from && _detailsSetUp(from)) {
+        _detailsShow(from, _meta(from).detailsOpen);
+    }
 }
 
 // Sets whether a node shows of itself. A box painted away from its DOM parent
@@ -25046,7 +25112,7 @@ function _gLayOutRun(group, s, innerW, x, y, cut) {
             continue;
         }
         var ks = _gStyle(kid);
-        if (ks.display === "none") {
+        if (ks.display === "none" || _gFoldedAway(kid)) {
             _gHide(kid);
             continue;
         }
@@ -25262,7 +25328,7 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
         }
         var kid = group.kid;
         var ks = _gStyle(kid);
-        if (ks.display === "none") {
+        if (ks.display === "none" || _gFoldedAway(kid)) {
             _gHide(kid);
             continue;
         }
@@ -25382,6 +25448,10 @@ function _gPlaceFloats(floats, side, innerW, innerH, x, top, prior) {
     }
     floats.forEach(function(kid) {
         var ks = _gStyle(kid);
+        if (_gFoldedAway(kid)) {
+            _gHide(kid);
+            return;
+        }
         kid.visible = true;
         var ke = _gEdges(kid, ks, innerW);
         // A float's `auto` margins are zero.
@@ -25496,7 +25566,7 @@ function _gLayoutFlex(raw, s, e, innerW, innerH) {
     var kids = _gKids(raw);
     for (var i = 0; i < kids.length; ++i) {
         var ks = _gStyle(kids[i]);
-        if (ks.display === "none") {
+        if (ks.display === "none" || _gFoldedAway(kids[i])) {
             _gHide(kids[i]);
             continue;
         }
@@ -25679,7 +25749,7 @@ function _gLayoutGrid(raw, s, e, innerW, innerH) {
     var all = _gKids(raw);
     for (var i = 0; i < all.length; ++i) {
         var ks = _gStyle(all[i]);
-        if (ks.display === "none") {
+        if (ks.display === "none" || _gFoldedAway(all[i])) {
             _gHide(all[i]);
         } else if (!_gOutOfFlow(ks)) {
             all[i].visible = true;
