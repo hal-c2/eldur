@@ -6590,8 +6590,8 @@ function _camelToKebab(propName) {
 // `name: value` pairs of a declaration text, names in kebab case.
 // A declaration list split at its `;`s, not those in strings or `url(...)`,
 // with each comment, and any quote or bracket in it, a space: the tokenizer
-// drops a comment but still ends a token there. An unquoted `url(` holds a
-// `/*` as text.
+// drops a comment but still ends a token there. An unquoted `url(` is one
+// token up to its first `)`, so a `/*`, a quote or a `(` in it is text.
 function _splitDecls(text) {
     var out = [];
     var cur = "";
@@ -6615,6 +6615,11 @@ function _splitDecls(text) {
         if (c === "\\") {
             // An escaped character is never a quote, a bracket or a `;`.
             cur += text.charAt(++i);
+        } else if (url >= 0) {
+            if (c === ")") {
+                depth = url;
+                url = -1;
+            }
         } else if (quote) {
             if (c === quote) {
                 quote = "";
@@ -6628,9 +6633,6 @@ function _splitDecls(text) {
             ++depth;
         } else if (c === ")") {
             depth = Math.max(0, depth - 1);
-            if (depth === url) {
-                url = -1;
-            }
         }
     }
     out.push(cur);
