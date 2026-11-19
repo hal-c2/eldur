@@ -17159,8 +17159,10 @@ function _inWindowActive() {
 function _inTabFrom(stops, from, back) {
     var order = _elementsUnder(_root, function(node) { return !node.__eldurInline; }, false);
     // A focused link in a line that is no stop (tabindex -1, focused by a
-    // script) still stands where its icon does.
-    var here = order.indexOf(from && from.__eldurInline ? _inInlineHolder(from) : from);
+    // script) still stands where its icon does, which `_inTabStops` has just
+    // noted; a text link stands at its line's text. The holder alone would
+    // put an icon link in a line at that line's text too.
+    var here = order.indexOf(from && from.__eldurInline ? _meta(from).carrier || _inInlineHolder(from) : from);
     var best = -1;
     var bestAt = back ? -1 : order.length;
     for (var i = 0; i < stops.length; ++i) {
