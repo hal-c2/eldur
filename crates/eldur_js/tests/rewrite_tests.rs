@@ -3262,3 +3262,72 @@ fn an_eager_modules_lexical_bindings_are_not_checked() {
     assert!(!out.page_js.contains("__eldur_tdz"), "{}", out.page_js);
     assert!(out.page_js.contains("return K + n;"), "{}", out.page_js);
 }
+
+/// In a lazily imported module a write that must throw first does what a
+/// browser does before it throws: a compound assignment to a `const` runs
+/// its operation, an update coerces as `++` does (a BigInt too). Every
+/// import is read-only, a live one to a `var` included. A destructuring
+/// setter's parameter never hides the binding it writes, a name outside
+/// ASCII gets its sentinel too, and an import's copy exists before the
+/// module's first statement runs.
+#[test]
+fn a_lazy_modules_writes_and_imports_behave_as_a_browsers() {
+    let resolver = FakeResolver::default();
+    let main = module_script("main.js", "import(\"./lazy.js\");\n");
+    let dep = imported_module(
+        "dep.js",
+        "export var v = 1;\nexport const x = 1;\nexport function bump() { v++; }\n",
+    );
+    let lazy = imported_module(
+        "lazy.js",
+        "console.log(y, café);\n\
+         import { v, x as y, bump } from \"./dep.js\";\n\
+         export const B = 1n;\n\
+         export let __eldur_value = 0;\n\
+         export let café = 1;\n\
+         export function compound() { B -= 1; }\n\
+         export function update() { B++; }\n\
+         export function destructure() { [__eldur_value] = [7]; }\n\
+         export function writeImport() { v = 2; bump(); }\n",
+    );
+    let out = run_rewrite(&[main, lazy, dep], &resolver);
+    let js = &out.page_js;
+    for expected in [
+        r#"(B === __eldur_tdz ? __eldur_tdz_error("B") : B) - (1), __eldur_const_write(false, "B"));"#,
+        r#"(((__eldur_value) => __eldur_value++)((B === __eldur_tdz ? __eldur_tdz_error("B") : B)), __eldur_const_write(false, "B"));"#,
+        r#"({ set v(__eldur_value_2) { __eldur_value = __eldur_tdz_set(__eldur_value_2, __eldur_value, "__eldur_value"); } }).v] = [7];"#,
+        r#"(2, __eldur_const_write(false, "v"));"#,
+        "café = __eldur_tdz",
+    ] {
+        assert!(js.contains(expected), "{expected}\n{js}");
+    }
+    let copy = js
+        .find("y = (x === __eldur_tdz")
+        .or_else(|| js.find("y = x;"))
+        .unwrap_or_else(|| panic!("the copy of x\n{js}"));
+    let first = js
+        .find("console.log(y, ")
+        .unwrap_or_else(|| panic!("console.log\n{js}"));
+    assert!(copy < first, "{js}");
+}
+
+/// A known divergence, pinned: a lazy module's `const` bound to an element
+/// the converter finds while converting is no binding on the page. Every use
+/// of it is the element itself, so a read before the declaration runs finds
+/// the element where a browser throws a `ReferenceError`.
+#[test]
+fn a_lazy_modules_element_const_is_the_element_even_before_it_runs() {
+    let resolver = FakeResolver::default().with_id("save", 1, "save", TargetKind::Button);
+    let main = module_script("main.js", "import(\"./lazy.js\");\n");
+    let lazy = imported_module(
+        "lazy.js",
+        "function early() { return btn.disabled; }\n\
+         early();\n\
+         const btn = document.getElementById(\"save\");\n",
+    );
+    let out = run_rewrite(&[main, lazy], &resolver);
+    let js = &out.page_js;
+    assert!(!js.contains("__eldur_tdz_error(\"btn\")"), "{js}");
+    assert!(!js.contains("btn"), "{js}");
+    assert!(js.contains("save"), "{js}");
+}

@@ -456,8 +456,11 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
         let fail = format!("{const_write}(false, {source:?})");
         if let Some(logic) = logical_binary_op(op) {
             format!("({read} {logic} ({rhs}, {fail}))")
+        } else if let Some(bin_op) = compound_binary_op(op) {
+            // The operation runs, `valueOf` and all, before the write throws.
+            format!("({read} {bin_op} ({rhs}), {fail})")
         } else {
-            format!("({read}, {rhs}, {fail})")
+            format!("({rhs}, {fail})")
         }
     }
 
@@ -468,8 +471,16 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
         if binding.kind == TdzKind::Let && !self.tdz_check(id) {
             return None;
         }
-        let write = self.tdz_assignment(id, binding, AssignmentOperator::Assign, "__eldur_value");
-        Some(format!("({{ set v(__eldur_value) {{ {write}; }} }}).v"))
+        // The setter's parameter must not hide the binding it writes.
+        let name = self.tdz_emitted_name(id);
+        let mut param = "__eldur_value".to_string();
+        let mut suffix = 2u32;
+        while param == name {
+            param = format!("__eldur_value_{suffix}");
+            suffix += 1;
+        }
+        let write = self.tdz_assignment(id, binding, AssignmentOperator::Assign, &param);
+        Some(format!("({{ set v({param}) {{ {write}; }} }}).v"))
     }
 
     fn tdz_update(
@@ -501,8 +512,10 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
                 "({name} === {} ? {}({source:?}) : {plain})",
                 helpers.sentinel, helpers.error
             ),
+            // The value is coerced as `++` or `--` would, a BigInt too,
+            // before the write throws.
             (_, read) => format!(
-                "(+{}, {}(false, {source:?}))",
+                "(((__eldur_value) => __eldur_value{op})({}), {}(false, {source:?}))",
                 read.unwrap_or(name),
                 helpers.const_write
             ),
