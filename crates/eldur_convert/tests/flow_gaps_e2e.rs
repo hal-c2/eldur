@@ -386,6 +386,23 @@ Item {
             Rectangle { width: 100; height: 20 }
         }
     }
+    EldurFlow {
+        id: free
+        y: 50
+        spacing: 10
+        rowSpacing: 5
+        Rectangle { width: 80; height: 20 }
+    }
+    Flow {
+        id: freeFlow
+        y: 50
+        spacing: 10
+        Rectangle { width: 80; height: 20 }
+    }
+    Component {
+        id: kid
+        Rectangle { width: 80; height: 20 }
+    }
     Item {
         id: ancestor
         EldurFlow {
@@ -419,15 +436,37 @@ Item {
         name: "EldurFlowAlone"
         when: windowShown
 
-        // A width that follows implicitWidth under a cap bounds the lines
-        // and settles: two lines of two, 230 wide.
-        function test_a_capped_width_settles() {
+        // Under an inline-flex's `Math.min(implicitWidth, line)` the box is
+        // CSS's shrink-to-fit width, min(max-content, line), as Chromium
+        // gives: the line's 284, two lines of two. It settles, and widens to
+        // one line of 490 when the line does.
+        function test_a_capped_width_is_shrink_to_fit() {
             wait(50)
             const settled = capped.widthChanges
             wait(200)
             compare(capped.widthChanges, settled, "the width keeps changing")
-            compare(capped.width, 230)
+            compare(capped.width, 284)
             compare(capped.implicitHeight, 45)
+            line.width = 600
+            wait(50)
+            compare(capped.width, 490)
+            compare(capped.implicitHeight, 20)
+            line.width = 284
+            wait(50)
+            compare(capped.width, 284)
+            compare(capped.implicitHeight, 45)
+        }
+
+        // With no width set, the items stay on one line, as in `Flow`, even
+        // after one is added.
+        function test_no_width_keeps_one_line() {
+            const added = kid.createObject(free)
+            kid.createObject(freeFlow)
+            wait(50)
+            compare(freeFlow.implicitHeight, 20, "Flow")
+            compare(free.implicitHeight, 20, "EldurFlow")
+            compare(added.x, 90)
+            compare(free.width, 170)
         }
 
         // A kid hidden on its own stays out of the lines while the box or an

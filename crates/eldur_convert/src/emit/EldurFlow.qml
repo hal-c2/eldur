@@ -9,9 +9,11 @@ import QtQuick
 // Lines break as `Flow`'s do (measured in qml6): an item that would end past
 // the width starts a new line unless it is the line's first, an item that is
 // hidden or has no width or height takes no place, and with no width the
-// items stay on one line. `implicitWidth` is the widest line and
-// `implicitHeight` the last line's bottom; both are only defaults, so a box
-// with a set width keeps it.
+// items stay on one line. `implicitWidth` is the max-content width, every
+// item on one line, which does not depend on the width, so a box capped by
+// `Math.min(implicitWidth, line)` is CSS's shrink-to-fit width and widens
+// again with its line. `implicitHeight` is the last line's bottom. Both are
+// only defaults, so a box with a set width keeps it.
 Item {
     id: eldurFlow
 
@@ -66,12 +68,9 @@ Item {
         if (!visible && eldurPlaced) {
             return;
         }
-        // The width the box is given bounds its lines, even one that follows
-        // `implicitWidth` under a cap, as an inline-flex's
-        // `Math.min(implicitWidth, line)` does; telling that from a width
-        // nobody set would flip between them every pass. The converter
-        // always gives the box a width; one nobody set would make the
-        // widest line the next pass's bound, unlike `Flow`.
+        // The width the box is given bounds its lines. One nobody set
+        // follows `implicitWidth`, every item on one line, so it keeps them
+        // there.
         const bound = width > 0 ? width : Infinity;
         const lines = [];
         let line = [];
@@ -79,6 +78,8 @@ Item {
         let y = 0;
         let tallest = 0;
         let widest = 0;
+        let oneLine = 0;
+        let placed = 0;
         for (const kid of children) {
             // Never placed and hidden: every kid counts, as none can be told
             // to be hidden on its own.
@@ -95,6 +96,8 @@ Item {
             }
             line.push({ item: kid, x: x });
             widest = Math.max(widest, x + kid.width);
+            oneLine += kid.width;
+            placed += 1;
             tallest = Math.max(tallest, kid.height);
             x += kid.width + spacing;
         }
@@ -109,7 +112,7 @@ Item {
                 at.item.y = l.y;
             }
         }
-        eldurLinesWidth = widest;
+        eldurLinesWidth = placed > 0 ? oneLine + spacing * (placed - 1) : 0;
         eldurLinesHeight = lines.length > 0 ? y + tallest : 0;
         eldurPlaced = visible;
     }
