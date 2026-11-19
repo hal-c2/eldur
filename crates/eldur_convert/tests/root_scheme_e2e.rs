@@ -643,6 +643,103 @@ TestCase {
 }
 "##;
 
+// A `<details open>` a script makes, with `innerHTML` (`#made`) or with
+// `createElement` and `setAttribute` (`#built`), was never folded: Chromium
+// shows its paragraph, and a script's `style.display = 'none'` or `hidden`
+// takes it off screen. The page keeps its rules for the runtime, but no
+// script moves the root's attributes and no rule names a created element, so
+// those are made from templates, as the static page's own are.
+const MADE_PAGE: &str = r##"<style>
+:root { --fg: #c1c3c8; }
+:root[data-theme='light'] { --fg: #23262f; }
+body { color: var(--fg); }
+</style>
+<div id="made-host"></div>
+<div id="built-host"></div>
+<button id="make">Make</button>
+<button id="hide">Hide</button>
+<script>
+document.getElementById('make').addEventListener('click', () => {
+  document.getElementById('made-host').innerHTML =
+    '<details open><summary>Made summary</summary><p id="made"><em>Made inside</em></p></details>';
+  const d = document.createElement('details');
+  d.setAttribute('open', '');
+  const s = document.createElement('summary');
+  s.textContent = 'Built summary';
+  const p = document.createElement('p');
+  p.id = 'built';
+  p.textContent = 'Built inside';
+  d.append(s, p);
+  document.getElementById('built-host').append(d);
+});
+document.getElementById('hide').addEventListener('click', () => {
+  document.getElementById('made').style.display = 'none';
+  document.getElementById('built').hidden = true;
+});
+</script>
+"##;
+
+const MADE_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 800
+    height: 600
+
+TestCase {
+    name: "RootSchemeMadeDetails"
+    when: windowShown
+
+    function find(item, test) {
+        if (test(item))
+            return item
+        for (const child of item.children) {
+            const got = find(child, test)
+            if (got)
+                return got
+        }
+        return null
+    }
+
+    function textOf(page, words) {
+        return find(page, i => i.text !== undefined && i.font !== undefined && String(i.text).indexOf(words) >= 0)
+    }
+
+    function press(page, label) {
+        const b = find(page, i => i.eldurTag === "button" && i.text === label)
+        verify(b !== null, "no " + label + " button")
+        b.clicked()
+    }
+
+    // Bounded, as the scheme's settle can come late on a loaded machine.
+    function shown(page, want, step) {
+        const off = () => Object.keys(want).filter(k => {
+            const t = textOf(page, k)
+            return !t || t.visible !== want[k]
+        })
+        for (let waited = 0; waited < 40 && off().length > 0; ++waited)
+            wait(50)
+        const wrong = off()
+        verify(wrong.length === 0, step + ": " + wrong.map(k => k + (want[k] ? " is hidden" : " is on screen")).join(", "))
+    }
+
+    function test_a_script_made_open_details_follows_scripts() {
+        const component = Qt.createComponent("Main.qml")
+        verify(component.status === Component.Ready, component.errorString())
+        const page = createTemporaryObject(component, host, { width: 800, height: 600 })
+        waitForRendering(page)
+        wait(50)
+        press(page, "Make")
+        shown(page, { "Made summary": true, "Made inside": true, "Built summary": true, "Built inside": true }, "made")
+        press(page, "Hide")
+        shown(page, { "Made summary": true, "Made inside": false, "Built summary": true, "Built inside": false }, "hidden by a script")
+    }
+}
+}
+"##;
+
 #[test]
 fn a_root_attribute_repaints_inherited_text() {
     run(PAGE, TEST, "eldur-root-scheme");
@@ -656,6 +753,11 @@ fn a_root_attribute_hides_and_shows_blocks() {
 #[test]
 fn a_root_attribute_hides_nested_and_folded_blocks() {
     run(NEST_PAGE, NEST_TEST, "eldur-root-scheme-nest");
+}
+
+#[test]
+fn a_script_made_open_details_is_not_folded() {
+    run(MADE_PAGE, MADE_TEST, "eldur-root-scheme-made");
 }
 
 fn run(page: &str, test: &str, name: &str) {
