@@ -15791,28 +15791,33 @@ function _deepestAt(scene) {
     return _deepestUnder(top, scene) || top;
 }
 
+// The element a click at `scene` is for, from the item `deep` up: a text's
+// run under the point, else the first element with an item of its own.
+function _tapTarget(deep, scene) {
+    for (var at = deep; at; at = at.parent) {
+        var model = _vModelOf(at);
+        if (model && !model.select) {
+            var local = at.mapFromItem(null, scene.x, scene.y);
+            return { target: _vHitAt(model, local.x, local.y) || _vHostElement(model), control: null };
+        }
+        if (!_isInternalHelperNode(at) && _vIsTagged(at)) {
+            return { target: at, control: typeof at.clicked === "function" ? at : null };
+        }
+    }
+    return { target: null, control: null };
+}
+
 function _beginTap(qtEv, heardBy) {
     var scene = qtEv.scenePosition;
     if (_tap && _tap.x === scene.x && _tap.y === scene.y) {
         return _tap;
     }
-    var deep = _deepestAt(scene);
     var t = { x: scene.x, y: scene.y, target: null, control: null, ev: null };
     _tap = t;
     Qt.callLater(_flushTap);
-    for (var at = deep; at && !t.target; at = at.parent) {
-        var model = _vModelOf(at);
-        if (model && !model.select) {
-            var local = at.mapFromItem(null, scene.x, scene.y);
-            t.target = _vHitAt(model, local.x, local.y) || _vHostElement(model);
-        } else if (!_isInternalHelperNode(at) && _vIsTagged(at)) {
-            t.target = at;
-            if (typeof at.clicked === "function") {
-                t.control = at;
-            }
-        }
-    }
-    t.target = t.target || _unwrap(document.body) || heardBy;
+    var hit = _tapTarget(_deepestAt(scene), scene);
+    t.target = hit.target || _unwrap(document.body) || heardBy;
+    t.control = hit.control;
     t.ev = event("click", wrap(t.target), qtEv);
     t.ev.target = wrap(t.target);
     t.ev.bubbles = true;
@@ -16481,6 +16486,25 @@ function labelled(item) {
         ev.target = wrap(raw);
         ev.bubbles = true;
         _dispatchDynamic(raw, "click", ev);
+    }
+}
+
+// What the converter emitted for Return or Enter on a link's box: the key's
+// click comes from nowhere (no point, no count), and the link is followed
+// unless a listener prevents it.
+function keyClick(item, run) {
+    var box = _unwrap(item);
+    var scene = box.mapToItem(null, box.width / 2, box.height / 2);
+    var raw = _tapTarget(box, scene).target || _unwrap(document.body) || box;
+    var ev = event("click", wrap(raw), {});
+    ev.target = wrap(raw);
+    ev.bubbles = true;
+    ev.cancelable = true;
+    ev.pointerType = "";
+    ev.pointerId = -1;
+    _dispatchDynamic(raw, "click", ev);
+    if (!ev.defaultPrevented) {
+        run();
     }
 }
 
