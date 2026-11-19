@@ -4956,6 +4956,7 @@ function _takeOut(raw) {
         return;
     }
     _gTouch();
+    var zFrom = _zLeaving([raw]);
     var box = raw.eldurBox || raw;
     var place = _slotOf(box) || box;
     if (place.parent) {
@@ -4965,6 +4966,7 @@ function _takeOut(raw) {
     if (_slotOf(box) && _blockOf(box) !== undefined) {
         box.parent = null;
     }
+    _zLeft(zFrom);
 }
 
 // Sets whether a node shows of itself. A box painted away from its DOM parent
@@ -6528,6 +6530,56 @@ function _zRelevel(box, before) {
         x.z = next;
         after = _zLift(x);
         x = _logicalParent(x);
+    }
+}
+
+// The boxes a raised box may have set the level of, before it leaves
+// them: only one whose level is no higher than the box's lift.
+function _zLeaving(nodes) {
+    var from = [];
+    for (var i = 0; i < nodes.length; ++i) {
+        var n = nodes[i];
+        if (!n || n.__eldurInline || typeof n.z !== "number") {
+            continue;
+        }
+        var lift = _zLift(n);
+        var p = lift === null ? null : _logicalParent(n);
+        if (p && typeof p.z === "number" && lift >= p.z && from.indexOf(p) === -1) {
+            from.push(p);
+        }
+    }
+    return from;
+}
+
+// A raised box left each of these: each takes the level of what it still
+// holds, and the boxes above it with it.
+function _zLeft(from) {
+    for (var i = 0; i < from.length; ++i) {
+        var x = from[i];
+        if (_zPage(x) || _zOwn(x) !== null) {
+            continue;
+        }
+        if (_zOutOfFlow(x)) {
+            _zRelevel(x, undefined);
+            continue;
+        }
+        var next = _zAuto(x, _zHold(x));
+        if (next !== x.z) {
+            var before = _zLift(x);
+            x.z = next;
+            _zRelevel(x, before);
+        }
+    }
+}
+
+// Boxes put into the page lift the boxes they now are in, as a script's
+// level does; they lifted nothing there before.
+function _zEntered(nodes) {
+    for (var i = 0; i < nodes.length; ++i) {
+        var n = nodes[i];
+        if (n && !n.__eldurInline && typeof n.z === "number" && _zLift(n) !== null) {
+            _zRelevel(n, null);
+        }
     }
 }
 
@@ -11166,7 +11218,11 @@ function _insertChildren(raw, nodes, ref, going, atStart) {
     if (!nodes.every(_pseudoBoxSide)) {
         _domTextStale(raw);
     }
+    // A box that moves leaves its old place without being taken out.
+    var zFrom = _zLeaving(nodes);
     _insertChildrenAt(raw, nodes, ref);
+    _zLeft(zFrom);
+    _zEntered(nodes);
     if (going && going.parent !== undefined) {
         _takeOut(going);
     }
