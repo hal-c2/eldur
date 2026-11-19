@@ -528,6 +528,32 @@
   "clicks": [],
   "probes": []
  },
+ "numbered": {
+  "log": [
+   "CS order n4 n2 n3"
+  ],
+  "clicks": [],
+  "probes": [
+   {
+    "id": "n4",
+    "x": 50,
+    "y": 10,
+    "color": "#00ff00"
+   },
+   {
+    "id": "n2",
+    "x": 50,
+    "y": 30,
+    "color": "#ff0000"
+   },
+   {
+    "id": "n3",
+    "x": 50,
+    "y": 50,
+    "color": "#00ff00"
+   }
+  ]
+ },
  "paint": {
   "log": [
    "CS painted"
