@@ -22,6 +22,7 @@ Item {
     property real eldurLinesHeight: 0
     property var eldurWatched: []
     property bool eldurPlaced: false
+    property bool eldurProbing: false
     // Tells a line of inline boxes this lays out a flex row's lines.
     readonly property bool eldurFlowLines: true
 
@@ -58,6 +59,27 @@ Item {
         eldurPlace();
     }
 
+    // The width the lines break at. A width nobody set follows
+    // `implicitWidth`, the last pass's widest line, and must not bound the
+    // next pass: `Flow` keeps its items on one line then. QML cannot ask
+    // whether a width was set, so move `implicitWidth` by one and see
+    // whether the width moves with it.
+    function eldurBound() {
+        if (width <= 0) {
+            return Infinity;
+        }
+        if (width !== implicitWidth) {
+            return width;
+        }
+        const set = width;
+        eldurProbing = true;
+        eldurLinesWidth = set + 1;
+        const follows = width !== set;
+        eldurLinesWidth = set;
+        eldurProbing = false;
+        return follows ? Infinity : set;
+    }
+
     function eldurPlace() {
         // `visible` is the effective one, so while this box is hidden every
         // kid reads hidden and a kid hidden on its own cannot be told apart.
@@ -67,7 +89,7 @@ Item {
             return;
         }
         // Unbounded without a width, as `Flow` is.
-        const bound = width > 0 ? width : Infinity;
+        const bound = eldurBound();
         const lines = [];
         let line = [];
         let x = 0;
@@ -97,7 +119,7 @@ Item {
             lines.push({ items: line, y: y });
         }
         const rtl = layoutDirection === Qt.RightToLeft;
-        const span = width > 0 ? width : widest;
+        const span = bound === Infinity ? widest : bound;
         for (const l of lines) {
             for (const at of l.items) {
                 at.item.x = rtl ? span - at.x - at.item.width : at.x;
@@ -110,7 +132,11 @@ Item {
     }
 
     onChildrenChanged: eldurWatch()
-    onWidthChanged: eldurQueue()
+    onWidthChanged: {
+        if (!eldurProbing) {
+            eldurQueue();
+        }
+    }
     onSpacingChanged: eldurQueue()
     onRowSpacingChanged: eldurQueue()
     onLayoutDirectionChanged: eldurQueue()
