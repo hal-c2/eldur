@@ -131,7 +131,10 @@ fn restyling_a_state_variant_s_reach_agrees_with_restyling_the_document() {
         .expect("tests/corpus exists")
         .filter_map(|e| {
             let path = e.ok()?.path().join("index.html");
-            Some((path.display().to_string(), std::fs::read_to_string(path).ok()?))
+            Some((
+                path.display().to_string(),
+                std::fs::read_to_string(path).ok()?,
+            ))
         })
         .collect();
     assert!(pages.len() > 50, "the corpus is there");
