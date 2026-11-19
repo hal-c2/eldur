@@ -463,24 +463,65 @@ fn dimension(value: &str) -> Option<String> {
 
 /// An `<svg>`'s `width` and `height` attributes as the `width` and `height`
 /// properties they are presentation attributes for (SVG 2 §8.1, §6.6): a flex
-/// row doesn't stretch a 16×16 icon. A bare number is in px; a value that
-/// isn't a length is dropped by the parser, as Chromium ignores it.
+/// row doesn't stretch a 16×16 icon. A bare number is in px. Anything but one
+/// length or `auto` is dropped, as Chromium ignores it, and never reaches the
+/// declaration text: `width="16;display:none"` adds no declaration.
 fn svg_hints(elem: &eldur_dom::Element) -> Option<String> {
     if !elem.is_svg() || elem.local_name() != "svg" {
         return None;
     }
     let mut hints = String::new();
     for name in ["width", "height"] {
-        let Some(value) = elem.attr(name).map(str::trim).filter(|v| !v.is_empty()) else {
-            continue;
-        };
-        if value.parse::<f32>().is_ok() {
-            hints.push_str(&format!("{name}:{value}px;"));
-        } else {
+        if let Some(value) = elem.attr(name).and_then(svg_length_hint) {
             hints.push_str(&format!("{name}:{value};"));
         }
     }
     Some(hints)
+}
+
+/// A presentation attribute's value as one CSS length, percentage or `auto`
+/// (SVG 2 §4.6.1): a number, then a unit of letters or `%`, px when none.
+/// Whether the unit is one CSS knows is left to the declaration's parser.
+fn svg_length_hint(value: &str) -> Option<String> {
+    let value = value.trim_matches([' ', '\t', '\n', '\x0c', '\r']);
+    if value.eq_ignore_ascii_case("auto") {
+        return Some("auto".into());
+    }
+    let bytes = value.as_bytes();
+    let digits = |from: usize| {
+        bytes[from..]
+            .iter()
+            .take_while(|b| b.is_ascii_digit())
+            .count()
+    };
+    let mut at = usize::from(matches!(bytes.first(), Some(b'+' | b'-')));
+    let int = digits(at);
+    at += int;
+    let mut frac = 0;
+    if bytes.get(at) == Some(&b'.') {
+        frac = digits(at + 1);
+        if frac > 0 {
+            at += 1 + frac;
+        }
+    }
+    if int + frac == 0 {
+        return None;
+    }
+    if matches!(bytes.get(at), Some(b'e' | b'E')) {
+        let sign = usize::from(matches!(bytes.get(at + 1), Some(b'+' | b'-')));
+        let exp = digits(at + 1 + sign);
+        if exp > 0 {
+            at += 1 + sign + exp;
+        }
+    }
+    let (number, unit) = value.split_at(at);
+    let unit = match unit {
+        "" => "px",
+        "%" => "%",
+        u if u.bytes().all(|b| b.is_ascii_alphabetic()) => u,
+        _ => return None,
+    };
+    Some(format!("{number}{unit}"))
 }
 
 pub(crate) fn compute_styles(
@@ -2089,7 +2130,9 @@ mod tests {
         let doc = Document::parse(
             r#"<!doctype html><body><svg id="a" width="16" height="16"></svg>
             <svg id="b" width="50%" height="2em" style="height:20px"></svg>
-            <svg id="c" width="wide"></svg></body>"#,
+            <svg id="c" width="wide"></svg>
+            <svg id="d" width="16;display:none" height=" 8 "></svg>
+            <svg id="e" width="1e1" height="1.5e"></svg></body>"#,
         );
         let map = compute_styles(&doc, &[], &Viewport::default());
         let of = |id: &str| map.style(doc.element_by_id(id).expect(id)).expect(id);
@@ -2099,6 +2142,12 @@ mod tests {
         assert!(matches!(&of("b").width, Size::Length(l) if l.as_px().is_none()));
         assert_eq!(of("b").height, Size::Length(Length::px(20.0)));
         assert_eq!(of("c").width, Size::Auto);
+        // One length or nothing: the rest of the value declares nothing.
+        assert_ne!(of("d").display, crate::Display::None);
+        assert_eq!(of("d").width, Size::Auto);
+        assert_eq!(of("d").height, Size::Length(Length::px(8.0)));
+        assert_eq!(of("e").width, Size::Length(Length::px(10.0)));
+        assert_eq!(of("e").height, Size::Auto, "`e` is no unit");
     }
 
     #[test]
