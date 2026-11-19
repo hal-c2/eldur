@@ -544,10 +544,14 @@ ApplicationWindow {
                             radius: 6
                             implicitWidth: buttonText.implicitWidth + 40
                             implicitHeight: buttonText.implicitHeight + 20
+                            activeFocusOnTab: true
                             Accessible.role: Accessible.Link
                             Accessible.name: "Get started"
                             width: Math.min(implicitWidth, centeredFlow.width)
                             antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                            Keys.onReturnPressed: root.scrollToFragment("#start")
+                            Keys.onEnterPressed: root.scrollToFragment("#start")
 
                             Text {
                                 id: buttonText
@@ -598,10 +602,14 @@ ApplicationWindow {
                             implicitHeight: buttonText2.implicitHeight + 24
                             border.width: 2
                             border.color: "#2563eb"
+                            activeFocusOnTab: true
                             Accessible.role: Accessible.Link
                             Accessible.name: "Read the docs"
                             width: Math.min(implicitWidth, centeredFlow.width)
                             antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                            Keys.onReturnPressed: root.scrollToFragment("#docs")
+                            Keys.onEnterPressed: root.scrollToFragment("#docs")
 
                             Text {
                                 id: buttonText2

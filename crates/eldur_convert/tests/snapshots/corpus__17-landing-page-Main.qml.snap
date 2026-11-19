@@ -313,12 +313,16 @@ ApplicationWindow {
                                             }
                                         }
                                     }
+                                    activeFocusOnTab: true
                                     Accessible.role: Accessible.Link
                                     Accessible.name: "Sign in"
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.preferredHeight: 40
                                     Layout.alignment: Qt.AlignVCenter
+
+                                    Keys.onReturnPressed: root.scrollToFragment("#signin")
+                                    Keys.onEnterPressed: root.scrollToFragment("#signin")
 
                                     Text {
                                         id: text_
@@ -582,10 +586,14 @@ ApplicationWindow {
                                                         }
                                                     }
                                                 }
+                                                activeFocusOnTab: true
                                                 Accessible.role: Accessible.Link
                                                 Accessible.name: "Start free trial"
                                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
                                                 height: 52
+
+                                                Keys.onReturnPressed: root.scrollToFragment("#signup")
+                                                Keys.onEnterPressed: root.scrollToFragment("#signup")
 
                                                 Text {
                                                     id: text2
@@ -648,10 +656,14 @@ ApplicationWindow {
                                                         }
                                                     }
                                                 }
+                                                activeFocusOnTab: true
                                                 Accessible.role: Accessible.Link
                                                 Accessible.name: "Watch the demo"
                                                 width: Math.min(Math.ceil(implicitWidth), parent.width)
                                                 height: 52
+
+                                                Keys.onReturnPressed: root.scrollToFragment("#demo")
+                                                Keys.onEnterPressed: root.scrollToFragment("#demo")
 
                                                 Text {
                                                     id: text3
@@ -1948,6 +1960,7 @@ ApplicationWindow {
                                                         }
                                                     }
                                                 }
+                                                activeFocusOnTab: true
                                                 Accessible.role: Accessible.Link
                                                 Accessible.name: "Get started"
                                                 Layout.fillWidth: true
@@ -1955,6 +1968,9 @@ ApplicationWindow {
                                                 Layout.preferredHeight: 52
                                                 Layout.alignment: Qt.AlignVCenter
                                                 Layout.leftMargin: 32
+
+                                                Keys.onReturnPressed: root.scrollToFragment("#signup")
+                                                Keys.onEnterPressed: root.scrollToFragment("#signup")
 
                                                 Text {
                                                     id: text5
