@@ -6484,6 +6484,41 @@ function _zShowing(raw, change) {
     change();
     if (typeof raw.z === "number" && raw.visible !== was) {
         _zRelevel(raw, before);
+    } else if (typeof raw.z === "number" && was === false) {
+        // Shown or hidden under a hidden ancestor.
+        _zUnseenAdd(raw);
+    }
+    if (raw.visible === true && _zUnseen.length > 0) {
+        _zSeen();
+    }
+}
+
+// Boxes whose level changed, or that came in, while an ancestor hid them:
+// Qt has them not visible, so they lifted nothing then (`_zLift`), and each
+// lifts the box it is in once it shows.
+var _zUnseen = [];
+
+function _zUnseenAdd(raw) {
+    if (raw.visible === false && _zUnseen.indexOf(raw) === -1) {
+        _zUnseen.push(raw);
+    }
+}
+
+function _zSeen() {
+    var waiting = _zUnseen;
+    _zUnseen = [];
+    for (var i = 0; i < waiting.length; ++i) {
+        var b = waiting[i];
+        if (!b.parent) {
+            continue;
+        }
+        if (b.visible === false) {
+            _zUnseen.push(b);
+        } else if (_zHost(b)) {
+            _zRelevel(b, undefined);
+        } else {
+            _zLeft([_logicalParent(b)]);
+        }
     }
 }
 
@@ -6670,8 +6705,11 @@ function _zLeft(from) {
 function _zEntered(nodes) {
     for (var i = 0; i < nodes.length; ++i) {
         var n = nodes[i];
-        if (n && !n.__eldurInline && typeof n.z === "number" && _zLift(n) !== null) {
-            _zRelevel(n, null);
+        if (n && !n.__eldurInline && typeof n.z === "number") {
+            if (_zLift(n) !== null) {
+                _zRelevel(n, null);
+            }
+            _zUnseenAdd(n);
         }
     }
 }
@@ -6761,7 +6799,17 @@ function _setStyleAt(item, prop, value) {
             } else if (str === "") {
                 _zShowing(raw, function() {
                     _layoutChanged(raw.parent);
-                    _inlineRelease(raw, raw, "visible");
+                    var slot = raw.eldurSlot;
+                    if (slot && slot.eldurRisen === true && raw.eldurBlock === undefined) {
+                        // The slot holds its room again, and the block shows
+                        // with what the slot is in, as the converter has it.
+                        _inlineRelease(raw, slot, "visible");
+                        raw.visible = Qt.binding(function() {
+                            return slot.parent ? slot.parent.visible : false;
+                        });
+                    } else {
+                        _inlineRelease(raw, raw, "visible");
+                    }
                 });
             } else {
                 _setShown(raw, !_displayHides(raw, str));
@@ -6807,6 +6855,7 @@ function _setStyleAt(item, prop, value) {
         if (stacked !== null && !isNaN(stacked) && typeof raw.z === "number") {
             raw.z = stacked;
             _zRelevel(raw, before);
+            _zUnseenAdd(raw);
         }
     } else if (name === "color") {
         _inlineColor(raw, Boolean(m.styles.color));
@@ -23801,11 +23850,15 @@ function _gPaintBox(raw, s, e) {
     // levels a box it lays out.
     // Only a box raised over its hold, or not yet at it, has kids to look
     // at: a kid raised since lifted it on its way up.
+    // A level of its own stopped its kids' lifts on their way up, so one
+    // that just went back to `auto` looks at them too.
     var own = _stackOwn(s, _gLayoutItem(raw));
     var hold = _stackHold(s);
+    var m = _meta(raw);
     var z = own !== null ? own
         : _zOutOfFlow(raw) ? _zOverlayAuto(raw)
-        : raw.z === hold ? hold : _zAuto(raw, hold);
+        : raw.z === hold && m.zLevelled !== true ? hold : _zAuto(raw, hold);
+    m.zLevelled = own !== null;
     if (raw.z !== z) {
         var before = _zOutOfFlow(raw) ? undefined : _zLift(raw);
         raw.z = z;
