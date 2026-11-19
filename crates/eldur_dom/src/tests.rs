@@ -128,7 +128,7 @@ fn svg_markup_carries_what_it_references_from_outside() {
         "<svg style='display:none'><symbol id=s viewBox='0 0 24 24'>\
          <rect fill='url(#g)' /></symbol><path id=unused d='M0 0'/></svg>\
          <svg><linearGradient id=g><stop offset=0 stop-color='currentColor'/></linearGradient></svg>\
-         <svg id=icon><use href='#s'/><use xlink:href='#missing'/><circle id=own/><use href='#own'/></svg>",
+         <svg id=icon><use href='#s'/><use xlink:href='#missing'/><circle id=own /><use href='#own'/></svg>",
     );
     let icon = doc
         .descendants(doc.root())
