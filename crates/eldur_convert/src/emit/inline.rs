@@ -819,7 +819,7 @@ impl Emitter<'_, '_> {
                     vertical_align(&mut placed, &a.style);
                     if let Some(link) = a.node.and_then(|n| self.inline_link(n)) {
                         let first = named_links.insert(link);
-                        self.atomic_link(&mut placed, link, first);
+                        self.atomic_link(&mut placed, a.node, link, first);
                         // The box is the link's item: its `:hover` and the
                         // like bind there, as the text run has none.
                         if self.markers && first && !part.own {
