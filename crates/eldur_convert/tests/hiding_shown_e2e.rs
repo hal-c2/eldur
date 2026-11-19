@@ -226,6 +226,47 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[16.0, 50.0],
         toggled: &[50.0, 84.0],
+    }, // `run-in` is no display Chromium or eldur_css takes: the `none` before it
+    // still hides the box.
+    Case {
+        name: "run_in_dropped",
+        body: r#"<p id="shy" style="display:none;display:run-in" hidden><em>Shy</em></p>
+<p id="after">After</p>
+<script>document.getElementById('shy').removeAttribute('hidden');</script>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[50.0, 84.0],
+    },
+    // A quote in a comment opens no string: the `display` after it is its own
+    // declaration.
+    Case {
+        name: "quote_in_a_comment",
+        body: r#"<p id="shy" style="display:none;color:red/* ' */;display:block" hidden><em>Shy</em></p>
+<p id="after">After</p>
+<script>document.getElementById('shy').removeAttribute('hidden');</script>"#,
+        ids: &["after", "t"],
+        load: &[50.0, 84.0],
+        toggled: &[16.0, 50.0],
+    },
+    // An escaped keyword is the keyword: `\62 lock` is `block`.
+    Case {
+        name: "escaped_display_keyword",
+        body: r#"<p id="shy" style="display:none;display:\62 lock" hidden><em>Shy</em></p>
+<p id="after">After</p>
+<script>document.getElementById('shy').removeAttribute('hidden');</script>"#,
+        ids: &["after", "t"],
+        load: &[50.0, 84.0],
+        toggled: &[16.0, 50.0],
+    },
+    // A `var()` display wins over the `none` before it.
+    Case {
+        name: "display_from_a_variable",
+        body: r#"<p id="shy" style="display:none;display:var(--missing, block)" hidden><em>Shy</em></p>
+<p id="after">After</p>
+<script>document.getElementById('shy').removeAttribute('hidden');</script>"#,
+        ids: &["after", "t"],
+        load: &[50.0, 84.0],
+        toggled: &[16.0, 50.0],
     },
 ];
 
@@ -452,4 +493,24 @@ fn an_escaped_bracket_does_not_swallow_the_display_after_it() {
 #[test]
 fn a_display_with_two_outside_keywords_does_not_show_the_block() {
     run(case("two_outside_keywords_dropped"));
+}
+
+#[test]
+fn a_display_chromium_drops_does_not_show_the_block() {
+    run(case("run_in_dropped"));
+}
+
+#[test]
+fn a_quote_in_a_comment_does_not_swallow_the_display_after_it() {
+    run(case("quote_in_a_comment"));
+}
+
+#[test]
+fn an_escaped_display_keyword_shows_the_block() {
+    run(case("escaped_display_keyword"));
+}
+
+#[test]
+fn a_display_from_a_variable_shows_the_block() {
+    run(case("display_from_a_variable"));
 }

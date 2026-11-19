@@ -2581,13 +2581,17 @@ fn only_a_block_its_own_style_attribute_hides_is_shown_when_a_script_clears_it()
 <p id="e" style="display:none !IMPORTANT">e</p>
 <p id="f" style="display:none;font-family:'a;display:block'">f</p>
 <p id="g" style="display:none;display:bogus">g</p>
+<p id="h" style="display:none;display:run-in">h</p>
+<p id="i" style="display:none;display:\62 lock">i</p>
+<p id="j" style="display:none;color:red/* ' */;display:block">j</p>
+<p id="k" style="display:none;display:var(--missing, block)">k</p>
 <button id="t">t</button>
 <script>
 document.getElementById('t').addEventListener('click', () => {
   document.getElementById('a').style.display = '';
   document.getElementById('b').style.display = '';
   document.getElementById('c').classList.toggle('on');
-  for (const id of ['d', 'e', 'f', 'g']) document.getElementById(id).style.display = '';
+  for (const id of ['d', 'e', 'f', 'g', 'h', 'i', 'j', 'k']) document.getElementById(id).style.display = '';
 });
 </script>"#,
     ));
@@ -2613,4 +2617,11 @@ document.getElementById('t').addEventListener('click', () => {
     assert!(hides("f"), "{qml}");
     // An invalid later declaration is dropped.
     assert!(hides("g"), "{qml}");
+    // So is a keyword eldur_css does not take, as the runtime drops it.
+    assert!(hides("h"), "{qml}");
+    // An escaped keyword, a comment and a `var()` decide as they do in the
+    // runtime: the later declaration wins.
+    for id in ["i", "j", "k"] {
+        assert!(!hides(id), "#{id}: {qml}");
+    }
 }
