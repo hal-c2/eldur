@@ -83,3 +83,71 @@ fn a_declaration_value_is_parsed_once_however_many_elements_it_styles() {
     // The same 40 classes style twice the cards; the value texts are the same.
     assert_eq!(large_parses, small_parses);
 }
+
+fn variants_both_ways(page: &str) -> (Vec<crate::StateVariant>, Vec<crate::StateVariant>) {
+    use crate::cascade::{VariantWalk, compute_styles_walking};
+    let doc = Document::parse(page);
+    let viewport = Viewport::default();
+    let (sheets, _) = collect_stylesheets(&doc, &mut NoSheets, &viewport);
+    let reach = compute_styles_walking(&doc, &sheets, &viewport, VariantWalk::Reach);
+    let whole = compute_styles_walking(&doc, &sheets, &viewport, VariantWalk::Document);
+    (reach.variants, whole.variants)
+}
+
+/// Selectors that carry a state up, sideways and down: what restyling only
+/// the reach must find just as restyling the whole document does.
+const REACHING: &[&str] = &[
+    // Descendants, inheritance through `display: contents`, and `rem`.
+    "<style>.a:hover .b{color:red} .a:hover{font-size:30px} .c{display:contents}\
+     .a:hover em{width:2em;height:1rem}</style>\
+     <div class=c><div class=a><p class=b>x <em>y</em></p></div></div>",
+    // The root's own state changes `rem` everywhere.
+    "<style>html:hover{font-size:20px} p{width:2rem}</style><p>x</p><div><p>y</p></div>",
+    // Following siblings and their subtrees.
+    "<style>.a:hover + .b{color:red} .a:focus ~ .c span{color:blue}</style>\
+     <p class=b>0</p><p class=a>1</p><p class=b>2</p><p class=c><span>3</span></p>",
+    // `:has()` reads a descendant's state; `:nth-child(of)` a sibling's.
+    "<style>div:has(.a:hover){background:red} li:nth-child(2 of .x:hover){color:red}\
+     .a:hover{color:green}</style>\
+     <div><p><span class=a>x</span></p></div><ul><li class=x>1<li class=x>2<li class=x>3</ul>",
+    // States read under other names, and in `:is()`/`:not()`.
+    "<style>input:enabled{color:red} a:link{color:blue} :is(.a:hover) b{color:red}\
+     p:not(.a:hover) i{color:green}</style>\
+     <form><input disabled><input></form><a href=#x>l</a><p class=a><b>b</b><i>i</i></p>",
+    // Shown and hidden by a state, and hidden around it.
+    "<style>.a:hover .h{display:block} .h{display:none} .n{display:none}\
+     .a:hover{display:none}</style><div class=a><p class=h>x</p></div>\
+     <div class=n><p class=a>y</p></div>",
+    // A state that starts from the document.
+    "<style>input:checked + label{color:red} :disabled{opacity:.5}</style>\
+     <input type=checkbox checked><label>x</label><fieldset disabled><input></fieldset>",
+];
+
+#[test]
+fn restyling_a_state_variant_s_reach_agrees_with_restyling_the_document() {
+    let corpus = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/corpus");
+    let mut pages: Vec<(String, String)> = std::fs::read_dir(&corpus)
+        .expect("tests/corpus exists")
+        .filter_map(|e| {
+            let path = e.ok()?.path().join("index.html");
+            Some((path.display().to_string(), std::fs::read_to_string(path).ok()?))
+        })
+        .collect();
+    assert!(pages.len() > 50, "the corpus is there");
+    pages.extend(
+        REACHING
+            .iter()
+            .enumerate()
+            .map(|(i, page)| (format!("REACHING[{i}]"), format!("<!DOCTYPE html>{page}"))),
+    );
+    pages.push(("cards".to_owned(), cards(40)));
+    for (name, page) in &pages {
+        let (reach, whole) = variants_both_ways(page);
+        assert_eq!(reach, whole, "{name}");
+    }
+    // The crafted pages do have variants, so the comparison is not empty.
+    for page in REACHING {
+        let (reach, _) = variants_both_ways(&format!("<!DOCTYPE html>{page}"));
+        assert!(reach.iter().any(|v| !v.changed.is_empty()), "{page}");
+    }
+}

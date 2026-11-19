@@ -5,7 +5,7 @@
 //! parser AST types.
 
 use std::cell::RefCell;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::ops::Add;
 
 use eldur_dom::{Document, Element, NodeData, NodeId, ns};
@@ -621,6 +621,71 @@ fn has_multi_element_dynamic_pseudos(sel: &Selector) -> bool {
         }
     }
     dynamic_positions > 1
+}
+
+/// Which elements' selectors can read one element's pseudo-state, so a state
+/// variant restyles only them (eldur #9). Combinators look up to ancestors and
+/// back to earlier siblings, so a state of `n` reaches `n`'s subtree, and with
+/// `+` or `~` its following siblings' subtrees too; `:has()` and
+/// `:nth-*(of)` look down and forward, so they may reach anything.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) enum StateReach {
+    #[default]
+    Subtree,
+    FollowingSiblings,
+    Document,
+}
+
+/// Widens `reach` for every state `sel` reads to as far as `sel` can carry it.
+pub(crate) fn note_state_reach(sel: &Selector, reach: &mut BTreeMap<PseudoState, StateReach>) {
+    #[derive(Default)]
+    struct Shape {
+        states: Vec<PseudoState>,
+        siblings: bool,
+        anywhere: bool,
+    }
+    fn walk(sel: &Selector, shape: &mut Shape) {
+        shape.siblings |= sel
+            .combinators
+            .iter()
+            .any(|c| matches!(c, Combinator::NextSibling | Combinator::LaterSibling));
+        for c in &sel.compounds {
+            for pc in &c.pseudos {
+                match pc {
+                    PseudoClass::Dynamic(st) => shape.states.push(*st),
+                    // Both read another state than their own name says.
+                    PseudoClass::Enabled => shape.states.push(PseudoState::Disabled),
+                    PseudoClass::Link => shape.states.push(PseudoState::Visited),
+                    PseudoClass::Is(list) | PseudoClass::Where(list) | PseudoClass::Not(list) => {
+                        list.iter().for_each(|s| walk(s, shape));
+                    }
+                    PseudoClass::NthChild(_, Some(list))
+                    | PseudoClass::NthLastChild(_, Some(list)) => {
+                        shape.anywhere = true;
+                        list.iter().for_each(|s| walk(s, shape));
+                    }
+                    PseudoClass::Has(rels) => {
+                        shape.anywhere = true;
+                        rels.iter().for_each(|r| walk(&r.selector, shape));
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+    let mut shape = Shape::default();
+    walk(sel, &mut shape);
+    let far = if shape.anywhere {
+        StateReach::Document
+    } else if shape.siblings {
+        StateReach::FollowingSiblings
+    } else {
+        StateReach::Subtree
+    };
+    for st in shape.states {
+        let at = reach.entry(st).or_default();
+        *at = (*at).max(far);
+    }
 }
 
 /// Calls `visit` on every compound of `sel`, including those nested in
