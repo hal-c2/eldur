@@ -259,6 +259,8 @@ fn svg_natural(text: &str) -> Natural {
     let Some((width, height, view_box)) = svg_root(text) else {
         return Natural::default();
     };
+    // A negative length is a zero one (`-80×-40` is 0×0).
+    let (width, height) = (width.map(|w| w.max(0.0)), height.map(|h| h.max(0.0)));
     let positive = |w: f32, h: f32| w > 0.0 && h > 0.0;
     let Some((vw, vh)) = view_box else {
         return Natural {
@@ -287,25 +289,40 @@ fn svg_natural(text: &str) -> Natural {
     }
 }
 
-/// An inline `<svg>`'s size from its root `width` and `height` (one of them
-/// with the `viewBox` ratio); else the `viewBox` ratio alone.
+/// An inline `<svg>`'s size, as Chromium lays one out from its root
+/// `width`, `height` and `viewBox`. A length that is not negative is the
+/// side's size. A negative one leaves the side auto but is a zero natural
+/// length. An auto side follows the other through the `viewBox` ratio, else
+/// takes its natural length, else the default object size's (300×150, CSS
+/// 2.2 §10.3.2, §10.6.2). With both auto: the natural lengths, one of them
+/// through the ratio, or the ratio alone (the svg fills its width).
 pub(crate) fn svg_size(text: &str) -> (Option<(f32, f32)>, Option<f32>) {
     let Some((width, height, view_box)) = svg_root(text) else {
         return (None, None);
     };
-    let (width, height) = (width.filter(|w| *w > 0.0), height.filter(|h| *h > 0.0));
-    match (width, height, view_box) {
-        (Some(w), Some(h), _) => (Some((w, h)), None),
-        (Some(w), None, Some((vw, vh))) => (Some((w, w * vh / vw)), None),
-        (None, Some(h), Some((vw, vh))) => (Some((h * vw / vh, h)), None),
-        (None, None, Some((vw, vh))) => (None, Some(vh / vw)),
-        _ => (None, None),
-    }
+    let ratio = view_box.map(|(vw, vh)| vh / vw);
+    let set = |v: Option<f32>| v.filter(|v| *v >= 0.0);
+    let natural = |v: Option<f32>| v.map(|v| v.max(0.0));
+    let (nw, nh) = (natural(width), natural(height));
+    let size = match (set(width), set(height)) {
+        (Some(w), Some(h)) => (w, h),
+        (Some(w), None) => (w, ratio.map(|r| w * r).or(nh).unwrap_or(150.0)),
+        (None, Some(h)) => (ratio.map(|r| h / r).or(nw).unwrap_or(300.0), h),
+        (None, None) => match (nw, nh, ratio) {
+            (Some(w), Some(h), _) => (w, h),
+            (Some(w), None, Some(r)) => (w, w * r),
+            (None, Some(h), Some(r)) => (h / r, h),
+            (None, None, Some(r)) => return (None, Some(r)),
+            (w, h, _) => (w.unwrap_or(300.0), h.unwrap_or(150.0)),
+        },
+    };
+    (Some(size), None)
 }
 
-/// The root `<svg>`'s absolute `width` and `height` (zero included, a
-/// negative one read as zero) and its `viewBox` size when both of its sides
-/// are positive; `None` when the text has no `<svg` tag.
+/// The root `<svg>`'s absolute `width` and `height` as written (zero and
+/// negative included; each caller reads them by its own rule) and its
+/// `viewBox` size when both of its sides are positive; `None` when the text
+/// has no `<svg` tag.
 #[allow(clippy::type_complexity)]
 fn svg_root(text: &str) -> Option<(Option<f32>, Option<f32>, Option<(f32, f32)>)> {
     let start = text.find("<svg")?;
@@ -327,13 +344,12 @@ fn svg_root(text: &str) -> Option<(Option<f32>, Option<f32>, Option<(f32, f32)>)
         }
     };
     // Only absolute lengths size the image; `100%` defers to the viewBox.
-    // A negative one is a zero one, as Chromium sizes it.
+    // A negative one is kept: a file reads it as zero, inline it is no size.
     let length = |name: &str| {
         attr(name)
             .map(|v| v.trim().trim_end_matches("px"))
             .and_then(|v| v.parse::<f32>().ok())
             .filter(|v| v.is_finite())
-            .map(|v| v.max(0.0))
     };
     let view_box = attr("viewBox").and_then(|v| {
         let n: Vec<f32> = v
@@ -366,17 +382,33 @@ mod tests {
             (Some((20.0, 40.0)), None)
         );
         assert_eq!(svg_size(r#"<svg viewBox="0 0 64 32">"#), (None, Some(0.5)));
-        // `svg_root` reads a negative length as zero for files; inline, the
-        // non-positive one is ignored and the other side and the viewBox
-        // decide, as Chromium sizes an inline `<svg>` (80×40 for both).
-        assert_eq!(
-            svg_size(r#"<svg width="-80" height="40" viewBox="0 0 20 10">"#),
-            (Some((80.0, 40.0)), None)
-        );
-        assert_eq!(
-            svg_size(r#"<svg width="80" height="-40" viewBox="0 0 20 10">"#),
-            (Some((80.0, 40.0)), None)
-        );
+        // Chromium's inline boxes (1280×800, `display: block`). A negative
+        // length is no size but a zero natural length; a missing one is the
+        // default object size's.
+        let vb = |attrs: &str| format!(r#"{attrs} viewBox="0 0 20 10""#);
+        for (attrs, size) in [
+            ("".to_owned(), (300.0, 150.0)),
+            (r#"width="-80""#.to_owned(), (0.0, 150.0)),
+            (r#"height="-40""#.to_owned(), (300.0, 0.0)),
+            (r#"width="-80" height="-40""#.to_owned(), (0.0, 0.0)),
+            (r#"width="0" height="0""#.to_owned(), (0.0, 0.0)),
+            (r#"width="0""#.to_owned(), (0.0, 150.0)),
+            (r#"height="0""#.to_owned(), (300.0, 0.0)),
+            (r#"width="-80" height="40""#.to_owned(), (0.0, 40.0)),
+            (r#"width="80" height="-40""#.to_owned(), (80.0, 0.0)),
+            (r#"width="80""#.to_owned(), (80.0, 150.0)),
+            (r#"height="40""#.to_owned(), (300.0, 40.0)),
+            (vb(r#"width="-80""#), (0.0, 0.0)),
+            (vb(r#"width="-80" height="-40""#), (0.0, 0.0)),
+            (vb(r#"width="-80" height="40""#), (80.0, 40.0)),
+            (vb(r#"width="80" height="-40""#), (80.0, 40.0)),
+        ] {
+            assert_eq!(
+                svg_size(&format!("<svg {attrs}>")),
+                (Some(size), None),
+                "{attrs}"
+            );
+        }
     }
 
     #[test]
