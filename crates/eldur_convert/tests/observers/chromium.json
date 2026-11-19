@@ -75,6 +75,14 @@
   "OB chain attributes:q:data-two:null:null",
   "OB done"
  ],
+ "mutation_callback_restyle": [
+  "OB connected A",
+  "OB B height 20",
+  "OB connected B",
+  "OB appended",
+  "OB records childList:W:+A|B",
+  "OB done"
+ ],
  "mutation_callbacks": [
   "OB body childList:P:+:-X:null:null childList:D:+X:-:null:null childList:A:+:-P:null:null childList:D:+S:-:X:null childList:A:+Y:-:null:null attributes:Y:data-v:null attributes:A:data-seen:null",
   "OB seen 1",

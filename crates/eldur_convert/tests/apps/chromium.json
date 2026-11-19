@@ -45019,6 +45019,75 @@
     ],
     "(focus)": ""
    }
+  },
+  {
+   "name": "script focuses icon, kept",
+   "log": [
+    "focusin refocus",
+    "focusout refocus",
+    "focusin icon",
+    "click refocus "
+   ],
+   "state": {
+    "#first": [
+     {
+      "box": [
+       8,
+       18,
+       16,
+       17
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "icon"
+   }
+  },
+  {
+   "name": "escape with a refocusing listener",
+   "log": [
+    "refocus",
+    "focusin icon",
+    "focusout icon",
+    "blurred A"
+   ],
+   "state": {
+    "#first": [
+     {
+      "box": [
+       8,
+       18,
+       16,
+       17
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "icon"
+   }
+  },
+  {
+   "name": "enter after the kept focus",
+   "log": [
+    "click icon "
+   ],
+   "state": {
+    "#first": [
+     {
+      "box": [
+       8,
+       18,
+       16,
+       17
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "icon"
+   }
   }
  ],
  "input_links": [
