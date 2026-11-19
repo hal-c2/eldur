@@ -2533,3 +2533,35 @@ fn a_block_link_keeps_its_focus_styles() {
     );
     assert_eq!(qml.matches("activeFocusOnTab: true").count(), 1, "{qml}");
 }
+
+#[test]
+fn only_a_block_its_own_style_attribute_hides_is_shown_when_a_script_clears_it() {
+    let (qml, _) = convert(&page(
+        ".k.on{display:block!important}",
+        r#"<p id="a" style="display:none">a</p>
+<p id="b" style="display:none" hidden>b</p>
+<p id="c" class="k" style="display:none">c</p>
+<button id="t">t</button>
+<script>
+document.getElementById('t').addEventListener('click', () => {
+  document.getElementById('a').style.display = '';
+  document.getElementById('b').style.display = '';
+  document.getElementById('c').classList.toggle('on');
+});
+</script>"#,
+    ));
+    // The item's own declarations follow its id.
+    let hides = |id: &str| {
+        let at = qml
+            .find(&format!("id: {id}\n"))
+            .unwrap_or_else(|| panic!("no #{id} in\n{qml}"));
+        let rest = &qml[at..];
+        rest[..rest.find("\n\n").unwrap_or(rest.len())]
+            .contains("property bool eldurStyleHides: true")
+    };
+    assert!(hides("a"), "{qml}");
+    // The UA's `[hidden]` rule hides it too.
+    assert!(!hides("b"), "{qml}");
+    // Its classes decide, through the binding the converter wrote.
+    assert!(!hides("c"), "{qml}");
+}
