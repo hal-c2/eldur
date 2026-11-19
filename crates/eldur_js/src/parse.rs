@@ -561,9 +561,6 @@ fn unsupported_global_diagnostic(name: &str, window_qualified: bool) -> Option<&
     match name {
         "BigInt" => Some("BigInt is not supported by QML's JS engine"),
         "Intl" => Some("Intl is not supported by QML's JS engine"),
-        "MutationObserver" => Some("MutationObserver is not supported in QML"),
-        "IntersectionObserver" => Some("IntersectionObserver is not supported in QML"),
-        "ResizeObserver" => Some("ResizeObserver is not supported in QML"),
         "Worker" => Some("Worker is not supported in QML"),
         "location" => Some(if window_qualified {
             "'window.location' is only stubbed in QML"
