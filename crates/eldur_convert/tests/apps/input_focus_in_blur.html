@@ -14,6 +14,8 @@ button, input { display: block; margin: 4px 0; }
 <button id="arm3">arm3</button>
 <button id="e">e</button>
 <button id="d">d</button>
+<button id="arm4">arm4</button>
+<button id="h">h</button>
 <script>
 // Listeners that move the focus while the page hears that it moved.
 function id(el) { return el && el.id ? el.id : el ? el.nodeName : "-"; }
@@ -38,6 +40,10 @@ on("arm2").addEventListener("click", function () {
 // A control focused and blurred again from a blur listener keeps nothing.
 on("arm3").addEventListener("click", function () {
   on("arm3").addEventListener("blur", function () { on("d").focus(); on("d").blur(); }, { once: true });
+});
+// A blur listener that focuses where the Tab goes anyway: it hears of it once.
+on("arm4").addEventListener("click", function () {
+  on("arm4").addEventListener("blur", function () { on("h").focus(); }, { once: true });
 });
 </script>
 </body>
