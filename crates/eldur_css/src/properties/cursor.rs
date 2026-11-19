@@ -19,6 +19,8 @@ pub(crate) const MAX_NESTING_DEPTH: usize = 32;
 pub(crate) fn parse_component_values(value: &str) -> Result<Vec<ComponentValue>, String> {
     let len =
         u32::try_from(value.len()).map_err(|_| "CSS value exceeds maximum length".to_owned())?;
+    #[cfg(test)]
+    crate::work::count_value_parse();
     let input = StringInput::new(value, BytePos(1), BytePos(1 + len));
     let mut errors = Vec::new();
     let list: ListOfComponentValues =

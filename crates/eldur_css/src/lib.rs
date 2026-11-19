@@ -555,6 +555,8 @@ fn matches_any(doc: &Document, node: NodeId, list: &selectors::ConvertedSelector
 
 mod cascade;
 mod collect;
+#[cfg(test)]
+mod work;
 mod conditional;
 mod inline_rules;
 mod media;
