@@ -39,6 +39,10 @@ const COMPONENTS: &[Component] = &[
         ],
     },
     Component {
+        name: "EldurFlow",
+        files: &[("EldurFlow.qml", super::flex::ELDUR_FLOW_QML.as_bytes())],
+    },
+    Component {
         name: "EldurInlineBox",
         files: &[("EldurInlineBox.qml", super::ELDUR_INLINE_BOX_QML.as_bytes())],
     },
