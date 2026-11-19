@@ -166,6 +166,7 @@ ApplicationWindow {
 
                             // <p>
                             Text {
+                                id: p
                                 property string eldurTag: "p"
 
                                 text: "A page with folding parts."
@@ -246,6 +247,7 @@ ApplicationWindow {
 
                             // <p>
                             Text {
+                                id: p2
                                 property string eldurTag: "p"
 
                                 text: "People with questions."
@@ -326,6 +328,7 @@ ApplicationWindow {
 
                             // <p>
                             Text {
+                                id: p3
                                 property string eldurTag: "p"
 
                                 text: "Whenever you want."
