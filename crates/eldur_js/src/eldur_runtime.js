@@ -713,8 +713,6 @@ function init(rootItem, baseUrl, documentUrl) {
             _resetPageState();
         } else if (_live(_root)) {
             _pageCaches.set(_root, _pageCacheSave());
-            // Whether this page numbers its items is asked of its own items.
-            _numberedItems = false;
             // The elements showing generated text are the earlier page's: this
             // page's rules must not take it off them.
             _pseudoShown = new Set();
@@ -1230,7 +1228,7 @@ function _pageCacheSave() {
         gStaticBase: _gStaticBase, gStaticControls: _gStaticControls,
         gClosedHidden: _gClosedHidden, gStaticRoot: _gStaticRoot, gSchemed: _gSchemed,
         documentListeners: _documentListeners, windowListeners: _windowListeners,
-        fallbackTitle: _fallbackTitle, numberedItems: _numberedItems
+        fallbackTitle: _fallbackTitle
     };
 }
 
@@ -1257,7 +1255,6 @@ function _pageCacheLoad(c) {
     _gClosedHidden = c.gClosedHidden; _gStaticRoot = c.gStaticRoot; _gSchemed = c.gSchemed;
     _documentListeners = c.documentListeners; _windowListeners = c.windowListeners;
     _fallbackTitle = c.fallbackTitle;
-    _numberedItems = c.numberedItems;
 }
 
 // What is kept for a page goes with it: pages made one after another, each
@@ -4683,7 +4680,9 @@ function _reflowFilled(container, force) {
 // Only the converter declares `eldurIndex` and its kin: on elements there when
 // the page loads, and on the templates some created elements are made from. A
 // page none of whose items has them has nothing to renumber, so its appends
-// skip a walk of all their new siblings. Each page keeps its own answer.
+// skip a walk of all their new siblings. The answer is for every page up at
+// once, not the one that is the document: an earlier page's timers still move
+// its items, and layouts settle for all of them together.
 var _numberedItems = false;
 
 // What goes into the page may bring numbered items with it; reading it costs
