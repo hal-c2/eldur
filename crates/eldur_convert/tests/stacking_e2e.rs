@@ -91,6 +91,7 @@ TestCase {
         "c1", "o1", "c2", "o2", "c3", "o3", "hv", "o4", "fc", "o5", "c6", "o6", "c7", "o7", "e8", "o8",
         "k1", "v1", "k2", "v2", "k3", "v3", "k4", "v4", "k5", "m5", "v5",
         "c1", "v1", "c2", "v2", "c3", "v3", "c4", "e4", "v4", "e5", "v5", "a6", "a7", "h8", "a8", "h9", "h10",
+        "p1", "p2", "r2", "a2",
         "b3", "b4", "da", "db", "k6", "n6", "v6"]
 
     // The painted box nearest the front at a point, in Qt Quick's paint
@@ -626,6 +627,48 @@ fn the_contexts_rules_levels_match_chromium() {
         &unscripted(CONTEXTS, "// A box raised"),
         &with_test(CONTEXTS_UNSCRIPTED),
         "contexts-unscripted",
+        false,
+    );
+}
+
+/// Overlays of the initial block at one level with the boxes of the
+/// page: `#p1` at 10 over `#p2` at 0 after it, though `#p2` rises; and
+/// `#r2` raised to 5 over `#a2` at 1 after it. No script.
+const INITIAL_BLOCK: &str = r#"<!doctype html><html><head><style>
+body { margin: 0 }
+div { height: 40px; width: 200px }
+.gap { height: 80px }
+.ab { position: absolute; width: 50px; background: green }
+#p1 { z-index: 10; left: 0; top: 0 }
+#p2 { z-index: 0; left: 20px; top: 0; background: red }
+#r2 { position: relative; z-index: 5; background: blue }
+#a2 { z-index: 1; left: 0; top: 80px }
+</style></head><body>
+<div id=p1 class=ab></div><div id=p2 class=ab></div>
+<div class=gap></div>
+<div id=r2></div><div id=a2 class=ab></div>
+</body></html>"#;
+
+/// Chromium's fronts.
+const INITIAL_BLOCK_TEST: &str = r##"
+    function test_levels_follow_what_the_boxes_hold() {
+        compare(front(page, 10, 20), "p1")
+        compare(front(page, 40, 20), "p1", "over a later overlay at a lower level")
+        compare(front(page, 60, 20), "p2")
+        compare(front(page, 100, 20), "")
+        compare(front(page, 10, 100), "r2", "a raised block over a later overlay")
+        compare(front(page, 100, 100), "r2")
+    }
+}
+}
+"##;
+
+#[test]
+fn the_initial_blocks_overlays_keep_one_layer_with_the_page() {
+    run(
+        INITIAL_BLOCK,
+        &with_test(INITIAL_BLOCK_TEST),
+        "initial-block",
         false,
     );
 }
