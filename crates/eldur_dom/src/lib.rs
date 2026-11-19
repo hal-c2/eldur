@@ -348,7 +348,10 @@ impl Document {
         if let [Some(width), Some(height)] = &root_size {
             sizes.push((id, width.clone(), height.clone()));
         }
-        let svg = SvgWriter { value, sizes: &sizes };
+        let svg = SvgWriter {
+            value,
+            sizes: &sizes,
+        };
         svg.write(self, id, element, &root, None, &mut out);
         if !copies.is_empty() {
             let mut defs = String::from("<defs>");
@@ -758,16 +761,19 @@ fn svg_own_colour(element: &Element) -> Option<String> {
             .find(|a| a.name.ns == ns!() && &*a.name.local == name)
             .map(|a| &*a.value)
     };
-    plain("style")
-        .and_then(|style| {
-            style
-                .split(';')
-                .filter_map(|d| d.split_once(':'))
-                .filter(|(name, _)| name.trim().eq_ignore_ascii_case("color"))
-                .last()
-                .and_then(|(_, v)| usable(v))
-        })
-        .or_else(|| plain("color").and_then(usable))
+    // A declared `color: inherit` still overrides the attribute below it.
+    let declared = plain("style").and_then(|style| {
+        style
+            .split(';')
+            .filter_map(|d| d.split_once(':'))
+            .filter(|(name, v)| name.trim().eq_ignore_ascii_case("color") && !v.trim().is_empty())
+            .last()
+            .map(|(_, v)| v)
+    });
+    match declared {
+        Some(v) => usable(v),
+        None => plain("color").and_then(usable),
+    }
 }
 
 /// Whether `name` is an XML 1.0 Name without a colon (XML §2.3), the

@@ -178,7 +178,8 @@ fn svg_markup_tells_the_colour_the_svg_sets_itself() {
     // `currentColor` as a colour sets nothing new.
     let doc = Document::parse(
         "<svg fill=currentColor><g color=blue><path d='M0 0' fill=currentColor/>\
-         <g style='stroke:red; color: #0f0 !important' color=red><path d='M1 1'/></g></g>\
+         <g style='stroke:red; color: #0f0 !important' color=red><path d='M1 1'/></g>\
+         <g color=red style='color:inherit'><path d='M3 3'/></g></g>\
          <g color=currentColor><path d='M2 2'/></g></svg>",
     );
     let svg = doc
@@ -196,6 +197,9 @@ fn svg_markup_tells_the_colour_the_svg_sets_itself() {
     assert!(markup.contains("d=\"M0 0 blue\""), "{markup}");
     assert!(markup.contains("d=\"M1 1 #0f0\""), "{markup}");
     assert!(markup.contains("d=\"M2 2 holder\""), "{markup}");
+    // A declared `inherit` beats the presentation attribute: Chromium
+    // draws M3 3 blue.
+    assert!(markup.contains("d=\"M3 3 blue\""), "{markup}");
 }
 
 #[test]
@@ -490,6 +494,9 @@ fn a_used_symbol_is_sized_where_it_is_drawn() {
         root("wide"),
         format!("{ns} id=\"wide\" viewBox=\"0 0 24 24\" width=\"300\" height=\"300\">")
     );
-    assert_eq!(root("px"), format!("{ns} id=\"px\" width=\"48px\" height=\"48\">"));
+    assert_eq!(
+        root("px"),
+        format!("{ns} id=\"px\" width=\"48px\" height=\"48\">")
+    );
     assert_eq!(root("unsized"), format!("{ns} id=\"unsized\">"));
 }

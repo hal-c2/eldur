@@ -2481,3 +2481,29 @@ fn a_link_with_a_negative_tabindex_is_no_tab_stop() {
     assert_eq!(qml.matches("Keys.onReturnPressed").count(), 2, "{qml}");
     assert_eq!(qml.matches("TapHandler").count(), 2, "{qml}");
 }
+
+#[test]
+fn a_link_through_a_display_contents_box_is_still_a_link() {
+    // CSS Display 3 §2.5: a `display: contents` box generates none of its
+    // own, so the svg inside is the link's inline content.
+    let (qml, _) = convert(&page(
+        "",
+        r##"<a href="#t"><span style="display:contents"><svg width="10" height="10"><rect width="10" height="10"/></svg></span></a><div id="t"></div>"##,
+    ));
+    assert!(qml.contains("Accessible.role: Accessible.Link"), "{qml}");
+    assert_eq!(qml.matches("TapHandler").count(), 1, "{qml}");
+}
+
+#[test]
+fn return_on_a_link_of_a_runtime_page_dispatches_its_click_first() {
+    // A click listener may cancel the follow, by key as by pointer.
+    let (qml, _) = convert(&page(
+        "a{display:block}",
+        r##"<details><summary>s</summary></details><a href="#t"><div style="height:20px"></div></a><div id="t"></div>"##,
+    ));
+    let keys = qml
+        .lines()
+        .find(|l| l.contains("Keys.onReturnPressed"))
+        .unwrap_or_else(|| panic!("{qml}"));
+    assert!(keys.contains("Eldur.keyClick("), "{keys}");
+}

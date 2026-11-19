@@ -52,13 +52,18 @@ impl Emitter<'_, '_> {
 
     /// The `<a href>` an atomic inline (an icon) is drawn inside of, through
     /// inline ancestors only: a link with a box of its own carries itself.
+    /// A `display: contents` ancestor has no box (CSS Display 3 §2.5), so
+    /// the walk goes through it.
     pub(super) fn inline_link(&self, node: NodeId) -> Option<NodeId> {
         self.doc
             .ancestors(node)
             .take_while(|&n| {
-                self.styles
-                    .computed(n)
-                    .is_some_and(|c| c.style.display == eldur_css::Display::Inline)
+                self.styles.computed(n).is_some_and(|c| {
+                    matches!(
+                        c.style.display,
+                        eldur_css::Display::Inline | eldur_css::Display::Contents
+                    )
+                })
             })
             .find(|&n| self.href(n).is_some())
     }
@@ -132,8 +137,9 @@ impl Emitter<'_, '_> {
     }
 
     /// A link is a stop in the tab chain, and Return or Enter there follows
-    /// it (HTML §6.6.3, "activation behavior"). The plain follow, in a page
-    /// with a runtime too: a key press dispatches no click there to wait on.
+    /// it (HTML §6.6.3, "activation behavior"). In a page with a runtime the
+    /// key first dispatches a click at the link's box, as a browser does,
+    /// and a listener that prevents it keeps the link from being followed.
     /// A negative `tabindex` takes the link out of the tab chain but not its
     /// keys, as a script or a tap can still focus it (HTML §6.6.3).
     fn link_keys(&mut self, obj: &mut Object, href: &str, link: NodeId) {
@@ -147,11 +153,17 @@ impl Emitter<'_, '_> {
         if !skipped && obj.get("activeFocusOnTab").is_none() {
             obj.set("activeFocusOnTab", true);
         }
+        let body = if self.runtime_dom {
+            let id = self.item_id(obj);
+            format!("Eldur.keyClick({id}, function () {{ {follow} }});")
+        } else {
+            follow
+        };
         for name in ["Keys.onReturnPressed", "Keys.onEnterPressed"] {
             obj.members.push(Member::Handler {
                 name: name.to_owned(),
                 params: Vec::new(),
-                body: vec![follow.clone()],
+                body: vec![body.clone()],
             });
         }
     }
