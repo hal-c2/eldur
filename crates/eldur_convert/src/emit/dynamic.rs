@@ -18,8 +18,8 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use eldur_css::{
-    ComputedStyle, Condition, ConditionalStyles, Display, LengthPercentage, PseudoState, Rgba,
-    Shadow, Structural, StyleMap, Stylesheet, TransformFn,
+    ComputedStyle, Condition, ConditionalStyles, Display, ElementConditional, LengthPercentage,
+    PseudoState, Rgba, Shadow, Structural, StyleMap, Stylesheet, TransformFn,
 };
 use eldur_dom::{Document, Element, NodeId};
 use eldur_js::ElementRef;
@@ -635,9 +635,9 @@ impl Diffs {
         other: &'o Object,
         path: &mut Path,
         owner: Option<NodeId>,
-        doc: &Document,
+        nodes: &HashMap<usize, NodeId>,
     ) {
-        let owner = marked(base).and_then(|i| node_at(doc, i)).or(owner);
+        let owner = marked(base).and_then(|i| nodes.get(&i).copied()).or(owner);
         let children = |o: &Object| -> Vec<usize> {
             o.members
                 .iter()
@@ -678,7 +678,7 @@ impl Diffs {
             match (b, o) {
                 (Some(Value::Object(b)), Some(Value::Object(o))) => {
                     path.push(Step::Prop(name.to_owned()));
-                    self.diff(world, b, o, path, owner, doc);
+                    self.diff(world, b, o, path, owner, nodes);
                     path.pop();
                 }
                 (Some(Value::List(bl)), Some(Value::List(ol)))
@@ -691,7 +691,7 @@ impl Diffs {
                         };
                         path.push(Step::Prop(name.to_owned()));
                         path.push(Step::Item(k));
-                        self.diff(world, b, o, path, owner, doc);
+                        self.diff(world, b, o, path, owner, nodes);
                         path.pop();
                         path.pop();
                     }
@@ -716,7 +716,7 @@ impl Diffs {
                 unreachable!("children");
             };
             path.push(Step::Child(bi));
-            self.diff(world, b, o, path, owner, doc);
+            self.diff(world, b, o, path, owner, nodes);
             path.pop();
         }
     }
@@ -729,8 +729,95 @@ impl Diffs {
     }
 }
 
-fn node_at(doc: &Document, index: usize) -> Option<NodeId> {
-    doc.descendants(doc.root()).find(|n| n.index() == index)
+/// Worlds emitted together: no element one of them restyles depends on a
+/// condition another flips, and each repaints only subtrees the others
+/// leave alone, so one emission shows each of them where it differs.
+#[derive(Default)]
+struct Batch {
+    worlds: Vec<usize>,
+    /// The conditions its worlds flip.
+    flips: BTreeSet<u16>,
+    /// The conditions the elements they restyle depend on.
+    reads: HashSet<u16>,
+    /// The marked element over each repainted one, and its world.
+    roots: HashMap<NodeId, usize>,
+    /// Their ancestors.
+    above: HashSet<NodeId>,
+    /// Whether its worlds may share an emission at all.
+    shared: bool,
+}
+
+/// What a world restyles: the conditions those elements depend on and the
+/// marked elements over them. `None` when it changes more than paint.
+struct Region {
+    reads: HashSet<u16>,
+    roots: BTreeSet<NodeId>,
+}
+
+impl Batch {
+    fn admits(&self, flipped: &[u16], region: &Region, doc: &Document) -> bool {
+        self.shared
+            && flipped.iter().all(|c| !self.reads.contains(c))
+            && region.reads.iter().all(|c| !self.flips.contains(c))
+            && region.roots.iter().all(|&r| {
+                !self.roots.contains_key(&r)
+                    && !self.above.contains(&r)
+                    && doc.ancestors(r).all(|a| !self.roots.contains_key(&a))
+            })
+    }
+
+    fn add(&mut self, world: usize, flipped: &[u16], region: Region, doc: &Document) {
+        self.worlds.push(world);
+        self.flips.extend(flipped);
+        self.reads.extend(region.reads);
+        for r in region.roots {
+            self.roots.insert(r, world);
+            self.above.extend(doc.ancestors(r));
+        }
+    }
+
+    /// The world whose region `owner` is in.
+    fn world_of(&self, owner: Option<NodeId>, doc: &Document) -> Option<usize> {
+        let owner = owner?;
+        std::iter::once(owner)
+            .chain(doc.ancestors(owner))
+            .find_map(|n| self.roots.get(&n).copied())
+    }
+}
+
+/// Whether `other` differs from `base` in paint alone, which an element
+/// draws on itself and what it contains, never on what is around it. A
+/// control is the exception: whether the page sets its background or border
+/// decides whether it keeps its native box.
+fn repaints_only(base: &ComputedStyle, other: &ComputedStyle, control: bool) -> bool {
+    let mut painted = base.clone();
+    painted.color = other.color;
+    painted.background_color = other.background_color;
+    painted.text_decoration_color = other.text_decoration_color;
+    if !control {
+        painted.author_background = other.author_background;
+        painted.author_border = other.author_border;
+    }
+    for (side, from) in [
+        (&mut painted.border.top, &other.border.top),
+        (&mut painted.border.right, &other.border.right),
+        (&mut painted.border.bottom, &other.border.bottom),
+        (&mut painted.border.left, &other.border.left),
+    ] {
+        side.color = from.color;
+        side.explicit_color = from.explicit_color;
+    }
+    painted == *other
+}
+
+#[cfg(test)]
+fn one_world_at_a_time() -> bool {
+    ONE_WORLD_AT_A_TIME.with(std::cell::Cell::get)
+}
+
+#[cfg(not(test))]
+fn one_world_at_a_time() -> bool {
+    false
 }
 
 fn object_at<'o>(root: &'o mut Object, path: &[Step]) -> Option<&'o mut Object> {
@@ -932,19 +1019,64 @@ impl Dynamic<'_, '_> {
         }
         let worlds = self.worlds(&unmarked);
         let lattice = Lattice::of(&worlds);
-        let mut trees = Vec::with_capacity(worlds.len());
-        for flipped in &worlds[1..] {
-            let (styles, collapsed) = self.world(flipped, &shown);
-            // Only the document's world reports; the others repeat it.
-            let mut scratch = Diagnostics::new(&self.diags.document);
-            let emitted = Self::emit_world(self.cx, &styles, &across, collapsed, &mut scratch);
-            imports.extend(emitted.imports);
-            trees.push(emitted.root);
-        }
-
+        let nodes: HashMap<usize, NodeId> = self
+            .cx
+            .doc
+            .descendants(self.cx.doc.root())
+            .map(|n| (n.index(), n))
+            .collect();
         let mut diffs = Diffs::default();
-        for (w, tree) in trees.iter().enumerate() {
-            diffs.diff(w + 1, &root, tree, &mut Vec::new(), None, self.cx.doc);
+        for batch in self.batches(&worlds, &markers, &shown) {
+            if batch.worlds.len() > 1 {
+                let flipped: Vec<u16> = batch.flips.iter().copied().collect();
+                let (styles, collapsed) = self.world(&flipped, &shown);
+                // Only the document's world reports; the others repeat it.
+                let mut scratch = Diagnostics::new(&self.diags.document);
+                let emitted = Self::emit_world(self.cx, &styles, &across, collapsed, &mut scratch);
+                let mut shared = Diffs::default();
+                shared.diff(0, &root, &emitted.root, &mut Vec::new(), None, &nodes);
+                drop(emitted.root);
+                // A difference outside every region, or in the tree's shape,
+                // is one no world alone was meant to have: emit them apart.
+                let owned: Option<Vec<usize>> = shared
+                    .changes
+                    .values()
+                    .map(|c| batch.world_of(c.owner, self.cx.doc))
+                    .collect();
+                if let Some(owned) = owned
+                    && shared.unknown.is_empty()
+                    && emitted.imports.is_subset(&imports)
+                {
+                    for ((key, change), w) in shared.changes.into_iter().zip(owned) {
+                        let Change {
+                            owner,
+                            ty,
+                            base,
+                            worlds: mut there,
+                        } = change;
+                        let value = there.remove(&0).expect("the shared world's value");
+                        diffs
+                            .changes
+                            .entry(key)
+                            .or_insert_with(|| Change {
+                                owner,
+                                ty,
+                                base,
+                                worlds: BTreeMap::new(),
+                            })
+                            .worlds
+                            .insert(w, value);
+                    }
+                    continue;
+                }
+            }
+            for &w in &batch.worlds {
+                let (styles, collapsed) = self.world(&worlds[w], &shown);
+                let mut scratch = Diagnostics::new(&self.diags.document);
+                let emitted = Self::emit_world(self.cx, &styles, &across, collapsed, &mut scratch);
+                imports.extend(emitted.imports);
+                diffs.diff(w, &root, &emitted.root, &mut Vec::new(), None, &nodes);
+            }
         }
         for owner in diffs.reshaped.iter().filter(|_| self.cx.probe.is_none()) {
             let what = owner.map_or_else(|| "the page".to_owned(), |n| describe(self.cx.doc, n));
@@ -964,6 +1096,11 @@ impl Dynamic<'_, '_> {
         let gate = self.cx.scripts.is_some();
         let mut gated = false;
         let changes = std::mem::take(&mut diffs.changes);
+        let index: HashMap<&[u16], usize> = worlds
+            .iter()
+            .enumerate()
+            .map(|(w, set)| (set.as_slice(), w))
+            .collect();
         for ((path, prop), change) in &changes {
             let Some(order) = self.dependencies(
                 change,
@@ -977,8 +1114,9 @@ impl Dynamic<'_, '_> {
             ) else {
                 continue;
             };
-            let Some(binding) = self.binding(&order, path, prop, change, &diffs, &worlds, &sources)
-            else {
+            let Some(binding) = self.binding(
+                &order, path, prop, change, &diffs, &worlds, &index, &sources,
+            ) else {
                 continue;
             };
             let behavior = self.behavior(change, prop, gate);
@@ -1039,30 +1177,127 @@ impl Dynamic<'_, '_> {
             .elements
             .iter()
             .map(|e| {
-                let mask = e
-                    .depends_on
-                    .iter()
-                    .enumerate()
-                    .filter(|&(_, c)| self.holds(*c, flipped))
-                    .fold(0usize, |m, (i, _)| m | 1 << i);
-                let mut style = (*e.by_mask[mask]).clone();
-                // A drawn outline is another object: one that comes and goes
-                // would make the worlds differ in form, and every other state
-                // binding of the page's tree would go with it.
-                if outline_changes(&e.by_mask) {
-                    style.outline = Default::default();
-                    style.outline_offset = Default::default();
-                }
-                if style.display == Display::None
-                    && let Some(display) = shown.get(&e.node)
-                {
-                    style.display = *display;
+                let (style, hidden) = self.style_in(e, flipped, shown);
+                if hidden {
                     collapsed.insert(e.node);
                 }
                 (e.node, style)
             })
             .collect();
         (self.cx.styles.with_styles(overrides), collapsed)
+    }
+
+    /// `e`'s style where `flipped` differ from the document, and whether
+    /// it is hidden there.
+    fn style_in(
+        &self,
+        e: &ElementConditional,
+        flipped: &[u16],
+        shown: &HashMap<NodeId, Display>,
+    ) -> (ComputedStyle, bool) {
+        let mask = e
+            .depends_on
+            .iter()
+            .enumerate()
+            .filter(|&(_, c)| self.holds(*c, flipped))
+            .fold(0usize, |m, (i, _)| m | 1 << i);
+        let mut style = (*e.by_mask[mask]).clone();
+        // A drawn outline is another object: one that comes and goes
+        // would make the worlds differ in form, and every other state
+        // binding of the page's tree would go with it.
+        if outline_changes(&e.by_mask) {
+            style.outline = Default::default();
+            style.outline_offset = Default::default();
+        }
+        let mut hidden = false;
+        if style.display == Display::None
+            && let Some(display) = shown.get(&e.node)
+        {
+            style.display = *display;
+            hidden = true;
+        }
+        (style, hidden)
+    }
+
+    /// The worlds after the document's, in batches that share an emission.
+    fn batches(
+        &self,
+        worlds: &[Vec<u16>],
+        markers: &HashMap<usize, Path>,
+        shown: &HashMap<NodeId, Display>,
+    ) -> Vec<Batch> {
+        let doc = self.cx.doc;
+        let mut dependents: Vec<Vec<usize>> = vec![Vec::new(); self.conds.len()];
+        for (i, e) in self.found.elements.iter().enumerate() {
+            for &c in &e.depends_on {
+                dependents[usize::from(c)].push(i);
+            }
+        }
+        let alone = one_world_at_a_time();
+        let mut batches: Vec<Batch> = Vec::new();
+        for (w, flipped) in worlds.iter().enumerate().skip(1) {
+            let region = (!alone)
+                .then(|| self.region(flipped, &dependents, markers, shown))
+                .flatten();
+            let Some(region) = region else {
+                batches.push(Batch {
+                    worlds: vec![w],
+                    ..Batch::default()
+                });
+                continue;
+            };
+            match batches.iter_mut().find(|b| b.admits(flipped, &region, doc)) {
+                Some(batch) => batch.add(w, flipped, region, doc),
+                None => {
+                    let mut batch = Batch {
+                        shared: true,
+                        ..Batch::default()
+                    };
+                    batch.add(w, flipped, region, doc);
+                    batches.push(batch);
+                }
+            }
+        }
+        batches
+    }
+
+    /// What `flipped` restyles, when that is paint under marked elements.
+    fn region(
+        &self,
+        flipped: &[u16],
+        dependents: &[Vec<usize>],
+        markers: &HashMap<usize, Path>,
+        shown: &HashMap<NodeId, Display>,
+    ) -> Option<Region> {
+        let doc = self.cx.doc;
+        let restyled: BTreeSet<usize> = flipped
+            .iter()
+            .flat_map(|&c| dependents[usize::from(c)].iter().copied())
+            .collect();
+        let mut region = Region {
+            reads: flipped.iter().copied().collect(),
+            roots: BTreeSet::new(),
+        };
+        for i in restyled {
+            let e = &self.found.elements[i];
+            region.reads.extend(&e.depends_on);
+            let (there, _) = self.style_in(e, flipped, shown);
+            let (here, _) = self.style_in(e, &[], shown);
+            if there == here {
+                continue;
+            }
+            if !repaints_only(&here, &there, classify(doc, e.node).is_some()) {
+                return None;
+            }
+            let Some(root) = std::iter::once(e.node)
+                .chain(doc.ancestors(e.node))
+                .find(|n| markers.contains_key(&n.index()))
+            else {
+                return None;
+            };
+            region.roots.insert(root);
+        }
+        Some(region)
     }
 
     fn holds(&self, c: u16, flipped: &[u16]) -> bool {
@@ -1246,6 +1481,7 @@ impl Dynamic<'_, '_> {
         change: &Change,
         diffs: &Diffs,
         worlds: &[Vec<u16>],
+        index: &HashMap<&[u16], usize>,
         sources: &Sources,
     ) -> Option<String> {
         let line = change.owner.and_then(|n| node_line(self.cx.doc, n));
@@ -1265,7 +1501,13 @@ impl Dynamic<'_, '_> {
         };
         // The value where exactly `flipped` (sorted) differ from the document.
         let value = |flipped: &[u16]| -> Option<Value> {
-            // A world that agrees on `order`, with the fewest others flipped.
+            // A world that agrees on `order`, with the fewest others flipped:
+            // exactly `flipped`, when that is a world, as no other has fewer.
+            if let Some(&w) = index.get(flipped)
+                && (w == 0 || diffs.known(path, w))
+            {
+                return change.worlds.get(&w).unwrap_or(&change.base).clone();
+            }
             let agreeing = worlds
                 .iter()
                 .enumerate()
