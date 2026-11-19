@@ -174,30 +174,6 @@ fn is_zero(length: &Length) -> bool {
     matches!(length, Length::Linear(l) if l.px == 0.0 && l.percent == 0.0 && l.vw == 0.0 && l.vh == 0.0)
 }
 
-/// `v + gap`, folded when both are numbers; `gap` is expression text.
-fn plus(v: &Value, gap: &str) -> Value {
-    match (v, gap.parse::<f32>().ok()) {
-        (_, Some(0.0)) => v.clone(),
-        (Value::Number(n), Some(g)) => Value::Number(n + f64::from(g)),
-        _ => Value::expr(format!("{} + {gap}", value_text(v))),
-    }
-}
-
-/// `v - gap`, as [`plus`]; `v` of `"0"` gives the negated gap alone.
-fn minus(v: &Value, gap: &str) -> Value {
-    let zero = matches!(v, Value::Expr(e) if e == "0");
-    match gap.parse::<f32>().ok() {
-        Some(g) if zero => number(-g),
-        Some(0.0) => v.clone(),
-        Some(g) => match v {
-            Value::Number(n) => Value::Number(n - f64::from(g)),
-            _ => Value::expr(format!("{} - {gap}", value_text(v))),
-        },
-        None if zero => Value::expr(format!("-({gap})")),
-        None => Value::expr(format!("{} - ({gap})", value_text(v))),
-    }
-}
-
 fn value_text(v: &Value) -> String {
     match v {
         Value::Number(n) => fmt_number(*n),
@@ -819,49 +795,19 @@ impl Emitter<'_, '_> {
             );
         }
 
-        let mut flow = Object::new("Flow");
-        let rtl = style.flex_direction == FlexDirection::RowReverse;
-        // `Flow` has one spacing for both axes. When the gaps differ, the
-        // flow's spacing is 0 and each item sits in a cell one column gap
-        // wider and one row gap taller. The flow is one column gap wider
-        // than the box, so the last cell's trailing gap never wraps a line
-        // that fits. The box ends one row gap above the flow. Items and
-        // percentages are then of the box, which has an id, because an
-        // item's parent is its cell. An `inline-flex` box shrinks to its
-        // content, and the cells' box has no width of its own to shrink
-        // to, so it keeps the one spacing.
-        let shrinks = style.display == Display::InlineFlex;
-        let split = (row_gap != column_gap && !shrinks).then(|| self.ids.claim("wrapping flex"));
-        if row_gap != column_gap && shrinks {
-            self.diags.info(
-                "qml",
-                line,
-                format!(
-                    "`Flow` has one spacing: the row gap of the inline {} uses the column gap",
-                    self.what(b)
-                ),
-            );
+        // `Flow` has one spacing for both axes, so when the gaps differ the
+        // items go in an `EldurFlow`, a positioner with a spacing for each.
+        // It is only a default `implicitWidth`, unlike `Flow`'s read-only
+        // one, so an `inline-flex` box with a set width gets one too.
+        let fixed_inline = style.display == Display::InlineFlex
+            && matches!(&style.width, Size::Length(l) if l.as_px().is_some());
+        let own = row_gap != column_gap || fixed_inline;
+        let mut flow = Object::new(if own { "EldurFlow" } else { "Flow" });
+        flow.set("spacing", column_gap.value("width"));
+        if own {
+            flow.set("rowSpacing", row_gap.value("height"));
         }
-        let base = split
-            .as_ref()
-            .map_or_else(|| "parent.width".to_owned(), |id| format!("{id}.width"));
-        let (cg, rg) = match &split {
-            Some(id) => (
-                column_gap.plus_text(0.0, 1.0, &format!("{id}.width")),
-                row_gap.plus_text(0.0, 1.0, &format!("{id}.height")),
-            ),
-            None => (String::new(), String::new()),
-        };
-        if split.is_some() {
-            flow.set("spacing", number(0.0));
-            flow.set("width", plus(&Value::expr("parent.width"), &cg));
-            if rtl {
-                flow.set("x", minus(&Value::expr("0"), &cg));
-            }
-        } else {
-            flow.set("spacing", column_gap.value("width"));
-        }
-        if rtl {
+        if style.flex_direction == FlexDirection::RowReverse {
             flow.set("layoutDirection", Value::expr("Qt.RightToLeft"));
         }
         if style.flex_wrap == FlexWrap::WrapReverse {
@@ -907,17 +853,15 @@ impl Emitter<'_, '_> {
             // A shrinkable item alone on a line narrower than its basis
             // shrinks to the line (CSS Flexbox §9.7).
             let width = match basis {
-                Some(Value::Number(n)) if cs.flex_shrink > 0.0 => {
-                    Value::expr(format!("Math.min({}, {base})", super::units::fmt_number(n)))
-                }
-                Some(Value::Expr(e)) if split.is_some() => {
-                    Value::Expr(e.replace("parent.width", &base))
-                }
+                Some(Value::Number(n)) if cs.flex_shrink > 0.0 => Value::expr(format!(
+                    "Math.min({}, parent.width)",
+                    super::units::fmt_number(n)
+                )),
                 Some(v) => v,
                 None if holds_control_row(&obj) => {
-                    Value::expr(format!("Math.min({CONTROL_ROW_WIDTH}, {base})"))
+                    Value::expr(format!("Math.min({CONTROL_ROW_WIDTH}, parent.width)"))
                 }
-                None => Value::expr(format!("Math.min({}, {base})", natural_width(&obj))),
+                None => Value::expr(format!("Math.min({}, parent.width)", natural_width(&obj))),
             };
             obj.set("width", width);
             match &cs.height {
@@ -937,35 +881,7 @@ impl Emitter<'_, '_> {
             {
                 flow.members.push(Member::Comment(describe(self.doc, node)));
             }
-            if split.is_some() {
-                // The cell follows its item, so a natural width is the
-                // item's own. A hidden item's cell takes no room: `Flow`
-                // skips only its own hidden children. The cell stays
-                // visible, because an item's `visible` reads false under a
-                // hidden parent and would never show it again.
-                let mut cell = Object::new("Item");
-                cell.set(
-                    "width",
-                    Value::expr(format!(
-                        "children[0].visible ? {} : 0",
-                        value_text(&plus(&Value::expr("children[0].width"), &cg))
-                    )),
-                );
-                cell.set(
-                    "height",
-                    Value::expr(format!(
-                        "children[0].visible ? {} : 0",
-                        value_text(&plus(&Value::expr("childrenRect.height"), &rg))
-                    )),
-                );
-                if rtl {
-                    obj.set("x", Value::expr(cg.clone()));
-                }
-                cell.push_child(obj);
-                flow.push_child(cell);
-            } else {
-                flow.push_child(obj);
-            }
+            flow.push_child(obj);
         }
         if lossy_margins {
             self.diags.info(
@@ -1000,18 +916,7 @@ impl Emitter<'_, '_> {
                 ),
             );
         }
-        match split {
-            Some(id) => {
-                let mut boxed = Object::new("Item").with_id(id);
-                boxed.set(
-                    "implicitHeight",
-                    Value::expr(format!("Math.max(0, childrenRect.height - ({rg}))")),
-                );
-                boxed.push_child(flow);
-                boxed
-            }
-            None => flow,
-        }
+        flow
     }
 
     /// The border-box basis every item grows from, when all items grow
@@ -1139,6 +1044,10 @@ fn horizontal_margin(margin: &LengthAuto) -> Option<Value> {
 const CONTROL_ROW_WIDTH: &str =
     "Math.ceil(Array.from(children).reduce((sum, item) => sum + item.implicitWidth, 0))";
 
+/// `EldurFlow.qml`, written beside `Main.qml` when a wrapping flex
+/// container's row gap and column gap differ.
+pub(crate) const ELDUR_FLOW_QML: &str = include_str!("EldurFlow.qml");
+
 /// A wrapping Text given a hair less than its fractional implicit width
 /// breaks its last word, so text boxes are capped at the whole pixel above.
 /// A button's label doesn't wrap, and Chromium sizes buttons to the
@@ -1153,7 +1062,7 @@ fn natural_width(obj: &Object) -> &'static str {
 
 /// Controls are items of a `Flow` only when they are all its line holds.
 pub(super) fn holds_control_row(obj: &Object) -> bool {
-    obj.type_name == "Flow"
+    matches!(obj.type_name.as_str(), "Flow" | "EldurFlow")
         && obj.members.iter().any(|m| {
             matches!(m, Member::Child(c) if matches!(
                 c.type_name.as_str(),
