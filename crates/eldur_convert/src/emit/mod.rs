@@ -1111,13 +1111,15 @@ impl<'a, 'd> Emitter<'a, 'd> {
         let level = own.or(at_auto);
         // A script's `style.zIndex` is a level over the flow too, and on a
         // page with no DOM the runtime has no rules to tell it this box is
-        // one it applies to, or what clearing it goes back to.
+        // one it applies to, what clearing it goes back to (-1 for `auto`),
+        // or the least level it has at `auto`; what it holds it sees itself.
         if (holds || layout_item) && self.writes_z_index && !page {
-            for (name, z) in [("eldurRuleZ", level), ("eldurAutoZ", at_auto)] {
+            let hold = i32::from(holds);
+            for (name, z) in [("eldurRuleZ", own.unwrap_or(-1)), ("eldurHoldZ", hold)] {
                 obj.members.push(Member::PropertyDecl {
                     ty: "real".to_owned(),
                     name: name.to_owned(),
-                    value: Some(Value::Number(f64::from(z.unwrap_or(0)))),
+                    value: Some(Value::Number(f64::from(z))),
                     readonly: true,
                     required: false,
                 });

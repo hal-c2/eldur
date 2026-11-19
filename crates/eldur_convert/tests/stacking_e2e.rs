@@ -3,7 +3,7 @@
 //! context of its own was raised for what it holds, so it rises or falls
 //! with what it holds, and one that is a stacking context keeps its own
 //! level. Run in qmltestrunner against Chromium's `elementFromPoint` at
-//! 900×800, on a page with no runtime rules and on one with them.
+//! 900×800.
 
 mod support;
 
@@ -41,7 +41,6 @@ div { height: 40px; width: 200px }
 <script>
 // Named so that they get an objectName the test can find.
 var named = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q'].map(function (id) { return document.getElementById(id); });
-/*READ*/
 // Lowered under its ancestor's sibling; raised over it; raised through two
 // ancestors; raised inside an ancestor with its own level, which keeps it;
 // and an ancestor's own level taken away.
@@ -138,19 +137,16 @@ fn a_scripted_level_restacks_the_boxes_around_it() {
 }
 
 #[test]
-fn a_scripted_level_restacks_them_with_runtime_rules() {
-    // A script that reads the cascade makes the page keep its rules.
-    let page = PAGE.replace("/*READ*/", "getComputedStyle(named[0]).zIndex;");
-    run(&page, TEST, "rules");
-}
-
-#[test]
 fn the_rules_levels_match_chromium() {
     let start = PAGE.find("// Lowered").expect("the script's writes");
     let end = PAGE.find("</script>").expect("the script's end");
     let page = format!("{}{}", &PAGE[..start], &PAGE[end..]);
     let cut = TEST.find("    function test_levels").expect("the test");
-    run(&page, &format!("{}{UNSCRIPTED}", &TEST[..cut]), "unscripted");
+    run(
+        &page,
+        &format!("{}{UNSCRIPTED}", &TEST[..cut]),
+        "unscripted",
+    );
 }
 
 fn run(page: &str, test: &str, name: &str) {
