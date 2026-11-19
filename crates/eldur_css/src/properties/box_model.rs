@@ -26,7 +26,8 @@ pub(crate) fn parse_display(cvs: &[ComponentValue]) -> Result<Display, String> {
 
     match words.as_slice() {
         [single] => match single.as_str() {
-            "block" => Ok(Display::Block),
+            // `flow` alone is a block box (CSS Display 3), as Chromium takes it.
+            "block" | "flow" => Ok(Display::Block),
             "inline" => Ok(Display::Inline),
             "inline-block" => Ok(Display::InlineBlock),
             "flex" => Ok(Display::Flex),
