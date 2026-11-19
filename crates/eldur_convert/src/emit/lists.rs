@@ -816,29 +816,14 @@ pub(super) fn is_host(o: &Object) -> bool {
     })
 }
 
-/// Whether a box, or one inside it, may paint over the boxes before it in
-/// its stacking context: one an overlay there goes among.
-pub(super) fn may_rise(b: &LayoutBox<'_>) -> bool {
-    fn rises(style: &ComputedStyle) -> bool {
-        style.position != Position::Static
-            || style.z_index.is_some()
-            || !style.transform.is_empty()
-            || style.filter.is_some()
-            || style.opacity < 1.0
-    }
-    fn inline_rises(items: &[crate::boxes::Inline<'_>]) -> bool {
-        items.iter().any(|item| match item {
-            crate::boxes::Inline::Span(span) => rises(span.style) || inline_rises(&span.children),
-            crate::boxes::Inline::Atomic(b) => may_rise(b),
-            _ => false,
-        })
-    }
-    rises(&b.style)
-        || match &b.content {
-            Content::Blocks(children) => children.iter().any(may_rise),
-            Content::Inline(items) => inline_rises(items),
-            Content::Empty => false,
-        }
+/// Whether a box paints in its stacking context's positioned layer, over
+/// the flow before it, by its own style.
+pub(super) fn rises(style: &ComputedStyle) -> bool {
+    style.position != Position::Static
+        || style.z_index.is_some()
+        || !style.transform.is_empty()
+        || style.filter.is_some()
+        || style.opacity < 1.0
 }
 
 /// The box a `position: absolute` or `fixed` descendant is placed against.

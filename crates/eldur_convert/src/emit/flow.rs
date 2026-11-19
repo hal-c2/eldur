@@ -408,8 +408,11 @@ impl Emitter<'_, '_> {
         // The item before the hidden one, which keeps its bottom margin
         // while the hidden one ends the column.
         let mut before_hidden: Option<usize> = None;
-        // A stop's blocks send their overlays here when what follows them
-        // may paint over them: else their blocks' lifts already order them.
+        // A stop's blocks send their overlays here when a box that follows
+        // them paints in the positioned layer itself: else their blocks'
+        // lifts already order them. A block lifted only for what it holds
+        // counts for nothing, as its own flow would then paint over them,
+        // which in CSS paints under every overlay.
         let stop = self.column_stop.take();
         let own_hoist = self.hoist_into;
         let mut later_rises = vec![self.writes_z_index; children.len()];
@@ -417,7 +420,7 @@ impl Emitter<'_, '_> {
             let mut any = false;
             for (i, c) in children.iter().enumerate().rev() {
                 later_rises[i] = any;
-                any = any || super::lists::may_rise(c);
+                any = any || super::lists::rises(&c.style);
             }
         }
         let mut rest = children;
