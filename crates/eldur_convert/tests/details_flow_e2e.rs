@@ -38,9 +38,13 @@ const SUPPORT: &str = r##"
         return item.mapToItem(page, 0, 0).y
     }
 
-    // `b` is `gap` px below the bottom of `a`'s line.
+    // `b` is `gap` px below the bottom of `a`'s line. Layout runs after the
+    // event that changed it, later on a loaded machine: it gets two seconds.
     function below(page, a, b, gap, step) {
-        const got = pageY(page, b) - pageY(page, a) - a.height
+        const gapNow = () => pageY(page, b) - pageY(page, a) - a.height
+        for (let t = 0; t < 40 && Math.round(gapNow()) !== gap; ++t)
+            wait(50)
+        const got = gapNow()
         compare(Math.round(got), gap, step + ": " + b.text + " is " + got + " px below "
                 + a.text + ", Chromium " + gap)
     }
@@ -226,6 +230,8 @@ SUPPORT
     function test_made_disclosures() {
         const page = load(Qt.createComponent("Main.qml"))
         press(page, "Make")
+        tryVerify(() => ["Made summary", "Made inside", "Built summary", "Built inside"]
+                  .every(w => textOf(page, w) !== null), 2000, "made lines")
         const madeSummary = textOf(page, "Made summary")
         const madeInside = textOf(page, "Made inside")
         const builtSummary = textOf(page, "Built summary")
@@ -345,10 +351,11 @@ SUPPORT
         const button = find(page, i => i.eldurTag === "button" && i.text === "Make")
         verify(button !== null, "no Make")
         mouseClick(button)
-        wait(100)
+        tryVerify(() => textOf(page, "Made summary") !== null && textOf(page, "Made inside") !== null,
+                  2000, "made lines")
+        waitForRendering(page)
         const summary = textOf(page, "Made summary")
         const inside = textOf(page, "Made inside")
-        verify(summary !== null && inside !== null, "made lines")
         let line = summary
         let marker = null
         while (line && line !== page && marker === null) {
@@ -357,8 +364,10 @@ SUPPORT
         }
         verify(marker !== null, "Made summary has no marker")
         verify(marker.open, "Made summary shows the closed marker")
-        const left = inside.mapToItem(page, 0, 0).x
-        const edge = marker.mapToItem(page, marker.width, 0).x - left
+        const edgeNow = () => marker.mapToItem(page, marker.width, 0).x - inside.mapToItem(page, 0, 0).x
+        for (let t = 0; t < 40 && Math.abs(edgeNow() - 16.94) > 1; ++t)
+            wait(50)
+        const edge = edgeNow()
         verify(Math.abs(edge - 16.94) <= 1, "the marker ends " + edge + " px in, Chromium's text starts at 16.94")
         // Both lines start with "M": where their first ink is, without the
         // marker, is where their text starts, give or take a pixel.
@@ -377,11 +386,163 @@ SUPPORT
 }
 "##;
 
+// What a script makes in a `<details>` on a page that styles made elements
+// folds as the rest does: a text run after the summary folds, and a summary
+// whose text is a heading's shows its marker.
+const FOLDS_PAGE: &str = r##"<!doctype html>
+<style>
+:root { --fg: #c1c3c8; }
+:root[data-theme='light'] { --fg: #23262f; }
+body { color: var(--fg); font: 16px/18px sans-serif; }
+h3 { margin: 0; font: 16px sans-serif; }
+</style>
+<script>document.documentElement.dataset.theme = 'light';</script>
+<div id="host"></div>
+<button id="make">Make</button>
+<script>
+document.getElementById('make').addEventListener('click', () => {
+  document.getElementById('host').innerHTML =
+    '<details id="t"><summary>Text sum</summary></details>'
+    + '<details><summary><h3>Head sum</h3></summary><p>Head inside</p></details>';
+  document.getElementById('t').appendChild(document.createTextNode('Body run'));
+});
+</script>
+"##;
+
+const FOLDS_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 800
+    height: 600
+
+TestCase {
+    name: "DetailsFolds"
+    when: windowShown
+SUPPORT
+
+    function shows(page, item) {
+        for (let i = item; i && i !== page; i = i.parent) {
+            if (!i.visible || i.opacity === 0)
+                return false
+        }
+        return true
+    }
+
+    function click(page, label) {
+        const button = find(page, i => i.eldurTag === "button" && i.text === label)
+        verify(button !== null, "no " + label)
+        mouseClick(button)
+    }
+
+    function test_made_folds() {
+        const page = load(Qt.createComponent("Main.qml"))
+        verify(page.eldurOpenElements === true, "the page does not style made elements")
+        click(page, "Make")
+        tryVerify(() => textOf(page, "Text sum") !== null, 2000, "made lines")
+        waitForRendering(page)
+        // A made element's form is made again once its rules apply: each press
+        // finds the summary as it is then.
+        const press = () => {
+            const sum = textOf(page, "Text sum")
+            mouseClick(sum, sum.width / 2, sum.height / 2)
+        }
+        tryVerify(() => { const b = textOf(page, "Body run"); return b === null || !shows(page, b) },
+                  2000, "Body run shows while its details is closed")
+        press()
+        tryVerify(() => { const b = textOf(page, "Body run"); return b !== null && shows(page, b) },
+                  2000, "Body run stays hidden once its details opens")
+        press()
+        tryVerify(() => { const b = textOf(page, "Body run"); return b === null || !shows(page, b) },
+                  2000, "Body run shows once its details closes again")
+
+        let line = textOf(page, "Head sum")
+        let marker = null
+        while (line && line !== page && marker === null) {
+            marker = disclosure(line)
+            line = line.parent
+        }
+        verify(marker !== null, "Head sum has no marker")
+        verify(shows(page, marker), "Head sum's marker is hidden")
+    }
+}
+}
+"##;
+
+// A `<details>` a script closes while an ancestor hides it stays closed once
+// the ancestor shows again, and opens as before.
+const UNDER_PAGE: &str = r##"<!doctype html>
+<style>body { font: 16px/18px sans-serif; }</style>
+<div id="wrap"><details id="w" open><summary>Wrap sum</summary><p>Wrap inside</p></details></div>
+<button id="hide">Hide</button>
+<button id="close">Close</button>
+<button id="show">Show</button>
+<button id="open">Open</button>
+<script>
+const wrap = document.getElementById('wrap');
+const w = document.getElementById('w');
+document.getElementById('hide').addEventListener('click', () => { wrap.style.display = 'none'; });
+document.getElementById('close').addEventListener('click', () => { w.open = false; });
+document.getElementById('show').addEventListener('click', () => { wrap.style.display = ''; });
+document.getElementById('open').addEventListener('click', () => { w.open = true; });
+</script>
+"##;
+
+const UNDER_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 800
+    height: 600
+
+TestCase {
+    name: "DetailsUnder"
+    when: windowShown
+SUPPORT
+
+    function shows(page, item) {
+        for (let i = item; i && i !== page; i = i.parent) {
+            if (!i.visible)
+                return false
+        }
+        return true
+    }
+
+    function click(page, label) {
+        const button = find(page, i => i.eldurTag === "button" && i.text === label)
+        verify(button !== null, "no " + label)
+        mouseClick(button)
+    }
+
+    function test_closed_under_a_hidden_ancestor() {
+        const page = load(Qt.createComponent("Main.qml"))
+        const sum = textOf(page, "Wrap sum")
+        const inside = textOf(page, "Wrap inside")
+        verify(sum !== null && inside !== null, "the details' lines")
+        verify(shows(page, inside), "Wrap inside is hidden while open")
+        click(page, "Hide")
+        tryVerify(() => !shows(page, sum), 2000, "Wrap sum shows once its ancestor is hidden")
+        click(page, "Close")
+        click(page, "Show")
+        tryVerify(() => shows(page, sum), 2000, "Wrap sum stays hidden once its ancestor shows again")
+        verify(!shows(page, inside), "Wrap inside shows though its details was closed while hidden")
+        click(page, "Open")
+        tryVerify(() => shows(page, inside), 2000, "Wrap inside stays hidden once its details opens")
+    }
+}
+}
+"##;
+
 // Two made `<div>`s share a template: one gets text, one holds a block.
 // The text one keeps its lines (#63's shared-key rule must not pick a probe
 // that has none).
 const SHARED_PAGE: &str = r##"<!doctype html>
-<style>body { font: 16px/18px sans-serif; } p { margin: 0; }</style>
+<style>body { font: 16px/18px sans-serif; } p { margin: 0; }
+#list > div > p { background-color: #f00; }</style>
 <div id="list"></div>
 <button id="make">Make</button>
 <script>
@@ -423,6 +584,13 @@ SUPPORT
         verify(beta !== null, "the block inside the other div is missing")
         verify(alpha.visible && beta.visible, "made lines are hidden")
         below(page, alpha, beta, 0, "shared")
+        // The paragraph's rule names its parent: it is found under the
+        // template the parent's key went to.
+        let box = beta
+        while (box && box !== page && !(box.eldurTag === "p" && box.color !== undefined))
+            box = box.parent
+        verify(box && box.eldurTag === "p", "Beta inside has no paragraph box")
+        verify(Qt.colorEqual(box.color, "#ff0000"), "Beta's paragraph is " + box.color + ", Chromium red")
     }
 }
 }
@@ -582,6 +750,9 @@ body { font: 16px/18px sans-serif; }
 <div>Box next</div>
 <details open><summary>Outer summary</summary><details open><summary>Nested summary</summary><p>Nested para</p></details></details>
 <div>Nested next</div>
+<details><summary>Wrap summary</summary><p>Wrap para</p></details>
+<div class="f">Wrap float</div><p>Wrap text</p>
+<div style="clear: both"></div>
 <button id="t">Dim</button>
 <script>
 document.getElementById('t').addEventListener('click', () => {
@@ -645,6 +816,19 @@ SUPPORT
         below(page, nestedPara, nestedNext, 16, "nested, open")
         click(page, "Nested summary")
         below(page, nestedSummary, nestedNext, 0, "nested, closed")
+
+        // Chromium: closed, the float is right under the summary and the
+        // text beside it 16 px lower; open, both are past the paragraph's
+        // 16 px, the float's margin before it as the text's.
+        const wrapSummary = textOf(page, "Wrap summary")
+        const wrapFloat = textOf(page, "Wrap float")
+        const wrapText = textOf(page, "Wrap text")
+        verify(wrapSummary && wrapFloat && wrapText, "wrap lines")
+        below(page, wrapSummary, wrapFloat, 0, "wrapped float, closed")
+        below(page, wrapSummary, wrapText, 16, "wrapped float, closed")
+        click(page, "Wrap summary")
+        below(page, textOf(page, "Wrap para"), wrapFloat, 16, "wrapped float, open")
+        below(page, textOf(page, "Wrap para"), wrapText, 16, "wrapped float, open")
     }
 }
 }
@@ -738,6 +922,16 @@ fn a_details_a_script_makes_open_is_an_open_disclosure() {
 #[test]
 fn a_made_summary_on_a_page_that_styles_made_elements_has_its_marker() {
     run(MARKED_PAGE, MARKED_TEST, "eldur-details-marked");
+}
+
+#[test]
+fn what_a_script_makes_in_a_details_folds_as_the_rest() {
+    run(FOLDS_PAGE, FOLDS_TEST, "eldur-details-folds");
+}
+
+#[test]
+fn a_details_closed_under_a_hidden_ancestor_stays_closed_when_it_shows() {
+    run(UNDER_PAGE, UNDER_TEST, "eldur-details-under");
 }
 
 #[test]
