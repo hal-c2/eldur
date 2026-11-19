@@ -5502,11 +5502,11 @@ function getText(item) {
     }
     var vOwn = _vModelOf(raw);
     if (vOwn) {
-        return _vTextContent(vOwn);
+        return _vBesideModel(raw, null) ? _rawChildNodes(raw).map(getText).join("") : _vTextContent(vOwn);
     }
     var vRun = _findTextChild(raw);
     if (vRun && _gIsBox(raw) && _vModelOf(vRun)) {
-        return _vTextContent(_vModelOf(vRun));
+        return _vBesideModel(raw, vRun) ? _rawChildNodes(raw).map(getText).join("") : _vTextContent(_vModelOf(vRun));
     }
     if (vRun && _gIsBox(raw) && _meta(vRun).vSplit) {
         return _rawKids(raw, true).filter(function(k) { return k !== vRun; }).map(getText).join("");
@@ -5544,6 +5544,9 @@ function getText(item) {
         && !(_rawElementChildren(raw).length > 0 && textChild.text.trim() === "")) {
         // A cell whose generated text has a font of its own holds a model.
         var cellModel = _vModelOf(textChild);
+        if (cellModel && _vBesideModel(raw, textChild)) {
+            return _rawChildNodes(raw).map(getText).join("");
+        }
         return cellModel ? _vText(cellModel) : _pseudoOwn(raw, String(textChild.text));
     }
     var m = _meta(raw);
@@ -6299,6 +6302,9 @@ function _rememberMarkup(raw, str) {
 function getInnerHTML(item) {
     var raw = _unwrap(item);
     var vInner = !raw ? null : raw.__eldurInline ? raw : _vExisting(raw);
+    if (vInner && !raw.__eldurInline && _vBesideModel(raw, _findTextChild(raw))) {
+        return _rawChildNodes(raw).map(_serializeElement).join("");
+    }
     if (vInner) {
         return vInner.vtext ? "" : _vInner(vInner);
     }
@@ -18777,6 +18783,12 @@ function _vSettle() {
 }
 
 // The model already holding `raw`'s text.
+// A block put into an element whose text is a model is a real item beside
+// that model: the element's text and markup are then its child nodes', in order.
+function _vBesideModel(raw, run) {
+    return _rawKids(raw, true).some(function(k) { return k !== run; });
+}
+
 function _vExisting(raw) {
     if (!_vHasRules() && typeof raw.eldurInline !== "string" && !_itemMeta.has(raw)) {
         return null;

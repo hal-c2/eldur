@@ -1,4 +1,15 @@
 {
+ "beside_model": {
+  "log": [
+   "LC plain inline \"onex\" one<em>x</em>",
+   "LC plain block \"onextwo\" one<em>x</em><div>two</div> 3",
+   "LC tagged inline \"onex\" one<em>x</em>",
+   "LC tagged block \"onextwo\" one<em>x</em><div>two</div> 3",
+   "LC mixed inline \"one ex\" one <em>e</em><em>x</em>",
+   "LC mixed block \"one extwo\" one <em>e</em><em>x</em><div>two</div> 4"
+  ],
+  "clicks": []
+ },
  "button_text": {
   "log": [
    "LC hidden \"SaveCtrl S\" \"Find Ctrl K\"",
