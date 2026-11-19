@@ -152,6 +152,10 @@ TestCase {
         box.visible = true
         near("shown: box height", box.implicitHeight, 20)
         near("shown: h3 x", h3.mapToItem(page, 0, 0).x, top.x + 180)
+        // A kid hidden on its own stays out while the box is hidden.
+        box.visible = false
+        near("h1 hidden, box hidden: box height", box.implicitHeight, 20)
+        box.visible = true
         h1.visible = true
         waitForRendering(page)
         near("h1 back: box height", box.implicitHeight, 45)
