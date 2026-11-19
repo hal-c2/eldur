@@ -132,6 +132,28 @@ const CASES: &[Case] = &[
         load: &[16.0, 50.0],
         toggled: &[16.0, 50.0],
     },
+    // Its `hidden` attribute removed as loaded: its `style` attribute still
+    // hides it, and clearing its display then shows it.
+    Case {
+        name: "hidden_removed",
+        body: r#"<p id="shy" style="display:none" hidden><em>Shy</em></p>
+<p id="after">After</p>
+<script>document.getElementById('shy').removeAttribute('hidden');</script>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[50.0, 84.0],
+    },
+    // `hidden` set by a script and the attribute then removed: it no longer
+    // keeps the box hidden once its display is cleared.
+    Case {
+        name: "hidden_set_removed",
+        body: r#"<p id="shy" style="display:none"><em>Shy</em></p>
+<p id="after">After</p>
+<script>const h = document.getElementById('shy'); h.hidden = true; h.removeAttribute('hidden');</script>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[50.0, 84.0],
+    },
 ];
 
 fn page(case: &Case) -> String {
@@ -312,4 +334,14 @@ fn clearing_the_display_of_a_hidden_attributed_block_keeps_it_hidden() {
 #[test]
 fn clearing_the_display_of_a_block_a_script_set_hidden_keeps_it_hidden() {
     run(case("hidden_set_stays"));
+}
+
+#[test]
+fn a_block_whose_hidden_attribute_is_removed_stays_hidden_by_its_style_until_cleared() {
+    run(case("hidden_removed"));
+}
+
+#[test]
+fn a_removed_hidden_attribute_no_longer_keeps_a_cleared_block_hidden() {
+    run(case("hidden_set_removed"));
 }
