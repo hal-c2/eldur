@@ -22,6 +22,24 @@ f.appendChild(document.createTextNode("tail"));
 L("filled " + f.childNodes.length + " " + f.children.length + " " + N(f.firstChild) + " " + N(f.lastChild)
   + " [" + f.textContent + "] " + N(f.firstChild.parentNode));
 L("query " + N(f.querySelector("#f2")) + " " + f.querySelectorAll("li").length + " " + N(f.getElementById("f1")));
+// A text node has element siblings too, and clones as a text node.
+L("siblings " + N(f.lastChild.previousElementSibling) + " " + N(f.lastChild.nextElementSibling));
+var g = document.createDocumentFragment();
+g.appendChild(document.createTextNode("a"));
+g.appendChild(li("g1", "g"));
+g.appendChild(document.createTextNode("b"));
+L("textsiblings " + N(g.firstChild.nextElementSibling) + " " + N(g.lastChild.previousElementSibling)
+  + " " + N(g.firstChild.previousElementSibling));
+var sc = f.cloneNode(false), dc = f.cloneNode(true);
+L("clones " + sc.childNodes.length + " " + dc.childNodes.length + " "
+  + Array.prototype.map.call(dc.childNodes, N).join("|") + " [" + dc.textContent + "] " + dc.lastChild.nodeType);
+var tc = document.createTextNode("x").cloneNode(true);
+L("textclone " + tc.nodeName + " " + tc.nodeType + " [" + tc.textContent + "]");
+var h = document.createDocumentFragment();
+h.textContent = "hello";
+L("settext " + h.childNodes.length + " " + N(h.firstChild) + " [" + h.textContent + "]");
+h.textContent = "";
+L("cleared " + h.childNodes.length + " [" + h.textContent + "]");
 list.appendChild(f);
 L("moved " + f.childNodes.length + " " + N(f.firstChild) + " " + list.childNodes.length + " "
   + Array.prototype.map.call(list.childNodes, N).join("|") + " " + N(document.getElementById("f1").parentNode));
