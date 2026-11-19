@@ -6,7 +6,16 @@
  {"name":"press y, whose mousedown hides x, whose blur focuses z, and the window goes away","click":"#y","away":true},
  {"name":"the window comes back to z","back":true},
  {"name":"click x2","click":"#x2"},
- {"name":"press y2, whose mousedown hides x2, whose blur focuses z2, and Tab in the same turn","click":"#y2","key":"Tab"}
+ {"name":"press y2, whose mousedown hides x2, whose blur focuses z2, and Tab in the same turn","click":"#y2","key":"Tab"},
+ {"name":"click x3","click":"#x3"},
+ {"name":"press y3, whose mousedown hides x3, whose blur focuses z3, and Shift+Tab back to y3 in the same turn","click":"#y3","key":"Shift+Tab"},
+ {"name":"click x4","click":"#x4"},
+ {"name":"press y4, whose mousedown hides x4, whose blur focuses z4, and press y4 again in the same turn","click":"#y4","again":"#y4"},
+ {"name":"click x5","click":"#x5"},
+ {"name":"press y5, which x5's blur moves on to z5, and press x5 again in the same turn","click":"#y5","again":"#x5"},
+ {"name":"click the link l in a line","click":"#l"},
+ {"name":"the window goes away from l","away":true},
+ {"name":"the window comes back to l","back":true}
 ],
 "watch":[{"sel":"#w"}],
 "window":true}

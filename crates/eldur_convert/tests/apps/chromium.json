@@ -91161,6 +91161,239 @@
     ],
     "(focus)": "v2"
    }
+  },
+  {
+   "name": "click x3",
+   "log": [
+    "blur v2 from x3 active BODY has true",
+    "focusout v2 from x3 active BODY has true",
+    "focus x3 from v2 active x3 has true",
+    "focusin x3 from v2 active x3 has true",
+    "click x3 has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "x3"
+   }
+  },
+  {
+   "name": "press y3, whose mousedown hides x3, whose blur focuses z3, and Shift+Tab back to y3 in the same turn",
+   "log": [
+    "blur x3 from y3 active BODY has true",
+    "focus z3 from - active z3 has true",
+    "focusin z3 from - active z3 has true",
+    "focusout x3 from - active z3 has true",
+    "click y3 has true",
+    "blur z3 from y3 active BODY has true",
+    "focusout z3 from y3 active BODY has true",
+    "focus y3 from z3 active y3 has true",
+    "focusin y3 from z3 active y3 has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "y3"
+   }
+  },
+  {
+   "name": "click x4",
+   "log": [
+    "blur y3 from x4 active BODY has true",
+    "focusout y3 from x4 active BODY has true",
+    "focus x4 from y3 active x4 has true",
+    "focusin x4 from y3 active x4 has true",
+    "click x4 has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "x4"
+   }
+  },
+  {
+   "name": "press y4, whose mousedown hides x4, whose blur focuses z4, and press y4 again in the same turn",
+   "log": [
+    "blur x4 from y4 active BODY has true",
+    "focus z4 from - active z4 has true",
+    "focusin z4 from - active z4 has true",
+    "focusout x4 from - active z4 has true",
+    "click y4 has true",
+    "blur z4 from y4 active BODY has true",
+    "focusout z4 from y4 active BODY has true",
+    "focus y4 from z4 active y4 has true",
+    "focusin y4 from z4 active y4 has true",
+    "click y4 has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "y4"
+   }
+  },
+  {
+   "name": "click x5",
+   "log": [
+    "blur y4 from x5 active BODY has true",
+    "focusout y4 from x5 active BODY has true",
+    "focus x5 from y4 active x5 has true",
+    "focusin x5 from y4 active x5 has true",
+    "click x5 has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "x5"
+   }
+  },
+  {
+   "name": "press y5, which x5's blur moves on to z5, and press x5 again in the same turn",
+   "log": [
+    "blur x5 from y5 active BODY has true",
+    "focus z5 from - active z5 has true",
+    "focusin z5 from - active z5 has true",
+    "focusout x5 from - active z5 has true",
+    "click y5 has true",
+    "blur z5 from x5 active BODY has true",
+    "focusout z5 from x5 active BODY has true",
+    "focus x5 from z5 active x5 has true",
+    "focusin x5 from z5 active x5 has true",
+    "click x5 has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "x5"
+   }
+  },
+  {
+   "name": "click the link l in a line",
+   "log": [
+    "blur x5 from l active BODY has true",
+    "focusout x5 from l active BODY has true",
+    "focus l from x5 active l has true",
+    "focusin l from x5 active l has true",
+    "click l has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "l"
+   }
+  },
+  {
+   "name": "the window goes away from l",
+   "log": [
+    "blur l from - active l has false",
+    "focusout l from - active l has false"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "l"
+   }
+  },
+  {
+   "name": "the window comes back to l",
+   "log": [
+    "focus l from - active l has true",
+    "focusin l from - active l has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "l"
+   }
   }
  ],
  "lines_closed": [

@@ -60,6 +60,8 @@ function windows() {
 async function openWindowTab() {
   if (!windowed) {
     const keyboard = spawn("wtype", ["-s", "3600000"], { stdio: "ignore" });
+    // A recording that throws still lets the seat's keyboard go.
+    process.on("exit", () => keyboard.kill());
     const headed = await chromium.launch({ headless: false, args: ["--ozone-platform=wayland"] });
     const elsewhere = await (await headed.newContext()).newPage();
     await elsewhere.setContent("<title>eldur-elsewhere</title>elsewhere");
@@ -78,15 +80,21 @@ async function openWindowTab() {
   await tab.waitForTimeout(300);
   windowed.page = windows().find((id) => !before.includes(id));
   sway(`[con_id=${windowed.page}] focus`);
-  for (let i = 0; i < 50 && !(await tab.evaluate(() => document.hasFocus())); i++) await tab.waitForTimeout(20);
   return tab;
+}
+// A step recorded with the window in the wrong state would be a wrong recording.
+async function focusIs(tab, want, what) {
+  for (let i = 0; i < 50; i++) {
+    if ((await tab.evaluate(() => document.hasFocus())) === want) return;
+    await tab.waitForTimeout(20);
+  }
+  throw new Error(`${what}: document.hasFocus() is still ${!want} after 1 s`);
 }
 async function windowStep(step) {
   if (step.away) sway('[title="^eldur-elsewhere"] focus');
   if (step.back) sway(`[con_id=${windowed.page}] focus`);
   if (step.away || step.back) {
-    const want = Boolean(step.back);
-    for (let i = 0; i < 50 && (await page.evaluate(() => document.hasFocus())) !== want; i++) await page.waitForTimeout(20);
+    await focusIs(page, Boolean(step.back), step.name);
   }
 }
 const snapshot = fs.readFileSync(path.join(here, "snapshot.js"), "utf8");
@@ -117,6 +125,10 @@ async function act(step) {
   if (step.viewport) await page.setViewportSize({ width: step.viewport[0], height: step.viewport[1] });
   if (step.click) {
     const { x, y } = await center(step.click);
+    await page.mouse.click(x, y);
+  }
+  if (step.again) {
+    const { x, y } = await center(step.again);
     await page.mouse.click(x, y);
   }
   await windowStep(step);
@@ -204,7 +216,14 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
   await page.goto("file://" + path.join(here, file), { waitUntil: "load" });
   // Playwright tells a page it has focus whatever its window does: this one
   // hears its window. Set after the load, as the page's new renderer forgets it.
-  if (spec.window) await windowed.cdp.send("Emulation.setFocusEmulationEnabled", { enabled: false });
+  if (spec.window) {
+    await windowed.cdp.send("Emulation.setFocusEmulationEnabled", { enabled: false });
+    // Without the emulation the page has the focus its window has, once it
+    // is the window's page in front.
+    sway(`[con_id=${windowed.page}] focus`);
+    await page.bringToFront();
+    await focusIs(page, true, `${name}: the page's window`);
+  }
   // A page caught mid-flight at load has nothing to record there that a rerun would repeat.
   const steps = [await state("load", spec.loadMoves ? [] : spec.watch)];
   for (const step of spec.steps) {

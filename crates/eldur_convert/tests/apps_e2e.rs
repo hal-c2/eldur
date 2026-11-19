@@ -191,6 +191,8 @@ TestCase {
     }
     function act(s) {
         if (s.click) { const p = center(s.click); moveTo(p.x, p.y); mouseClick(page, p.x, p.y, Qt.LeftButton, mods) }
+        // A second press in the same turn as the first.
+        if (s.again) { const p = center(s.again); moveTo(p.x, p.y); mouseClick(page, p.x, p.y, Qt.LeftButton, mods) }
         // The window goes away in the same turn as what came before in the step.
         if (s.away) {
             if (!other) other = elsewhere.createObject(null)
