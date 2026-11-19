@@ -18102,6 +18102,11 @@ function _inFocusChanged() {
     if (now === undefined || now === _in.focused) {
         return;
     }
+    // A listener moved the page's focus and Qt has not been told yet: what Qt
+    // holds meanwhile is the move it overrides, not a new one.
+    if (_in.focusPending && _in.focusPending === _in.focused) {
+        return;
+    }
     var was = _in.focused;
     // Qt takes it at once from what a script just disabled; a page hears at its next update.
     if (!now && was && !was.__eldurInline && !was.enabled && !_in.focusSettling) {
@@ -18140,8 +18145,10 @@ function _inFocusChanged() {
             _inFocusEvents(was, now, "blur");
             _inFocusEvents(was, _in.shiftTo ? null : now, "focusout");
         };
-        // A script's change to what stays shown holds nothing back: focus moves in one go.
-        if (was.__eldurInline || (was.visible && was.enabled)) {
+        // A script's change to what stays shown holds nothing back: focus moves
+        // in one go. So does a move to another control, whatever became of the
+        // one it leaves: only a focus that goes nowhere is heard a moment later.
+        if (was.__eldurInline || (was.visible && was.enabled) || now) {
             heard();
         } else {
             whenBlurred(was, "blur", heard);
