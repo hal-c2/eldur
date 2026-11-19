@@ -28,6 +28,10 @@ div { height: 40px; width: 200px }
 #o { position: relative; background: red }
 #n { position: relative; z-index: 3 }
 #p { z-index: 2; background: blue }
+#s { position: relative }
+#t { position: absolute; top: 40px; left: 0; z-index: 5; background: red }
+#w { position: relative; z-index: 7; background: red }
+#u { z-index: 2; background: blue }
 </style></head><body>
 <div id=a><div id=c></div></div><div id=b class=over></div>
 <div class=gap></div>
@@ -38,17 +42,21 @@ div { height: 40px; width: 200px }
 <div id=k><div id=l></div></div><div id=m class=over></div>
 <div class=gap></div>
 <div id=q><div id=n><div id=o></div></div></div><div id=p class=over></div>
+<div class=gap></div>
+<div id=r><div id=s><div id=w></div><div id=t></div></div></div><div id=u class=over></div>
 <script>
 // Named so that they get an objectName the test can find.
-var named = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q'].map(function (id) { return document.getElementById(id); });
+var named = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','w'].map(function (id) { return document.getElementById(id); });
 // Lowered under its ancestor's sibling; raised over it; raised through two
 // ancestors; raised inside an ancestor with its own level, which keeps it;
-// and an ancestor's own level taken away.
+// an ancestor's own level taken away; and one taken from a box beside an
+// absolutely positioned one, which still lifts their block by its own level.
 document.getElementById('c').style.zIndex = 'auto';
 document.getElementById('d').style.zIndex = '1';
 document.getElementById('i').style.zIndex = '3';
 document.getElementById('l').style.zIndex = '5';
 document.getElementById('n').style.zIndex = 'auto';
+document.getElementById('w').style.zIndex = 'auto';
 </script></body></html>"#;
 
 /// Chromium's `elementFromPoint(100, y)` for each row.
@@ -66,7 +74,7 @@ TestCase {
     when: windowShown
 
     property var page
-    readonly property var painted: ["b", "c", "d", "f", "i", "j", "l", "m", "o", "p"]
+    readonly property var painted: ["b", "c", "d", "f", "i", "j", "l", "m", "o", "p", "t", "u", "w"]
 
     // The painted box nearest the front at a point, in Qt Quick's paint
     // order: the children over an item from the last level down, then the
@@ -113,12 +121,15 @@ TestCase {
         compare(front(page, 100, 270), "i", "#i set to 3")
         compare(front(page, 100, 390), "m", "#l set to 5 inside #k")
         compare(front(page, 100, 510), "p", "#n set to auto")
+        // Chromium has `#u` over `#w` at 630; the converter lifts `#t`'s
+        // block, `#w` with it, by `#t`'s level, so only `#t` is checked.
+        compare(front(page, 100, 650), "t", "#t still lifts its block")
     }
 }
 }
 "##;
 
-/// With no script, Chromium's fronts are `c f j m o`.
+/// With no script, Chromium's fronts are `c f j m o w t`.
 const UNSCRIPTED: &str = r##"
     function test_levels_follow_what_the_boxes_hold() {
         compare(front(page, 100, 30), "c")
@@ -126,6 +137,8 @@ const UNSCRIPTED: &str = r##"
         compare(front(page, 100, 270), "j")
         compare(front(page, 100, 390), "m")
         compare(front(page, 100, 510), "o")
+        compare(front(page, 100, 630), "w")
+        compare(front(page, 100, 650), "t")
     }
 }
 }
@@ -133,7 +146,14 @@ const UNSCRIPTED: &str = r##"
 
 #[test]
 fn a_scripted_level_restacks_the_boxes_around_it() {
-    run(PAGE, TEST, "plain");
+    run(PAGE, TEST, "plain", false);
+}
+
+/// The page as one with no rules at run time has it: the levels come from
+/// what the converter writes on each box (`eldurRuleZ`, `eldurHoldZ`).
+#[test]
+fn a_scripted_level_restacks_them_without_the_rules() {
+    run(PAGE, TEST, "no-rules", true);
 }
 
 #[test]
@@ -146,10 +166,11 @@ fn the_rules_levels_match_chromium() {
         &page,
         &format!("{}{UNSCRIPTED}", &TEST[..cut]),
         "unscripted",
+        false,
     );
 }
 
-fn run(page: &str, test: &str, name: &str) {
+fn run(page: &str, test: &str, name: &str, no_rules: bool) {
     if support::no_qt() {
         return;
     }
@@ -166,6 +187,23 @@ fn run(page: &str, test: &str, name: &str) {
     let dir = std::env::temp_dir().join(format!("eldur-stacking-{name}-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("temp dir");
     write(&dir, &out);
+    if no_rules {
+        let main = dir.join("Main.qml");
+        let qml = std::fs::read_to_string(&main).expect("read Main.qml");
+        assert!(qml.contains("eldurRuleZ"), "no level on any box\n{qml}");
+        let kept: Vec<&str> = qml
+            .lines()
+            .filter(|l| {
+                !l.trim_start()
+                    .starts_with("property string eldurCascadeRules:")
+            })
+            .collect();
+        assert!(
+            kept.len() < qml.lines().count(),
+            "no rules to take out\n{qml}"
+        );
+        std::fs::write(&main, kept.join("\n")).expect("write Main.qml");
+    }
     std::fs::write(dir.join("tst_stacking.qml"), test).expect("write test");
     let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
