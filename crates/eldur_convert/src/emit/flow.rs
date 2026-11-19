@@ -291,11 +291,11 @@ impl Emitter<'_, '_> {
                 emitted.top = MarginSet::default();
                 emitted.bottom = MarginSet::default();
             }
-            // A block a script reaches it can hide too (#51): the margins
+            // A block a script hides by its display (#51): the margins
             // either side of it then collapse together, as they do around one
             // that is hidden until a script shows it.
             let reached = !collapsed
-                && child.node.is_some_and(|n| self.wanted.contains(&n))
+                && child.node.is_some_and(|n| self.script_hides.contains(&n))
                 && crate::boxes::is_block_level(child.style.display);
             let hides = (collapsed || reached) && obj.id.is_some();
             if hidden.boxes.is_empty() {
@@ -310,7 +310,7 @@ impl Emitter<'_, '_> {
                     escaped_top = Some(pending);
                     // The parent keeps what escaped through its top edge: once
                     // this one is gone, the next one's margin is what it adds.
-                    if hides {
+                    if reached {
                         hidden.given = pending.value().max(0.0);
                     }
                 } else {
