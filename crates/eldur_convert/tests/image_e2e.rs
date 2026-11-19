@@ -430,6 +430,34 @@ fn ratio_attributes_are_dimension_values() {
     assert_eq!(implicit_size(qml, "zc"), size("80", "150"), "only a width");
 }
 
+/// A remote or `data:` image is not read, so the converter has no natural
+/// size for it and gives it none: the 300×150 default is for a file that
+/// was read and lacks a dimension. Qt's `Image` sizes it once loaded.
+#[test]
+fn unread_images_take_no_default_size() {
+    let html = r#"<!doctype html><html><head><style>body{margin:0} img{display:block}</style></head><body>
+<img id=remote src="https://example.com/a.png" width="120">
+<img id=inline src="data:image/png;base64,iVBORw0KGgo=">
+<script>var named = [document.getElementById('remote'), document.getElementById('inline')];</script>
+</body></html>"#;
+    let options = Options {
+        root: RootKind::Item,
+        ..Options::default()
+    };
+    let out = eldur_convert::convert(
+        &Input {
+            html: html.to_owned(),
+            url: "/page/index.html".to_owned(),
+        },
+        &options,
+        &mut Bare,
+    );
+    let qml = out.main_qml().expect("Main.qml");
+    let size = |w: &str, h: &str| (w.to_owned(), h.to_owned());
+    assert_eq!(implicit_size(qml, "remote"), size("120", "0"));
+    assert_eq!(implicit_size(qml, "inline"), size("0", "0"));
+}
+
 #[test]
 fn image_ratio_attributes_match_chromium() {
     if support::no_qt() {
