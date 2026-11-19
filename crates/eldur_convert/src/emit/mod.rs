@@ -114,6 +114,9 @@ pub(crate) struct Emitter<'a, 'd> {
     /// The box being emitted is an overlay of its containing block, so its
     /// `position` is handled.
     positioned_child: bool,
+    /// The box being emitted is a flex or grid item, whose `z-index` applies
+    /// though it is not positioned (CSS Flexbox 1 §4.3, CSS Grid 2 §9.5).
+    layout_item: bool,
     /// Where `position: absolute` boxes go. At the top it is the initial
     /// containing block.
     abs_block: lists::ContainingBlock,
@@ -170,6 +173,8 @@ pub(crate) struct Emitter<'a, 'd> {
     pub open_elements: bool,
     /// A script writes inline styles or `hidden`, so any item can leave its layout.
     pub hides_items: bool,
+    /// A script writes an inline `z-index` (`Analysis::writes_z_index`).
+    pub writes_z_index: bool,
     /// Blocks a script hides or shows by `style.display` or `hidden`: the
     /// margins either side of them collapse for both states (#51).
     pub script_hides: HashSet<NodeId>,
@@ -264,6 +269,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             viewport_overflow: (Overflow::Visible, Overflow::Visible),
             has_table: false,
             positioned_child: false,
+            layout_item: false,
             abs_block: lists::ContainingBlock::initial(),
             fixed_block: None,
             hideable_ancestor: false,
@@ -285,6 +291,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             runtime_dom: false,
             open_elements: false,
             hides_items: false,
+            writes_z_index: false,
             script_hides: HashSet::new(),
             cascade_rules: false,
             gains: HashSet::new(),
@@ -537,12 +544,24 @@ impl<'a, 'd> Emitter<'a, 'd> {
         self.block_box(b, inherited, true)
     }
 
+    /// [`Self::item`] for an item of a flex or grid container.
+    pub(super) fn layout_item(
+        &mut self,
+        b: &LayoutBox<'_>,
+        inherited: TextDecorationLine,
+    ) -> Emitted {
+        self.layout_item = true;
+        self.item(b, inherited)
+    }
+
     fn block_box(
         &mut self,
         b: &LayoutBox<'_>,
         inherited: TextDecorationLine,
         independent: bool,
     ) -> Emitted {
+        // Its own: the boxes inside it are not the container's items.
+        let layout_item = std::mem::take(&mut self.layout_item);
         let given = if independent {
             std::mem::replace(&mut self.child_given, Given::Stretched)
         } else {
@@ -557,7 +576,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             || establishes_bfc(&b.style)
             || (b.node.is_some() && b.node == self.root_node);
         let outer_wrap = if own_context { self.wrap.take() } else { None };
-        let e = self.block_box_in_lines(b, inherited, independent);
+        let e = self.block_box_in_lines(b, inherited, independent, layout_item);
         if outer_wrap.is_some() {
             self.wrap = outer_wrap;
         }
@@ -571,6 +590,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         b: &LayoutBox<'_>,
         inherited: TextDecorationLine,
         independent: bool,
+        layout_item: bool,
     ) -> Emitted {
         let style = &*b.style;
         let line = b.node.and_then(|n| node_line(self.doc, n));
@@ -581,7 +601,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     && let Some(control) = controls::classify(self.doc, node)
                 {
                     let e = self.control(b, node, control, line);
-                    return self.transformed(e, b, line);
+                    return self.stacked_whole(e, b, line, layout_item);
                 }
                 if let Some(node) = b.node
                     && self.doc.element(node).is_some_and(|e| {
@@ -590,10 +610,10 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     })
                 {
                     let e = self.image(b, node, line);
-                    return self.transformed(e, b, line);
+                    return self.stacked_whole(e, b, line, layout_item);
                 }
                 let e = self.replaced(b, line);
-                return self.transformed(e, b, line);
+                return self.stacked_whole(e, b, line, layout_item);
             }
             BoxKind::Table => match style.display {
                 Display::Table | Display::InlineTable => {
@@ -604,7 +624,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     } else {
                         self.table(b, inherited, line)
                     };
-                    return self.transformed(e, b, line);
+                    return self.stacked_whole(e, b, line, layout_item);
                 }
                 Display::TableCell | Display::TableCaption => {}
                 // A section with no rows yet stands as a box of its own for
@@ -973,7 +993,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         }
         self.label_tap(&mut obj, b.node);
         self.visibility(&mut obj, style);
-        self.stack_above_flow(&mut obj, b, outer_above_flow);
+        self.stack_above_flow(&mut obj, b, outer_above_flow, layout_item);
         let e = Emitted {
             obj,
             top,
@@ -1030,9 +1050,33 @@ impl<'a, 'd> Emitter<'a, 'd> {
         wrapper.push_child(flow);
     }
 
+    /// A box its own path emits whole (replaced, or a table) stacks as any
+    /// other does: positioned, or a flex or grid item with a `z-index`, it
+    /// is over the flow as the runtime's paint pass puts it.
+    fn stacked_whole(
+        &mut self,
+        e: Emitted,
+        b: &LayoutBox<'_>,
+        line: Option<u32>,
+        layout_item: bool,
+    ) -> Emitted {
+        let mut e = self.transformed(e, b, line);
+        // Its own path has no level of the boxes inside to give it.
+        let outer = self.above_flow.take();
+        self.stack_above_flow(&mut e.obj, b, outer, layout_item);
+        e
+    }
+
     /// Raises an in-flow box that is positioned, or holds one, over its later
-    /// siblings. Of the same `z`, the later is on top, as in CSS.
-    fn stack_above_flow(&mut self, obj: &mut Object, b: &LayoutBox<'_>, outer: Option<i32>) {
+    /// siblings. Of the same `z`, the later is on top, as in CSS. A flex or
+    /// grid item with a `z-index` stacks as a positioned box does.
+    fn stack_above_flow(
+        &mut self,
+        obj: &mut Object,
+        b: &LayoutBox<'_>,
+        outer: Option<i32>,
+        layout_item: bool,
+    ) {
         let style = &*b.style;
         if boxes::is_out_of_flow(style) {
             // Its block has the overlay's own `z` to see to.
@@ -1040,20 +1084,38 @@ impl<'a, 'd> Emitter<'a, 'd> {
             return;
         }
         let holds = boxes::is_containing_block(style);
-        let own = match style.z_index {
-            // `z-index: 0` is still over what is not positioned.
-            Some(z) if holds && z >= 0 => Some(z + 1),
-            Some(z) if holds && z < 0 => {
-                self.above_flow = outer;
-                return;
-            }
-            _ => None,
-        };
-        let inside = if own.is_some() { None } else { self.above_flow };
-        let level = own.or(inside).or(holds.then_some(1));
+        let stacks = holds || (layout_item && style.z_index.is_some());
         let page = b
             .node
             .is_some_and(|n| Some(n) == self.doc.body() || Some(n) == self.root_node);
+        let inside = self.above_flow;
+        let at_auto = inside.or(holds.then_some(1));
+        let own = match style.z_index {
+            // `z-index: 0` is still over what is not positioned.
+            Some(z) if stacks && z >= 0 => Some(z + 1),
+            // Under its parent in Qt, as it is not in CSS: it stays in the flow.
+            Some(_) if stacks => Some(0),
+            _ => None,
+        };
+        let level = own.or(at_auto);
+        // A script's `style.zIndex` is a level over the flow too, and on a
+        // page with no DOM the runtime has no rules to tell it this box is
+        // one it applies to, or what clearing it goes back to.
+        if (holds || layout_item) && self.writes_z_index && !page {
+            for (name, z) in [("eldurRuleZ", level), ("eldurAutoZ", at_auto)] {
+                obj.members.push(Member::PropertyDecl {
+                    ty: "real".to_owned(),
+                    name: name.to_owned(),
+                    value: Some(Value::Number(f64::from(z.unwrap_or(0)))),
+                    readonly: true,
+                    required: false,
+                });
+            }
+        }
+        if own == Some(0) {
+            self.above_flow = outer;
+            return;
+        }
         if let Some(z) = level.filter(|_| !page) {
             obj.set("z", Value::Number(f64::from(z)));
         }
