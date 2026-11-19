@@ -18,11 +18,6 @@ impl Emitter<'_, '_> {
         let style = &*b.style;
         let element = self.doc.element(node).expect("an img is an element");
         let inline_svg = element.is_svg();
-        let asset = if inline_svg {
-            self.svg_asset(node, style.color)
-        } else {
-            self.images.get(&node).cloned()
-        };
         let insets = self.insets(style, line);
         let (extra_w, extra_h) = match style.box_sizing {
             BoxSizing::ContentBox => (0.0, 0.0),
@@ -43,6 +38,13 @@ impl Emitter<'_, '_> {
         };
         let width = css_px(&style.width, extra_w);
         let height = css_px(&style.height, extra_h);
+        // An inline svg's file is written at the size CSS gives it, when CSS
+        // gives both; a file has no box of its own to fill.
+        let asset = if inline_svg {
+            self.svg_asset(node, style.color, width.zip(height))
+        } else {
+            self.images.get(&node).cloned()
+        };
         let size = asset.as_ref().and_then(|a| a.size);
         let ratio = size
             .map(|(w, h)| h / w)
@@ -185,7 +187,12 @@ impl Emitter<'_, '_> {
     /// element that holds it (SVG 2 §13.2, CSS Color 4 §6.4). The name is a
     /// hash of the content, so each colour the svg takes in some state is a
     /// file of its own and the same icon twice is one file.
-    fn svg_asset(&mut self, node: NodeId, color: Rgba) -> Option<ImageAsset> {
+    fn svg_asset(
+        &mut self,
+        node: NodeId,
+        color: Rgba,
+        used: Option<(f32, f32)>,
+    ) -> Option<ImageAsset> {
         let colour = svg_colour(color);
         let resolve = |name: &str, value: &str, own: Option<&str>| {
             if takes_a_colour(name) {
@@ -194,7 +201,7 @@ impl Emitter<'_, '_> {
                 value.to_owned()
             }
         };
-        let markup = self.doc.svg_markup(node, &resolve)?;
+        let markup = self.doc.svg_markup(node, used, &resolve)?;
         let source = format!("assets/svg-{:016x}.svg", fnv1a(markup.as_bytes()));
         let (size, ratio) = svg_size(&markup);
         self.svgs

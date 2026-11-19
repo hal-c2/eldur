@@ -106,7 +106,7 @@ fn svg_markup_is_a_standalone_svg_document() {
         }
     };
     assert_eq!(
-        doc.svg_markup(svg, &upper).as_deref(),
+        doc.svg_markup(svg, None, &upper).as_deref(),
         Some(
             "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" \
              viewBox=\"0 0 24 24\" fill=\"#123456\"><style>path{stroke:#123456}</style>\
@@ -116,7 +116,7 @@ fn svg_markup_is_a_standalone_svg_document() {
     );
     // Not an svg element.
     let body = doc.body().expect("body");
-    assert_eq!(doc.svg_markup(body, &upper), None);
+    assert_eq!(doc.svg_markup(body, None, &upper), None);
 }
 
 #[test]
@@ -136,7 +136,7 @@ fn svg_markup_carries_what_it_references_from_outside() {
         .expect("icon");
     let red = |_: &str, v: &str, _: Option<&str>| v.replace("currentColor", "#c00");
     assert_eq!(
-        doc.svg_markup(icon, &red).as_deref(),
+        doc.svg_markup(icon, None, &red).as_deref(),
         Some(
             "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" \
              id=\"icon\"><use href=\"#s\"/><use xlink:href=\"#missing\"/><circle id=\"own\"/>\
@@ -164,7 +164,7 @@ fn svg_markup_drops_attributes_with_an_unbound_prefix() {
         .expect("svg");
     let same = |_: &str, v: &str, _: Option<&str>| v.to_owned();
     assert_eq!(
-        doc.svg_markup(svg, &same).as_deref(),
+        doc.svg_markup(svg, None, &same).as_deref(),
         Some(
             "<svg xmlns=\"http://www.w3.org/2000/svg\" xml:space=\"preserve\" width=\"4\" x.y=\"1\"><g/></svg>"
         )
@@ -192,7 +192,7 @@ fn svg_markup_tells_the_colour_the_svg_sets_itself() {
             v.to_owned()
         }
     };
-    let markup = doc.svg_markup(svg, &tag).expect("markup");
+    let markup = doc.svg_markup(svg, None, &tag).expect("markup");
     assert!(markup.contains("d=\"M0 0 blue\""), "{markup}");
     assert!(markup.contains("d=\"M1 1 #0f0\""), "{markup}");
     assert!(markup.contains("d=\"M2 2 holder\""), "{markup}");
@@ -439,12 +439,20 @@ fn a_used_symbol_is_sized_where_it_is_drawn() {
          <svg id=mixed width=48 height=48><use href='#s' width=20 height=20 /><use href='#s'/></svg>\
          <svg id=own width=48 height=48><use href='#fixed'/></svg>\
          <svg id=inside width=40 height=40><symbol id=i viewBox='0 0 8 8'/><use href='#i'/></svg>\
-         <svg id=unsized><use href='#s'/></svg>",
+         <svg id=unsized><use href='#s'/></svg>\
+         <svg id=css class=icon><use href='#s'/></svg>\
+         <svg id=wide width=100% viewBox='0 0 24 24'><use href='#s'/></svg>",
     );
     let same = |_: &str, v: &str, _: Option<&str>| v.to_owned();
+    // What the layout gives a CSS-sized icon (`.icon { width: 48px }`).
+    let used = |id: &str| match id {
+        "css" => Some((48.0, 47.5)),
+        "wide" => Some((300.0, 300.0)),
+        _ => None,
+    };
     let symbol = |id: &str| {
         let markup = doc
-            .svg_markup(doc.element_by_id(id).expect(id), &same)
+            .svg_markup(doc.element_by_id(id).expect(id), used(id), &same)
             .expect("markup");
         let at = markup.find("<symbol").expect("symbol");
         markup[at..markup[at..].find('>').map_or(markup.len(), |e| at + e + 1)].to_owned()
@@ -463,4 +471,25 @@ fn a_used_symbol_is_sized_where_it_is_drawn() {
         "<symbol id=\"i\" viewBox=\"0 0 8 8\" width=\"40\" height=\"40\"/>"
     );
     assert_eq!(symbol("unsized"), format!("{s}>"));
+    assert_eq!(symbol("css"), format!("{s} width=\"48\" height=\"47.5\">"));
+    assert_eq!(symbol("wide"), format!("{s} width=\"24\" height=\"24\">"));
+    // The file has no CSS box: the root takes the size it is laid out at,
+    // in place of a length that needs one.
+    let root = |id: &str| {
+        let markup = doc
+            .svg_markup(doc.element_by_id(id).expect(id), used(id), &same)
+            .expect("markup");
+        markup[..markup.find('>').expect("tag") + 1].to_owned()
+    };
+    let ns = "<svg xmlns=\"http://www.w3.org/2000/svg\"";
+    assert_eq!(
+        root("css"),
+        format!("{ns} id=\"css\" class=\"icon\" width=\"48\" height=\"47.5\">")
+    );
+    assert_eq!(
+        root("wide"),
+        format!("{ns} id=\"wide\" viewBox=\"0 0 24 24\" width=\"300\" height=\"300\">")
+    );
+    assert_eq!(root("px"), format!("{ns} id=\"px\" width=\"48px\" height=\"48\">"));
+    assert_eq!(root("unsized"), format!("{ns} id=\"unsized\">"));
 }

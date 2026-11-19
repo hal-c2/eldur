@@ -312,10 +312,15 @@ impl Document {
     /// `url(#id)`, is copied into a `<defs>` at the end: in the page those
     /// ids resolve document-wide (SVG 2 §16.1.3), in a file of its own only
     /// within it, and without the copies the icon draws nothing.
+    ///
+    /// `used` is the width and height the svg is laid out at, when the
+    /// layout knows them. A root without a length of its own is written
+    /// with that one, as a file has no CSS box to fill.
     #[must_use]
     pub fn svg_markup(
         &self,
         id: NodeId,
+        used: Option<(f32, f32)>,
         value: &dyn Fn(&str, &str, Option<&str>) -> String,
     ) -> Option<String> {
         let element = self.element(id).filter(|e| e.is_svg())?;
@@ -332,7 +337,17 @@ impl Document {
         if xlink {
             root.push_str(" xmlns:xlink=\"http://www.w3.org/1999/xlink\"");
         }
-        let sizes = self.svg_symbol_sizes(id, element, &copies);
+        let used = used.map(|(w, h)| [fmt_length(w), fmt_length(h)]);
+        let root_size = ["width", "height"].map(|name| element.attr(name).and_then(svg_length));
+        let root_size = [0, 1].map(|axis| {
+            root_size[axis]
+                .clone()
+                .or_else(|| used.as_ref().map(|u| u[axis].clone()))
+        });
+        let mut sizes = self.svg_symbol_sizes(id, element, &root_size, &copies);
+        if let [Some(width), Some(height)] = &root_size {
+            sizes.push((id, width.clone(), height.clone()));
+        }
         let svg = SvgWriter { value, sizes: &sizes };
         svg.write(self, id, element, &root, None, &mut out);
         if !copies.is_empty() {
@@ -367,19 +382,20 @@ impl Document {
         &self,
         id: NodeId,
         root: &Element,
+        root_size: &[Option<String>],
         copies: &[NodeId],
     ) -> Vec<(NodeId, String, String)> {
-        let viewport = |name: &str, index: usize| {
+        let viewport = |axis: usize| {
             root.attr("viewBox")
                 .and_then(|b| {
                     b.split(|c: char| c == ',' || c.is_whitespace())
                         .filter(|p| !p.is_empty())
-                        .nth(index)
+                        .nth(axis + 2)
                         .and_then(svg_length)
                 })
-                .or_else(|| root.attr(name).and_then(svg_length))
+                .or_else(|| root_size.get(axis).cloned().flatten())
         };
-        let viewport = [viewport("width", 2), viewport("height", 3)];
+        let viewport = [viewport(0), viewport(1)];
         let symbols = std::iter::once(id)
             .chain(copies.iter().copied())
             .flat_map(|n| self.descendants(n))
@@ -408,7 +424,7 @@ impl Document {
             for (axis, attr) in ["width", "height"].into_iter().enumerate() {
                 let mut asked = uses
                     .iter()
-                    .filter(target)
+                    .filter(|u| target(u))
                     .map(|u| u.attr(attr).and_then(svg_length));
                 let first = asked.next().flatten();
                 size[axis] = match first {
@@ -703,6 +719,12 @@ impl SvgWriter<'_> {
         out.push_str(element.local_name());
         out.push('>');
     }
+}
+
+/// `px` as an svg length: at most two decimals, no trailing zeros.
+fn fmt_length(px: f32) -> String {
+    let s = format!("{:.2}", px.max(0.0));
+    s.trim_end_matches('0').trim_end_matches('.').to_owned()
 }
 
 /// A length in user units, as written (`48`, `48px`, `1.5`); `None` for a
