@@ -6517,6 +6517,7 @@ function _zSeen() {
         } else if (_zHost(b)) {
             _zRelevel(b, undefined);
         } else {
+            _zSetSlot(b);
             _zLeft([_logicalParent(b)]);
         }
     }
@@ -6554,7 +6555,31 @@ function _zLift(raw) {
 // makes no stacking context: it lifts that item, not its block.
 function _zHost(raw) {
     var frame = raw.parent;
-    return frame && frame.eldurHoisted === true ? frame.parent : null;
+    if (!frame) {
+        return null;
+    }
+    if (frame.eldurHoisted === true) {
+        return frame.parent;
+    }
+    // A box a script made out of flow is painted in its gate (`_leaveFlow`),
+    // among the initial block's overlays, and not in its DOM parent.
+    return frame.eldurSlot === null && _meta(frame).hostBox === raw ? frame : null;
+}
+
+// A raised block a script put somewhere is painted in its slot there
+// (`_insertRawNodesBefore`), in what it was put in, so that box's effects
+// and stacking context hold it: the slot stands at its lift among its
+// siblings, and the block lifts what it is in as a box in flow does.
+function _zSunk(raw) {
+    var slot = raw.parent;
+    return Boolean(slot) && slot === raw.eldurSlot && slot.eldurRisen === true;
+}
+
+function _zSetSlot(raw) {
+    if (_zSunk(raw)) {
+        var lift = _zLift(raw);
+        _zSetHost(raw.parent, raw, lift === null ? 0 : lift);
+    }
 }
 
 // The highest lift of what a box holds, 0 for none.
@@ -6635,6 +6660,7 @@ function _zRelevel(box, before) {
         _zSetHost(host, box, after === null ? 0 : after);
         return;
     }
+    _zSetSlot(box);
     var x = _logicalParent(box);
     for (var depth = 0; x && depth < 512; ++depth) {
         if (before !== undefined && before === after) {
@@ -6658,6 +6684,7 @@ function _zRelevel(box, before) {
                 _zSetHost(took, x, after === null ? 0 : after);
                 return;
             }
+            _zSetSlot(x);
             x = _logicalParent(x);
             continue;
         }
@@ -10903,6 +10930,9 @@ function _leaveFlow(item) {
     // Outside the Flickable, so it does not scroll.
     gate.parent = block === "window" ? initial.parent.parent.parent : initial;
     item.parent = gate;
+    // The gate stacks with the initial block's overlays (`_zHost`).
+    var lift = _zLift(item);
+    _zSetHost(gate, item, lift === null ? 0 : lift);
 }
 
 // --- Lines a script makes --------------------------------------------------
@@ -11475,8 +11505,12 @@ function _insertRawNodesBefore(container, rawNodes, rawRef) {
     _insertInFlow(container, places, (rawRef && _slotOf(rawRef)) || rawRef);
     _wsEnter(rawNodes.length, rawRef, container);
     for (var o = 0; o < rawNodes.length; ++o) {
-        if (rawNodes[o] && _blockOf(rawNodes[o]) !== undefined) {
-            _leaveFlow(rawNodes[o]);
+        var put = rawNodes[o];
+        if (put && _blockOf(put) !== undefined) {
+            _leaveFlow(put);
+        } else if (put && put.eldurSlot && put.eldurSlot.eldurRisen === true && _zHost(put)) {
+            // Painted where it was put (`_zSunk`); the slot places it there.
+            put.parent = put.eldurSlot;
         }
     }
 }
