@@ -5,6 +5,8 @@
  {"name":"tab while arm2's blur focuses a field","key":"Tab"},
  {"name":"tab from the untouched field","key":"Tab"},
  {"name":"click arm3","click":"#arm3"},
- {"name":"tab while arm3's blur focuses and blurs d","key":"Tab"}
+ {"name":"tab while arm3's blur focuses and blurs d","key":"Tab"},
+ {"name":"click arm4","click":"#arm4"},
+ {"name":"tab while arm4's blur focuses where it goes","key":"Tab"}
 ],
 "watch":[{"sel":"#a"}]}

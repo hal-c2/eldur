@@ -38285,6 +38285,55 @@
     ],
     "(focus)": "e"
    }
+  },
+  {
+   "name": "click arm4",
+   "log": [
+    "blur e from arm4 active BODY",
+    "focusout e from arm4 active BODY",
+    "focus arm4 from e active arm4",
+    "focusin arm4 from e active arm4"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       8,
+       8,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "arm4"
+   }
+  },
+  {
+   "name": "tab while arm4's blur focuses where it goes",
+   "log": [
+    "blur arm4 from h active BODY",
+    "focus h from - active h",
+    "focusin h from - active h",
+    "focusout arm4 from - active h",
+    "now h"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       8,
+       8,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "h"
+   }
   }
  ],
  "input_forms": [
