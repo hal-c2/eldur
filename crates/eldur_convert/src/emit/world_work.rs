@@ -49,7 +49,10 @@ fn worlds_that_repaint_subtrees_apart_share_one_emission() {
     // The document's world, then one for every card's `:hover`: each
     // repaints its own card, so all of them are emitted together.
     assert_eq!(large, small, "twice the cards, twice the emissions");
-    assert!(small <= 3, "{small} emissions of a page with one kind of state");
+    assert!(
+        small <= 3,
+        "{small} emissions of a page with one kind of state"
+    );
 }
 
 /// Pages whose worlds can and cannot share an emission.
