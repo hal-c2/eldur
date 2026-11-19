@@ -490,10 +490,21 @@ fn reports_window_qualified_unsupported_globals_and_nested_arguments() {
 
     let bare_res = analyze(&[bare]);
     let win_res = analyze(&[win]);
+    // The three observers are in the scripts but the runtime implements them, so
+    // they are the six uses that make no diagnostic.
     assert_eq!(
         bare_res.diagnostics.len(),
-        26,
+        20,
         "unexpected bare diagnostics: {:#?}",
+        bare_res.diagnostics
+    );
+    assert!(
+        bare_res
+            .diagnostics
+            .iter()
+            .chain(&win_res.diagnostics)
+            .all(|d| !d.message.contains("Observer")),
+        "observers are supported: {:#?}",
         bare_res.diagnostics
     );
     assert_eq!(
@@ -522,8 +533,8 @@ fn reports_window_qualified_unsupported_globals_and_nested_arguments() {
     let nested_res = analyze(&[nested]);
     assert_eq!(
         nested_res.diagnostics.len(),
-        7,
-        "expected 7 diagnostics across nested constructs, got: {:#?}",
+        6,
+        "expected 6 diagnostics across nested constructs (the observer is supported, its confirm is not), got: {:#?}",
         nested_res.diagnostics
     );
 }
