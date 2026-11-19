@@ -7353,6 +7353,25 @@ function blur(item) {
     if (!raw) {
         return;
     }
+    // A link in a line holds its focus through the item that holds it for it
+    // (`focus` above): that item lets it go, and the window's focus change
+    // tells the page, once.
+    if (_in && raw.__eldurInline && _in.inlineFocus === raw) {
+        var holder = _inInlineHolder(raw);
+        _in.inlineFocus = null;
+        if (holder && holder.activeFocus) {
+            holder.focus = false;
+        }
+        // No change came: a window not yet active, or a holder Qt kept it on.
+        if (_in.focused === raw) {
+            _in.focused = null;
+            if (_activeElement === raw) {
+                _activeElement = null;
+            }
+            _inFocusEvents(raw, null, "blur", "focusout");
+        }
+        return;
+    }
     var wasActive = _activeElement === raw || Boolean(raw.activeFocus || raw.focus);
     if (_activeElement === raw) {
         _activeElement = null;
@@ -7986,7 +8005,10 @@ var _ce = {
     upgrading: null,
     // `new X()` making its own element: `createElement` must not upgrade it.
     making: false,
-    any: false
+    any: false,
+    // While a watched tree operation runs, the callbacks it causes, run as it
+    // returns: DOM's [CEReactions], after the operation's own record.
+    reactions: null
 };
 
 var _CE_RESERVED = {
@@ -8068,6 +8090,10 @@ function _ceReport(err) {
 }
 
 function _ceCall(raw, method, args) {
+    if (_ce.reactions) {
+        _ce.reactions.push([raw, method, args]);
+        return;
+    }
     var w = wrap(raw);
     if (typeof w[method] !== "function") {
         return;
@@ -8534,6 +8560,43 @@ function _moNotify() {
     }
 }
 
+// One operation an observer records as a whole: what it does underneath makes
+// no records, and then `record` makes its own. A custom element's callbacks
+// are the page's own code, not a step of the operation: they run once it has
+// made its record, as DOM's [CEReactions] run as the method returns, and what
+// they change is recorded as any script's change is.
+function _moOwn(op, record) {
+    var outer = _ce.reactions;
+    var reactions = [];
+    _ce.reactions = reactions;
+    _mo.depth++;
+    var out;
+    var made = false;
+    try {
+        out = op();
+        made = true;
+    } finally {
+        _mo.depth--;
+        _ce.reactions = outer;
+        // An operation that throws still runs the callbacks it caused.
+        if (!made) {
+            _ceReact(reactions);
+        }
+    }
+    try {
+        record(out);
+    } finally {
+        _ceReact(reactions);
+    }
+    return out;
+}
+
+function _ceReact(reactions) {
+    for (var c = 0; c < reactions.length; ++c) {
+        _ceCall(reactions[c][0], reactions[c][1], reactions[c][2]);
+    }
+}
+
 // An attribute write. `mode` says when it makes no record: "remove" when the
 // attribute was not there, "token" (a class list) when it is neither before
 // nor after, "replace" also when the token was not there to replace.
@@ -8544,20 +8607,14 @@ function _moAttr(item, name, mode, write) {
     }
     var key = String(name).toLowerCase();
     var old = getAttribute(raw, key);
-    var out;
-    _mo.depth++;
-    try {
-        out = write();
-    } finally {
-        _mo.depth--;
-    }
-    if (mode === "remove" && old === null
-        || (mode === "token" || mode === "replace") && old === null && getAttribute(raw, key) === null
-        || mode === "replace" && out === false) {
-        return out;
-    }
-    _moQueue(raw, "attributes", key, old);
-    return out;
+    return _moOwn(write, function(out) {
+        if (mode === "remove" && old === null
+            || (mode === "token" || mode === "replace") && old === null && getAttribute(raw, key) === null
+            || mode === "replace" && out === false) {
+            return;
+        }
+        _moQueue(raw, "attributes", key, old);
+    });
 }
 
 // The nodes an insertion takes from where they are: a fragment gives its
@@ -8644,13 +8701,18 @@ function _moChildOp(parent, taken, op) {
         queued = queued.concat(_moDeliver(_moHits(r[0], "childList"), r[0], "childList",
             null, null, [], r[1], r[2], r[3]));
     });
-    var out;
-    // Only a watched parent's operation is the record of what it does inside.
-    if (watched) {
-        _mo.depth++;
+    if (!watched) {
+        return _moRun(queued, op);
     }
+    // Only a watched parent's operation is the record of what it does inside.
+    return _moOwn(function() { return _moRun(queued, op); }, function() { _moChildRecord(parent, before); });
+}
+
+// Runs a tree operation; one that throws moved nothing, so the removals
+// queued for it are taken back.
+function _moRun(queued, op) {
     try {
-        out = op();
+        return op();
     } catch (err) {
         queued.forEach(function(q) {
             var at = q[0]._records.indexOf(q[1]);
@@ -8659,21 +8721,18 @@ function _moChildOp(parent, taken, op) {
             }
         });
         throw err;
-    } finally {
-        if (watched) {
-            _mo.depth--;
-        }
     }
-    if (!watched) {
-        return out;
-    }
+}
+
+// The record of what a watched parent's child list lost and gained.
+function _moChildRecord(parent, before) {
     var after = _rawChildNodes(parent);
     var was = new Set(before);
     var now = new Set(after);
     var removed = before.filter(function(n) { return !now.has(n); });
     var added = after.filter(function(n) { return !was.has(n); });
     if (removed.length === 0 && added.length === 0) {
-        return out;
+        return;
     }
     var prev, next;
     if (added.length > 0) {
@@ -8684,7 +8743,6 @@ function _moChildOp(parent, taken, op) {
         next = before[before.indexOf(removed[removed.length - 1]) + 1];
     }
     _moQueue(parent, "childList", null, null, added, removed, prev || null, next || null);
-    return out;
 }
 
 // A wrapper's tree methods, each one record however it is built underneath.
@@ -8730,13 +8788,7 @@ function _moText(raw, write) {
         return write();
     }
     var old = wrap(raw).data;
-    _mo.depth++;
-    try {
-        write();
-    } finally {
-        _mo.depth--;
-    }
-    _moQueue(raw, "characterData", null, old);
+    _moOwn(write, function() { _moQueue(raw, "characterData", null, old); });
 }
 
 // Resize and intersection observers are measured in a frame (HTML's "update
@@ -8778,6 +8830,11 @@ function _obsHook(raw) {
         // scroll port drives, which no item on this chain reports.
         if (_isQObject(item.eldurScrollPort)) {
             _obsHookOne(item.eldurScrollPort);
+        }
+        // An out-of-flow box is painted outside its DOM parent's items, yet
+        // scrolls with them: what moves its DOM parent moves it.
+        if (_meta(item).isOutOfFlowGate && _isQObject(item.dom)) {
+            _obsHook(item.dom);
         }
     }
 }
@@ -8838,7 +8895,7 @@ function _obsStep() {
     for (var i = 0; i < watching.length; ++i) {
         var io = watching[i];
         io._targets.forEach(function(t) {
-            var e = _ioEntry(io, t.m.raw);
+            var e = _ioEntry(io, t.m);
             if (e.index !== t.index || e.entry.isIntersecting !== t.inside) {
                 t.index = e.index;
                 t.inside = e.entry.isIntersecting;
@@ -9098,7 +9155,11 @@ function _ioClips(raw) {
     return !raw.__eldurInline && _isQObject(raw) && (raw.clip === true || Boolean(raw.eldurScroller));
 }
 
-function _ioEntry(io, raw) {
+function _ioEntry(io, m) {
+    // Measuring lays out, which can hand the root or the target to a new item
+    // (a frame callback may have restyled either): both are read after it.
+    _layoutForRead();
+    var raw = m.raw;
     var root;
     var rootRaw = io._rootMeta ? io._rootMeta.raw : null;
     if (rootRaw) {
@@ -10091,6 +10152,7 @@ function _leaveFlow(item) {
             + "visible: dom ? dom.visible : false }",
             _qobjectParent(), "eldur_out_of_flow");
         _meta(m.outOfFlowGate).hostBox = item;
+        _meta(m.outOfFlowGate).isOutOfFlowGate = true;
     }
     var gate = m.outOfFlowGate;
     var dom = _logicalParent(item);
