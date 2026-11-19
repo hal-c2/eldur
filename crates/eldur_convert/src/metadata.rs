@@ -191,6 +191,32 @@ pub(crate) fn declare_style(obj: &mut Object, doc: &Document, node: NodeId) {
     }
 }
 
+/// `eldurStyleHides`: the element's own `style` attribute says
+/// `display: none`, so a script clearing its `display` shows it, where nothing
+/// else hides it.
+pub(crate) fn declare_style_hides(obj: &mut Object, doc: &Document, node: NodeId) {
+    let Some(element) = doc.element(node) else {
+        return;
+    };
+    // The UA's `[hidden]` rule hides it as well.
+    if element.attr("hidden").is_some() {
+        return;
+    }
+    let Some(style) = element.attr("style") else {
+        return;
+    };
+    let display = style.split(';').rev().find_map(|d| {
+        let (name, value) = d.split_once(':')?;
+        name.trim()
+            .eq_ignore_ascii_case("display")
+            .then(|| value.trim().trim_end_matches("!important").trim().to_ascii_lowercase())
+    });
+    if display.as_deref() == Some("none") {
+        obj.members
+            .insert(0, decl("bool", "eldurStyleHides", Value::Bool(true)));
+    }
+}
+
 /// An element whose attributes the runtime acts on when it hears the person
 /// itself: what a control validates by, what a link follows, what takes a stop
 /// in the focus order or opens a dialog.
