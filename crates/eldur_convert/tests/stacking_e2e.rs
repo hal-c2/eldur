@@ -90,7 +90,7 @@ TestCase {
     readonly property var painted: ["b", "c", "d", "f", "i", "j", "l", "m", "o", "p", "t", "u", "w", "vd", "src", "mv", "vs", "rm", "gone", "vr",
         "c1", "o1", "c2", "o2", "c3", "o3", "hv", "o4", "fc", "o5", "c6", "o6", "c7", "o7", "e8", "o8", "c9", "o9",
         "k1", "v1", "k2", "v2", "k3", "v3", "k4", "v4", "k5", "m5", "v5",
-        "c1", "v1", "c2", "v2", "c3", "v3", "c4", "e4", "v4", "e5", "v5", "a6", "a7", "h8", "a8", "h9", "h10",
+        "c1", "v1", "c2", "v2", "c3", "v3", "c4", "e4", "v4", "e5", "v5", "a6", "a7", "h8", "a8", "h9", "h10", "c11", "v11", "c12", "v12", "c13", "v13",
         "p1", "p2", "r2", "a2",
         "b3", "b4", "da", "db", "k6", "n6", "v6"]
 
@@ -423,6 +423,7 @@ div { height: 40px; width: 200px }
 #h9 { position: relative; left: 20px; right: 60px }
 @keyframes nudge { from { left: 0 } to { left: 40px } }
 #h10 { position: relative; right: 20px; animation: nudge 10s linear -5s paused }
+.lv0 { z-index: 0 }
 </style></head><body>
 <div id=t1 class=tf><div id=c1 class=in></div></div><div id=v1 class=over></div>
 <div class=gap></div>
@@ -443,12 +444,27 @@ div { height: 40px; width: 200px }
 <div dir=rtl><div id=h9></div></div>
 <div class=gap></div>
 <div id=h10></div>
+<div class=gap></div>
+<div id=p11 class=rel><div id=c11 class=in></div></div><div id=v11 class=over></div>
+<div class=gap></div>
+<div id=p12 class="rel lv0"><div id=c12 class="in up"></div></div><div id=v12 class=over></div>
+<div class=gap></div>
+<div id=a13><div id=c13 class="in up"></div></div><div id=v13 class=over></div>
 <script>
-var named = ['t1','c1','v1','t2','c2','v2','t3','c3','v3','p4','c4','e4','v4','p5','e5','f5','v5','h6','a6','v6','o7','h7','a7','v7','h8','a8','h9','h10'].map(function (id) { return document.getElementById(id); });
+var named = ['t1','c1','v1','t2','c2','v2','t3','c3','v3','p4','c4','e4','v4','p5','e5','f5','v5','h6','a6','v6','o7','h7','a7','v7','h8','a8','h9','h10','p11','c11','v11','p12','c12','v12','a13','c13','v13'].map(function (id) { return document.getElementById(id); });
 // A box raised inside a transformed box at `auto`, which keeps it in; a
 // box that lifted its block hidden.
 document.getElementById('c1').style.zIndex = '10';
 document.getElementById('c4').style.display = 'none';
+// A level set under a hidden block, which then shows; a block's level
+// taken away, which leaves it at `auto`; and a raised block hidden and
+// shown again.
+document.getElementById('p11').style.display = 'none';
+document.getElementById('c11').style.zIndex = '10';
+document.getElementById('p11').style.display = '';
+document.getElementById('p12').classList.remove('lv0');
+document.getElementById('c13').style.display = 'none';
+document.getElementById('c13').style.display = '';
 </script></body></html>"#;
 
 /// Chromium's fronts.
@@ -472,12 +488,16 @@ const CONTEXTS_TEST: &str = r##"
         compare(front(page, 10, 1020), "", "an animated left wins over right")
         compare(front(page, 30, 1020), "h10")
         compare(front(page, 210, 1020), "h10")
+        compare(front(page, 100, 1110), "c11", "a level set under a hidden block")
+        compare(front(page, 100, 1230), "c12", "its block's level taken away")
+        compare(front(page, 100, 1350), "c13", "a raised block hidden and shown")
     }
 }
 }
 "##;
 
-/// With no script, Chromium's fronts are the same but `c4` on row four.
+/// With no script, Chromium's fronts are the same but `c4`, `v11` and
+/// `v12` on rows four, eleven and twelve.
 const CONTEXTS_UNSCRIPTED: &str = r##"
     function test_levels_follow_what_the_boxes_hold() {
         compare(front(page, 100, 30), "v1")
@@ -498,6 +518,9 @@ const CONTEXTS_UNSCRIPTED: &str = r##"
         compare(front(page, 10, 1020), "", "an animated left wins over right")
         compare(front(page, 30, 1020), "h10")
         compare(front(page, 210, 1020), "h10")
+        compare(front(page, 100, 1110), "v11")
+        compare(front(page, 100, 1230), "v12")
+        compare(front(page, 100, 1350), "c13")
     }
 }
 }
