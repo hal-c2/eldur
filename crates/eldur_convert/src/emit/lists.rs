@@ -341,7 +341,8 @@ impl Emitter<'_, '_> {
                     .unwrap_or(1)
                     .max(1)
             },
-            |z| z.max(0) + 1,
+            // A level at the top of the range stays there rather than wrap.
+            |z| z.max(0).saturating_add(1),
         );
         if node.is_some() && hoist.is_none() {
             self.above_flow = Some(self.above_flow.map_or(lift, |n| n.max(lift)));
