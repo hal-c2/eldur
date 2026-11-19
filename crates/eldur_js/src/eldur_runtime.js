@@ -7361,6 +7361,8 @@ function _inFocusWhileHeard(raw) {
     var told = before && _in.untold.indexOf(before) < 0 ? before : null;
     _inUntoldDrop(raw);
     _inFocusTake(raw);
+    // The move this one overrides: Qt reports its two ends until it is told.
+    _in.overridden = _in.change ? [_in.change.was, _in.change.now] : null;
     var moves = _in.focusMoves;
     if (_inIsField(raw)) {
         _meta(raw).changeBase = String(raw.text);
@@ -7372,6 +7374,7 @@ function _inFocusWhileHeard(raw) {
         }
         if (_in.focusPending === raw) {
             _in.focusPending = null;
+            _in.overridden = null;
         }
         if (_in.focused !== raw) {
             return;
@@ -16656,7 +16659,7 @@ function _inInstall() {
         page: _root, overlay: null, held: 0, last: null, pressed: false, hoverP: null, hoverM: null,
         downTarget: {}, noMouse: false, count: 0, countButton: -1, countAt: null, countTime: 0,
         capture: null, captureNext: null, defaults: [], scrolled: null, restoreFocus: null,
-        restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusMoves: 0, focusShift: false, focusPending: null, untold: [], shiftTo: null,
+        restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusMoves: 0, focusShift: false, focusPending: null, untold: [], shiftTo: null, change: null, overridden: null, away: false, seenActive: false,
         spaceDown: null, typing: null, popovers: [], radioLast: {}, focusProbe: null
     };
     _inLayers.set(_root, _in);
@@ -16684,10 +16687,18 @@ function _inInstall() {
         }
     });
     overlay.wheeled.connect(_inOnPage(_root, _inWheel));
-    var probe = Qt.createQmlObject("import QtQuick; Item { readonly property Item held: Window.activeFocusItem; readonly property bool active: Window.active }",
+    var probe = Qt.createQmlObject("import QtQuick; Item { readonly property Item held: Window.activeFocusItem; readonly property bool active: Window.active; readonly property var window: Window.window }",
         home, "eldur_input_focus");
     _in.focusProbe = probe;
     probe.heldChanged.connect(_inFocusChanged);
+    // A window that has never been active (a page before it shows) is not one
+    // that lost the focus: `document.hasFocus()` asks only after the first.
+    _in.seenActive = probe.active;
+    probe.activeChanged.connect(function() {
+        if (_in && probe.active) {
+            _in.seenActive = true;
+        }
+    });
     _in.focused = null;
     // `autofocus` asked before the layer was there to hear.
     Qt.callLater(_inFocusChanged);
@@ -17590,6 +17601,11 @@ function _inKeyed(qtEv, down) {
         return seen[id];
     }
     delete seen[(down ? "u" : "d") + qtEv.key];
+    // A release that came before has its click still to fire (`_inLater`): a
+    // browser fires it with the release, so a key after it hears it fired.
+    if (_in.later.length) {
+        _inFlushLater();
+    }
     if (!_in.keysLater) {
         _in.keysLater = true;
         Qt.callLater(_inKeysDone);
@@ -17997,7 +18013,11 @@ function _inPlaceBefore(a, b) {
 }
 
 function _inWindowActive() {
-    return Boolean(_in.focusProbe && _in.focusProbe.active);
+    var probe = _in.focusProbe;
+    // The window's own, not the probe's binding to it: that one hears of a
+    // change only after the focus has already moved with it.
+    var win = probe ? probe.window : null;
+    return Boolean(win ? win.active : probe && probe.active);
 }
 
 // From what has focus but is no stop, or where a press or a fragment left off:
@@ -18098,16 +18118,42 @@ function _inFocusChanged() {
         return;
     }
     var now = _inFocusElement();
+    var active = _inWindowActive();
+    // Back in a window that went away: Qt gives the focus back to what had it,
+    // which hears of it again, from nowhere.
+    var back = _in.away && active;
+    if (back) {
+        _in.away = false;
+        if (now === _in.focused && now) {
+            _inFocusEvents(now, null, "focus", "focusin");
+            return;
+        }
+    }
     // In a popup of its own (a select's list): the select still has the focus.
     if (now === undefined || now === _in.focused) {
         return;
     }
-    // A listener moved the page's focus and Qt has not been told yet: what Qt
-    // holds meanwhile is the move it overrides, not a new one.
-    if (_in.focusPending && _in.focusPending === _in.focused) {
+    // A listener moved the page's focus and Qt has not been told yet: Qt's
+    // report of the move it overrides, from where it left or to where it went,
+    // is not a new one. Any other is.
+    if (_in.focusPending && _in.focusPending === _in.focused && now && active
+        && _in.overridden && _in.overridden.indexOf(now) >= 0) {
         return;
     }
+    _in.focusPending = null;
+    _in.overridden = null;
     var was = _in.focused;
+    // The window went away: what has the focus keeps it, and hears it is
+    // blurred, as the page no longer has the focus.
+    if (!now && was && !active) {
+        _in.away = true;
+        _inFocusEvents(was, null, "blur", "focusout");
+        return;
+    }
+    // Qt gave the focus back elsewhere: what had it heard of its blur already.
+    if (back) {
+        was = null;
+    }
     // Qt takes it at once from what a script just disabled; a page hears at its next update.
     if (!now && was && !was.__eldurInline && !was.enabled && !_in.focusSettling) {
         _in.focusSettling = true;
@@ -18132,6 +18178,7 @@ function _inFocusChanged() {
     }
     _in.untold = now ? [now] : [];
     _in.shiftTo = null;
+    _in.change = { was: was, now: now };
     _in.focusShift = true;
     if (was) {
         if (_inIsField(was)) {
@@ -18155,6 +18202,7 @@ function _inFocusChanged() {
         }
     }
     _in.focusShift = false;
+    _in.change = null;
     _in.untold = [];
     _in.shiftTo = null;
     // A blur listener focused something else: the focus is there now. One that
@@ -20527,6 +20575,11 @@ var document = {
     get hidden() { return false; },
     get visibilityState() { return "visible"; },
     hasFocus: function() {
+        // Another window of the app being active leaves the app active: the
+        // page's own window is what has gone.
+        if (_in && _in.seenActive && !_inWindowActive()) {
+            return false;
+        }
         return Qt.application.state === Qt.ApplicationActive;
     },
     get activeElement() {
