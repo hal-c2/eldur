@@ -286,7 +286,7 @@ fn conditions(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Vec<Cond> {
                 .collect()
         })
         .unwrap_or_default();
-    for v in cx.styles.variants.iter() {
+    for v in &cx.styles.variants {
         let control = classify(doc, v.node);
         let element = doc.element(v.node);
         let has = |name: &str| element.is_some_and(|e| e.has_attr(name));
@@ -1387,7 +1387,6 @@ impl Dynamic<'_, '_> {
     }
 }
 
-/// The key of a leaf: whether each condition of `order` holds.
 /// The worlds one flipped condition apart.
 struct Lattice {
     /// For each world, the conditions that flipped too make another world,
@@ -1421,6 +1420,7 @@ impl Lattice {
     }
 }
 
+/// The key of a leaf: whether each condition of `order` holds.
 fn holds_key(order: &[u16], mask: usize) -> Vec<u16> {
     order
         .iter()
