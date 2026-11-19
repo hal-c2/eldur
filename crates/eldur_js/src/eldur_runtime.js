@@ -524,11 +524,178 @@ var _explicitBaseUrl = "";
 var _explicitDocumentUrl = "";
 
 // Per-item sidecar storage keyed by raw QML QObject (or synthetic node).
-// QML QObjects reject ad-hoc JS property assignments, whereas ES6 Map keys
-// preserve QObject identity across direct id references and tree walks.
-var _itemMeta = new Map();
+// QML QObjects reject ad-hoc JS property assignments, so the records live in a
+// table beside them.
+var _itemMeta = new _ItemTable();
 var _warnedMissingTemplates = {};
 var _componentProbeCache = new Map();
+
+// A Map keyed by objects. QV4's Map finds a key by walking every key it holds,
+// so a record per item made each lookup cost as much as the page had items and
+// a page that appends N items quadratic. A QObject's address names it in a
+// plain object's properties, which are hashed; anything without one (a
+// synthetic node, a QObject Qt has destroyed) goes in a Map.
+function _ItemTable() {
+    this._byAddress = Object.create(null);
+    this._addressed = 0;
+    this._others = new Map();
+    // Reads come in runs on one item, and printing its address costs more than
+    // comparing it with the last one asked about.
+    this._lastKey = null;
+    this._lastSlot = null;
+}
+
+// `String(qobject)` is `Type(0x55…)`, or `Type(0x55…, "name")` with a name.
+// Null for a QObject Qt has destroyed, which throws when printed; "" for
+// anything else without an address.
+function _itemAddress(key) {
+    if (!key || typeof key !== "object" || Array.isArray(key)) {
+        return "";
+    }
+    var text;
+    try {
+        text = String(key);
+    } catch (e) {
+        return null;
+    }
+    var at = text.indexOf("(0x");
+    if (at === -1) {
+        return "";
+    }
+    var end = at + 3;
+    while (end < text.length && text.charCodeAt(end) !== 44 && text.charCodeAt(end) !== 41) {
+        ++end;
+    }
+    return text.substring(at + 1, end);
+}
+
+_ItemTable.prototype._slot = function(key) {
+    if (key === this._lastKey && key) {
+        return this._lastSlot;
+    }
+    var address = _itemAddress(key);
+    if (!address) {
+        return null;
+    }
+    var slot = this._byAddress[address];
+    // Qt may reuse a destroyed QObject's address; its old record is not this one's.
+    if (!slot || slot.key !== key) {
+        return null;
+    }
+    this._lastKey = key;
+    this._lastSlot = slot;
+    return slot;
+};
+
+// A QObject Qt has destroyed throws when printed, and every destroyed one is
+// `===` every other, as a Map key too; the first record of one found under an
+// address moves to the Map, which then answers for them all, as it did when
+// it held every record.
+_ItemTable.prototype._adoptDestroyed = function(key) {
+    if (_itemAddress(key) !== null || this._others.has(key)) {
+        return;
+    }
+    var addresses = Object.keys(this._byAddress);
+    for (var i = 0; i < addresses.length; ++i) {
+        var slot = this._byAddress[addresses[i]];
+        if (slot.key === key) {
+            delete this._byAddress[addresses[i]];
+            --this._addressed;
+            this._others.set(key, slot.value);
+            return;
+        }
+    }
+};
+
+_ItemTable.prototype.get = function(key) {
+    var slot = this._slot(key);
+    if (slot) {
+        return slot.value;
+    }
+    this._adoptDestroyed(key);
+    return this._others.get(key);
+};
+
+_ItemTable.prototype.has = function(key) {
+    if (this._slot(key) !== null) {
+        return true;
+    }
+    this._adoptDestroyed(key);
+    return this._others.has(key);
+};
+
+_ItemTable.prototype.set = function(key, value) {
+    var address = _itemAddress(key);
+    if (!address) {
+        this._others.set(key, value);
+        return this;
+    }
+    if (!this._byAddress[address]) {
+        ++this._addressed;
+    }
+    this._lastKey = null;
+    this._byAddress[address] = { key: key, value: value };
+    return this;
+};
+
+_ItemTable.prototype.delete = function(key) {
+    this._lastKey = null;
+    var address = _itemAddress(key);
+    var slot = address ? this._byAddress[address] : null;
+    if (slot && slot.key === key) {
+        delete this._byAddress[address];
+        --this._addressed;
+        return true;
+    }
+    if (address === null) {
+        this._adoptDestroyed(key);
+    }
+    return this._others.delete(key);
+};
+
+// Drops each record `drop(value, key)` picks, by where it is kept rather than
+// by its key, which a destroyed QObject no longer names.
+_ItemTable.prototype.deleteWhere = function(drop) {
+    this._lastKey = null;
+    var addresses = Object.keys(this._byAddress);
+    for (var i = 0; i < addresses.length; ++i) {
+        var slot = this._byAddress[addresses[i]];
+        if (drop(slot.value, slot.key)) {
+            delete this._byAddress[addresses[i]];
+            --this._addressed;
+        }
+    }
+    var others = this._others;
+    var dropped = [];
+    others.forEach(function(value, key) {
+        if (drop(value, key)) {
+            dropped.push(key);
+        }
+    });
+    for (var n = 0; n < dropped.length; ++n) {
+        others.delete(dropped[n]);
+    }
+};
+
+// Visits a snapshot, so `fn` may delete what it is shown.
+_ItemTable.prototype.forEach = function(fn) {
+    var addresses = Object.keys(this._byAddress);
+    for (var i = 0; i < addresses.length; ++i) {
+        var slot = this._byAddress[addresses[i]];
+        if (slot) {
+            fn(slot.value, slot.key);
+        }
+    }
+    var others = [];
+    this._others.forEach(function(value, key) { others.push([key, value]); });
+    for (var n = 0; n < others.length; ++n) {
+        fn(others[n][1], others[n][0]);
+    }
+};
+
+Object.defineProperty(_ItemTable.prototype, "size", {
+    get: function() { return this._addressed + this._others.size; }
+});
 
 function init(rootItem, baseUrl, documentUrl) {
     // A page's start hooks may each call init; only a new root is a new page,
@@ -615,6 +782,9 @@ function init(rootItem, baseUrl, documentUrl) {
             if (item.eldurTag === "details") {
                 _setUpDetails(item);
             }
+            if (typeof item.eldurIndex === "number" || typeof item.eldurTypeIndex === "number") {
+                _numberedItems = true;
+            }
             return false;
         });
         _tableSetUp();
@@ -688,6 +858,7 @@ function _resetPageState() {
     _pseudoBoxItems = null;
     _vKeyed = {};
     _gDirty = false;
+    _numberedItems = false;
     _gLive = [];
     _gLiveTemplates = [];
     for (var metricsKey in _gMetricsCache) {
@@ -2213,10 +2384,8 @@ function _meta(item) {
 // records as after the last sweep.
 var _itemMetaSweepAt = 256;
 function _sweepItemMeta() {
-    _itemMeta.forEach(function(entry, item) {
-        if (entry.item && item.parent === undefined) {
-            _itemMeta.delete(item);
-        }
+    _itemMeta.deleteWhere(function(entry, item) {
+        return entry.item && item.parent === undefined;
     });
     _itemMetaSweepAt = Math.max(256, 2 * _itemMeta.size);
 }
@@ -4508,8 +4677,14 @@ function _reflowFilled(container, force) {
     }
 }
 
+// Only the converter declares `eldurIndex` and its kin, on elements that are
+// there when the page loads; what a script makes never has them. A page whose
+// load had none has nothing to renumber, so its appends skip a walk of all
+// their new siblings.
+var _numberedItems = false;
+
 function _renumber(container) {
-    if (!container || typeof container !== "object" || !container.children) {
+    if (!_numberedItems || !container || typeof container !== "object" || !container.children) {
         return;
     }
     var kids = _rawElementChildren(container).filter(function(kid) {
@@ -5429,6 +5604,11 @@ function _wsLeave(raw) {
 // What is inserted goes after the whitespace that was at that place.
 function _wsEnter(count, ref, container) {
     var owner = _meta(container).hostBox || container;
+    // Nothing to move is the common case; finding the first of the inserted
+    // among all of `owner`'s children would make each append cost them all.
+    if ((ref ? _wsBefore(ref) : _wsEnd(owner)).length === 0) {
+        return;
+    }
     // Looked up, as insertion can swap an element for its template's form.
     var kids = _rawElementChildren(owner);
     var first = kids[(ref ? kids.indexOf(ref) : kids.length) - count];
@@ -12577,7 +12757,27 @@ var _vBoxProps = ["margin-left", "margin-right", "padding-top", "padding-right",
 var _vDefault = { color: "rgb(0, 0, 0)", weight: 400, italic: false, underline: false, strike: false, size: 16, family: "", bg: "rgba(0, 0, 0, 0)", display: "inline", visible: true };
 
 function _vHasRules() {
-    return Boolean(_root) && _root.eldurInlineRules !== undefined;
+    return _rootHas("eldurInlineRules");
+}
+
+// Whether the root declares one of the converter's rule strings. Asked on
+// every write; reading the property copies the whole string, tens of
+// kilobytes, out of QML each time.
+var _rootHasFor = null;
+var _rootHasKnown = {};
+
+function _rootHas(name) {
+    if (!_root) {
+        return false;
+    }
+    if (_rootHasFor !== _root) {
+        _rootHasFor = _root;
+        _rootHasKnown = {};
+    }
+    if (_rootHasKnown[name] === undefined) {
+        _rootHasKnown[name] = typeof _root[name] === "string";
+    }
+    return _rootHasKnown[name];
 }
 
 var _VProto = {
@@ -19992,7 +20192,7 @@ function _gActive() {
 // A page all of whose elements have templates still holds the rules when it
 // has margins to work out around created elements or styles to read back.
 function _gHasCascade() {
-    return _gActive() || (Boolean(_root) && typeof _root.eldurCascadeRules === "string");
+    return _gActive() || _rootHas("eldurCascadeRules");
 }
 
 function _gRules() {

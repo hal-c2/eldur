@@ -5240,3 +5240,79 @@ Item {
         out.page_js
     );
 }
+
+/// The runtime keeps a record per item. Qt's Map looks a key up by walking
+/// every key, so the records sit in a table found by each item's address; this
+/// checks that the table answers as a Map did, for live items and for one Qt
+/// has destroyed.
+#[test]
+fn qml6_item_records_follow_items_through_renames_and_destruction() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 item record test: qml6 not on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("item_records");
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+    dir.write_file("eldur_runtime.js", RUNTIME_JS);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import "eldur_runtime.js" as R
+
+Item {
+    id: root
+    Component { id: made; Item {} }
+    // A `var` property naming a QObject reads null once it is destroyed; one
+    // held in an array is still the destroyed object.
+    property var held: []
+    property var b: null
+    property var plain: ({})
+    property var seen: []
+
+    Timer {
+        id: later
+        interval: 50
+        onTriggered: {
+            var table = R._itemMeta;
+            // Every destroyed QObject is `===` every other, so a Map found
+            // a's record for any of them; the table does too.
+            var a = root.held[0];
+            seen.push(table.has(a) && table.get(a).mark === "a");
+            var before = table.size;
+            table.deleteWhere(function(value) { return value.mark === "a"; });
+            seen.push(before - table.size);
+            seen.push(table.get(root.b).mark);
+            console.log("ELDUR_OK_ITEM_RECORDS", seen.join("|"));
+            Qt.quit();
+        }
+    }
+
+    Component.onCompleted: {
+        var table = R._itemMeta;
+        var a = made.createObject(root);
+        held.push(a);
+        b = made.createObject(root);
+        table.set(a, { mark: "a" });
+        table.set(b, { mark: "b" });
+        table.set(plain, { mark: "plain" });
+        a.objectName = "renamed";
+        seen.push(table.get(a).mark + table.get(b).mark + table.get(plain).mark);
+        seen.push(table.has(made.createObject(root)));
+        seen.push(table.size);
+        table.delete(b);
+        seen.push(table.has(b));
+        table.set(b, { mark: "b2" });
+        a.destroy();
+        later.start();
+    }
+}
+"#,
+    );
+
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
+    assert!(
+        output.contains("ELDUR_OK_ITEM_RECORDS abplain|false|3|false|true|1|b2"),
+        "unexpected qml6 item record output:\n{output}"
+    );
+}

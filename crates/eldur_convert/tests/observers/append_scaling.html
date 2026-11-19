@@ -1,0 +1,21 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>append scaling</title></head><body>
+<p id="t">rows</p>
+<script>
+// hal-c2/eldur#23: 300 appends to body took 8 s because each append walked
+// everything already there. The first 300 of 600 appends are timed on their
+// own: if each append costs the same, all 600 take twice as long as the first
+// 300; if each walks its siblings, four times as long. A browser is done in a
+// few milliseconds, too fast for the ratio to mean anything.
+function L(k){console.log("OB "+k)}
+function row(i) { var d = document.createElement("div"); d.textContent = "row " + i; document.body.appendChild(d); }
+var t0 = Date.now(), t300 = 0;
+for (var i = 0; i < 600; ++i) {
+  row(i);
+  if (i === 299) { t300 = Date.now() - t0; }
+}
+var t600 = Date.now() - t0;
+console.log("append scaling: 300 in " + t300 + " ms, 600 in " + t600 + " ms");
+L(t600 < 50 || t600 < 3 * t300 ? "appends grow linearly" : "appends grow " + (t600 / t300).toFixed(1) + "x");
+L("rows " + document.querySelectorAll("div").length);
+var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+</script></body></html>
