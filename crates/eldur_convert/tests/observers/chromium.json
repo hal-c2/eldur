@@ -69,6 +69,7 @@
   "OB mo childList:list:+f1|f2:-:a:null",
   "OB frag childList:frag:+:-f1|f2:null:null",
   "OB many 1200 true 1199",
+  "OB begun 1200 1199",
   "OB done"
  ],
  "mutation_moves": [

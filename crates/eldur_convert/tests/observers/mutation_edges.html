@@ -38,8 +38,27 @@ setTimeout(function() {
     }
     setTimeout(function() {
       L("many " + got + " " + (calls > 1000) + " " + sink.getAttribute("data-n"));
-      L("done");
-      var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+      // Nor are they when a callback began them: the loop goes on long after
+      // that callback's notification.
+      var s2 = document.createElement("p"), t2 = document.createElement("p"), got2 = 0;
+      document.body.appendChild(s2); document.body.appendChild(t2);
+      var starter = new MutationObserver(function() {
+        starter.disconnect();
+        (async function() {
+          for (var j = 0; j < 1200; ++j) {
+            await null;
+            t2.setAttribute("x", j);
+          }
+          setTimeout(function() {
+            L("begun " + got2 + " " + t2.getAttribute("x"));
+            L("done");
+            var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+          }, 0);
+        })();
+      });
+      starter.observe(s2, { attributes: true });
+      new MutationObserver(function(rs) { got2 += rs.length; }).observe(t2, { attributes: true });
+      s2.setAttribute("go", "");
     }, 0);
   })();
 }, 0);

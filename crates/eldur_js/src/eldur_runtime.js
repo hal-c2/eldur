@@ -7827,14 +7827,12 @@ var customElements = {
 // are: what it does underneath (`setAttribute("class")` setting the class
 // name) is that operation's record, not one of its own.
 var _MO_ROUNDS = 1000;
-// The cause a MutationObserver callback, and every job it queues, runs under.
-var _MO_CAUSE = {};
 var _mo = _moFresh();
 
 function _moFresh() {
     return {
         regs: new Map(), pending: [], queued: false, depth: 0, nextId: 0,
-        chained: false, rounds: 0, stopped: false
+        cause: null, chained: false, rounds: 0, stopped: false
     };
 }
 
@@ -8005,8 +8003,9 @@ function _moDeliver(hits, raw, type, name, oldValue, added, removed, prev, next)
     if (!_mo.queued) {
         _mo.queued = true;
         // Whether this notification is one the last one's callbacks made,
-        // directly or through promises they began.
-        _mo.chained = _micro.cause === _MO_CAUSE;
+        // directly or through promises they began. A chain an older callback
+        // began is not: it goes on outside the loop the guard is for.
+        _mo.chained = _mo.cause !== null && _micro.cause === _mo.cause;
         _microEnqueue(_moNotify);
     }
     return queued;
@@ -8035,7 +8034,10 @@ function _moNotify() {
         return;
     }
     var cause = _micro.cause;
-    _micro.cause = _MO_CAUSE;
+    // Each notification's callbacks, and every job they queue, run under a
+    // cause of its own.
+    _mo.cause = {};
+    _micro.cause = _mo.cause;
     try {
         for (var i = 0; i < list.length; ++i) {
             var records = list[i].takeRecords();
