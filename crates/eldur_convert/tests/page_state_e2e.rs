@@ -800,6 +800,7 @@ const UNNUMBERED: &str = r#"<!doctype html><html><head><meta charset="utf-8"></h
 const NUMBERED_TEST: &str = r##"
 import QtQuick
 import QtTest
+import "eldur_runtime.js" as R
 
 Item {
     id: host
@@ -820,6 +821,11 @@ TestCase {
     function numbers(item, out) {
         if (typeof item.eldurIndex === "number") {
             out.push(item.eldurIndex + "/" + item.eldurCount)
+            // A converted item's record is found by its address, not in the
+            // linear Map that is only for what has none.
+            if (R._itemMeta._slot(item) === null) {
+                out.push("unaddressed")
+            }
         }
         for (let i = 0; i < item.children.length; ++i) {
             numbers(item.children[i], out)

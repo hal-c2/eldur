@@ -5300,6 +5300,10 @@ Item {
         seen.push(table.get(a).mark + table.get(b).mark + table.get(plain).mark);
         seen.push(table.has(made.createObject(root)));
         seen.push(table.size);
+        // Items take the hashed path; were Qt to call a QObject something else
+        // to `Object.prototype.toString`, every item would fall back to the
+        // linear Map, still right but slow, and this would read 0/3.
+        seen.push(table._addressed + "/" + table._others.size);
         table.delete(b);
         seen.push(table.has(b));
         // Script objects that print like a QObject are still two keys.
@@ -5320,7 +5324,7 @@ Item {
 
     let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
     assert!(
-        output.contains("ELDUR_OK_ITEM_RECORDS abplain|false|3|false|e1e2|true|1|b2"),
+        output.contains("ELDUR_OK_ITEM_RECORDS abplain|false|3|2/1|false|e1e2|true|1|b2"),
         "unexpected qml6 item record output:\n{output}"
     );
 }
