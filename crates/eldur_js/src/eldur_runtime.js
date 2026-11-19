@@ -14102,6 +14102,7 @@ var _vRendering = false;
 
 function _vRender(model) {
     var text = model.text;
+    _inInlineFocusLook(model);
     if (model.hoisted) {
         _V_BLOCK_LOOK.forEach(function(field) {
             if (field.paint) {
@@ -17213,13 +17214,21 @@ function _inTabOrder() {
 function _inLinksInRun(item) {
     var model = _vModelOf(item);
     var links = [];
-    if (model && !model.select) {
-        _vEachElement(model.kids, function(v) {
-            if (_inIsLink(v)) {
+    // What a later run continues of an element an earlier one started hangs
+    // under that element, but is the later run's (`_vBuild`): the run keeps a
+    // placeholder (`live`) where it stands among its own nodes.
+    (function walk(kids) {
+        kids.forEach(function(k) {
+            var v = k.live || k;
+            if (!v.kids) {
+                return;
+            }
+            if (v.model === model && _inIsLink(v)) {
                 links.push(v);
             }
+            walk(v.kids);
         });
-    }
+    })(model && !model.select ? model.kids : []);
     return links;
 }
 
@@ -17245,7 +17254,11 @@ function _inTabPlace(order, node) {
     if (!node || !node.__eldurInline) {
         return [order.indexOf(node), -1];
     }
-    var holder = _meta(node).carrier || _inInlineHolder(node);
+    // An icon that no longer carries the link, or is off the page, is no
+    // place of its.
+    var carrier = _meta(node).carrier;
+    var holder = carrier && _inCarriedLink(carrier) === node && order.indexOf(carrier) >= 0
+        ? carrier : _inInlineHolder(node);
     return [order.indexOf(holder), _inLinksInRun(holder).indexOf(node)];
 }
 
@@ -17423,6 +17436,22 @@ function _inWatchHidden(raw) {
     };
     raw.visibleChanged.connect(look);
     raw.enabledChanged.connect(look);
+}
+
+// A focused link in a line that a change to its run's nodes leaves with no
+// box (`display: none`, `visibility: hidden`) loses the focus, as a hidden
+// item does (`_inWatchHidden`); its `Text` keeps Qt's focus for the rest.
+function _inInlineFocusLook(model) {
+    var raw = _in ? _in.inlineFocus : null;
+    if (!raw || _vPieces(raw).indexOf(model) < 0 && raw.model !== model) {
+        return;
+    }
+    Qt.callLater(function() {
+        if (_in && _in.inlineFocus === raw && _in.focused === raw && !_inInlineShown(raw)) {
+            _in.inlineFocus = null;
+            (_root.contentItem || _root).forceActiveFocus();
+        }
+    });
 }
 
 function _inFocusEvents(raw, other, one, two) {
