@@ -225,7 +225,8 @@ pub(crate) struct AstLowerer<'a, 'b> {
     method_fn_spans: HashSet<(u32, u32)>,
     pub symbol_renames: HashMap<SymbolId, String>,
     /// `import("x")` specifiers naming a module this page inlines, mapped to
-    /// the top-level function that returns that module's namespace.
+    /// the expression the call becomes: one resolving to that module's
+    /// namespace, loading it first when it is lazy.
     pub dynamic_imports: HashMap<String, String>,
 }
 
@@ -1713,11 +1714,10 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
         // promise is the page's own (`Eldur.Promise`), so `instanceof Promise`
         // holds.
         if it.options.is_none()
-            && let Expression::StringLiteral(spec) = &it.source
-            && let Some(namespace) = self.dynamic_imports.get(spec.value.as_str())
+            && let Some(spec) = crate::resolve::extract_string_literal(&it.source)
+            && let Some(call) = self.dynamic_imports.get(spec.as_str())
         {
-            self.editor
-                .replace(it.span, format!("Eldur.Promise.resolve({namespace}())"));
+            self.editor.replace(it.span, call.clone());
             return;
         }
         // Any other module would have to be fetched, and QML has no loader.

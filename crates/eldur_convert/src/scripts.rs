@@ -127,8 +127,52 @@ fn warn_of_what_has_no_counterpart(doc: &Document, analysis: &Analysis, diags: &
     }
 }
 
-/// Collects `<script>`s and `on*` attributes in document order and runs
-/// the analysis.
+/// Reads the modules the scripts import, and those they import in turn, as a
+/// browser fetches a module graph: each file once, resolved against the file
+/// that names it. Only literal path specifiers are followed; a bare one needs an
+/// import map, and a file that cannot be read is reported where it is imported.
+fn read_imported_modules(
+    inputs: &mut Vec<ScriptInput>,
+    files: &mut HashSet<String>,
+    url: &str,
+    resources: &mut dyn Resources,
+) {
+    let mut asked: HashSet<(String, String)> = HashSet::new();
+    let mut next = 0;
+    while next < inputs.len() {
+        let importer = &inputs[next];
+        next += 1;
+        let base = if files.contains(&importer.name) {
+            importer.name.clone()
+        } else {
+            url.to_owned()
+        };
+        for spec in eldur_js::module_requests(importer) {
+            if !eldur_js::is_path_specifier(&spec) || !asked.insert((base.clone(), spec.clone())) {
+                continue;
+            }
+            let Some(resource) = resources.read(&spec, &base) else {
+                continue;
+            };
+            if inputs
+                .iter()
+                .any(|i| i.kind.is_module() && i.name == resource.resolved)
+            {
+                continue;
+            }
+            files.insert(resource.resolved.clone());
+            inputs.push(ScriptInput {
+                source: String::from_utf8_lossy(&resource.bytes).into_owned(),
+                name: resource.resolved,
+                kind: ScriptKind::ImportedModule,
+                line_offset: 1,
+            });
+        }
+    }
+}
+
+/// Collects `<script>`s and `on*` attributes in document order, the modules
+/// they import, and runs the analysis.
 pub(crate) fn collect(
     doc: &Document,
     url: &str,
@@ -136,6 +180,9 @@ pub(crate) fn collect(
     diags: &mut Diagnostics,
 ) -> Scripts {
     let mut inputs = Vec::new();
+    // The scripts that are files, whose imports resolve beside them; the rest
+    // (inline scripts, handlers) resolve theirs against the page.
+    let mut files: HashSet<String> = HashSet::new();
     let mut keys = HashMap::new();
     let mut inline = 0;
     for node in doc.descendants(doc.root()) {
@@ -174,12 +221,15 @@ pub(crate) fn collect(
         };
         match element.attr("src") {
             Some(src) => match resources.read(src, url) {
-                Some(resource) => inputs.push(ScriptInput {
-                    source: String::from_utf8_lossy(&resource.bytes).into_owned(),
-                    name: resource.resolved,
-                    kind,
-                    line_offset: 1,
-                }),
+                Some(resource) => {
+                    files.insert(resource.resolved.clone());
+                    inputs.push(ScriptInput {
+                        source: String::from_utf8_lossy(&resource.bytes).into_owned(),
+                        name: resource.resolved,
+                        kind,
+                        line_offset: 1,
+                    });
+                }
                 None => diags.error(
                     "js",
                     line,
@@ -197,6 +247,8 @@ pub(crate) fn collect(
             }
         }
     }
+
+    read_imported_modules(&mut inputs, &mut files, url, resources);
 
     let mut analysis = eldur_js::analyze(&inputs);
     let ids: std::collections::BTreeSet<String> = doc
