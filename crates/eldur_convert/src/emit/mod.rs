@@ -1112,6 +1112,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 || self.cascade_rules
                 || self.by_path
                 || b.style.visibility == eldur_css::Visibility::Collapse
+                || self.collapsed.contains(&node)
             {
                 crate::metadata::declare_style(&mut e.obj, self.doc, node);
             }
