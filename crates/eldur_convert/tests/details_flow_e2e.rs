@@ -292,6 +292,91 @@ SUPPORT
 }
 "##;
 
+// #74: on a page whose made elements follow its rules (a `:root[data-theme]`
+// rule a script sets), a made `<summary>` still has its disclosure marker.
+// Chromium puts its text 16.94 px in from the paragraph under it.
+const MARKED_PAGE: &str = r##"<!doctype html>
+<style>
+:root { --fg: #c1c3c8; }
+:root[data-theme='light'] { --fg: #23262f; }
+body { color: var(--fg); font: 16px/18px sans-serif; }
+</style>
+<script>document.documentElement.dataset.theme = 'light';</script>
+<div id="host"></div>
+<button id="make">Make</button>
+<script>
+document.getElementById('make').addEventListener('click', () => {
+  document.getElementById('host').innerHTML =
+    '<details open><summary>Made summary</summary><p>Made inside</p></details>';
+});
+</script>
+"##;
+
+const MARKED_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 800
+    height: 600
+
+TestCase {
+    name: "DetailsMarked"
+    when: windowShown
+SUPPORT
+
+    function firstInk(page, image, text) {
+        const at = text.mapToItem(page, 0, 0)
+        const paper = image.pixel(image.width - 1, Math.round(at.y))
+        for (let x = 0; x < image.width; ++x) {
+            for (let y = Math.round(at.y); y < Math.round(at.y + text.height); ++y) {
+                const p = image.pixel(x, y)
+                if (Math.abs(p.r - paper.r) + Math.abs(p.g - paper.g) + Math.abs(p.b - paper.b) > 0.6)
+                    return x
+            }
+        }
+        return -1
+    }
+
+    function test_made_summary_has_its_marker() {
+        const page = load(Qt.createComponent("Main.qml"))
+        verify(page.eldurOpenElements === true, "the page does not style made elements")
+        const button = find(page, i => i.eldurTag === "button" && i.text === "Make")
+        verify(button !== null, "no Make")
+        mouseClick(button)
+        wait(100)
+        const summary = textOf(page, "Made summary")
+        const inside = textOf(page, "Made inside")
+        verify(summary !== null && inside !== null, "made lines")
+        let line = summary
+        let marker = null
+        while (line && line !== page && marker === null) {
+            marker = disclosure(line)
+            line = line.parent
+        }
+        verify(marker !== null, "Made summary has no marker")
+        verify(marker.open, "Made summary shows the closed marker")
+        const left = inside.mapToItem(page, 0, 0).x
+        const edge = marker.mapToItem(page, marker.width, 0).x - left
+        verify(Math.abs(edge - 16.94) <= 1, "the marker ends " + edge + " px in, Chromium's text starts at 16.94")
+        // Both lines start with "M": where their first ink is, without the
+        // marker, is where their text starts, give or take a pixel.
+        marker.visible = false
+        waitForRendering(page)
+        const image = grabImage(page)
+        marker.visible = true
+        const start = firstInk(page, image, summary) - firstInk(page, image, inside)
+        verify(Math.abs(start - 16.94) <= 1, "Made summary's text starts " + start + " px in, Chromium 16.94")
+        mouseClick(summary, summary.width / 2, summary.height / 2)
+        wait(100)
+        verify(!inside.visible, "Made inside shows once closed")
+        verify(!marker.open, "the marker stays open once closed")
+    }
+}
+}
+"##;
+
 // A script moving and taking out a `<details>`' children: each shows as
 // Chromium shows it, as its own `hidden` says and as the fold it is now in says.
 const CHANGE_PAGE: &str = r##"<!doctype html>
@@ -512,6 +597,11 @@ fn an_open_details_whose_last_block_a_rule_hides_brings_no_margin_of_it() {
 #[test]
 fn a_details_a_script_makes_open_is_an_open_disclosure() {
     run(MADE_PAGE, MADE_TEST, "eldur-details-made");
+}
+
+#[test]
+fn a_made_summary_on_a_page_that_styles_made_elements_has_its_marker() {
+    run(MARKED_PAGE, MARKED_TEST, "eldur-details-marked");
 }
 
 #[test]
