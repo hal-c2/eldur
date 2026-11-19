@@ -6592,6 +6592,37 @@ function _zPage(raw) {
         || typeof raw.z !== "number";
 }
 
+// Without the rules, the converter gave a box whose level a class or state
+// changes a binding over those. A level written over it stays live too: at
+// what the box holds now, which the kids' own bindings keep current.
+function _zLevelOf(x) {
+    var own = _zOwn(x);
+    if (own !== null) {
+        return own;
+    }
+    return _zOutOfFlow(x) ? _zOverlayAuto(x) : _zAuto(x, _zHold(x));
+}
+
+function _zSetLevel(x, value) {
+    if (_zStyled(x)) {
+        x.z = value;
+    } else {
+        x.z = Qt.binding(function() { return _zLevelOf(x); });
+    }
+}
+
+// The item that took `box` out to its stop's column stands at its lift.
+function _zSetHost(host, box, value) {
+    if (_zStyled(box)) {
+        host.z = value;
+    } else {
+        host.z = Qt.binding(function() {
+            var lift = _zLift(box);
+            return lift === null ? 0 : lift;
+        });
+    }
+}
+
 // A box's level changed, and with it how high it lifts the box it is in
 // (`before`, undefined when unknown). The converter raised each box that is
 // no stacking context to the level of what it holds; each such box up from
@@ -6601,7 +6632,7 @@ function _zRelevel(box, before) {
     var after = _zLift(box);
     var host = _zHost(box);
     if (host) {
-        host.z = after === null ? 0 : after;
+        _zSetHost(host, box, after === null ? 0 : after);
         return;
     }
     var x = _logicalParent(box);
@@ -6619,12 +6650,12 @@ function _zRelevel(box, before) {
             if (at === x.z) {
                 return;
             }
-            x.z = at;
+            _zSetLevel(x, at);
             before = undefined;
             after = _zLift(x);
             var took = _zHost(x);
             if (took) {
-                took.z = after === null ? 0 : after;
+                _zSetHost(took, x, after === null ? 0 : after);
                 return;
             }
             x = _logicalParent(x);
@@ -6651,7 +6682,7 @@ function _zRelevel(box, before) {
             return;
         }
         before = _zLift(x);
-        x.z = next;
+        _zSetLevel(x, next);
         after = _zLift(x);
         x = _logicalParent(x);
     }
@@ -6686,7 +6717,7 @@ function _zLeft(from) {
         if (_zOutOfFlow(x)) {
             var at = _zOverlayAuto(x);
             if (at !== x.z) {
-                x.z = at;
+                _zSetLevel(x, at);
                 _zRelevel(x, undefined);
             }
             continue;
@@ -6694,7 +6725,7 @@ function _zLeft(from) {
         var next = _zAuto(x, _zHold(x));
         if (next !== x.z) {
             var before = _zLift(x);
-            x.z = next;
+            _zSetLevel(x, next);
             _zRelevel(x, before);
         }
     }
