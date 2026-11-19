@@ -7303,6 +7303,9 @@ function focus(item) {
         _inFocusWhileHeard(raw);
         return;
     }
+    if (_inQtHeld(raw)) {
+        return;
+    }
     // A link in a line is not an item: its `Text` holds the focus for it, or
     // with no words of its own, the icon it carries.
     var holder = _in && raw.__eldurInline ? _inInlineHolder(raw) : null;
@@ -7361,8 +7364,9 @@ function _inFocusWhileHeard(raw) {
     var told = before && _in.untold.indexOf(before) < 0 ? before : null;
     _inUntoldDrop(raw);
     _inFocusTake(raw);
-    // The move this one overrides: Qt reports its two ends until it is told.
-    _in.overridden = _in.change ? [_in.change.was, _in.change.now] : null;
+    // What Qt holds for the move this one overrides. Until Qt is told, a
+    // report that finds Qt still on it brings nothing new from Qt.
+    _in.overridden = _in.change ? { held: _in.focusProbe.held } : null;
     var moves = _in.focusMoves;
     if (_inIsField(raw)) {
         _meta(raw).changeBase = String(raw.text);
@@ -7407,6 +7411,18 @@ function _inFocusWhileHeard(raw) {
     if (_in && _in.focused === raw && _in.focusMoves === moves) {
         _inFocusEvents(raw, told, "focusin");
     }
+}
+
+// A move to what Qt still holds while a listener's move is on its way to Qt:
+// Qt has no change to report, so the page hears this one now.
+function _inQtHeld(raw) {
+    if (!_in || !_in.focusPending || _in.focused === raw || !raw.activeFocus || _in.focusShift) {
+        return false;
+    }
+    _in.focusPending = null;
+    _in.overridden = null;
+    _inFocusChanged();
+    return true;
 }
 
 // The page's focus goes to `raw` within a change, and Qt's after it.
@@ -16693,10 +16709,12 @@ function _inInstall() {
     probe.heldChanged.connect(_inFocusChanged);
     // A window that has never been active (a page before it shows) is not one
     // that lost the focus: `document.hasFocus()` asks only after the first.
-    _in.seenActive = probe.active;
+    // The layer this probe is for, which a later page's `_in` is not.
+    var layer = _in;
+    layer.seenActive = probe.active;
     probe.activeChanged.connect(function() {
-        if (_in && probe.active) {
-            _in.seenActive = true;
+        if (probe.active) {
+            layer.seenActive = true;
         }
     });
     _in.focused = null;
@@ -17102,6 +17120,7 @@ function _inFocusOnPress(target) {
         }
         if (typeof at.clicked === "function" || typeof at.cursorPosition === "number"
             || at.activeFocusOnTab === true) {
+            _inQtHeld(at);
             return;
         }
         if (getAttribute(at, "tabindex") !== null || _inIsLink(at) || _nodeTag(at) === "summary" || _nodeTag(at) === "dialog") {
@@ -17604,7 +17623,14 @@ function _inKeyed(qtEv, down) {
     // A release that came before has its click still to fire (`_inLater`): a
     // browser fires it with the release, so a key after it hears it fired.
     if (_in.later.length) {
+        var layer = _in;
+        var gen = _docGen;
         _inFlushLater();
+        // A click listener that made another page ended the key.
+        if (_in !== layer || _docGen !== gen) {
+            qtEv.accepted = true;
+            return true;
+        }
     }
     if (!_in.keysLater) {
         _in.keysLater = true;
@@ -18092,6 +18118,11 @@ function _inTabStep(back) {
 
 function _inFocusElement() {
     var item = _in.focusProbe.held;
+    // The window went away: a link in a line keeps what holds its focus for
+    // it, which Qt gives the focus back to.
+    if (!item && !_inWindowActive()) {
+        return null;
+    }
     var body = _vBody();
     if (_in.inlineFocus && item === _inInlineHolder(_in.inlineFocus)) {
         return _in.inlineFocus;
@@ -18133,11 +18164,11 @@ function _inFocusChanged() {
     if (now === undefined || now === _in.focused) {
         return;
     }
-    // A listener moved the page's focus and Qt has not been told yet: Qt's
-    // report of the move it overrides, from where it left or to where it went,
-    // is not a new one. Any other is.
-    if (_in.focusPending && _in.focusPending === _in.focused && now && active
-        && _in.overridden && _in.overridden.indexOf(now) >= 0) {
+    // A listener moved the page's focus and Qt has not been told yet: a
+    // report that finds Qt where the move it overrode left it (a change heard
+    // again a moment later) is not a new one. Any change of Qt's is.
+    if (_in.focusPending && _in.focusPending === _in.focused && active
+        && _in.overridden && _in.focusProbe.held === _in.overridden.held) {
         return;
     }
     _in.focusPending = null;
