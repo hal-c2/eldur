@@ -18,8 +18,8 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use eldur_css::{
-    ComputedStyle, Condition, ConditionalStyles, Display, ElementConditional, LengthPercentage,
-    PseudoState, Rgba, Shadow, Structural, StyleMap, Stylesheet, TransformFn,
+    BorderCollapse, ComputedStyle, Condition, ConditionalStyles, Display, ElementConditional,
+    LengthPercentage, PseudoState, Rgba, Shadow, Structural, StyleMap, Stylesheet, TransformFn,
 };
 use eldur_dom::{Document, Element, NodeId};
 use eldur_js::ElementRef;
@@ -1171,6 +1171,7 @@ impl Dynamic<'_, '_> {
         flipped: &[u16],
         shown: &HashMap<NodeId, Display>,
     ) -> (StyleMap, HashSet<NodeId>) {
+        debug_assert!(flipped.is_sorted());
         let mut collapsed = HashSet::new();
         let overrides: Vec<(NodeId, ComputedStyle)> = self
             .found
@@ -1269,6 +1270,7 @@ impl Dynamic<'_, '_> {
         markers: &HashMap<usize, Path>,
         shown: &HashMap<NodeId, Display>,
     ) -> Option<Region> {
+        debug_assert!(flipped.is_sorted());
         let doc = self.cx.doc;
         let restyled: BTreeSet<usize> = flipped
             .iter()
@@ -1281,24 +1283,45 @@ impl Dynamic<'_, '_> {
         for i in restyled {
             let e = &self.found.elements[i];
             region.reads.extend(&e.depends_on);
-            let (there, _) = self.style_in(e, flipped, shown);
-            let (here, _) = self.style_in(e, &[], shown);
+            let (there, hidden_there) = self.style_in(e, flipped, shown);
+            let (here, hidden_here) = self.style_in(e, &[], shown);
+            // Showing or hiding an element moves what follows it.
+            if hidden_there != hidden_here {
+                return None;
+            }
             if there == here {
                 continue;
             }
             if !repaints_only(&here, &there, classify(doc, e.node).is_some()) {
                 return None;
             }
-            let root = std::iter::once(e.node)
-                .chain(doc.ancestors(e.node))
+            // A collapsed table draws half of each cell's border in its
+            // neighbour, and its own edges in the edge cells: the table is
+            // what such a cell repaints.
+            let from = if here.border_collapse == BorderCollapse::Collapse {
+                std::iter::once(e.node)
+                    .chain(doc.ancestors(e.node))
+                    .find(|&n| {
+                        self.cx.styles.style(n).is_some_and(|s| {
+                            matches!(s.display, Display::Table | Display::InlineTable)
+                        })
+                    })
+                    .unwrap_or(e.node)
+            } else {
+                e.node
+            };
+            let root = std::iter::once(from)
+                .chain(doc.ancestors(from))
                 .find(|n| markers.contains_key(&n.index()))?;
             region.roots.insert(root);
         }
         Some(region)
     }
 
+    /// Whether `c` holds where `flipped` (sorted, as every world and batch
+    /// is) differ from the document.
     fn holds(&self, c: u16, flipped: &[u16]) -> bool {
-        self.conds[usize::from(c)].initial ^ flipped.contains(&c)
+        self.conds[usize::from(c)].initial ^ flipped.binary_search(&c).is_ok()
     }
 
     /// Every combination of flipped conditions some element depends on,

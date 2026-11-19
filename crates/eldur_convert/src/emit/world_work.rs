@@ -78,6 +78,16 @@ const BATCHING: &[&str] = &[
     "<style>div:focus-within{background:#eef} input:checked + label{color:red}</style>\
      <div><input></div><div><input type=checkbox><label>l</label></div>\
      <div><input type=checkbox checked><label>m</label></div>",
+    // A state that hides an element moves what follows it, beside one that
+    // repaints.
+    "<style>.a:hover .x{display:none} p{margin:10px} .b:hover{color:red}</style>\
+     <div class=a><p class=x>x</p><p>y</p></div><div class=b><p>z</p></div>\
+     <div class=a><p class=x>v</p><p>w</p></div>",
+    // A collapsed table draws half of a cell's border in its neighbour.
+    "<style>table{border-collapse:collapse} td{border:1px solid black}\
+     .a{border-right:2px solid black} .a:hover{border-right-color:red}\
+     .b:hover{background:yellow}</style>\
+     <table><tr><td class=a>A<td class=b>B<tr><td>C<td>D</table>",
 ];
 
 /// Files next to a corpus page, as the corpus snapshot test reads them.
@@ -100,24 +110,27 @@ impl Resources for CaseFiles {
     }
 }
 
-fn everything(out: &Output) -> Vec<String> {
-    let mut all: Vec<String> = out
+/// Every file, byte for byte, and every diagnostic.
+type Everything = (Vec<(PathBuf, Vec<u8>)>, Vec<String>);
+
+fn everything(out: &Output) -> Everything {
+    let mut files: Vec<(PathBuf, Vec<u8>)> = out
         .files
         .iter()
-        .map(|f| {
-            format!(
-                "{}\n{}",
-                f.path.display(),
-                String::from_utf8_lossy(&f.contents)
-            )
-        })
+        .map(|f| (f.path.clone(), f.contents.clone()))
         .collect();
-    all.sort();
-    all.extend(out.diagnostics.iter().map(ToString::to_string));
-    all
+    files.sort();
+    let diagnostics = out.diagnostics.iter().map(ToString::to_string).collect();
+    (files, diagnostics)
 }
 
-fn both_ways(html: &str, dir: Option<&Path>) -> (Vec<String>, Vec<String>) {
+fn binds_a_state((files, _): &Everything) -> bool {
+    files.iter().any(|(path, bytes)| {
+        path == Path::new("Main.qml") && String::from_utf8_lossy(bytes).contains(" ? ")
+    })
+}
+
+fn both_ways(html: &str, dir: Option<&Path>) -> (Everything, Everything) {
     let run = |one: bool| {
         ONE_WORLD_AT_A_TIME.with(|c| c.set(one));
         let input = Input {
@@ -160,12 +173,7 @@ fn shared_emissions_convert_as_one_world_at_a_time_does() {
         let (shared, alone) = both_ways(&page, None);
         assert_eq!(shared, alone, "BATCHING[{i}]");
         // The crafted pages do have worlds, so the comparison is not empty.
-        assert!(
-            alone
-                .iter()
-                .any(|f| f.starts_with("Main.qml\n") && f.contains(" ? ")),
-            "BATCHING[{i}] binds a state"
-        );
+        assert!(binds_a_state(&alone), "BATCHING[{i}] binds a state");
     }
     let (shared, alone) = both_ways(&cards(40), None);
     assert_eq!(shared, alone, "cards");
