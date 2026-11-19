@@ -243,9 +243,12 @@ body { margin: 0 }
 <div id=s4 style="height:10px"></div>
 <div><span id=p style="display:inline-flex;flex-wrap:wrap;row-gap:5px;column-gap:30px" class=w><div id=p1></div><div id=p2></div><div id=p3></div></span></div>
 <div id=s5 style="height:10px"></div>
+<div id=q style="display:flex;flex-wrap:wrap;width:200px;row-gap:5px;column-gap:30px" class=w><div id=q1></div><div id=q2></div></div>
+<div id=s6 style="height:10px"></div>
 <script>
 var k = document.getElementById('k');
 document.getElementById('p1').style.width = '300px';
+document.getElementById('q1').style.width = '300px';
 var m = document.getElementById('m');
 var log = [];
 log.push('kids=' + k.children.length);
@@ -257,12 +260,12 @@ log.push('last=' + k.lastElementChild.id);
 m.removeChild(document.getElementById('m2'));
 log.push('kids=' + m.children.length);
 console.log('DOM ' + log.join(' '));
-var named = [document.getElementById('k1'), document.getElementById('k2'), document.getElementById('k3'), document.getElementById('s1'), document.getElementById('m1'), document.getElementById('m3'), document.getElementById('s2'), document.getElementById('i'), document.getElementById('i1'), document.getElementById('i2'), document.getElementById('i3'), document.getElementById('s3'), document.getElementById('j'), document.getElementById('j1'), document.getElementById('j2'), document.getElementById('j3'), document.getElementById('s4'), document.getElementById('p'), document.getElementById('p1'), document.getElementById('p2'), document.getElementById('p3'), document.getElementById('s5')];
+var named = [document.getElementById('k1'), document.getElementById('k2'), document.getElementById('k3'), document.getElementById('s1'), document.getElementById('m1'), document.getElementById('m3'), document.getElementById('s2'), document.getElementById('i'), document.getElementById('i1'), document.getElementById('i2'), document.getElementById('i3'), document.getElementById('s3'), document.getElementById('j'), document.getElementById('j1'), document.getElementById('j2'), document.getElementById('j3'), document.getElementById('s4'), document.getElementById('p'), document.getElementById('p1'), document.getElementById('p2'), document.getElementById('p3'), document.getElementById('s5'), document.getElementById('q1'), document.getElementById('q2'), document.getElementById('s6')];
 </script></body></html>"#;
 
 /// Chromium, `getBoundingClientRect()` at 900×800, after the page's script
-/// appended `k4`, removed `m2` and set `p1` to 300px wide. It logged `DOM
-/// kids=3 parent=true first=k1 kids=4 last=k4 kids=2`.
+/// appended `k4`, removed `m2` and set `p1` and `q1` to 300px wide. It
+/// logged `DOM kids=3 parent=true first=k1 kids=4 last=k4 kids=2`.
 const DOM_TEST: &str = r##"
 import QtQuick
 import QtTest
@@ -319,6 +322,17 @@ TestCase {
         check("p1", 0, 200, 300, 20)
         check("p2", 330, 200, 150, 20)
         check("p3", 510, 200, 150, 20)
+        // The script set q1 to 300px in a 200px box: it shrinks to the
+        // line, as Chromium has it (q1 200 wide, q2 on the next line).
+        // Relative, as the line above it is the inline emitter's.
+        const q1 = findChild(page, "q1")
+        const q2 = findChild(page, "q2")
+        verify(q1 && q2, "q1, q2")
+        compare(q1.width, 200)
+        const a = q1.mapToItem(page, 0, 0)
+        const b = q2.mapToItem(page, 0, 0)
+        compare(b.x, a.x)
+        compare(b.y, a.y + 25)
     }
 }
 }
