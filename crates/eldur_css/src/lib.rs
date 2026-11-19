@@ -308,13 +308,12 @@ pub struct StyleMap {
     /// inside `display: none`; see [`StyleMap::computed`].
     pub(crate) hidden: Vec<Option<ElementStyle>>,
     pub(crate) parent_elements: Vec<Option<NodeId>>,
-    /// Shared with the copies [`StyleMap::with_styles`] makes, as are
-    /// `variants`: a copy for each combination of states must not copy
-    /// every state's styles again.
+    /// Shared with the copies [`StyleMap::with_styles`] makes: a copy for
+    /// each combination of states must not copy every element's cascade.
     pub(crate) element_cascades: std::sync::Arc<Vec<Option<cascade::ElementCascade>>>,
     pub(crate) root_font_size: f32,
     pub(crate) viewport: Viewport,
-    pub variants: std::sync::Arc<Vec<StateVariant>>,
+    pub variants: Vec<StateVariant>,
     pub keyframes: BTreeMap<String, Vec<Keyframe>>,
     pub font_faces: Vec<FontFace>,
     pub diagnostics: Vec<Diagnostic>,
