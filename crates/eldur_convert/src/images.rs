@@ -303,8 +303,9 @@ pub(crate) fn svg_size(text: &str) -> (Option<(f32, f32)>, Option<f32>) {
     }
 }
 
-/// The root `<svg>`'s absolute `width` and `height` (zero included) and its
-/// `viewBox` size; `None` when the text has no `<svg` tag.
+/// The root `<svg>`'s absolute `width` and `height` (zero included, a
+/// negative one read as zero) and its `viewBox` size when both of its sides
+/// are positive; `None` when the text has no `<svg` tag.
 #[allow(clippy::type_complexity)]
 fn svg_root(text: &str) -> Option<(Option<f32>, Option<f32>, Option<(f32, f32)>)> {
     let start = text.find("<svg")?;
@@ -326,11 +327,13 @@ fn svg_root(text: &str) -> Option<(Option<f32>, Option<f32>, Option<(f32, f32)>)
         }
     };
     // Only absolute lengths size the image; `100%` defers to the viewBox.
+    // A negative one is a zero one, as Chromium sizes it.
     let length = |name: &str| {
         attr(name)
             .map(|v| v.trim().trim_end_matches("px"))
             .and_then(|v| v.parse::<f32>().ok())
-            .filter(|v| v.is_finite() && *v >= 0.0)
+            .filter(|v| v.is_finite())
+            .map(|v| v.max(0.0))
     };
     let view_box = attr("viewBox").and_then(|v| {
         let n: Vec<f32> = v
