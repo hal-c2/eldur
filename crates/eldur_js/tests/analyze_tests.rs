@@ -9,6 +9,7 @@ fn classic(name: &str, source: &str) -> ScriptInput {
         name: name.to_string(),
         kind: ScriptKind::Classic,
         line_offset: 1,
+        imports: Vec::new(),
     }
 }
 
@@ -281,6 +282,7 @@ fn reports_syntax_errors_with_line_offset_and_continues_other_scripts() {
         name: "inline script #1".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 20,
+        imports: Vec::new(),
     };
     let valid_handler = ScriptInput {
         source: "doWork(this); return false;".to_string(),
@@ -290,6 +292,7 @@ fn reports_syntax_errors_with_line_offset_and_continues_other_scripts() {
             event: "click".to_string(),
         },
         line_offset: 45,
+        imports: Vec::new(),
     };
     let valid_classic = classic(
         "app.js",
@@ -316,6 +319,7 @@ fn reports_cross_script_lexical_redeclaration_as_error() {
         name: "s2.js".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 10,
+        imports: Vec::new(),
     };
 
     let res = analyze(&[s1, s2]);
@@ -334,6 +338,7 @@ fn reports_cross_script_block_nested_var_conflict_with_lexical_binding() {
         name: "s2.js".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 10,
+        imports: Vec::new(),
     };
 
     let res = analyze(&[s1, s2]);
@@ -349,6 +354,7 @@ fn reports_cross_script_block_nested_var_conflict_with_lexical_binding() {
         name: "s4.js".to_string(),
         kind: ScriptKind::Classic,
         line_offset: 20,
+        imports: Vec::new(),
     };
     let res2 = analyze(&[s3, s4]);
     assert_eq!(res2.diagnostics.len(), 1);
@@ -386,6 +392,7 @@ fn reports_unsupported_js_and_browser_features() {
         name: "mod.js".to_string(),
         kind: ScriptKind::Module,
         line_offset: 1,
+        imports: Vec::new(),
     };
 
     let res = analyze(&[script, missing_mod]);
@@ -655,6 +662,7 @@ fn corpus_scripts(case: &str) -> Vec<ScriptInput> {
             name: format!("inline script #{}", out.len() + 1),
             kind: ScriptKind::Classic,
             line_offset: u32::try_from(line).expect("line fits u32"),
+            imports: Vec::new(),
         });
         consumed += end;
         rest = &rest[end..];
@@ -1186,6 +1194,7 @@ fn handler_attribute_this_is_a_runtime_element() {
             event: "click".to_string(),
         },
         line_offset: 4,
+        imports: Vec::new(),
     }]);
     assert!(res.runtime_dom);
     assert_eq!(
@@ -1588,10 +1597,22 @@ fn a_modules_requests_are_its_static_and_literal_dynamic_specifiers() {
         name: "/js/main.js".to_owned(),
         kind: eldur_js::ScriptKind::Module,
         line_offset: 1,
+        imports: Vec::new(),
     };
     assert_eq!(
         eldur_js::module_requests(&input),
         vec!["./a.js", "../b.js", "/c.js", "./d.js"]
+    );
+    // In the order the source names them, an `import()` above a static one
+    // first.
+    let input = eldur_js::ScriptInput {
+        source: "function later() { return import('./late.js'); }\nimport './early.js';\n"
+            .to_owned(),
+        ..input
+    };
+    assert_eq!(
+        eldur_js::module_requests(&input),
+        vec!["./late.js", "./early.js"]
     );
     for (spec, path) in [
         ("./a.js", true),

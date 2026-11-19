@@ -277,7 +277,7 @@ pub(crate) fn collect_unresolvable_module_diagnostics(
         match stmt {
             Statement::ImportDeclaration(imp) => {
                 let spec = imp.source.value.as_str();
-                if resolve_module_specifier(&input.name, spec, scripts).is_none() {
+                if resolve_module_specifier(input, spec, scripts).is_none() {
                     diagnostics.push(Diagnostic {
                         severity: Severity::Unsupported,
                         source: input.name.clone(),
@@ -288,7 +288,7 @@ pub(crate) fn collect_unresolvable_module_diagnostics(
             }
             Statement::ExportAllDeclaration(exp) => {
                 let spec = exp.source.value.as_str();
-                if resolve_module_specifier(&input.name, spec, scripts).is_none() {
+                if resolve_module_specifier(input, spec, scripts).is_none() {
                     diagnostics.push(Diagnostic {
                         severity: Severity::Unsupported,
                         source: input.name.clone(),
@@ -299,7 +299,7 @@ pub(crate) fn collect_unresolvable_module_diagnostics(
             }
             Statement::ExportFromDeclaration(exp) => {
                 let spec = exp.source.value.as_str();
-                if resolve_module_specifier(&input.name, spec, scripts).is_none() {
+                if resolve_module_specifier(input, spec, scripts).is_none() {
                     diagnostics.push(Diagnostic {
                         severity: Severity::Unsupported,
                         source: input.name.clone(),

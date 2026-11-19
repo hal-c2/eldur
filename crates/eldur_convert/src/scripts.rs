@@ -123,46 +123,59 @@ fn warn_of_what_has_no_counterpart(doc: &Document, analysis: &Analysis, diags: &
 }
 
 /// Reads the modules the scripts import, and those they import in turn, as a
-/// browser fetches a module graph: each file once, resolved against the file
-/// that names it. Only literal path specifiers are followed; a bare one needs an
-/// import map, and a file that cannot be read is reported where it is imported.
+/// browser fetches a module graph: each specifier that names a path, against
+/// the importing file, or against the page for an inline script or a handler.
+/// Each file becomes one [`ScriptKind::ImportedModule`] however many import
+/// it, and every importer is told what its specifiers named
+/// ([`ScriptInput::imports`]), a file that could not be read included, so the
+/// rewrite links what was read rather than guessing again.
 fn read_imported_modules(
     inputs: &mut Vec<ScriptInput>,
     files: &mut HashSet<String>,
     url: &str,
     resources: &mut dyn Resources,
 ) {
-    let mut asked: HashSet<(String, String)> = HashSet::new();
+    let mut asked: HashMap<(String, String), Option<String>> = HashMap::new();
     let mut next = 0;
     while next < inputs.len() {
-        let importer = &inputs[next];
+        let importer = next;
         next += 1;
-        let base = if files.contains(&importer.name) {
-            importer.name.clone()
+        let base = if files.contains(&inputs[importer].name) {
+            inputs[importer].name.clone()
         } else {
             url.to_owned()
         };
-        for spec in eldur_js::module_requests(importer) {
-            if !eldur_js::is_path_specifier(&spec) || !asked.insert((base.clone(), spec.clone())) {
+        let mut imports = Vec::new();
+        for spec in eldur_js::module_requests(&inputs[importer]) {
+            if !eldur_js::is_path_specifier(&spec) {
                 continue;
             }
-            let Some(resource) = resources.read(&spec, &base) else {
-                continue;
+            let key = (base.clone(), spec.clone());
+            let resolved = if let Some(found) = asked.get(&key) {
+                found.clone()
+            } else {
+                let found = resources.read(&spec, &base).map(|resource| {
+                    if !inputs
+                        .iter()
+                        .any(|i| i.kind.is_module() && i.name == resource.resolved)
+                    {
+                        files.insert(resource.resolved.clone());
+                        inputs.push(ScriptInput {
+                            source: String::from_utf8_lossy(&resource.bytes).into_owned(),
+                            name: resource.resolved.clone(),
+                            kind: ScriptKind::ImportedModule,
+                            line_offset: 1,
+                            imports: Vec::new(),
+                        });
+                    }
+                    resource.resolved
+                });
+                asked.insert(key, found.clone());
+                found
             };
-            if inputs
-                .iter()
-                .any(|i| i.kind.is_module() && i.name == resource.resolved)
-            {
-                continue;
-            }
-            files.insert(resource.resolved.clone());
-            inputs.push(ScriptInput {
-                source: String::from_utf8_lossy(&resource.bytes).into_owned(),
-                name: resource.resolved,
-                kind: ScriptKind::ImportedModule,
-                line_offset: 1,
-            });
+            imports.push((spec, resolved));
         }
+        inputs[importer].imports = imports;
     }
 }
 
@@ -201,6 +214,7 @@ pub(crate) fn collect(
                         event: event.to_owned(),
                     },
                     line_offset: line.unwrap_or(1),
+                    imports: Vec::new(),
                 });
             }
         }
@@ -223,6 +237,7 @@ pub(crate) fn collect(
                         name: resource.resolved,
                         kind,
                         line_offset: 1,
+                        imports: Vec::new(),
                     });
                 }
                 None => diags.error(
@@ -238,6 +253,7 @@ pub(crate) fn collect(
                     name: format!("inline script #{inline}"),
                     kind,
                     line_offset: line.unwrap_or(1),
+                    imports: Vec::new(),
                 });
             }
         }

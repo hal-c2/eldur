@@ -55,6 +55,8 @@ const out = {
   repro: await record("repro", ["a", "b"]),
   order: await record("order", ["out"], "#go"),
   rooted: await record("rooted", ["a", "b"]),
+  lazy: await record("lazy", ["out"]),
+  nested: await record("nested/page", ["a", "b"]),
 };
 await browser.close();
 fs.writeFileSync(path.join(here, "chromium.json"), `${JSON.stringify(out, null, 2)}\n`);
