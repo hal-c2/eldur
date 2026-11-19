@@ -102,6 +102,16 @@ const CASES: &[Case] = &[
         load: &[66.0, 100.0],
         toggled: &[66.0, 134.0],
     },
+    // After a block a script can hide, a wrapper whose own first block
+    // hides: the gap above the wrapper is what its next block escapes then.
+    Case {
+        name: "wrapper_after_hideable",
+        body: r#"<body style="margin:0"><p id="p" style="margin:0">P</p><div id="w"><p id="shy" style="margin:40px 0 0"><em>Shy</em></p><p id="g" style="margin:10px 0 0">G</p></div>
+<script>document.getElementById('p').style.display = '';</script>"#,
+        ids: &["w", "g", "t"],
+        load: &[58.0, 86.0, 104.0],
+        toggled: &[28.0, 28.0, 46.0],
+    },
 ];
 
 fn page(case: &Case) -> String {
@@ -267,4 +277,9 @@ fn an_empty_block_after_a_hidden_one_keeps_its_margins() {
 #[test]
 fn an_earlier_hiding_block_does_not_decide_what_a_column_passes_on() {
     run(case("earlier_block_hides"));
+}
+
+#[test]
+fn a_wrapper_after_a_hideable_block_takes_its_own_first_blocks_cases() {
+    run(case("wrapper_after_hideable"));
 }
