@@ -1,0 +1,10 @@
+{"steps":[
+ {"name":"click a","click":"#a"},
+ {"name":"tab while a's blur focuses b","key":"Tab"},
+ {"name":"click arm2","click":"#arm2"},
+ {"name":"tab while arm2's blur focuses a field","key":"Tab"},
+ {"name":"tab from the untouched field","key":"Tab"},
+ {"name":"click arm3","click":"#arm3"},
+ {"name":"tab while arm3's blur focuses and blurs d","key":"Tab"}
+],
+"watch":[{"sel":"#a"}]}
