@@ -5,6 +5,7 @@
 #![allow(dead_code)]
 
 use std::env;
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::OnceLock;
@@ -80,7 +81,7 @@ pub fn problem_lines(text: &str, keep: impl Fn(&str) -> bool) -> Vec<String> {
 /// judge Qt 6 QML).
 pub fn qmllint() -> Option<PathBuf> {
     if let Some(set) = env::var_os("QMLLINT").filter(|s| !s.is_empty()) {
-        return Some(std::path::absolute(PathBuf::from(set)).expect("the working directory"));
+        return Some(named(&set, env::var_os("PATH").as_deref()));
     }
     // Without a qmltestrunner, a `qmllint6` on PATH still serves.
     runner()
@@ -91,8 +92,7 @@ pub fn qmllint() -> Option<PathBuf> {
 
 fn find() -> Option<PathBuf> {
     if let Some(set) = env::var_os("QMLTESTRUNNER").filter(|s| !s.is_empty()) {
-        // Absolute, as the tests start it from their own working directories.
-        let path = std::path::absolute(PathBuf::from(&set)).expect("the working directory");
+        let path = named(&set, env::var_os("PATH").as_deref());
         assert!(
             path.is_file(),
             "QMLTESTRUNNER is {}, which is not a file",
@@ -137,8 +137,30 @@ fn find() -> Option<PathBuf> {
     version.starts_with("6.").then_some(plain)
 }
 
+/// The tool a variable (QMLTESTRUNNER, QMLLINT) names, as setup finds it
+/// (`qt_tool_runs` in mise-tasks/_lib/common.sh): a path as written, a bare
+/// name through `search` (PATH) and never in ".". Absolute, as the tests
+/// start it from their own working directories. A bare name PATH lacks stays
+/// as written, so the caller's is-a-file check names it.
+pub fn named(set: &OsStr, search: Option<&OsStr>) -> PathBuf {
+    let written = Path::new(set);
+    if written.components().count() == 1
+        && !written.has_root()
+        && let Some(found) = search.and_then(|dirs| in_dirs(dirs, set))
+    {
+        return found;
+    }
+    std::path::absolute(written).expect("the working directory")
+}
+
 fn on_path(name: &str) -> Option<PathBuf> {
-    env::split_paths(&env::var_os("PATH")?)
+    in_dirs(&env::var_os("PATH")?, OsStr::new(name))
+}
+
+fn in_dirs(dirs: &OsStr, name: &OsStr) -> Option<PathBuf> {
+    env::split_paths(dirs)
+        // An empty entry means "." to a shell; setup never looks there.
+        .filter(|dir| dir.is_absolute())
         .map(|dir| dir.join(name))
         .find(|path| path.is_file())
 }
