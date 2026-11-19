@@ -85,7 +85,9 @@ fn a_declaration_value_is_parsed_once_however_many_elements_it_styles() {
     assert_eq!(large_parses, small_parses);
 }
 
-fn variants_both_ways(page: &str) -> (Vec<crate::StateVariant>, Vec<crate::StateVariant>) {
+type Variants = std::sync::Arc<Vec<crate::StateVariant>>;
+
+fn variants_both_ways(page: &str) -> (Variants, Variants) {
     use crate::cascade::{VariantWalk, compute_styles_walking};
     let doc = Document::parse(page);
     let viewport = Viewport::default();
