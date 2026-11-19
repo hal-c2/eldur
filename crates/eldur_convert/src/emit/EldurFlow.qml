@@ -64,7 +64,10 @@ Item {
         let tallest = 0;
         let widest = 0;
         for (const kid of children) {
-            if (!kid.visible || kid.width <= 0 || kid.height <= 0) {
+            // `visible` is the effective one: while this box is hidden every
+            // kid reads hidden, and `Flow` skips only the kids hidden
+            // themselves, so a hidden box keeps its lines.
+            if ((visible && !kid.visible) || kid.width <= 0 || kid.height <= 0) {
                 continue;
             }
             // A hair of slack: a line whose items sum to the width fits.
@@ -100,5 +103,8 @@ Item {
     onSpacingChanged: eldurQueue()
     onRowSpacingChanged: eldurQueue()
     onLayoutDirectionChanged: eldurQueue()
+    // Placed at once, so a box shown again has its lines in its first frame
+    // and a kid hidden on its own drops out of them.
+    onVisibleChanged: eldurPlace()
     Component.onCompleted: eldurWatch()
 }
