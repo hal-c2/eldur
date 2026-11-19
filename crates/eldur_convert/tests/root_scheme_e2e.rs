@@ -524,6 +524,125 @@ TestCase {
 }
 "##;
 
+// Blocks the scheme hides under a parent it hides too, and a block a closed
+// `<details>` folds away. Chromium, after the head script (`light`): `.box`
+// is `display: none`, and `#inner` with it. `dark` shows `.box` and its
+// `#sibling`, and its own rule keeps `#inner` out; `light` hides `.box`
+// again; `dim` says nothing of either, so both show. The `<details>` is
+// closed: its summary shows in every scheme and `#folded` in none, though
+// `dark` says it is a block. Opened, `#folded` shows; `dim` hides it, and
+// `dark` shows it again.
+const NEST_PAGE: &str = r##"<style>
+:root { --fg: #c1c3c8; }
+:root[data-theme='light'] { --fg: #23262f; }
+body { color: var(--fg); }
+:root[data-theme='light'] .box { display: none; }
+:root[data-theme='dark'] .box .inner { display: none; }
+:root[data-theme='dark'] .fold { display: block; }
+:root[data-theme='dim'] .fold { display: none; }
+</style>
+<script>document.documentElement.dataset.theme = 'light';</script>
+<div class="box"><p class="inner"><em>Inner</em></p><p><em>Sibling</em></p></div>
+<details id="d"><summary>Summary</summary><p class="fold"><em>Folded</em></p></details>
+<button id="light">Light</button>
+<button id="dark">Dark</button>
+<button id="dim">Dim</button>
+<button id="open">Open</button>
+<script>
+for (const name of ['light', 'dark', 'dim']) {
+  document.getElementById(name).addEventListener('click', () => {
+    document.documentElement.dataset.theme = name;
+  });
+}
+document.getElementById('open').addEventListener('click', () => {
+  const d = document.getElementById('d');
+  d.open = !d.open;
+});
+</script>
+"##;
+
+const NEST_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 800
+    height: 600
+
+TestCase {
+    name: "RootSchemeNested"
+    when: windowShown
+
+    function find(item, test) {
+        if (test(item))
+            return item
+        for (const child of item.children) {
+            const got = find(child, test)
+            if (got)
+                return got
+        }
+        return null
+    }
+
+    function textOf(page, words) {
+        return find(page, i => i.text !== undefined && i.font !== undefined && String(i.text).indexOf(words) >= 0)
+    }
+
+    function press(page, label) {
+        const b = find(page, i => i.eldurTag === "button" && i.text === label)
+        verify(b !== null, "no " + label + " button")
+        b.clicked()
+    }
+
+    // Each item's `visible`, which is false under a hidden ancestor too, as
+    // Chromium's boxes are. The scheme's settle can come after a fixed wait
+    // on a loaded machine: wait a bounded time, then say what is wrong.
+    function shown(items, want, step) {
+        const off = () => Object.keys(want).filter(k => items[k].visible !== want[k])
+        for (let waited = 0; waited < 40 && off().length > 0; ++waited)
+            wait(50)
+        const wrong = off()
+        verify(wrong.length === 0, step + ": " + wrong.map(k => k + (want[k] ? " is hidden" : " is on screen")).join(", "))
+    }
+
+    function test_nested_and_folded_blocks_follow_scheme() {
+        const component = Qt.createComponent("Main.qml")
+        verify(component.status === Component.Ready, component.errorString())
+        const page = createTemporaryObject(component, host, { width: 800, height: 600 })
+        waitForRendering(page)
+        wait(50)
+        const items = {}
+        for (const [key, words] of [["inner", "Inner"], ["sibling", "Sibling"],
+                                    ["summary", "Summary"], ["folded", "Folded"]]) {
+            items[key] = textOf(page, words)
+            verify(items[key] !== null, "no #" + key)
+        }
+        shown(items, { inner: false, sibling: false, summary: true, folded: false }, "load")
+        press(page, "Dark")
+        shown(items, { inner: false, sibling: true, summary: true, folded: false }, "dark")
+        press(page, "Light")
+        shown(items, { inner: false, sibling: false, summary: true, folded: false }, "light")
+        // Neither rule: a hold `dark` left on `#inner` is gone.
+        press(page, "Dim")
+        shown(items, { inner: true, sibling: true, summary: true, folded: false }, "dim")
+        press(page, "Dark")
+        shown(items, { inner: false, sibling: true, summary: true, folded: false }, "dark again")
+        press(page, "Open")
+        shown(items, { inner: false, sibling: true, summary: true, folded: true }, "dark, open")
+        press(page, "Dim")
+        shown(items, { inner: true, sibling: true, summary: true, folded: false }, "dim, open")
+        press(page, "Dark")
+        shown(items, { inner: false, sibling: true, summary: true, folded: true }, "dark, open again")
+        press(page, "Open")
+        shown(items, { inner: false, sibling: true, summary: true, folded: false }, "dark, closed")
+        press(page, "Light")
+        shown(items, { inner: false, sibling: false, summary: true, folded: false }, "light, closed")
+    }
+}
+}
+"##;
+
 #[test]
 fn a_root_attribute_repaints_inherited_text() {
     run(PAGE, TEST, "eldur-root-scheme");
@@ -532,6 +651,11 @@ fn a_root_attribute_repaints_inherited_text() {
 #[test]
 fn a_root_attribute_hides_and_shows_blocks() {
     run(SHY_PAGE, SHY_TEST, "eldur-root-scheme-shy");
+}
+
+#[test]
+fn a_root_attribute_hides_nested_and_folded_blocks() {
+    run(NEST_PAGE, NEST_TEST, "eldur-root-scheme-nest");
 }
 
 fn run(page: &str, test: &str, name: &str) {
