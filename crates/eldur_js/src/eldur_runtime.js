@@ -7293,6 +7293,13 @@ function focus(item) {
     if (!raw.__eldurInline && _itHidden(raw)) {
         return;
     }
+    // Asked by a listener while the page hears of a focus change: Qt is still
+    // telling its probe of that change, and one more now would be lost to a
+    // binding loop. The page hears of this one at once, and Qt is told after.
+    if (_in && _in.focusShift && _in.focused !== raw) {
+        _inFocusWhileHeard(raw);
+        return;
+    }
     // A link in a line is not an item: its `Text` holds the focus for it, or
     // with no words of its own, the icon it carries.
     var holder = _in && raw.__eldurInline ? _inInlineHolder(raw) : null;
@@ -7345,6 +7352,29 @@ function focus(item) {
     }
 }
 
+function _inFocusWhileHeard(raw) {
+    var before = _in.focused;
+    _in.focused = raw;
+    _in.focusMoves++;
+    _activeElement = raw;
+    if (raw.__eldurInline) {
+        _in.inlineFocus = raw;
+    }
+    Qt.callLater(function() {
+        if (_pageGone() || !_in || _in.focused !== raw) {
+            return;
+        }
+        var holder = raw.__eldurInline ? _inInlineHolder(raw) : raw;
+        if (holder && !holder.activeFocus && typeof holder.forceActiveFocus === "function") {
+            holder.forceActiveFocus();
+        }
+    });
+    if (before) {
+        _inFocusEvents(before, raw, "blur", "focusout");
+    }
+    _inFocusEvents(raw, before, "focus", "focusin");
+}
+
 function blur(item) {
     if (item && !_isDomTarget(item) && typeof item.blur === "function") {
         return item.blur();
@@ -7358,12 +7388,14 @@ function blur(item) {
     // tells the page, once.
     if (_in && raw.__eldurInline && _in.inlineFocus === raw) {
         var holder = _inInlineHolder(raw);
+        var moves = _in.focusMoves;
         _in.inlineFocus = null;
         if (holder && holder.activeFocus) {
             holder.focus = false;
         }
         // No change came: a window not yet active, or a holder Qt kept it on.
-        if (_in.focused === raw) {
+        // One that came may have run a blur listener that focused it again.
+        if (_in.focusMoves === moves && _in.focused === raw) {
             _in.focused = null;
             if (_activeElement === raw) {
                 _activeElement = null;
@@ -8008,7 +8040,11 @@ var _ce = {
     any: false,
     // While a watched tree operation runs, the callbacks it causes, run as it
     // returns: DOM's [CEReactions], after the operation's own record.
-    reactions: null
+    reactions: null,
+    // While an element's item is swapped for another (a restyle that takes it
+    // out of flow, say): its children are carried over, not inserted, and the
+    // custom elements among them never left the document.
+    carrying: 0
 };
 
 var _CE_RESERVED = {
@@ -8091,7 +8127,10 @@ function _ceReport(err) {
 
 function _ceCall(raw, method, args) {
     if (_ce.reactions) {
-        _ce.reactions.push([raw, method, args]);
+        // Held by its record: a callback run before it may restyle the
+        // element onto a new item, which its call then goes to.
+        var held = _itemMeta.get(raw);
+        _ce.reactions.push([held && held.raw === raw ? held : raw, method, args]);
         return;
     }
     var w = wrap(raw);
@@ -8171,7 +8210,7 @@ function _ceNow(h) {
 
 // After the held nodes went into the document: each custom element now in it.
 function _ceInserted(held) {
-    if (!held) {
+    if (!held || _ce.carrying > 0) {
         return;
     }
     for (var i = 0; i < held.length; ++i) {
@@ -8187,7 +8226,7 @@ function _ceInserted(held) {
 // Before `raw` leaves the document: the custom elements it takes along, held
 // by their records as `_ceHold` holds nodes.
 function _ceLeaving(raw) {
-    if (!_ce.any || !_isConnected(raw)) {
+    if (!_ce.any || _ce.carrying > 0 || !_isConnected(raw)) {
         return [];
     }
     var out = [];
@@ -8593,7 +8632,7 @@ function _moOwn(op, record) {
 
 function _ceReact(reactions) {
     for (var c = 0; c < reactions.length; ++c) {
-        _ceCall(reactions[c][0], reactions[c][1], reactions[c][2]);
+        _ceCall(_ceNow(reactions[c][0]), reactions[c][1], reactions[c][2]);
     }
 }
 
@@ -8891,6 +8930,9 @@ function _obsStep() {
         }
     }
     var crossed = false;
+    // Measuring lays out, and a frame callback may have restyled a root or a
+    // target: once here, as no page code runs between the entries below.
+    _layoutForRead();
     var watching = _obs.io.slice();
     for (var i = 0; i < watching.length; ++i) {
         var io = watching[i];
@@ -9155,11 +9197,10 @@ function _ioClips(raw) {
     return !raw.__eldurInline && _isQObject(raw) && (raw.clip === true || Boolean(raw.eldurScroller));
 }
 
-function _ioEntry(io, m) {
-    // Measuring lays out, which can hand the root or the target to a new item
-    // (a frame callback may have restyled either): both are read after it.
-    _layoutForRead();
-    var raw = m.raw;
+// `target` is the target's record: the caller has laid out, which can hand
+// the root or the target to a new item, so both are read through records.
+function _ioEntry(io, target) {
+    var raw = target.raw;
     var root;
     var rootRaw = io._rootMeta ? io._rootMeta.raw : null;
     if (rootRaw) {
@@ -11114,6 +11155,15 @@ function _syncUpPointersOnItem(raw) {
 }
 
 function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
+    _ce.carrying++;
+    try {
+        return _swapRawItemCarried(oldRaw, component, fallbackQmlSrc);
+    } finally {
+        _ce.carrying--;
+    }
+}
+
+function _swapRawItemCarried(oldRaw, component, fallbackQmlSrc) {
     var m = _meta(oldRaw);
     var parentContainer = oldRaw.parent || null;
 
@@ -16502,7 +16552,7 @@ function _inInstall() {
         page: _root, overlay: null, held: 0, last: null, pressed: false, hoverP: null, hoverM: null,
         downTarget: {}, noMouse: false, count: 0, countButton: -1, countAt: null, countTime: 0,
         capture: null, captureNext: null, defaults: [], scrolled: null, restoreFocus: null,
-        restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusShift: false,
+        restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusMoves: 0, focusShift: false,
         spaceDown: null, typing: null, popovers: [], radioLast: {}, focusProbe: null
     };
     _inLayers.set(_root, _in);
@@ -17959,6 +18009,7 @@ function _inFocusChanged() {
         return;
     }
     _in.focused = now;
+    _in.focusMoves++;
     // Focus somewhere is where the next Tab starts, whatever a fragment said before.
     if (now && _nodeTag(now) !== "body") {
         _in.tabFrom = null;
@@ -17986,6 +18037,10 @@ function _inFocusChanged() {
         }
     }
     _in.focusShift = false;
+    // A blur listener focused something else: the focus is there now.
+    if (_in.focused !== now) {
+        return;
+    }
     _activeElement = now;
     if (now) {
         _inFocusEvents(now, was, "focus", "focusin");
