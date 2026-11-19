@@ -943,26 +943,95 @@ function _dropHelper(obj) {
     }
 }
 
-// A `<details>` shows its summary, and the rest when open.
+// A `<details>` shows its summary, and the rest when open. One a script
+// makes is set up once it is in the document, open as its `open` attribute
+// says (#63): the converter's `eldurOpen` is only on the page's own.
 function _setUpDetails(raw) {
-    var kids = _rawElementChildren(raw);
-    var summary = kids.filter(function(k) { return _nodeTag(k) === "summary"; })[0];
-    _detailsShow(raw, raw.eldurOpen === true);
+    var open = raw.eldurOpen === true || getAttribute(raw, "open") !== null;
+    _detailsShow(raw, open);
     // Open from the start is a toggle too, once the page's scripts have run.
-    if (raw.eldurOpen === true) {
+    if (open) {
         Qt.callLater(function() {
             dispatchEvent(wrap(raw), new Event("toggle"));
         });
     }
-    if (summary) {
-        wrap(summary).addEventListener("click", function(ev) {
-            // Last on its element, and the page's listeners further up have yet to
-            // run: the toggle waits for what they say.
-            summary.forceActiveFocus();
-            _afterThisDispatch(ev, function() {
-                wrap(raw).open = !_meta(raw).detailsOpen;
-            });
+}
+
+function _detailsSummary(raw) {
+    return _rawElementChildren(raw).filter(function(k) { return _nodeTag(k) === "summary"; })[0];
+}
+
+// Its first summary opens and closes it, whichever summary that is now.
+function _detailsWire(summary) {
+    var m = _meta(summary);
+    if (m.detailsWired) {
+        return;
+    }
+    m.detailsWired = true;
+    wrap(summary).addEventListener("click", function(ev) {
+        var at = _elementParent(summary);
+        if (!at || _nodeTag(at) !== "details" || _detailsSummary(at) !== summary) {
+            return;
+        }
+        // Last on its element, and the page's listeners further up have yet to
+        // run: the toggle waits for what they say.
+        summary.forceActiveFocus();
+        _afterThisDispatch(ev, function() {
+            wrap(at).open = !_meta(at).detailsOpen;
         });
+    });
+}
+
+// What a script puts in the document, held by records as `_ceHold` holds
+// nodes, since an element its new place restyles is made another item.
+function _detailsHold(nodes) {
+    return nodes.map(function(n) {
+        var m = _itemMeta.get(n);
+        return m && m.raw === n ? m : n;
+    });
+}
+
+// After `held` went into `parent`: each `<details>` among them is set up, and
+// what went into a set-up one is folded with the rest while it is closed.
+function _detailsInserted(parent, held) {
+    var open = _nodeTag(parent) === "details" ? _meta(parent).detailsOpen : undefined;
+    if (open !== undefined) {
+        var first = _detailsSummary(parent);
+        for (var k = 0; k < held.length; ++k) {
+            var kid = _ceNow(held[k]);
+            if (kid === first) {
+                _detailsTurnMarker(kid, open);
+                _detailsWire(kid);
+            } else if (!open && _isQObject(kid) && !kid.__eldurInline && _nodeTag(kid) !== "summary") {
+                kid.visible = false;
+            }
+        }
+        _layoutChanged(parent);
+    }
+    for (var i = 0; i < held.length; ++i) {
+        _detailsSetUpUnder(_ceNow(held[i]), true);
+    }
+}
+
+function _detailsSetUpUnder(raw, top) {
+    if (!raw || raw.__eldurInline || !_isQObject(raw) || (top && !_isConnected(raw))) {
+        return;
+    }
+    if (_nodeTag(raw) === "details" && _meta(raw).detailsOpen === undefined) {
+        _setUpDetails(raw);
+    }
+    var kids = _rawElementChildren(raw);
+    for (var i = 0; i < kids.length; ++i) {
+        _detailsSetUpUnder(kids[i], false);
+    }
+}
+
+// The attribute is the state (HTML §4.11.1): a script writing it opens or
+// closes a set-up `<details>` as `open` does.
+function _detailsAttributeWritten(raw, open) {
+    var now = _meta(raw).detailsOpen;
+    if (now !== undefined && now !== open && _nodeTag(raw) === "details") {
+        wrap(raw).open = open;
     }
 }
 
@@ -988,6 +1057,7 @@ function _detailsShow(raw, open) {
         } else if (!seenSummary) {
             seenSummary = true;
             _detailsTurnMarker(kid, open);
+            _detailsWire(kid);
         }
     });
     _layoutChanged(raw);
@@ -6323,8 +6393,10 @@ function _replaceWithMarkup(raw, str) {
     var parsed = _parseHtmlFragmentNodes(str);
     var nodes = _expandInsertRawNodes(parsed);
     var held = _ceHold(nodes);
+    var placed = _detailsHold(nodes);
     _insertRawNodesBefore(_appendTarget(raw), nodes, null);
     _ceInserted(held);
+    _detailsInserted(raw, placed);
     _wsGiven(raw, "wsEnd", parsed.wsEnd);
 }
 
@@ -7559,6 +7631,8 @@ function _setAttributeAt(item, attrName, attrValue) {
         raw.enabled = false;
     } else if (name === "hidden" && typeof raw.visible === "boolean") {
         _shownByAttribute(raw, true);
+    } else if (name === "open") {
+        _detailsAttributeWritten(raw, true);
     } else if (name === "readonly" && typeof raw.readOnly === "boolean") {
         raw.readOnly = true;
     } else if (name === "value") {
@@ -7677,6 +7751,8 @@ function _removeAttributeAt(item, attrName) {
         // `el.hidden` reads false again.
         m.explicitHidden = false;
         _shownByAttribute(raw, false);
+    } else if (name === "open") {
+        _detailsAttributeWritten(raw, false);
     } else if (name === "readonly" && typeof raw.readOnly === "boolean") {
         raw.readOnly = false;
     } else if (name === "class") {
@@ -11454,6 +11530,7 @@ function _insertChildren(raw, nodes, ref, going, atStart) {
     }
     // A box that moves leaves its old place without being taken out.
     var zFrom = _zLeaving(nodes);
+    var placed = _detailsHold(nodes);
     _insertChildrenAt(raw, nodes, ref);
     _zLeft(zFrom);
     _zEntered(nodes);
@@ -11462,6 +11539,7 @@ function _insertChildren(raw, nodes, ref, going, atStart) {
     }
     _ceLeft(leaving);
     _ceInserted(held);
+    _detailsInserted(raw, placed);
 }
 
 function _insertChildrenAt(raw, nodes, ref) {
@@ -12924,13 +13002,24 @@ function wrap(rawItem) {
         },
         get content() { return _templateContent(rawItem); },
         get open() {
-            return _nodeTag(rawItem) === "details" ? m.detailsOpen === true : getAttribute(rawItem, "open") !== null;
+            return _nodeTag(rawItem) === "details" && m.detailsOpen !== undefined
+                ? m.detailsOpen === true : getAttribute(rawItem, "open") !== null;
         },
         set open(v) {
             if (_nodeTag(rawItem) !== "details") {
                 return;
             }
             var next = Boolean(v);
+            // Not in the document yet: the attribute is all it has, and is
+            // what sets it up once it is (`_detailsInserted`).
+            if (m.detailsOpen === undefined) {
+                if (next) {
+                    setAttribute(rawItem, "open", "");
+                } else {
+                    removeAttribute(rawItem, "open");
+                }
+                return;
+            }
             if (next === (m.detailsOpen === true)) {
                 return;
             }
