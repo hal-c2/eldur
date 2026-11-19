@@ -1147,6 +1147,17 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     crate::metadata::declare_style(&mut e.obj, self.doc, node);
                 }
             }
+            // A box a class world shows is bound to its classes instead,
+            // and must keep following them.
+            if !collapsed
+                && b.style.visibility == eldur_css::Visibility::Collapse
+                && self
+                    .styles
+                    .computed(node)
+                    .is_some_and(|s| s.style.display == Display::None)
+            {
+                crate::metadata::declare_style_hides(&mut e.obj, self.doc, node);
+            }
             if self.markers {
                 e.obj.members.push(Member::Comment(dynamic::marker(node)));
             }
