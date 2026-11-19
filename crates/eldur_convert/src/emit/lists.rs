@@ -262,7 +262,12 @@ impl Emitter<'_, '_> {
         self.report_place_in_line(b);
         // One under its block, at a negative `z-index`, stays in it, under
         // what the block holds: its stop's column would put it over that.
-        let hoist = self.hoist_into.filter(|stop| {
+        let into = if node.is_none() {
+            self.icb_hoist_into
+        } else {
+            self.hoist_into
+        };
+        let hoist = into.filter(|stop| {
             !fixed
                 && !self.no_carry
                 && style.z_index.is_none_or(|z| z >= 0)

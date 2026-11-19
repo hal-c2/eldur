@@ -147,6 +147,10 @@ pub(crate) struct Emitter<'a, 'd> {
     /// every box between is a block of a column that makes none and clips
     /// nothing, so in CSS it paints among that column's boxes.
     hoist_into: Option<usize>,
+    /// The stop whose column an overlay of the initial containing block
+    /// emitted here goes to: as `hoist_into`, but when any other box of
+    /// that column rises, before it or after.
+    icb_hoist_into: Option<usize>,
     /// The box being emitted is a block of a column.
     column_child: bool,
     /// The box whose column is about to be filled is a stop, by this number.
@@ -312,6 +316,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             above_flow: None,
             overlay_inside: None,
             hoist_into: None,
+            icb_hoist_into: None,
             column_child: false,
             column_stop: None,
             stops: 0,
@@ -622,9 +627,10 @@ impl<'a, 'd> Emitter<'a, 'd> {
         let outer_wrap = if own_context { self.wrap.take() } else { None };
         let rising = std::mem::take(&mut self.rise_out);
         let outer_rising = std::mem::replace(&mut self.rising, rising);
-        let (outer_hoist, outer_stop) = self.enter_stop(b, layout_item);
+        let (outer_hoist, outer_icb_hoist, outer_stop) = self.enter_stop(b, layout_item);
         let e = self.block_box_in_lines(b, inherited, independent, layout_item);
         self.hoist_into = outer_hoist;
+        self.icb_hoist_into = outer_icb_hoist;
         self.column_stop = outer_stop;
         self.rising = outer_rising;
         if outer_wrap.is_some() {
@@ -643,7 +649,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         &mut self,
         b: &LayoutBox<'_>,
         layout_item: bool,
-    ) -> (Option<usize>, Option<usize>) {
+    ) -> (Option<usize>, Option<usize>, Option<usize>) {
         let style = &*b.style;
         let column_child = std::mem::take(&mut self.column_child);
         let page = b
@@ -657,13 +663,18 @@ impl<'a, 'd> Emitter<'a, 'd> {
             && b.kind == BoxKind::Block
             && style.overflow_x == Overflow::Visible
             && style.overflow_y == Overflow::Visible;
-        let inner = if keeps { self.hoist_into } else { None };
+        let (inner, inner_icb) = if keeps {
+            (self.hoist_into, self.icb_hoist_into)
+        } else {
+            (None, None)
+        };
         let id = stop.then(|| {
             self.stops += 1;
             self.stops
         });
         (
             std::mem::replace(&mut self.hoist_into, inner),
+            std::mem::replace(&mut self.icb_hoist_into, inner_icb),
             std::mem::replace(&mut self.column_stop, id),
         )
     }

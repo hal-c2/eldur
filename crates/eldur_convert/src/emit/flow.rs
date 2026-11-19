@@ -415,11 +415,21 @@ impl Emitter<'_, '_> {
         // which in CSS paints under every overlay.
         let stop = self.column_stop.take();
         let own_hoist = self.hoist_into;
+        let own_icb_hoist = self.icb_hoist_into;
         let mut later_rises = vec![self.writes_z_index; children.len()];
+        // The initial block's overlays paint over the whole page, so they
+        // go too when a box before them rises: else the stop's column
+        // and the initial block would split what CSS orders as one layer.
+        let mut others_rise = later_rises.clone();
         if stop.is_some() && !self.writes_z_index {
             let mut any = false;
             for (i, c) in children.iter().enumerate().rev() {
                 later_rises[i] = any;
+                any = any || super::lists::rises(&c.style);
+            }
+            let mut any = false;
+            for (i, c) in children.iter().enumerate() {
+                others_rise[i] = any || later_rises[i];
                 any = any || super::lists::rises(&c.style);
             }
         }
@@ -428,6 +438,7 @@ impl Emitter<'_, '_> {
             if let Some(stop) = stop {
                 let i = children.len() - rest.len();
                 self.hoist_into = later_rises[i].then_some(stop);
+                self.icb_hoist_into = others_rise[i].then_some(stop);
             }
             if is_out_of_flow(&child.style) {
                 rest = &rest[1..];
@@ -711,6 +722,7 @@ impl Emitter<'_, '_> {
             self.place_hoisted(stop, &mut layout);
         }
         self.hoist_into = own_hoist;
+        self.icb_hoist_into = own_icb_hoist;
         // Its margins escape through the top too while all of it is hidden.
         let escapes_through = hidden.escaping;
         // Every block of the column is one a script can hide.
