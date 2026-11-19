@@ -3132,7 +3132,7 @@ function verifyGlobalsAndEvents(done) {
     );
     assert!(
         output.contains(
-            "ELDUR_OK_GLOBALS_EVENTS bus:42,key:Enter:13:true,click:12:34:true,clickRes:false,moOptions:true,hash:#tab1,pop:7|1+2|hi|true|true|visible:false:1|copied-text|2"
+            "ELDUR_OK_GLOBALS_EVENTS bus:42,key:Enter:13:true,click:12:34:true,clickRes:false,hash:#tab1,pop:7,moOptions:true|1+2|hi|true|true|visible:false:1|copied-text|2"
         ),
         "{output}"
     );
