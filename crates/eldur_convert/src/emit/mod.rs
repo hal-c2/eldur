@@ -1089,16 +1089,21 @@ impl<'a, 'd> Emitter<'a, 'd> {
         layout_item: bool,
     ) {
         let style = &*b.style;
+        let page = b
+            .node
+            .is_some_and(|n| Some(n) == self.doc.body() || Some(n) == self.root_node);
         if boxes::is_out_of_flow(style) {
-            // Its block has the overlay's own `z` to see to.
+            // Its block has the overlay's own `z` to see to. Without the
+            // rules, the runtime reads that `z` here, to lift its block by
+            // when it levels that block again.
+            if self.writes_z_index && !page {
+                push_z_markers(obj, style.z_index, 1);
+            }
             self.above_flow = outer;
             return;
         }
         let holds = boxes::is_containing_block(style);
         let stacks = holds || (layout_item && style.z_index.is_some());
-        let page = b
-            .node
-            .is_some_and(|n| Some(n) == self.doc.body() || Some(n) == self.root_node);
         let inside = self.above_flow;
         let at_auto = inside.or(holds.then_some(1));
         let own = match style.z_index {
@@ -1111,19 +1116,10 @@ impl<'a, 'd> Emitter<'a, 'd> {
         let level = own.or(at_auto);
         // A script's `style.zIndex` is a level over the flow too, and on a
         // page with no DOM the runtime has no rules to tell it this box is
-        // one it applies to, what clearing it goes back to (-1 for `auto`),
-        // or the least level it has at `auto`; what it holds it sees itself.
+        // one it applies to, what clearing it goes back to, or the least
+        // level it has at `auto`; what it holds it sees itself.
         if (holds || layout_item) && self.writes_z_index && !page {
-            let hold = i32::from(holds);
-            for (name, z) in [("eldurRuleZ", own.unwrap_or(-1)), ("eldurHoldZ", hold)] {
-                obj.members.push(Member::PropertyDecl {
-                    ty: "real".to_owned(),
-                    name: name.to_owned(),
-                    value: Some(Value::Number(f64::from(z))),
-                    readonly: true,
-                    required: false,
-                });
-            }
+            push_z_markers(obj, own, i32::from(holds));
         }
         if own == Some(0) {
             self.above_flow = outer;
@@ -1748,4 +1744,20 @@ fn over(top: eldur_css::Rgba, under: eldur_css::Rgba) -> eldur_css::Rgba {
         mix(top.b, under.b),
         255,
     )
+}
+
+/// What the runtime levels a box by on a page with no rules at run time:
+/// `eldurHoldZ`, the least level it has at `auto`, on every box it levels,
+/// and `eldurRuleZ`, its rule's own level, only on one that has one.
+fn push_z_markers(obj: &mut Object, own: Option<i32>, hold: i32) {
+    let own = own.map(|z| ("eldurRuleZ", z));
+    for (name, z) in own.into_iter().chain([("eldurHoldZ", hold)]) {
+        obj.members.push(Member::PropertyDecl {
+            ty: "real".to_owned(),
+            name: name.to_owned(),
+            value: Some(Value::Number(f64::from(z))),
+            readonly: true,
+            required: false,
+        });
+    }
 }

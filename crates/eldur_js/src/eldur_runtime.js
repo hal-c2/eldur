@@ -6426,18 +6426,19 @@ function _zOutOfFlow(raw) {
 }
 
 // The box's own level, or null at `auto`. Without the rules, the converter
-// gives a box `z-index` applies to its rule's level (-1 at `auto`), and a
-// script's write is kept beside it.
+// marks each box it levels with its least level at `auto` (`eldurHoldZ`),
+// and one whose rule gives it a level of its own with that (`eldurRuleZ`);
+// a script's write is kept beside it.
 function _zOwn(raw) {
     if (_zStyled(raw)) {
         return _stackOwn(_gStyle(raw), _gLayoutItem(raw));
     }
-    if (typeof raw.eldurRuleZ === "number") {
+    if (typeof raw.eldurHoldZ === "number") {
         var set = _meta(raw).zOwn;
         if (set !== undefined) {
             return set;
         }
-        return raw.eldurRuleZ >= 0 ? raw.eldurRuleZ : null;
+        return typeof raw.eldurRuleZ === "number" ? raw.eldurRuleZ : null;
     }
     return null;
 }
@@ -6633,9 +6634,9 @@ function _setStyleAt(item, prop, value) {
     } else if (name === "zIndex") {
         // The level the rules give it, so a script's `z-index` and a
         // stylesheet's stack the same. Without the rules, the converter
-        // gives a box `z-index` applies to its own level (-1 at `auto`) and
-        // its level at `auto` before what it holds, and one it raises takes
-        // its number plus one; any other box takes the number.
+        // marks a box `z-index` applies to (`_zOwn`): one in the flow takes
+        // its number plus one, an overlay the number; any other box takes
+        // the number.
         var stacked;
         var before = _zOutOfFlow(raw) ? undefined : _zLift(raw);
         if (_zStyled(raw)) {
@@ -6644,12 +6645,15 @@ function _setStyleAt(item, prop, value) {
             var fresh = _gFreshStyle(raw);
             var own = _stackOwn(fresh, _gLayoutItem(raw));
             stacked = own !== null ? own : _zAuto(raw, _stackHold(fresh));
-        } else if (typeof raw.eldurRuleZ === "number") {
+        } else if (typeof raw.eldurHoldZ === "number") {
             var level = parseInt(str, 10);
-            var set = str === "" ? (raw.eldurRuleZ >= 0 ? raw.eldurRuleZ : null)
-                : str === "auto" || isNaN(level) ? null : level >= 0 ? level + 1 : 0;
+            var outOfFlow = _zOutOfFlow(raw);
+            var set = str === "" ? (typeof raw.eldurRuleZ === "number" ? raw.eldurRuleZ : null)
+                : str === "auto" || isNaN(level) ? null
+                : outOfFlow ? level : level >= 0 ? level + 1 : 0;
             _meta(raw).zOwn = set;
-            stacked = set !== null ? set : _zAuto(raw, raw.eldurHoldZ || 0);
+            // An overlay at `auto` is at 0 in its block, as the converter puts it.
+            stacked = set !== null ? set : outOfFlow ? 0 : _zAuto(raw, raw.eldurHoldZ);
         } else {
             stacked = parseInt(str, 10);
         }
@@ -23643,8 +23647,11 @@ function _gPaintBox(raw, s, e) {
     _gPaintOutline(raw, s);
     // At `auto`, over its later siblings by what it holds, as the converter
     // levels a box it lays out.
+    // Only a box raised over its hold, or not yet at it, has kids to look
+    // at: a kid raised since lifted it on its way up.
     var own = _stackOwn(s, _gLayoutItem(raw));
-    var z = own !== null ? own : _zAuto(raw, _stackHold(s));
+    var hold = _stackHold(s);
+    var z = own !== null ? own : raw.z === hold ? hold : _zAuto(raw, hold);
     if (raw.z !== z) {
         var before = _zOutOfFlow(raw) ? undefined : _zLift(raw);
         raw.z = z;
