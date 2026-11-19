@@ -1132,10 +1132,14 @@ impl<'a, 'd> Emitter<'a, 'd> {
             if !self.by_path {
                 dynamic::takes_focus_by_tabindex(&mut e.obj, self.doc, node);
             }
-            if self.collapsed.contains(&node) {
+            let collapsed = self.collapsed.contains(&node);
+            if collapsed {
                 e.obj.set("visible", false);
-                // Its own `style` attribute may be what hides it: clearing
-                // that from a script shows it.
+            }
+            // A hidden box's own `style` attribute may be what hides it
+            // (a `display: none` one a script reaches is built collapsed):
+            // clearing that from a script shows it.
+            if collapsed || b.style.visibility == eldur_css::Visibility::Collapse {
                 let declared = e.obj.members.iter().any(
                     |m| matches!(m, Member::PropertyDecl { name, .. } if name == "eldurStyle"),
                 );
