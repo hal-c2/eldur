@@ -198,61 +198,10 @@ pub(crate) fn declare_style_hides(obj: &mut Object, doc: &Document, node: NodeId
     let Some(style) = doc.element(node).and_then(|e| e.attr("style")) else {
         return;
     };
-    if own_display(style).as_deref() == Some("none") {
+    if eldur_css::style_attribute_hides(style) {
         obj.members
             .insert(0, decl("bool", "eldurStyleHides", Value::Bool(true)));
     }
-}
-
-/// The `display` a `style` attribute declares, as the cascade picks it: an
-/// important declaration over a normal one, then the last.
-fn own_display(style: &str) -> Option<String> {
-    let mut won: Option<(bool, String)> = None;
-    for declaration in declarations(style) {
-        let Some((name, value)) = declaration.split_once(':') else {
-            continue;
-        };
-        if !name.trim().eq_ignore_ascii_case("display") {
-            continue;
-        }
-        let value = value.trim().to_ascii_lowercase();
-        let (value, important) = match value.rsplit_once('!') {
-            Some((value, priority)) if priority.trim() == "important" => {
-                (value.trim().to_owned(), true)
-            }
-            _ => (value, false),
-        };
-        if important || !won.as_ref().is_some_and(|(important, _)| *important) {
-            won = Some((important, value));
-        }
-    }
-    won.map(|(_, value)| value)
-}
-
-/// A declaration list split at its `;`s, not those in strings or `url(...)`.
-fn declarations(style: &str) -> Vec<&str> {
-    let mut out = Vec::new();
-    let (mut start, mut depth, mut quote) = (0, 0usize, None);
-    let mut chars = style.char_indices();
-    while let Some((at, c)) = chars.next() {
-        match (quote, c) {
-            (Some(_), '\\') => {
-                chars.next();
-            }
-            (Some(q), c) if c == q => quote = None,
-            (Some(_), _) => {}
-            (None, '"' | '\'') => quote = Some(c),
-            (None, '(') => depth += 1,
-            (None, ')') => depth = depth.saturating_sub(1),
-            (None, ';') if depth == 0 => {
-                out.push(&style[start..at]);
-                start = at + 1;
-            }
-            _ => {}
-        }
-    }
-    out.push(&style[start..]);
-    out
 }
 
 /// An element whose attributes the runtime acts on when it hears the person
