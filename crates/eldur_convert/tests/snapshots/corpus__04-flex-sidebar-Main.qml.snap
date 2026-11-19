@@ -18,6 +18,30 @@ ApplicationWindow {
     width: 1280
     height: 800
 
+    function scrollToFragment(eldurLink) {
+        let eldurName = eldurLink.slice(1);
+        const eldurTargets = Object.create(null);
+        flickableInput.forceActiveFocus();
+        if (!(eldurName in eldurTargets)) {
+            try {
+                eldurName = decodeURIComponent(eldurName);
+            } catch (e) {
+                eldurName = null;
+            }
+        }
+        const eldurTarget = eldurName === null ? undefined : eldurTargets[eldurName];
+        if (eldurTarget) {
+            for (let eldurAt = eldurTarget.parent; eldurAt && eldurAt !== flickable; eldurAt = eldurAt.parent) {
+                if (eldurAt instanceof Flickable)
+                    eldurAt.contentY = Math.max(0, Math.min(eldurTarget.mapToItem(eldurAt.contentItem, 0, 0).y, eldurAt.contentHeight - eldurAt.height));
+            }
+            const eldurY = eldurTarget.mapToItem(flickable.contentItem, 0, 0).y;
+            flickable.contentY = Math.max(0, Math.min(eldurY, flickable.contentHeight - flickable.height));
+        } else if (eldurName !== null && (eldurName === "" || eldurName.toLowerCase() === "top")) {
+            flickable.contentY = 0;
+        }
+    }
+
     Flickable {
         id: flickable
         anchors.fill: parent
@@ -145,6 +169,8 @@ ApplicationWindow {
                                                 radius: 6
                                                 implicitWidth: menuItemText.implicitWidth + 24
                                                 implicitHeight: menuItemText.implicitHeight + 20
+                                                Accessible.role: Accessible.Link
+                                                Accessible.name: "Dashboard"
                                                 Layout.fillWidth: true
                                                 Layout.preferredHeight: implicitHeight
                                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
@@ -196,6 +222,14 @@ ApplicationWindow {
                                                     anchors.topMargin: 10
                                                     renderType: Text.NativeRendering
                                                 }
+
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
+                                                }
                                             }
 
                                             // <a class="menu-item">
@@ -207,6 +241,8 @@ ApplicationWindow {
                                                 radius: 6
                                                 implicitWidth: menuItemText2.implicitWidth + 24
                                                 implicitHeight: menuItemText2.implicitHeight + 20
+                                                Accessible.role: Accessible.Link
+                                                Accessible.name: "Projects"
                                                 Layout.fillWidth: true
                                                 Layout.topMargin: 4 - menuItem.eldurCarry
                                                 Layout.preferredHeight: implicitHeight
@@ -236,6 +272,14 @@ ApplicationWindow {
                                                     renderType: Text.NativeRendering
                                                 }
 
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
+                                                }
+
                                                 HoverHandler {
                                                     id: menuItem2Hover
                                                 }
@@ -250,6 +294,8 @@ ApplicationWindow {
                                                 radius: 6
                                                 implicitWidth: menuItemText3.implicitWidth + 24
                                                 implicitHeight: menuItemText3.implicitHeight + 20
+                                                Accessible.role: Accessible.Link
+                                                Accessible.name: "Tasks"
                                                 Layout.fillWidth: true
                                                 Layout.topMargin: 4 - menuItem2.eldurCarry
                                                 Layout.preferredHeight: implicitHeight
@@ -279,6 +325,14 @@ ApplicationWindow {
                                                     renderType: Text.NativeRendering
                                                 }
 
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
+                                                }
+
                                                 HoverHandler {
                                                     id: menuItem3Hover
                                                 }
@@ -293,6 +347,8 @@ ApplicationWindow {
                                                 radius: 6
                                                 implicitWidth: menuItemText4.implicitWidth + 24
                                                 implicitHeight: menuItemText4.implicitHeight + 20
+                                                Accessible.role: Accessible.Link
+                                                Accessible.name: "Calendar"
                                                 Layout.fillWidth: true
                                                 Layout.topMargin: 4 - menuItem3.eldurCarry
                                                 Layout.preferredHeight: implicitHeight
@@ -322,6 +378,14 @@ ApplicationWindow {
                                                     renderType: Text.NativeRendering
                                                 }
 
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
+                                                }
+
                                                 HoverHandler {
                                                     id: menuItem4Hover
                                                 }
@@ -336,6 +400,8 @@ ApplicationWindow {
                                                 radius: 6
                                                 implicitWidth: menuItemText5.implicitWidth + 24
                                                 implicitHeight: menuItemText5.implicitHeight + 20
+                                                Accessible.role: Accessible.Link
+                                                Accessible.name: "Messages"
                                                 Layout.fillWidth: true
                                                 Layout.topMargin: 4 - menuItem4.eldurCarry
                                                 Layout.preferredHeight: implicitHeight
@@ -363,6 +429,14 @@ ApplicationWindow {
                                                     anchors.rightMargin: 12
                                                     anchors.topMargin: 10
                                                     renderType: Text.NativeRendering
+                                                }
+
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
 
                                                 HoverHandler {
@@ -419,6 +493,8 @@ ApplicationWindow {
                                                 radius: 6
                                                 implicitWidth: menuItemText6.implicitWidth + 24
                                                 implicitHeight: menuItemText6.implicitHeight + 20
+                                                Accessible.role: Accessible.Link
+                                                Accessible.name: "Members"
                                                 Layout.fillWidth: true
                                                 Layout.preferredHeight: implicitHeight
                                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
@@ -447,6 +523,14 @@ ApplicationWindow {
                                                     renderType: Text.NativeRendering
                                                 }
 
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
+                                                }
+
                                                 HoverHandler {
                                                     id: menuItem5Hover
                                                 }
@@ -461,6 +545,8 @@ ApplicationWindow {
                                                 radius: 6
                                                 implicitWidth: menuItemText7.implicitWidth + 24
                                                 implicitHeight: menuItemText7.implicitHeight + 20
+                                                Accessible.role: Accessible.Link
+                                                Accessible.name: "Billing"
                                                 Layout.fillWidth: true
                                                 Layout.topMargin: 4 - menuItem5.eldurCarry
                                                 Layout.preferredHeight: implicitHeight
@@ -490,6 +576,14 @@ ApplicationWindow {
                                                     renderType: Text.NativeRendering
                                                 }
 
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
+                                                }
+
                                                 HoverHandler {
                                                     id: menuItem6Hover
                                                 }
@@ -504,6 +598,8 @@ ApplicationWindow {
                                                 radius: 6
                                                 implicitWidth: menuItemText8.implicitWidth + 24
                                                 implicitHeight: menuItemText8.implicitHeight + 20
+                                                Accessible.role: Accessible.Link
+                                                Accessible.name: "Settings"
                                                 Layout.fillWidth: true
                                                 Layout.topMargin: 4 - menuItem6.eldurCarry
                                                 Layout.preferredHeight: implicitHeight
@@ -531,6 +627,14 @@ ApplicationWindow {
                                                     anchors.rightMargin: 12
                                                     anchors.topMargin: 10
                                                     renderType: Text.NativeRendering
+                                                }
+
+                                                TapHandler {
+                                                    onTapped: root.scrollToFragment("#")
+                                                }
+
+                                                HoverHandler {
+                                                    cursorShape: Qt.PointingHandCursor
                                                 }
 
                                                 HoverHandler {

@@ -19,6 +19,34 @@ ApplicationWindow {
     width: 1280
     height: 800
 
+    function scrollToFragment(eldurLink) {
+        let eldurName = eldurLink.slice(1);
+        const eldurTargets = Object.assign(Object.create(null), {
+            "components": components,
+            "docs": docs,
+            "tokens": tokens
+        });
+        flickableInput.forceActiveFocus();
+        if (!(eldurName in eldurTargets)) {
+            try {
+                eldurName = decodeURIComponent(eldurName);
+            } catch (e) {
+                eldurName = null;
+            }
+        }
+        const eldurTarget = eldurName === null ? undefined : eldurTargets[eldurName];
+        if (eldurTarget) {
+            for (let eldurAt = eldurTarget.parent; eldurAt && eldurAt !== flickable; eldurAt = eldurAt.parent) {
+                if (eldurAt instanceof Flickable)
+                    eldurAt.contentY = Math.max(0, Math.min(eldurTarget.mapToItem(eldurAt.contentItem, 0, 0).y, eldurAt.contentHeight - eldurAt.height));
+            }
+            const eldurY = eldurTarget.mapToItem(flickable.contentItem, 0, 0).y;
+            flickable.contentY = Math.max(0, Math.min(eldurY, flickable.contentHeight - flickable.height));
+        } else if (eldurName !== null && (eldurName === "" || eldurName.toLowerCase() === "top")) {
+            flickable.contentY = 0;
+        }
+    }
+
     Flickable {
         id: flickable
         anchors.fill: parent
@@ -1044,6 +1072,8 @@ ApplicationWindow {
                                     radius: 6
                                     implicitWidth: buttonText.implicitWidth + 35.2
                                     implicitHeight: buttonText.implicitHeight + 16
+                                    Accessible.role: Accessible.Link
+                                    Accessible.name: "Read the docs"
                                     width: Math.min(implicitWidth, blockFlow3.width)
                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
@@ -1069,6 +1099,14 @@ ApplicationWindow {
                                         anchors.rightMargin: 17.6
                                         anchors.topMargin: 8
                                         renderType: Text.NativeRendering
+                                    }
+
+                                    TapHandler {
+                                        onTapped: root.scrollToFragment("#docs")
+                                    }
+
+                                    HoverHandler {
+                                        cursorShape: Qt.PointingHandCursor
                                     }
 
                                     HoverHandler {

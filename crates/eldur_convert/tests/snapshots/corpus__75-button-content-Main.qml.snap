@@ -388,11 +388,12 @@ ApplicationWindow {
 
                 Item {
                     id: srOnlySlot
-                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
                 }
 
                 EldurLines {
                     id: blockFlow2
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                     color: "#000000"
                     font.family: EldurFonts.family("sans-serif")
                     font.pixelSize: 16

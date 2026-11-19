@@ -1,0 +1,17 @@
+---
+source: crates/eldur_convert/tests/corpus.rs
+expression: file_list(&output)
+---
+EldurLines.qml
+EldurRun.qml
+EldurScrollInput.qml
+Main.qml
+assets/svg-0264ce491e4d77a3.svg
+assets/svg-0eda57d105a60ff4.svg
+assets/svg-73f6f77585154202.svg
+assets/svg-7971e5f4a743c7d2.svg
+assets/svg-b5486e2271a50591.svg
+assets/svg-ca6f6627adf4ad9a.svg
+assets/svg-ce7a7d67d9e96444.svg
+assets/svg-e3bf96ac6e4316a8.svg
+eldur_fonts.js

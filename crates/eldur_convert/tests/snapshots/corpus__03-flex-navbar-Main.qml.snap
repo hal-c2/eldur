@@ -286,6 +286,8 @@ ApplicationWindow {
                                             implicitHeight: btnText.implicitHeight + 18
                                             border.width: 1
                                             border.color: btnHover.hovered ? "#094a8a" : "#0b5cad"
+                                            Accessible.role: Accessible.Link
+                                            Accessible.name: "Sign up"
                                             width: Math.min(implicitWidth, liFlow.width)
                                             antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
@@ -319,6 +321,14 @@ ApplicationWindow {
                                                 anchors.rightMargin: 17
                                                 anchors.topMargin: 9
                                                 renderType: Text.NativeRendering
+                                            }
+
+                                            TapHandler {
+                                                onTapped: root.scrollToFragment("#")
+                                            }
+
+                                            HoverHandler {
+                                                cursorShape: Qt.PointingHandCursor
                                             }
 
                                             HoverHandler {
@@ -542,6 +552,8 @@ ApplicationWindow {
                                     implicitHeight: btnText2.implicitHeight + 30
                                     border.width: 1
                                     border.color: btn2Hover.hovered ? "#094a8a" : "#0b5cad"
+                                    Accessible.role: Accessible.Link
+                                    Accessible.name: "Start free trial"
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.alignment: Qt.AlignVCenter
@@ -580,6 +592,14 @@ ApplicationWindow {
                                         renderType: Text.NativeRendering
                                     }
 
+                                    TapHandler {
+                                        onTapped: root.scrollToFragment("#")
+                                    }
+
+                                    HoverHandler {
+                                        cursorShape: Qt.PointingHandCursor
+                                    }
+
                                     HoverHandler {
                                         id: btn2Hover
                                     }
@@ -594,6 +614,8 @@ ApplicationWindow {
                                     implicitHeight: btnText3.implicitHeight + 30
                                     border.width: 1
                                     border.color: "#0b5cad"
+                                    Accessible.role: Accessible.Link
+                                    Accessible.name: "Watch the demo"
                                     Layout.fillWidth: true
                                     Layout.maximumWidth: Math.ceil(implicitWidth)
                                     Layout.alignment: Qt.AlignVCenter
@@ -623,6 +645,14 @@ ApplicationWindow {
                                         anchors.rightMargin: 29
                                         anchors.topMargin: 15
                                         renderType: Text.NativeRendering
+                                    }
+
+                                    TapHandler {
+                                        onTapped: root.scrollToFragment("#")
+                                    }
+
+                                    HoverHandler {
+                                        cursorShape: Qt.PointingHandCursor
                                     }
 
                                     HoverHandler {

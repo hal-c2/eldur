@@ -18,6 +18,30 @@ ApplicationWindow {
     width: 1280
     height: 800
 
+    function scrollToFragment(eldurLink) {
+        let eldurName = eldurLink.slice(1);
+        const eldurTargets = Object.create(null);
+        flickableInput.forceActiveFocus();
+        if (!(eldurName in eldurTargets)) {
+            try {
+                eldurName = decodeURIComponent(eldurName);
+            } catch (e) {
+                eldurName = null;
+            }
+        }
+        const eldurTarget = eldurName === null ? undefined : eldurTargets[eldurName];
+        if (eldurTarget) {
+            for (let eldurAt = eldurTarget.parent; eldurAt && eldurAt !== flickable; eldurAt = eldurAt.parent) {
+                if (eldurAt instanceof Flickable)
+                    eldurAt.contentY = Math.max(0, Math.min(eldurTarget.mapToItem(eldurAt.contentItem, 0, 0).y, eldurAt.contentHeight - eldurAt.height));
+            }
+            const eldurY = eldurTarget.mapToItem(flickable.contentItem, 0, 0).y;
+            flickable.contentY = Math.max(0, Math.min(eldurY, flickable.contentHeight - flickable.height));
+        } else if (eldurName !== null && (eldurName === "" || eldurName.toLowerCase() === "top")) {
+            flickable.contentY = 0;
+        }
+    }
+
     Flickable {
         id: flickable
         anchors.fill: parent
@@ -274,6 +298,8 @@ ApplicationWindow {
                                                     radius: 8
                                                     implicitWidth: isActiveText.implicitWidth + 24
                                                     implicitHeight: isActiveText.implicitHeight + 16
+                                                    Accessible.role: Accessible.Link
+                                                    Accessible.name: "Overview"
                                                     Layout.fillWidth: true
                                                     Layout.preferredHeight: implicitHeight
                                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
@@ -301,6 +327,14 @@ ApplicationWindow {
                                                         anchors.topMargin: 8
                                                         renderType: Text.NativeRendering
                                                     }
+
+                                                    TapHandler {
+                                                        onTapped: root.scrollToFragment("#")
+                                                    }
+
+                                                    HoverHandler {
+                                                        cursorShape: Qt.PointingHandCursor
+                                                    }
                                                 }
                                             }
 
@@ -321,6 +355,8 @@ ApplicationWindow {
 
                                                     implicitWidth: aText.implicitWidth + 24
                                                     implicitHeight: aText.implicitHeight + 16
+                                                    Accessible.role: Accessible.Link
+                                                    Accessible.name: "Projects"
                                                     Layout.fillWidth: true
                                                     Layout.preferredHeight: implicitHeight
 
@@ -346,6 +382,14 @@ ApplicationWindow {
                                                         anchors.topMargin: 8
                                                         renderType: Text.NativeRendering
                                                     }
+
+                                                    TapHandler {
+                                                        onTapped: root.scrollToFragment("#")
+                                                    }
+
+                                                    HoverHandler {
+                                                        cursorShape: Qt.PointingHandCursor
+                                                    }
                                                 }
                                             }
 
@@ -366,6 +410,8 @@ ApplicationWindow {
 
                                                     implicitWidth: aText2.implicitWidth + 24
                                                     implicitHeight: aText2.implicitHeight + 16
+                                                    Accessible.role: Accessible.Link
+                                                    Accessible.name: "Deployments"
                                                     Layout.fillWidth: true
                                                     Layout.preferredHeight: implicitHeight
 
@@ -391,6 +437,14 @@ ApplicationWindow {
                                                         anchors.topMargin: 8
                                                         renderType: Text.NativeRendering
                                                     }
+
+                                                    TapHandler {
+                                                        onTapped: root.scrollToFragment("#")
+                                                    }
+
+                                                    HoverHandler {
+                                                        cursorShape: Qt.PointingHandCursor
+                                                    }
                                                 }
                                             }
 
@@ -411,6 +465,8 @@ ApplicationWindow {
 
                                                     implicitWidth: aText3.implicitWidth + 24
                                                     implicitHeight: aText3.implicitHeight + 16
+                                                    Accessible.role: Accessible.Link
+                                                    Accessible.name: "Incidents"
                                                     Layout.fillWidth: true
                                                     Layout.preferredHeight: implicitHeight
 
@@ -436,6 +492,14 @@ ApplicationWindow {
                                                         anchors.topMargin: 8
                                                         renderType: Text.NativeRendering
                                                     }
+
+                                                    TapHandler {
+                                                        onTapped: root.scrollToFragment("#")
+                                                    }
+
+                                                    HoverHandler {
+                                                        cursorShape: Qt.PointingHandCursor
+                                                    }
                                                 }
                                             }
 
@@ -456,6 +520,8 @@ ApplicationWindow {
 
                                                     implicitWidth: aText4.implicitWidth + 24
                                                     implicitHeight: aText4.implicitHeight + 16
+                                                    Accessible.role: Accessible.Link
+                                                    Accessible.name: "Reports"
                                                     Layout.fillWidth: true
                                                     Layout.preferredHeight: implicitHeight
 
@@ -481,6 +547,14 @@ ApplicationWindow {
                                                         anchors.topMargin: 8
                                                         renderType: Text.NativeRendering
                                                     }
+
+                                                    TapHandler {
+                                                        onTapped: root.scrollToFragment("#")
+                                                    }
+
+                                                    HoverHandler {
+                                                        cursorShape: Qt.PointingHandCursor
+                                                    }
                                                 }
                                             }
 
@@ -501,6 +575,8 @@ ApplicationWindow {
 
                                                     implicitWidth: aText5.implicitWidth + 24
                                                     implicitHeight: aText5.implicitHeight + 16
+                                                    Accessible.role: Accessible.Link
+                                                    Accessible.name: "Settings"
                                                     Layout.fillWidth: true
                                                     Layout.preferredHeight: implicitHeight
 
@@ -525,6 +601,14 @@ ApplicationWindow {
                                                         anchors.rightMargin: 12
                                                         anchors.topMargin: 8
                                                         renderType: Text.NativeRendering
+                                                    }
+
+                                                    TapHandler {
+                                                        onTapped: root.scrollToFragment("#")
+                                                    }
+
+                                                    HoverHandler {
+                                                        cursorShape: Qt.PointingHandCursor
                                                     }
                                                 }
                                             }

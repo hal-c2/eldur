@@ -243,6 +243,30 @@ ApplicationWindow {
         return heights
     }
 
+    function scrollToFragment(eldurLink) {
+        let eldurName = eldurLink.slice(1);
+        const eldurTargets = Object.create(null);
+        flickableInput.forceActiveFocus();
+        if (!(eldurName in eldurTargets)) {
+            try {
+                eldurName = decodeURIComponent(eldurName);
+            } catch (e) {
+                eldurName = null;
+            }
+        }
+        const eldurTarget = eldurName === null ? undefined : eldurTargets[eldurName];
+        if (eldurTarget) {
+            for (let eldurAt = eldurTarget.parent; eldurAt && eldurAt !== flickable; eldurAt = eldurAt.parent) {
+                if (eldurAt instanceof Flickable)
+                    eldurAt.contentY = Math.max(0, Math.min(eldurTarget.mapToItem(eldurAt.contentItem, 0, 0).y, eldurAt.contentHeight - eldurAt.height));
+            }
+            const eldurY = eldurTarget.mapToItem(flickable.contentItem, 0, 0).y;
+            flickable.contentY = Math.max(0, Math.min(eldurY, flickable.contentHeight - flickable.height));
+        } else if (eldurName !== null && (eldurName === "" || eldurName.toLowerCase() === "top")) {
+            flickable.contentY = 0;
+        }
+    }
+
     Flickable {
         id: flickable
         anchors.fill: parent
@@ -428,6 +452,8 @@ ApplicationWindow {
                                         radius: 8
                                         implicitWidth: text_.implicitWidth + 24
                                         implicitHeight: text_.implicitHeight + 18
+                                        Accessible.role: Accessible.Link
+                                        Accessible.name: "Dashboard"
                                         Layout.fillWidth: true
                                         Layout.topMargin: 8
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
@@ -481,6 +507,14 @@ ApplicationWindow {
                                             anchors.bottomMargin: 9
                                             renderType: Text.NativeRendering
                                         }
+
+                                        TapHandler {
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
+                                        }
                                     }
 
                                     // <a class="nav-item">
@@ -490,6 +524,8 @@ ApplicationWindow {
                                         radius: 8
                                         implicitWidth: text2.implicitWidth + 24
                                         implicitHeight: text2.implicitHeight + 18
+                                        Accessible.role: Accessible.Link
+                                        Accessible.name: "Analytics"
                                         Layout.fillWidth: true
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
@@ -519,6 +555,14 @@ ApplicationWindow {
                                             renderType: Text.NativeRendering
                                         }
 
+                                        TapHandler {
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
+                                        }
+
                                         HoverHandler {
                                             id: navItemHover
                                         }
@@ -531,6 +575,8 @@ ApplicationWindow {
                                         radius: 8
                                         implicitWidth: text3.implicitWidth + 24
                                         implicitHeight: text3.implicitHeight + 18
+                                        Accessible.role: Accessible.Link
+                                        Accessible.name: "Reports"
                                         Layout.fillWidth: true
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
@@ -558,6 +604,14 @@ ApplicationWindow {
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
                                             renderType: Text.NativeRendering
+                                        }
+
+                                        TapHandler {
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
                                         }
 
                                         HoverHandler {
@@ -596,6 +650,8 @@ ApplicationWindow {
                                         radius: 8
                                         implicitWidth: navItemContent.implicitWidth + 24
                                         implicitHeight: navItemContent.implicitHeight + 18
+                                        Accessible.role: Accessible.Link
+                                        Accessible.name: "Orders 12"
                                         Layout.fillWidth: true
                                         Layout.topMargin: 8
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
@@ -673,6 +729,14 @@ ApplicationWindow {
                                             }
                                         }
 
+                                        TapHandler {
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
+                                        }
+
                                         HoverHandler {
                                             id: navItem3Hover
                                         }
@@ -685,6 +749,8 @@ ApplicationWindow {
                                         radius: 8
                                         implicitWidth: text4.implicitWidth + 24
                                         implicitHeight: text4.implicitHeight + 18
+                                        Accessible.role: Accessible.Link
+                                        Accessible.name: "Customers"
                                         Layout.fillWidth: true
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
@@ -714,6 +780,14 @@ ApplicationWindow {
                                             renderType: Text.NativeRendering
                                         }
 
+                                        TapHandler {
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
+                                        }
+
                                         HoverHandler {
                                             id: navItem4Hover
                                         }
@@ -726,6 +800,8 @@ ApplicationWindow {
                                         radius: 8
                                         implicitWidth: text5.implicitWidth + 24
                                         implicitHeight: text5.implicitHeight + 18
+                                        Accessible.role: Accessible.Link
+                                        Accessible.name: "Products"
                                         Layout.fillWidth: true
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
@@ -753,6 +829,14 @@ ApplicationWindow {
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
                                             renderType: Text.NativeRendering
+                                        }
+
+                                        TapHandler {
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
                                         }
 
                                         HoverHandler {
@@ -791,6 +875,8 @@ ApplicationWindow {
                                         radius: 8
                                         implicitWidth: text6.implicitWidth + 24
                                         implicitHeight: text6.implicitHeight + 18
+                                        Accessible.role: Accessible.Link
+                                        Accessible.name: "Team"
                                         Layout.fillWidth: true
                                         Layout.topMargin: 8
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
@@ -821,6 +907,14 @@ ApplicationWindow {
                                             renderType: Text.NativeRendering
                                         }
 
+                                        TapHandler {
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
+                                        }
+
                                         HoverHandler {
                                             id: navItem6Hover
                                         }
@@ -833,6 +927,8 @@ ApplicationWindow {
                                         radius: 8
                                         implicitWidth: text7.implicitWidth + 24
                                         implicitHeight: text7.implicitHeight + 18
+                                        Accessible.role: Accessible.Link
+                                        Accessible.name: "Billing"
                                         Layout.fillWidth: true
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
@@ -860,6 +956,14 @@ ApplicationWindow {
                                             anchors.topMargin: 9
                                             anchors.bottomMargin: 9
                                             renderType: Text.NativeRendering
+                                        }
+
+                                        TapHandler {
+                                            onTapped: root.scrollToFragment("#")
+                                        }
+
+                                        HoverHandler {
+                                            cursorShape: Qt.PointingHandCursor
                                         }
 
                                         HoverHandler {
