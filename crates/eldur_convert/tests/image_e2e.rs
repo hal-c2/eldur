@@ -621,3 +621,31 @@ fn run(dir: &Path, out: &eldur_convert::Output, name: &str, test: &str) {
     std::fs::remove_dir_all(dir).expect("remove temp dir");
     assert!(output.status.success(), "{text}");
 }
+
+/// An inline `<svg>` with neither size nor `viewBox` has no ratio of its own,
+/// even once its file is written at a box with one: `height: auto` beside a
+/// clamped `width` keeps the 150 default, as in Chromium.
+#[test]
+fn an_inline_svg_box_lends_it_no_ratio() {
+    let html = r#"<!doctype html><html><head><style>body{margin:0} svg{display:block}</style></head><body>
+<svg id=m xmlns="http://www.w3.org/2000/svg" style="width:200px;height:auto;max-width:100px"><rect width="50" height="50" fill="red"/></svg>
+<script>var named = [document.getElementById('m')];</script>
+</body></html>"#;
+    let options = Options {
+        root: RootKind::Item,
+        ..Options::default()
+    };
+    let out = eldur_convert::convert(
+        &Input {
+            html: html.to_owned(),
+            url: "/page/index.html".to_owned(),
+        },
+        &options,
+        &mut Bare,
+    );
+    let qml = out.main_qml().expect("Main.qml");
+    assert!(
+        !qml.contains("0.75"),
+        "no ratio from the written box:\n{qml}"
+    );
+}
