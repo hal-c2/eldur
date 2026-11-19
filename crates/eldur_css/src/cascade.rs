@@ -524,7 +524,7 @@ pub(crate) fn compute_styles_walking(
         element_cascades: std::sync::Arc::new(element_cascades),
         root_font_size,
         viewport: viewport.clone(),
-        variants: std::sync::Arc::new(variants),
+        variants,
         keyframes,
         font_faces,
         diagnostics,
