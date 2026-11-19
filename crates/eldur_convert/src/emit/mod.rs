@@ -151,6 +151,13 @@ pub(crate) struct Emitter<'a, 'd> {
     stops: usize,
     /// Overlays on their way to their stop's column, with the stop.
     hoisted: Vec<(usize, Object)>,
+    /// The block about to be emitted goes to its stop's column too, leaving
+    /// a slot in the flow (`risen_host`): it is raised over what follows its
+    /// block, and the rest of its block is not.
+    rise_out: bool,
+    /// The block being emitted is one that goes out, so its level lifts no
+    /// ancestor.
+    rising: bool,
     /// The content height in px of the block whose children are being
     /// laid out, when it is definite: their percentage heights resolve
     /// against it (CSS 2.2 §10.5).
@@ -301,6 +308,8 @@ impl<'a, 'd> Emitter<'a, 'd> {
             column_stop: None,
             stops: 0,
             hoisted: Vec::new(),
+            rise_out: false,
+            rising: false,
             percent_height_base: None,
             column_fills: true,
             fixed: Vec::new(),
@@ -602,10 +611,13 @@ impl<'a, 'd> Emitter<'a, 'd> {
             || establishes_bfc(&b.style)
             || (b.node.is_some() && b.node == self.root_node);
         let outer_wrap = if own_context { self.wrap.take() } else { None };
+        let rising = std::mem::take(&mut self.rise_out);
+        let outer_rising = std::mem::replace(&mut self.rising, rising);
         let (outer_hoist, outer_stop) = self.enter_stop(b, layout_item);
         let e = self.block_box_in_lines(b, inherited, independent, layout_item);
         self.hoist_into = outer_hoist;
         self.column_stop = outer_stop;
+        self.rising = outer_rising;
         if outer_wrap.is_some() {
             self.wrap = outer_wrap;
         }
@@ -1205,6 +1217,12 @@ impl<'a, 'd> Emitter<'a, 'd> {
         }
         if let Some(z) = level.filter(|_| !page) {
             obj.set("z", Value::Number(f64::from(z)));
+        }
+        // Out in its stop's column, it is over its block's later siblings
+        // without its block.
+        if self.rising {
+            self.above_flow = outer;
+            return;
         }
         self.above_flow = match (level, outer) {
             (Some(a), Some(b)) => Some(a.max(b)),
