@@ -389,8 +389,8 @@ const OUT_OF_FLOW_MOVES_UNSCRIPTED: &str = r##"
 /// `auto` is a stacking context, which keeps what it holds in, so it stays
 /// at its own level; a box with no box (`display: none`) lifts nothing; a
 /// fixed box is painted over the window, not in its block. And an overlay
-/// taken out of its block keeps the place its block's relative offset, and
-/// that of a positioned box its block is in, give it.
+/// taken out of its block keeps its place at its block, and at the
+/// positioned box its block is in.
 const CONTEXTS: &str = r#"<!doctype html><html><head><style>
 body { margin: 0 }
 div { height: 40px; width: 200px }
@@ -404,8 +404,8 @@ div { height: 40px; width: 200px }
 .rel { position: relative }
 .ab { position: absolute; left: 0; top: 0; width: 50px; background: green }
 #f5 { position: fixed; top: 1150px; left: 600px; z-index: 10; width: 50px; background: green }
-#h6 { position: relative; left: 40px; top: 20px }
-#o7 { position: relative; left: 30px }
+#h6 { position: relative; margin-left: 40px }
+#o7 { position: relative; margin-left: 30px }
 </style></head><body>
 <div id=t1 class=tf><div id=c1 class=in></div></div><div id=v1 class=over></div>
 <div class=gap></div>
@@ -436,10 +436,10 @@ const CONTEXTS_TEST: &str = r##"
         compare(front(page, 100, 270), "v3", "a sticky box keeps its kid's level in")
         compare(front(page, 100, 390), "v4", "the box that lifted its block hidden")
         compare(front(page, 100, 510), "v5", "a fixed box lifts nothing")
-        compare(front(page, 70, 630), "a6", "at its block's relative offset")
-        compare(front(page, 20, 610), "", "not where its block would be unmoved")
-        compare(front(page, 70, 730), "a7", "at the offset of its block's block")
-        compare(front(page, 10, 730), "", "not where that block would be unmoved")
+        compare(front(page, 70, 630), "a6", "at its block")
+        compare(front(page, 20, 610), "", "not at its stop")
+        compare(front(page, 70, 730), "a7", "at its block in a positioned box")
+        compare(front(page, 10, 730), "", "not at that box's stop")
     }
 }
 }
