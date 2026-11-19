@@ -7,7 +7,15 @@
 //
 // writes `chromium.json`, and with `--shots` each page's last state as
 // DIR/<page>.png. `--only` rerecords those pages and keeps the rest. Regenerate it; never edit it by hand.
+//
+// A page whose json says `"window": true` has steps where its window loses
+// focus (`away`) and gets it back (`back`). Headless Chromium tells every page
+// it has focus, so that page runs in a headed Chromium on a Wayland compositor
+// off the user's screen: sway with `WLR_BACKENDS=headless`, `WAYLAND_DISPLAY`
+// set to it and `ELDUR_GEN_SWAYSOCK` to its IPC socket. The seat has a keyboard
+// while it records (`wtype`), as a window gets no focus on a seat without one.
 
+import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -35,6 +43,52 @@ async function openTab() {
   return tab;
 }
 let page = await openTab();
+
+// The headed browser, its keyboard, the page's sway window and the one that takes its focus.
+let windowed = null;
+function sway(...args) {
+  const sock = process.env.ELDUR_GEN_SWAYSOCK;
+  if (!sock || !process.env.WAYLAND_DISPLAY) {
+    throw new Error("a page with `window` steps needs WAYLAND_DISPLAY and ELDUR_GEN_SWAYSOCK (see the top of gen.mjs)");
+  }
+  return execFileSync("swaymsg", ["-s", sock, ...args]).toString();
+}
+function windows() {
+  const walk = (n) => [...(n.pid ? [n.id] : []), ...[...(n.nodes || []), ...(n.floating_nodes || [])].flatMap(walk)];
+  return walk(JSON.parse(sway("-t", "get_tree")));
+}
+async function openWindowTab() {
+  if (!windowed) {
+    const keyboard = spawn("wtype", ["-s", "3600000"], { stdio: "ignore" });
+    const headed = await chromium.launch({ headless: false, args: ["--ozone-platform=wayland"] });
+    const elsewhere = await (await headed.newContext()).newPage();
+    await elsewhere.setContent("<title>eldur-elsewhere</title>elsewhere");
+    windowed = { keyboard, headed, elsewhere };
+  }
+  const before = windows();
+  const tab = await (await windowed.headed.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 })).newPage();
+  windowed.cdp = await tab.context().newCDPSession(tab);
+  tab.on("console", (m) => {
+    if (!isMark(m.text())) log.push(m.text());
+  });
+  tab.on("pageerror", (e) => {
+    throw new Error(`page threw: ${e.message}`);
+  });
+  await trackPending(tab);
+  await tab.waitForTimeout(300);
+  windowed.page = windows().find((id) => !before.includes(id));
+  sway(`[con_id=${windowed.page}] focus`);
+  for (let i = 0; i < 50 && !(await tab.evaluate(() => document.hasFocus())); i++) await tab.waitForTimeout(20);
+  return tab;
+}
+async function windowStep(step) {
+  if (step.away) sway('[title="^eldur-elsewhere"] focus');
+  if (step.back) sway(`[con_id=${windowed.page}] focus`);
+  if (step.away || step.back) {
+    const want = Boolean(step.back);
+    for (let i = 0; i < 50 && (await page.evaluate(() => document.hasFocus())) !== want; i++) await page.waitForTimeout(20);
+  }
+}
 const snapshot = fs.readFileSync(path.join(here, "snapshot.js"), "utf8");
 
 async function center(selector) {
@@ -65,6 +119,7 @@ async function act(step) {
     const { x, y } = await center(step.click);
     await page.mouse.click(x, y);
   }
+  await windowStep(step);
   if (step.clickAt) await page.mouse.click(step.clickAt[0], step.clickAt[1], { button: step.button ?? "left" });
   if (step.dblAt) await page.mouse.dblclick(step.dblAt[0], step.dblAt[1]);
   if (step.move) await page.mouse.move(step.move[0], step.move[1]);
@@ -144,9 +199,12 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
   log = [];
   // A tab that scrolled to its end can no longer take a screenshot on the next page.
   await page.close().catch(() => {});
-  page = await openTab();
+  page = spec.window ? await openWindowTab() : await openTab();
   await page.mouse.move(1200, 790);
   await page.goto("file://" + path.join(here, file), { waitUntil: "load" });
+  // Playwright tells a page it has focus whatever its window does: this one
+  // hears its window. Set after the load, as the page's new renderer forgets it.
+  if (spec.window) await windowed.cdp.send("Emulation.setFocusEmulationEnabled", { enabled: false });
   // A page caught mid-flight at load has nothing to record there that a rerun would repeat.
   const steps = [await state("load", spec.loadMoves ? [] : spec.watch)];
   for (const step of spec.steps) {
@@ -173,4 +231,8 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
   }
 }
 await browser.close();
+if (windowed) {
+  await windowed.headed.close();
+  windowed.keyboard.kill();
+}
 writeRecording(recorded, JSON.stringify(out, null, 1) + "\n");

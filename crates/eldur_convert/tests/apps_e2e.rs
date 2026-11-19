@@ -110,11 +110,15 @@ Item {
     width: 1280
     height: 800
 
+    // Another window to take the focus, for steps where the page's window goes away.
+    Component { id: elsewhere; Window { width: 40; height: 40 } }
+
 TestCase {
     name: "App"
     when: windowShown
 
     property var page
+    property var other
 
     SNAPSHOT
 
@@ -187,6 +191,17 @@ TestCase {
     }
     function act(s) {
         if (s.click) { const p = center(s.click); moveTo(p.x, p.y); mouseClick(page, p.x, p.y, Qt.LeftButton, mods) }
+        // The window goes away in the same turn as what came before in the step.
+        if (s.away) {
+            if (!other) other = elsewhere.createObject(null)
+            other.visible = true
+            other.requestActivate()
+            tryVerify(() => !host.Window.window.active, 2000, "the page's window still active")
+        }
+        if (s.back) {
+            host.Window.window.requestActivate()
+            tryVerify(() => host.Window.window.active, 2000, "the page's window not active again")
+        }
         if (s.clickAt) {
             moveTo(s.clickAt[0], s.clickAt[1])
             mouseClick(page, s.clickAt[0], s.clickAt[1], buttonOf[s.button || "left"], mods)
@@ -796,6 +811,11 @@ fn input_link_blur() {
 #[test]
 fn input_focus_in_blur() {
     page("input_focus_in_blur");
+}
+
+#[test]
+fn input_window_blur() {
+    page("input_window_blur");
 }
 
 #[test]

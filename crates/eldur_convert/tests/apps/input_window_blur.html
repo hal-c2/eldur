@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head><style>
+body { margin: 8px; font: 16px sans-serif; }
+button { margin: 4px; }
+</style></head>
+<body>
+<button id="w">w</button>
+<button id="x">x</button>
+<button id="y">y</button>
+<button id="z">z</button>
+<button id="x2">x2</button>
+<button id="y2">y2</button>
+<button id="z2">z2</button>
+<button id="v2">v2</button>
+<script>
+// The window loses focus and gets it back, by itself and right after a blur
+// listener moved the focus. `document.hasFocus()` follows the window.
+function id(el) { return el && el.id ? el.id : el ? el.nodeName : "-"; }
+function on(id_) { return document.getElementById(id_); }
+["focus", "blur", "focusin", "focusout"].forEach(function (type) {
+  document.addEventListener(type, function (ev) {
+    console.log(type, id(ev.target), "from", id(ev.relatedTarget), "active", id(document.activeElement),
+      "has", document.hasFocus());
+  }, true);
+});
+document.addEventListener("click", function (ev) {
+  console.log("click", id(ev.target), "has", document.hasFocus());
+});
+// Pressing y hides x from its mousedown, and x's blur listener focuses z: the
+// window then goes away in the same turn.
+on("x").addEventListener("click", function () {
+  on("x").addEventListener("blur", function () { on("z").focus(); }, { once: true });
+  on("y").addEventListener("mousedown", function () { on("x").style.visibility = "hidden"; }, { once: true });
+});
+// The same, and a Tab in the same turn as the press: it goes on from z2.
+on("x2").addEventListener("click", function () {
+  on("x2").addEventListener("blur", function () { on("z2").focus(); }, { once: true });
+  on("y2").addEventListener("mousedown", function () { on("x2").style.visibility = "hidden"; }, { once: true });
+});
+</script>
+</body>
+</html>
