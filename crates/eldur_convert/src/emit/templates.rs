@@ -1118,11 +1118,26 @@ pub(crate) fn add(
     // given `textContent`). Its lines still take direct text. A probe holding
     // a block has no lines at all, so it never wins over a text one. The
     // registry keeps the probes' order.
+    //
+    // A probe made inside another is keyed under the templates its parent's
+    // key went to, which are known once every probe one level up has had
+    // its key: probes go level by level, parents first.
+    let depth = |mut i: usize| {
+        let mut d = 0usize;
+        while let Context::Probe(p) = insts[i].context {
+            if d > insts.len() {
+                break;
+            }
+            d += 1;
+            i = p;
+        }
+        d
+    };
     keyed.sort_by_key(|&i| {
         let node = insts[i].node;
         let lines = doc.element_children(node).next().is_some()
             && crate::boxes::only_phrasing_inside(&doc, &styles, node);
-        (matches!(insts[i].context, Context::Any), !lines)
+        (depth(i), matches!(insts[i].context, Context::Any), !lines)
     });
     for i in keyed {
         let Some(k) = template_of[i] else {
