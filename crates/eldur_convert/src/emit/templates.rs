@@ -1111,16 +1111,18 @@ pub(crate) fn add(
     let mut keyed: Vec<usize> = (0..insts.len()).collect();
     keyed.sort_by_key(|&i| matches!(insts[i].context, Context::Any));
     let rank: HashMap<usize, usize> = keyed.iter().enumerate().map(|(r, &i)| (i, r)).collect();
-    // Where two probes share a key, one probed with elements inside wins it
-    // over one probed with text alone: the runtime makes the same template
-    // for both, and a text-only one has no lines for an element to sit on
-    // (#63: `<p><em>…</em></p>` made by `innerHTML` beside a `<p>` given
-    // `textContent`). The registry keeps the probes' order.
+    // Where two probes share a key, one probed with phrasing elements inside
+    // wins it over one probed with text alone: the runtime makes the same
+    // template for both, and a text-only one has no lines for an element to
+    // sit on (#63: `<p><em>…</em></p>` made by `innerHTML` beside a `<p>`
+    // given `textContent`). Its lines still take direct text. A probe holding
+    // a block has no lines at all, so it never wins over a text one. The
+    // registry keeps the probes' order.
     keyed.sort_by_key(|&i| {
-        (
-            matches!(insts[i].context, Context::Any),
-            doc.element_children(insts[i].node).next().is_none(),
-        )
+        let node = insts[i].node;
+        let lines = doc.element_children(node).next().is_some()
+            && crate::boxes::only_phrasing_inside(&doc, &styles, node);
+        (matches!(insts[i].context, Context::Any), !lines)
     });
     for i in keyed {
         let Some(k) = template_of[i] else {

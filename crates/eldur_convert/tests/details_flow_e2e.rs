@@ -377,6 +377,57 @@ SUPPORT
 }
 "##;
 
+// Two made `<div>`s share a template: one gets text, one holds a block.
+// The text one keeps its lines (#63's shared-key rule must not pick a probe
+// that has none).
+const SHARED_PAGE: &str = r##"<!doctype html>
+<style>body { font: 16px/18px sans-serif; } p { margin: 0; }</style>
+<div id="list"></div>
+<button id="make">Make</button>
+<script>
+document.getElementById('make').addEventListener('click', () => {
+  const a = document.createElement('div');
+  a.textContent = 'Alpha text';
+  const b = document.createElement('div');
+  const p = document.createElement('p');
+  p.textContent = 'Beta inside';
+  b.append(p);
+  document.getElementById('list').append(a, b);
+});
+</script>
+"##;
+
+const SHARED_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 800
+    height: 600
+
+TestCase {
+    name: "DetailsShared"
+    when: windowShown
+SUPPORT
+
+    function test_text_and_block_share_a_template() {
+        const page = load(Qt.createComponent("Main.qml"))
+        const button = find(page, i => i.eldurTag === "button" && i.text === "Make")
+        verify(button !== null, "no Make")
+        mouseClick(button)
+        wait(100)
+        const alpha = textOf(page, "Alpha text")
+        const beta = textOf(page, "Beta inside")
+        verify(alpha !== null, "the text-only div lost its text")
+        verify(beta !== null, "the block inside the other div is missing")
+        verify(alpha.visible && beta.visible, "made lines are hidden")
+        below(page, alpha, beta, 0, "shared")
+    }
+}
+}
+"##;
+
 // A script moving and taking out a `<details>`' children: each shows as
 // Chromium shows it, as its own `hidden` says and as the fold it is now in says.
 const CHANGE_PAGE: &str = r##"<!doctype html>
@@ -687,6 +738,11 @@ fn a_details_a_script_makes_open_is_an_open_disclosure() {
 #[test]
 fn a_made_summary_on_a_page_that_styles_made_elements_has_its_marker() {
     run(MARKED_PAGE, MARKED_TEST, "eldur-details-marked");
+}
+
+#[test]
+fn made_elements_sharing_a_template_keep_their_text_and_blocks() {
+    run(SHARED_PAGE, SHARED_TEST, "eldur-details-shared");
 }
 
 #[test]
