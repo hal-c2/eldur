@@ -212,6 +212,7 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
         cx.styles,
         Some(cx.wanted),
         cx.probe.map(|p| &p.inline_items),
+        None,
         diags,
     );
     let body = cx.doc.body().and_then(|b| cx.styles.style(b));
@@ -935,6 +936,8 @@ struct Across {
     plain_edges: HashSet<NodeId>,
     shares: HashSet<NodeId>,
     restacks: HashSet<NodeId>,
+    /// The elements hidden in some combination (the keys of `shown`).
+    hideable: HashSet<NodeId>,
 }
 
 impl Dynamic<'_, '_> {
@@ -992,13 +995,6 @@ impl Dynamic<'_, '_> {
                 Restacks::No => Vec::new(),
             })
             .collect();
-        let across = Across {
-            sticky,
-            strips,
-            plain_edges,
-            shares,
-            restacks,
-        };
         // The display an element hidden in some combinations has when shown.
         let shown: HashMap<NodeId, Display> = self
             .found
@@ -1010,6 +1006,14 @@ impl Dynamic<'_, '_> {
                 (none && shown.display != Display::Inline).then_some((e.node, shown.display))
             })
             .collect();
+        let across = Across {
+            sticky,
+            strips,
+            plain_edges,
+            shares,
+            restacks,
+            hideable: shown.keys().copied().collect(),
+        };
         let (styles, collapsed) = self.world(&[], &shown);
         let Emitted {
             mut root,
@@ -1419,6 +1423,7 @@ impl Dynamic<'_, '_> {
             styles,
             Some(cx.wanted),
             cx.probe.map(|p| &p.inline_items),
+            Some(&collapsed),
             diags,
         );
         let body = cx.doc.body().and_then(|b| styles.style(b));
@@ -1456,7 +1461,8 @@ impl Dynamic<'_, '_> {
         emitter.plain_edges = across.plain_edges.clone();
         emitter.shares = across.shares.clone();
         emitter.restacks = across.restacks.clone();
-        emitter.collapsed = collapsed;
+        emitter.hideable = across.hideable.clone();
+        emitter.collapsed = collapsed.clone();
         let root = emitter.document(tree.as_ref(), body);
         cx.svgs.borrow_mut().append(&mut emitter.svgs);
         let emitted = Emitted {
