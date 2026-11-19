@@ -1,0 +1,12 @@
+{"steps":[
+ {"name":"click w","click":"#w"},
+ {"name":"the window goes away","away":true},
+ {"name":"the window comes back","back":true},
+ {"name":"click x","click":"#x"},
+ {"name":"press y, whose mousedown hides x, whose blur focuses z, and the window goes away","click":"#y","away":true},
+ {"name":"the window comes back to z","back":true},
+ {"name":"click x2","click":"#x2"},
+ {"name":"press y2, whose mousedown hides x2, whose blur focuses z2, and Tab in the same turn","click":"#y2","key":"Tab"}
+],
+"watch":[{"sel":"#w"}],
+"window":true}

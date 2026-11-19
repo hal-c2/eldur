@@ -90947,6 +90947,222 @@
    }
   }
  ],
+ "input_window_blur": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "click w",
+   "log": [
+    "focus w from - active w has true",
+    "focusin w from - active w has true",
+    "click w has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "w"
+   }
+  },
+  {
+   "name": "the window goes away",
+   "log": [
+    "blur w from - active w has false",
+    "focusout w from - active w has false"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "w"
+   }
+  },
+  {
+   "name": "the window comes back",
+   "log": [
+    "focus w from - active w has true",
+    "focusin w from - active w has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "w"
+   }
+  },
+  {
+   "name": "click x",
+   "log": [
+    "blur w from x active BODY has true",
+    "focusout w from x active BODY has true",
+    "focus x from w active x has true",
+    "focusin x from w active x has true",
+    "click x has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "x"
+   }
+  },
+  {
+   "name": "press y, whose mousedown hides x, whose blur focuses z, and the window goes away",
+   "log": [
+    "blur x from y active BODY has true",
+    "focus z from - active z has true",
+    "focusin z from - active z has true",
+    "focusout x from - active z has true",
+    "click y has true",
+    "blur z from - active z has false",
+    "focusout z from - active z has false"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "z"
+   }
+  },
+  {
+   "name": "the window comes back to z",
+   "log": [
+    "focus z from - active z has true",
+    "focusin z from - active z has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "z"
+   }
+  },
+  {
+   "name": "click x2",
+   "log": [
+    "blur z from x2 active BODY has true",
+    "focusout z from x2 active BODY has true",
+    "focus x2 from z active x2 has true",
+    "focusin x2 from z active x2 has true",
+    "click x2 has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "x2"
+   }
+  },
+  {
+   "name": "press y2, whose mousedown hides x2, whose blur focuses z2, and Tab in the same turn",
+   "log": [
+    "blur x2 from y2 active BODY has true",
+    "focus z2 from - active z2 has true",
+    "focusin z2 from - active z2 has true",
+    "focusout x2 from - active z2 has true",
+    "click y2 has true",
+    "blur z2 from v2 active BODY has true",
+    "focusout z2 from v2 active BODY has true",
+    "focus v2 from z2 active v2 has true",
+    "focusin v2 from z2 active v2 has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "v2"
+   }
+  }
+ ],
  "lines_closed": [
   {
    "name": "load",
