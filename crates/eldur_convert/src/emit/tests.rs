@@ -338,6 +338,17 @@ fn wrapping_row_whose_gaps_differ_is_an_eldur_flow() {
     assert!(w.contains("EldurFlow {"), "{w}");
     assert!(own_lines(w).contains(&"spacing: 30"), "{w}");
     assert!(own_lines(w).contains(&"rowSpacing: 5"), "{w}");
+    // Each item says its basis before the line clamps it, which the
+    // EldurFlow's implicitWidth sums.
+    let a = object_after(w, "<div>");
+    assert!(
+        own_lines(a).contains(&"property real eldurBasis: 150"),
+        "{a}"
+    );
+    assert!(
+        own_lines(a).contains(&"width: Math.min(eldurBasis, parent.width)"),
+        "{a}"
+    );
     // Equal gaps stay a plain Flow.
     let (qml, _) = convert(&page(
         ".w{display:flex;flex-wrap:wrap;gap:8px}",

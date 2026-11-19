@@ -855,18 +855,36 @@ impl Emitter<'_, '_> {
             };
             // A shrinkable item alone on a line narrower than its basis
             // shrinks to the line (CSS Flexbox §9.7).
-            let width = match basis {
-                Some(Value::Number(n)) if cs.flex_shrink > 0.0 => Value::expr(format!(
-                    "Math.min({}, parent.width)",
-                    super::units::fmt_number(n)
-                )),
-                Some(v) => v,
-                None if holds_control_row(&obj) => {
-                    Value::expr(format!("Math.min({CONTROL_ROW_WIDTH}, parent.width)"))
+            let unclamped = match basis {
+                Some(Value::Number(n)) if cs.flex_shrink > 0.0 => Some(fmt_number(n)),
+                Some(v) => {
+                    obj.set("width", v);
+                    None
                 }
-                None => Value::expr(format!("Math.min({}, parent.width)", natural_width(&obj))),
+                None if holds_control_row(&obj) => Some(CONTROL_ROW_WIDTH.to_owned()),
+                None => Some(natural_width(&obj).to_owned()),
             };
-            obj.set("width", width);
+            if let Some(unclamped) = unclamped {
+                if own {
+                    // The width before the line clamps it: an `EldurFlow`
+                    // sums these for its max-content `implicitWidth`, which
+                    // the clamped widths of a box capped by it would hold
+                    // at nothing.
+                    obj.members.push(Member::PropertyDecl {
+                        ty: "real".to_owned(),
+                        name: "eldurBasis".to_owned(),
+                        value: Some(Value::expr(unclamped)),
+                        readonly: false,
+                        required: false,
+                    });
+                    obj.set("width", Value::expr("Math.min(eldurBasis, parent.width)"));
+                } else {
+                    obj.set(
+                        "width",
+                        Value::expr(format!("Math.min({unclamped}, parent.width)")),
+                    );
+                }
+            }
             match &cs.height {
                 Size::Length(l) if l.as_px().is_some() || is_viewport_relative(l) => {
                     fixed_heights.push(l.as_px());

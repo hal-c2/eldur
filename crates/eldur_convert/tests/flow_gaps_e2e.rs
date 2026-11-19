@@ -386,6 +386,23 @@ Item {
             Rectangle { width: 100; height: 20 }
         }
     }
+    // Items clamped by the box, as the converter clamps a shrinkable
+    // basis, under a line that starts narrower than one item.
+    Item {
+        id: narrow
+        y: 250
+        width: 50
+        EldurFlow {
+            id: clamped
+            width: Math.min(implicitWidth, narrow.width)
+            spacing: 30
+            rowSpacing: 5
+            Rectangle { property real eldurBasis: 100; width: Math.min(eldurBasis, parent.width); height: 20 }
+            Rectangle { property real eldurBasis: 100; width: Math.min(eldurBasis, parent.width); height: 20 }
+            Rectangle { property real eldurBasis: 100; width: Math.min(eldurBasis, parent.width); height: 20 }
+            Rectangle { property real eldurBasis: 100; width: Math.min(eldurBasis, parent.width); height: 20 }
+        }
+    }
     EldurFlow {
         id: free
         y: 50
@@ -455,6 +472,17 @@ Item {
             wait(50)
             compare(capped.width, 284)
             compare(capped.implicitHeight, 45)
+        }
+
+        // Its implicitWidth sums the items' bases, not their clamped
+        // widths, so it widens with its line from narrower than one item.
+        function test_clamped_items_widen_with_the_line() {
+            wait(50)
+            compare(clamped.width, 50)
+            narrow.width = 600
+            wait(50)
+            compare(clamped.width, 490)
+            compare(clamped.implicitHeight, 20)
         }
 
         // With no width set, the items stay on one line, as in `Flow`, even
