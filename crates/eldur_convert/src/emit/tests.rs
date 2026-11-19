@@ -1842,6 +1842,30 @@ fn a_fractional_line_height_hands_its_rounding_to_the_next_item() {
 }
 
 #[test]
+fn an_absolute_elements_slot_leaves_the_last_items_carry_on_the_last_item() {
+    // The absolute span's slot goes in before the line, after the column's
+    // carry is worked out: the 20px box's carry is still its own, and the
+    // line's is declared once.
+    let (qml, _) = convert(&page(
+        "",
+        r#"<span style="position:absolute">S</span><img width="16" height="16" src="x.png"><div id="d" style="height:20px"></div>"#,
+    ));
+    let lines: Vec<&str> = qml.lines().map(str::trim).collect();
+    for pair in lines.windows(2) {
+        assert!(
+            !(pair[0].starts_with("property real eldurCarry")
+                && pair[1].starts_with("property real eldurCarry")),
+            "{qml}"
+        );
+    }
+    let d = own_lines(object_after(&qml, r#"<div id="d">"#));
+    assert!(
+        d.contains(&"property real eldurCarry: Math.ceil(Layout.topMargin + 20) - Layout.topMargin - 20 + 0.000001"),
+        "{d:?}"
+    );
+}
+
+#[test]
 fn a_box_around_a_carried_column_paints_its_css_height() {
     // 02-block-flow's hero: a column's excess is in its implicit height for
     // the column above to take back, but the box's bottom edge is Chromium's
