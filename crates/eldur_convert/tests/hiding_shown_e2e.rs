@@ -161,7 +161,8 @@ TestCase {{
     function expect(names, tops, step) {{
         // A layout is polished on the next frame: wait a bounded time for
         // it, then say where everything is.
-        const at = () => names.map(posY)
+        // A carry lands blocks on N.999999: compare to a hundredth.
+        const at = () => names.map(n => Math.round(posY(n) * 100) / 100)
         for (let waited = 0; waited < 40 && JSON.stringify(at()) !== JSON.stringify(tops); ++waited)
             wait(25)
         compare(JSON.stringify(at()), JSON.stringify(tops), step + ": " + JSON.stringify(names))
