@@ -25893,7 +25893,18 @@ function _gVariantSupports(raw, name) {
 
 // Shows or hides an item as the rules now say. The converter's binding answers
 // for all it knows; only where it disagrees does something hold over it.
+// A closed disclosure folds every child but its summary away, whatever the
+// cascade says; `_detailsShow` reads the cascade when it opens.
+function _gFoldedAway(raw) {
+    var up = _elementParent(raw);
+    return Boolean(up) && _nodeTag(up) === "details" && _meta(up).detailsOpen !== true
+        && _nodeTag(raw) !== "summary";
+}
+
 function _gShowAsRules(raw) {
+    if (_gFoldedAway(raw)) {
+        return;
+    }
     var display = _gStyle(raw).display;
     if (raw.eldurSlot && raw.eldurBlock === undefined) {
         var parent = raw.parent;
