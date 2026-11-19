@@ -195,18 +195,29 @@ impl Escape {
             m.join(b);
             m
         };
+        // As `nested` does: past the nearest few boxes, as if hidden. The
+        // farthest are dropped from whichever side has more, never a case
+        // from the middle of the list, so every kept box keeps all of its
+        // cases.
+        let (mut near_a, mut near_b) = (self.cases.len(), other.cases.len());
+        while near_a * (near_b + 1) + near_b > HiddenRun::NEAREST {
+            if near_a >= near_b {
+                near_a -= 1;
+            } else {
+                near_b -= 1;
+            }
+        }
+        let (mine, theirs) = (&self.cases[..near_a], &other.cases[..near_b]);
         let mut cases = Vec::new();
-        for (a, ma) in &self.cases {
-            for (b, mb) in &other.cases {
+        for (a, ma) in mine {
+            for (b, mb) in theirs {
                 cases.push((format!("({a}) && ({b})"), both(*ma, *mb)));
             }
             cases.push((a.clone(), both(*ma, other.otherwise)));
         }
-        for (b, mb) in &other.cases {
+        for (b, mb) in theirs {
             cases.push((b.clone(), both(self.otherwise, *mb)));
         }
-        // As `nested` does: past the nearest few, as if none held.
-        cases.truncate(HiddenRun::NEAREST);
         Escape {
             cases,
             otherwise: both(self.otherwise, other.otherwise),
@@ -1647,4 +1658,66 @@ fn line_strut(
     let line_top = top_edge.min(0.0);
     let line_bottom = bottom_edge.max(line);
     Some((top_edge - line_top + mt, line_bottom - bottom_edge + mb))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn side(prefix: &str, margins: &[f32], otherwise: f32) -> Escape {
+        Escape {
+            cases: margins
+                .iter()
+                .enumerate()
+                .map(|(i, m)| (format!("{prefix}{i}"), MarginSet::of(*m)))
+                .collect(),
+            otherwise: MarginSet::of(otherwise),
+        }
+    }
+
+    /// The margin the cases give while the boxes in `shown` are shown.
+    fn under(escape: &Escape, shown: &[String]) -> f32 {
+        let holds = |cond: &str| {
+            cond.split(" && ").all(|c| {
+                shown
+                    .iter()
+                    .any(|s| *s == c.trim_matches(|ch| ch == '(' || ch == ')'))
+            })
+        };
+        escape
+            .cases
+            .iter()
+            .find(|(c, _)| holds(c))
+            .map_or(escape.otherwise, |(_, m)| *m)
+            .value()
+    }
+
+    #[test]
+    fn meeting_cases_past_the_nearest_keeps_each_kept_box_alone() {
+        // Nearest first on both sides, as `after_run` and `nested` list them.
+        let above = side("a", &[10.0, 20.0, 30.0], 4.0);
+        let below = side("b", &[12.0, 24.0, 36.0], 2.0);
+        let met = above.meet(&below);
+        assert!(met.cases.len() <= HiddenRun::NEAREST);
+        let names = |p: &str| (0..3).map(move |i| format!("{p}{i}"));
+        for a in (0..=3).map(|n| names("a").take(n).collect::<Vec<_>>()) {
+            for b in (0..=3).map(|n| names("b").take(n).collect::<Vec<_>>()) {
+                // Each side shows its nearest boxes: the dropped ones are
+                // the farthest, so these margins are exact.
+                let first = |s: &[String], e: &Escape| {
+                    s.first().map_or(e.otherwise, |id| {
+                        e.cases.iter().find(|(c, _)| c == id).unwrap().1
+                    })
+                };
+                let mut want = first(&a, &above);
+                want.join(first(&b, &below));
+                let shown: Vec<String> = a.iter().chain(&b).cloned().collect();
+                assert_eq!(under(&met, &shown), want.value(), "shown {shown:?}");
+            }
+        }
+        // The nearest box alone on the lower side still holds when the upper
+        // side is all hidden: the case the old cut dropped.
+        assert_eq!(under(&met, &["b0".to_owned()]), 12.0);
+        assert_eq!(under(&met, &["a0".to_owned(), "b0".to_owned()]), 12.0);
+    }
 }
