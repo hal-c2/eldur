@@ -5502,11 +5502,11 @@ function getText(item) {
     }
     var vOwn = _vModelOf(raw);
     if (vOwn) {
-        return _vBesideModel(raw, null) ? _rawChildNodes(raw).map(getText).join("") : _vTextContent(vOwn);
+        return _vBesideModel(raw, null) ? _vNodesBeside(raw, null).map(getText).join("") : _vTextContent(vOwn);
     }
     var vRun = _findTextChild(raw);
     if (vRun && _gIsBox(raw) && _vModelOf(vRun)) {
-        return _vBesideModel(raw, vRun) ? _rawChildNodes(raw).map(getText).join("") : _vTextContent(_vModelOf(vRun));
+        return _vBesideModel(raw, vRun) ? _vNodesBeside(raw, vRun).map(getText).join("") : _vTextContent(_vModelOf(vRun));
     }
     if (vRun && _gIsBox(raw) && _meta(vRun).vSplit) {
         return _rawKids(raw, true).filter(function(k) { return k !== vRun; }).map(getText).join("");
@@ -5545,7 +5545,7 @@ function getText(item) {
         // A cell whose generated text has a font of its own holds a model.
         var cellModel = _vModelOf(textChild);
         if (cellModel && _vBesideModel(raw, textChild)) {
-            return _rawChildNodes(raw).map(getText).join("");
+            return _vNodesBeside(raw, textChild).map(getText).join("");
         }
         return cellModel ? _vText(cellModel) : _pseudoOwn(raw, String(textChild.text));
     }
@@ -6302,8 +6302,9 @@ function _rememberMarkup(raw, str) {
 function getInnerHTML(item) {
     var raw = _unwrap(item);
     var vInner = !raw ? null : raw.__eldurInline ? raw : _vExisting(raw);
-    if (vInner && !raw.__eldurInline && _vBesideModel(raw, _findTextChild(raw))) {
-        return _rawChildNodes(raw).map(_serializeElement).join("");
+    var vBeside = vInner && !raw.__eldurInline ? _findTextChild(raw) : null;
+    if (vInner && !raw.__eldurInline && _vBesideModel(raw, vBeside)) {
+        return _vNodesBeside(raw, vBeside).map(_serializeElement).join("");
     }
     if (vInner) {
         return vInner.vtext ? "" : _vInner(vInner);
@@ -18785,13 +18786,23 @@ function _vSettle() {
 // A block put into an element whose text is a model is a real item beside
 // that model: the element's text and markup are then its child nodes', in order.
 // Most such elements hold no item but their text, which is told by a count.
+// The hidden copy a pressed model lays out under its Text is no node.
 function _vBesideModel(raw, run) {
     var container = _childContainer(raw);
-    var own = run && run.parent === container ? 1 : 0;
+    var model = _vModelOf(raw) || (run && _vModelOf(run));
+    var twin = model && model.twin && model.twin.parent === container ? 1 : 0;
+    var own = (run && run.parent === container ? 1 : 0) + twin;
     if (!container || !container.children || container.children.length <= own) {
         return false;
     }
-    return _rawKids(raw, true).some(function(k) { return k !== run && !k.__eldurInline; });
+    return _vNodesBeside(raw, run).some(function(k) { return k !== run && !k.__eldurInline; });
+}
+
+// `raw`'s child nodes, without its model's hidden copy.
+function _vNodesBeside(raw, run) {
+    var model = _vModelOf(raw) || (run && _vModelOf(run));
+    var twin = model && model.twin;
+    return _rawChildNodes(raw).filter(function(k) { return k !== twin; });
 }
 
 // The model already holding `raw`'s text.
