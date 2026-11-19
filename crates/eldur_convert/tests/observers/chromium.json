@@ -75,6 +75,21 @@
   "OB chain attributes:q:data-two:null:null",
   "OB done"
  ],
+ "mutation_callback_order": [
+  "OB connected A1",
+  "OB connected B1",
+  "OB attr B1 v null 1",
+  "OB set v on B1",
+  "OB appended 1",
+  "OB connected A2",
+  "OB connected B2",
+  "OB attr B2 v null 1",
+  "OB set v on B2",
+  "OB appended 2",
+  "OB records childList:W1:+A1|B1 attributes:B1:v",
+  "OB records childList:W2:+A2|B2",
+  "OB done"
+ ],
  "mutation_callback_restyle": [
   "OB connected A",
   "OB B height 20",
