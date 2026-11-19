@@ -286,6 +286,15 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[16.0, 50.0],
         toggled: &[50.0, 84.0],
+    }, // A quote in an unquoted `url(` opens no string: the `display` after it is
+    // its own declaration.
+    Case {
+        name: "quote_in_an_unquoted_url",
+        body: r#"<p id="shy" style="background:url(a'b);display:none"><em>Shy</em></p>
+<p id="after">After</p>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[50.0, 84.0],
     },
 ];
 
@@ -542,4 +551,9 @@ fn a_comment_between_display_keywords_separates_them() {
 #[test]
 fn a_comment_inside_a_display_keyword_splits_it() {
     run(case("comment_inside_keyword"));
+}
+
+#[test]
+fn a_quote_in_an_unquoted_url_does_not_swallow_the_display_after_it() {
+    run(case("quote_in_an_unquoted_url"));
 }
