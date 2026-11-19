@@ -1,0 +1,165 @@
+{
+ "numbered initial": {
+  "markers": [
+   "1. ",
+   "2. ",
+   "3. "
+  ],
+  "tops": [
+   {
+    "text": "a",
+    "shown": true,
+    "top": 16
+   },
+   {
+    "text": "x",
+    "shown": false,
+    "top": 0
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 36
+   },
+   {
+    "text": "c",
+    "shown": true,
+    "top": 56
+   }
+  ]
+ },
+ "numbered hover": {
+  "markers": [
+   "1. ",
+   "2. ",
+   "3. ",
+   "4. "
+  ],
+  "tops": [
+   {
+    "text": "a",
+    "shown": true,
+    "top": 16
+   },
+   {
+    "text": "x",
+    "shown": true,
+    "top": 36
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 56
+   },
+   {
+    "text": "c",
+    "shown": true,
+    "top": 76
+   }
+  ]
+ },
+ "numbered left": {
+  "markers": [
+   "1. ",
+   "2. ",
+   "3. "
+  ],
+  "tops": [
+   {
+    "text": "a",
+    "shown": true,
+    "top": 16
+   },
+   {
+    "text": "x",
+    "shown": false,
+    "top": 0
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 36
+   },
+   {
+    "text": "c",
+    "shown": true,
+    "top": 56
+   }
+  ]
+ },
+ "margin initial": {
+  "markers": [],
+  "tops": [
+   {
+    "text": "0",
+    "shown": true,
+    "top": 10
+   },
+   {
+    "text": "a",
+    "shown": true,
+    "top": 40
+   },
+   {
+    "text": "x",
+    "shown": false,
+    "top": 0
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 70
+   }
+  ]
+ },
+ "margin hover": {
+  "markers": [],
+  "tops": [
+   {
+    "text": "0",
+    "shown": true,
+    "top": 10
+   },
+   {
+    "text": "a",
+    "shown": true,
+    "top": 40
+   },
+   {
+    "text": "x",
+    "shown": true,
+    "top": 90
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 140
+   }
+  ]
+ },
+ "margin left": {
+  "markers": [],
+  "tops": [
+   {
+    "text": "0",
+    "shown": true,
+    "top": 10
+   },
+   {
+    "text": "a",
+    "shown": true,
+    "top": 40
+   },
+   {
+    "text": "x",
+    "shown": false,
+    "top": 0
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 70
+   }
+  ]
+ }
+}
