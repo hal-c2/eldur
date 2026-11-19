@@ -1082,13 +1082,15 @@ function _detailsShow(raw, open) {
     // Only its first summary stays out of the fold (HTML §4.11.1). Each shows
     // as itself says otherwise: `hidden` and `display: none` still hide it.
     // Only what changes is written, so a binding the converter wrote stays.
+    // Under a hidden ancestor an item reads hidden whatever it was told, so
+    // there the fold is written anyway.
     var seenSummary = false;
-    _rawElementChildren(raw).forEach(function(kid) {
+    _detailsKids(raw).forEach(function(kid) {
         var summary = _nodeTag(kid) === "summary" && !seenSummary;
         var own = _detailsOwnShown(kid);
         var shown = (open || summary) && own;
         _meta(kid).detailsFolded = own && !shown;
-        if (kid.visible !== shown) {
+        if (kid.visible !== shown || (!shown && kid.parent && kid.parent.visible === false)) {
             kid.visible = shown;
         }
         if (summary) {
@@ -1100,8 +1102,21 @@ function _detailsShow(raw, open) {
     _layoutChanged(raw);
 }
 
+// Its element children, and the text a script put in it: layout moves that
+// text into anonymous lines, where element children leave it out.
+function _detailsKids(raw) {
+    var kids = _rawElementChildren(raw);
+    _rawKids(raw, true).forEach(function(kid) {
+        if (kids.indexOf(kid) < 0 && _isQObject(kid) && !kid.__eldurInline && _meta(kid).createdTag === "#text") {
+            kids.push(kid);
+        }
+    });
+    return kids;
+}
+
 // Whether it shows of itself. A page's own `hidden` is in its item alone, as
 // `visible: false`, so what the fold hid is marked to tell the two apart.
+// Under a hidden ancestor every item reads hidden: what it read last stands.
 function _detailsOwnShown(kid) {
     var m = _meta(kid);
     var hidden = getAttribute(kid, "hidden") !== null;
@@ -1111,18 +1126,22 @@ function _detailsOwnShown(kid) {
     if (m.explicitHidden !== undefined || m.createdTag || m.styles.display !== undefined
         || typeof kid.eldurStyle === "string") {
         hidden = m.explicitHidden === true;
+    } else if (kid.parent && kid.parent.visible === false) {
+        hidden = m.detailsOwnHidden === true;
     } else {
         hidden = !m.detailsFolded && kid.visible === false;
+        m.detailsOwnHidden = hidden;
     }
     return !hidden && _ownDisplay(kid, m) !== "none" && _gStyleAllowsShow(kid);
 }
 
 // A details' first summary shows the marker turned as it is open. A form the
-// converter made has one; the form an open page makes from its rules has none
-// (#74), so it is given one, as the converter's: the triangle on the first
-// line's baseline and that line moved in by its width.
+// converter made has one unless its rules took it away; the form an open page
+// makes for a summary a script made has none (#74), so it is given one, as the
+// converter's: the triangle on the first line's baseline and that line moved in
+// by its width.
 function _detailsMark(summary, open) {
-    if (_detailsTurnMarker(summary, open)) {
+    if (_detailsTurnMarker(summary, open) || !_meta(summary).createdTag) {
         return;
     }
     var text = _detailsFirstText(summary);
@@ -1146,8 +1165,10 @@ function _detailsMark(summary, open) {
     text.forceLayout();
 }
 
+// The Text that draws the first line: an empty one is a box's placeholder,
+// hidden while it is empty.
 function _detailsFirstText(item) {
-    if (typeof item.text === "string" && item.lineLaidOut !== undefined) {
+    if (typeof item.text === "string" && item.text !== "" && item.lineLaidOut !== undefined) {
         return item;
     }
     var kids = item.children || [];
