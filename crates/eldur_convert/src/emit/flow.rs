@@ -24,13 +24,17 @@ pub(crate) struct MarginSet {
     neg: f32,
 }
 
-/// Hidden boxes in a row in a column, which a script can show one at a time.
+/// Boxes in a row in a column that a script can show or hide one at a time:
+/// hidden ones it can show, and shown ones it reaches and can hide.
 #[derive(Default)]
 struct HiddenRun {
     before: MarginSet,
     /// What the layout gives anyway: an item holding only hidden boxes stays
-    /// an item, keeping its top margin.
+    /// an item, keeping its top margin, and margins that escaped through the
+    /// parent's top edge are the parent's.
     given: f32,
+    /// What follows the run as the page loads, when a box in it is shown.
+    loaded: Option<MarginSet>,
     boxes: Vec<(String, MarginSet)>,
 }
 
@@ -287,16 +291,28 @@ impl Emitter<'_, '_> {
                 emitted.top = MarginSet::default();
                 emitted.bottom = MarginSet::default();
             }
-            let hides = collapsed && obj.id.is_some();
+            // A block a script reaches it can hide too (#51): the margins
+            // either side of it then collapse together, as they do around one
+            // that is hidden until a script shows it.
+            let reached = !collapsed
+                && child.node.is_some_and(|n| self.wanted.contains(&n))
+                && crate::boxes::is_block_level(child.style.display);
+            let hides = (collapsed || reached) && obj.id.is_some();
             if hidden.boxes.is_empty() {
                 if hides {
                     hidden.before = pending;
                     hidden.given = 0.0;
+                    hidden.loaded = None;
                     before_hidden = last;
                 }
                 pending.join(emitted.top);
                 if last.is_none() && top_open {
                     escaped_top = Some(pending);
+                    // The parent keeps what escaped through its top edge: once
+                    // this one is gone, the next one's margin is what it adds.
+                    if hides {
+                        hidden.given = pending.value().max(0.0);
+                    }
                 } else {
                     self.set_margin(&mut obj, "Layout.topMargin", pending.value());
                 }
@@ -318,6 +334,9 @@ impl Emitter<'_, '_> {
             }
             if hides && let Some(id) = &obj.id {
                 hidden.push(format!("{id}.visible"), emitted.bottom);
+                if reached {
+                    hidden.loaded = Some(emitted.bottom);
+                }
             } else {
                 hidden.boxes.clear();
                 // Its margins collapse through it until something in it shows.
@@ -366,7 +385,7 @@ impl Emitter<'_, '_> {
             if hidden.boxes.is_empty() {
                 pending
             } else {
-                hidden.before
+                hidden.loaded.unwrap_or(hidden.before)
             }
         } else {
             if let Some(Member::Child(obj)) = layout.members.get_mut(last) {
