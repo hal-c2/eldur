@@ -1,0 +1,12 @@
+<!DOCTYPE html><html><body>
+<p id="out">waiting</p>
+<p id="label">before</p>
+<script type="module">
+import { log } from "./log.js";
+document.getElementById("label").textContent = "changed";
+import("./ea.js").then((m) => {
+  log("ea " + m.read());
+  document.getElementById("out").textContent = "done " + m.read();
+}, (e) => log("ea rejected " + e.name));
+</script>
+</body></html>

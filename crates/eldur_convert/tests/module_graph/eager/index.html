@@ -1,0 +1,11 @@
+<!DOCTYPE html><html><body>
+<p id="out">waiting</p>
+<script type="module">
+import { log } from "./log.js";
+import("./boom.js").then(() => log("early resolved"), (e) => log("early rejected " + e.message));
+log("first");
+</script>
+<script type="module" src="boom.js"></script>
+<script type="module" src="after.js"></script>
+<script type="module" src="last.js"></script>
+</body></html>

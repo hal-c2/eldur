@@ -27,7 +27,7 @@ async function record(name, read, click) {
   page.on("console", (m) => {
     if (m.text().startsWith("LC ")) lines.push(m.text().slice(3));
   });
-  page.on("pageerror", (e) => errors.push(e.message));
+  page.on("pageerror", (e) => errors.push(`${e.name}: ${e.message}`));
   await page.route("**/*", (route) => {
     const url = new URL(route.request().url());
     const file = path.join(here, decodeURIComponent(url.pathname));
@@ -57,6 +57,8 @@ const out = {
   rooted: await record("rooted", ["a", "b"]),
   lazy: await record("lazy", ["out"]),
   nested: await record("nested/page", ["a", "b"]),
+  eager: await record("eager", ["out"]),
+  element: await record("element", ["out", "label"]),
 };
 await browser.close();
 fs.writeFileSync(path.join(here, "chromium.json"), `${JSON.stringify(out, null, 2)}\n`);
