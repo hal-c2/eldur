@@ -13,7 +13,7 @@ use eldur_qml::{Member, Object, Value};
 
 use super::decoration::border_width;
 use super::units::{ROOT_ID, color, fmt_number, length_expr, number, round};
-use super::{Emitter, hint};
+use super::{Emitter, FLICKABLE_ID, hint};
 use crate::boxes::{
     self, BoxKind, Content, LayoutBox, Marker, MarkerKind, describe, is_out_of_flow, node_line,
 };
@@ -26,6 +26,8 @@ const IMAGE_MARKER_GAP: f32 = 7.0;
 /// its DOM parent, and on that item, the box.
 pub(super) const SLOT_PROPERTY: &str = "eldurSlot";
 pub(super) const BOX_PROPERTY: &str = "eldurBox";
+/// Marks the frame an overlay that went to its stop's column is in.
+pub(super) const HOISTED_PROPERTY: &str = "eldurHoisted";
 
 /// A bullet's side, in px. Chromium draws it about 0.3em across at any font
 /// size (measured at 12, 16, 24 and 40px).
@@ -256,15 +258,21 @@ impl Emitter<'_, '_> {
         );
         self.report_crossed_ancestors(b, node, fixed);
         self.report_place_in_line(b);
+        let hoist = self.hoist_into.filter(|stop| {
+            !fixed
+                && !self.no_carry
+                && (node.is_none() || self.abs_block.hoist.as_ref().is_some_and(|h| h.0 == *stop))
+        });
+        let block_id = hoist.and(node).map(|_| self.containing_block_id());
         let static_place = slot.as_ref().filter(|_| placed_by_slot).map(|slot| {
             self.static_places = true;
             StaticPlace {
                 slot: slot.clone(),
                 // Only a containing block in the page is an ancestor of the slot.
-                from: if node.is_some() {
-                    "parent"
-                } else {
-                    "flickable.contentItem"
+                from: match (&block_id, node) {
+                    (Some(id), _) => id.clone(),
+                    (None, Some(_)) => "parent".to_owned(),
+                    (None, None) => "flickable.contentItem".to_owned(),
                 },
                 margin,
             }
@@ -318,18 +326,28 @@ impl Emitter<'_, '_> {
             self.nested_z = Some(self.nested_z.map_or(z, |n| n.max(z)));
         }
         // Inside the page, it has to get out from under what follows.
-        if node.is_some() {
-            let z = style.z_index.unwrap_or(0).max(0) + 1;
-            self.above_flow = Some(self.above_flow.map_or(z, |n| n.max(z)));
+        // At `auto`, by what it holds too, as nothing in it makes a context
+        // to keep that in.
+        let inside = self.overlay_inside.take();
+        let lift = style
+            .z_index
+            .map_or_else(|| inside.unwrap_or(1).max(1), |z| z.max(0) + 1);
+        if node.is_some() && hoist.is_none() {
+            self.above_flow = Some(self.above_flow.map_or(lift, |n| n.max(lift)));
         }
         let comment = b
             .node
             .filter(|_| self.options.source_comments)
             .map(|n| describe(self.doc, n));
-        match (fixed, self.fixed_block.as_mut()) {
-            (false, _) => self.abs_block.overlays.push((comment, obj)),
-            (true, Some(block)) => block.overlays.push((comment, obj)),
-            (true, None) => self.fixed.push((comment, obj)),
+        if let Some(stop) = hoist {
+            let host = self.hoisted_host(b, obj, block_id.as_deref(), lift);
+            self.hoisted.push((stop, host));
+        } else {
+            match (fixed, self.fixed_block.as_mut()) {
+                (false, _) => self.abs_block.overlays.push((comment, obj)),
+                (true, Some(block)) => block.overlays.push((comment, obj)),
+                (true, None) => self.fixed.push((comment, obj)),
+            }
         }
         slot.map(|id| {
             let mut item = Object::new("Item").with_id(id);
@@ -351,6 +369,106 @@ impl Emitter<'_, '_> {
             }
             item
         })
+    }
+
+    /// The id of the containing block being filled, claimed the first time
+    /// an overlay places itself by it.
+    fn containing_block_id(&mut self) -> String {
+        if let Some(id) = &self.abs_block.id {
+            return id.clone();
+        }
+        let (html_id, hint) = self
+            .abs_block
+            .hoist
+            .as_ref()
+            .map(|(_, html_id, hint)| (html_id.clone(), hint.clone()))
+            .unwrap_or_default();
+        let id = match html_id {
+            Some(html_id) => self.claim_html_id(&html_id),
+            None => self.ids.claim(&hint),
+        };
+        self.abs_block.id = Some(id.clone());
+        id
+    }
+
+    /// An overlay whose containing block makes no stacking context, in the
+    /// item that takes it to its stop's column: a CSS box paints over or
+    /// under the boxes of the stacking context it is in, and a QML item only
+    /// over or under its siblings, so one that stayed in its block would lift
+    /// the block, and all the block holds, over what follows it. The frame
+    /// lies where the block is, at its size, so the overlay is placed as
+    /// before; `block` is the block's id, or `None` for the initial one.
+    fn hoisted_host(
+        &mut self,
+        b: &LayoutBox<'_>,
+        mut obj: Object,
+        block: Option<&str>,
+        lift: i32,
+    ) -> Object {
+        self.static_places = true;
+        let host = self.ids.claim(&format!("{} host", hint(self.doc, b)));
+        let mut frame = Object::new("Item");
+        frame.members.push(Member::PropertyDecl {
+            ty: "bool".to_owned(),
+            name: HOISTED_PROPERTY.to_owned(),
+            value: Some(Value::Bool(true)),
+            readonly: true,
+            required: false,
+        });
+        match block {
+            Some(block) => {
+                for (axis, function) in [("x", "staticX"), ("y", "staticY")] {
+                    frame.set(
+                        axis,
+                        Value::expr(format!(
+                            "{ROOT_ID}.{function}({block}, {host}.parent) - {ROOT_ID}.{function}({host}, {host}.parent)"
+                        )),
+                    );
+                }
+                frame.set("width", Value::expr(format!("{block}.width")));
+                frame.set("height", Value::expr(format!("{block}.height")));
+                frame.set("visible", Value::expr(format!("{block}.visible")));
+            }
+            None => {
+                for (axis, function) in [("x", "staticX"), ("y", "staticY")] {
+                    frame.set(
+                        axis,
+                        Value::expr(format!(
+                            "-{ROOT_ID}.{function}({host}, {FLICKABLE_ID}.contentItem)"
+                        )),
+                    );
+                }
+                frame.set("width", Value::expr(format!("{FLICKABLE_ID}.width")));
+                frame.set("height", Value::expr(format!("{FLICKABLE_ID}.height")));
+                // What it covers still counts for how far the page scrolls.
+                let id = match &obj.id {
+                    Some(id) => id.clone(),
+                    None => {
+                        let id = self.ids.claim(&hint(self.doc, b));
+                        obj.id = Some(id.clone());
+                        id
+                    }
+                };
+                let mut extent = Object::new("Item");
+                for p in ["x", "y", "width", "height"] {
+                    extent.set(p, Value::expr(format!("{id}.{p}")));
+                }
+                self.abs_block.overlays.push((None, extent));
+            }
+        }
+        frame.push_child(obj);
+        let mut item = Object::new("Item").with_id(host);
+        // Not one of the page's elements.
+        item.members.push(Member::PropertyDecl {
+            ty: "Item".to_owned(),
+            name: SLOT_PROPERTY.to_owned(),
+            value: Some(Value::expr("null")),
+            readonly: false,
+            required: false,
+        });
+        item.set("z", Value::Number(f64::from(lift)));
+        item.push_child(frame);
+        item
     }
 
     /// A slot goes before the line, whose start it knows and whose text it
@@ -493,11 +611,17 @@ impl Emitter<'_, '_> {
     ) -> Object {
         let decoration = TextDecorationLine::default();
         self.positioned_child = true;
+        self.overlay_inside = None;
         let emitted = self.item(b, decoration);
         self.positioned_child = false;
         let mut obj = emitted.obj;
         let style = &*b.style;
-        if let Some(z) = style.z_index {
+        // Overlays stack by their `z-index`, and one at `auto` is at 0 with
+        // what it holds over it: a kid's level is its `z-index` plus one.
+        let z = style
+            .z_index
+            .or_else(|| self.overlay_inside.map(|n| n - 1).filter(|&n| n > 0));
+        if let Some(z) = z {
             obj.set("z", Value::Number(f64::from(z)));
         }
         let line = b.node.and_then(|n| node_line(self.doc, n));
@@ -592,12 +716,51 @@ pub(super) struct StaticPlace {
     margin: f32,
 }
 
+/// The item [`Emitter::hoisted_host`] puts an overlay in.
+pub(super) fn is_host(o: &Object) -> bool {
+    o.members.iter().any(|m| {
+        matches!(m, Member::Child(frame) if frame.members.iter().any(|m| {
+            matches!(m, Member::PropertyDecl { name, .. } if name == HOISTED_PROPERTY)
+        }))
+    })
+}
+
+/// Whether a box, or one inside it, may paint over the boxes before it in
+/// its stacking context: one an overlay there goes among.
+pub(super) fn may_rise(b: &LayoutBox<'_>) -> bool {
+    fn rises(style: &ComputedStyle) -> bool {
+        style.position != Position::Static
+            || style.z_index.is_some()
+            || !style.transform.is_empty()
+            || style.filter.is_some()
+            || style.opacity < 1.0
+    }
+    fn inline_rises(items: &[crate::boxes::Inline<'_>]) -> bool {
+        items.iter().any(|item| match item {
+            crate::boxes::Inline::Span(span) => rises(span.style) || inline_rises(&span.children),
+            crate::boxes::Inline::Atomic(b) => may_rise(b),
+            _ => false,
+        })
+    }
+    rises(&b.style)
+        || match &b.content {
+            Content::Blocks(children) => children.iter().any(may_rise),
+            Content::Inline(items) => inline_rises(items),
+            Content::Empty => false,
+        }
+}
+
 /// The box a `position: absolute` or `fixed` descendant is placed against.
 pub(super) struct ContainingBlock {
     node: Option<NodeId>,
     border: Sides<BorderSide>,
     /// Each overlay and its source comment, in document order.
     pub overlays: Vec<(Option<String>, Object)>,
+    /// The stop its overlays may go to, and its HTML id and hint, to claim
+    /// the id they place themselves by when one does.
+    pub hoist: Option<(usize, Option<String>, String)>,
+    /// The id claimed for it.
+    pub id: Option<String>,
 }
 
 impl ContainingBlock {
@@ -607,6 +770,8 @@ impl ContainingBlock {
             // The viewport has no border, so the initial style stands in.
             border: ComputedStyle::default().border,
             overlays: Vec::new(),
+            hoist: None,
+            id: None,
         }
     }
 
@@ -615,6 +780,8 @@ impl ContainingBlock {
             node,
             border: style.border.clone(),
             overlays: Vec::new(),
+            hoist: None,
+            id: None,
         }
     }
 }

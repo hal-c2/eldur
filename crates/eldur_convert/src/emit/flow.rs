@@ -371,6 +371,20 @@ pub(crate) struct Column {
 impl Emitter<'_, '_> {
     /// `top_open`/`bottom_open`: whether the parent's own margins collapse
     /// with its first/last child's.
+    /// The overlays the block just placed sent to this column's stop, after it.
+    fn place_hoisted(&mut self, stop: Option<usize>, layout: &mut Object) {
+        let Some(stop) = stop else {
+            return;
+        };
+        let (here, rest): (Vec<_>, Vec<_>) = std::mem::take(&mut self.hoisted)
+            .into_iter()
+            .partition(|(s, _)| *s == stop);
+        self.hoisted = rest;
+        for (_, host) in here {
+            layout.push_child(host);
+        }
+    }
+
     pub(super) fn column(
         &mut self,
         children: &[LayoutBox<'_>],
@@ -394,8 +408,24 @@ impl Emitter<'_, '_> {
         // The item before the hidden one, which keeps its bottom margin
         // while the hidden one ends the column.
         let mut before_hidden: Option<usize> = None;
+        // A stop's blocks send their overlays here when what follows them
+        // may paint over them: else their blocks' lifts already order them.
+        let stop = self.column_stop.take();
+        let own_hoist = self.hoist_into;
+        let mut later_rises = vec![self.writes_z_index; children.len()];
+        if stop.is_some() && !self.writes_z_index {
+            let mut any = false;
+            for (i, c) in children.iter().enumerate().rev() {
+                later_rises[i] = any;
+                any = any || super::lists::may_rise(c);
+            }
+        }
         let mut rest = children;
         while let Some(child) = rest.first() {
+            if let Some(stop) = stop {
+                let i = children.len() - rest.len();
+                self.hoist_into = later_rises[i].then_some(stop);
+            }
             if is_out_of_flow(&child.style) {
                 rest = &rest[1..];
                 // Its static position is past the margins so far, unless
@@ -409,6 +439,7 @@ impl Emitter<'_, '_> {
                 if let Some(slot) = self.out_of_flow_box(child, margin) {
                     layout.push_child(slot);
                 }
+                self.place_hoisted(stop, &mut layout);
                 continue;
             }
             let run = float_run(rest);
@@ -440,6 +471,7 @@ impl Emitter<'_, '_> {
                 }
                 layout.push_child(obj);
                 last = Some(layout.members.len() - 1);
+                self.place_hoisted(stop, &mut layout);
                 pending = bottom;
                 pending_cases = None;
                 if hidden.escaping {
@@ -475,6 +507,7 @@ impl Emitter<'_, '_> {
                 }
                 layout.push_child(obj);
                 last = Some(layout.members.len() - 1);
+                self.place_hoisted(stop, &mut layout);
                 pending = MarginSet::default();
                 pending_cases = None;
                 if hidden.escaping {
@@ -484,8 +517,10 @@ impl Emitter<'_, '_> {
                 continue;
             }
             rest = &rest[1..];
+            self.column_child = true;
             let emitted = self.block(child, decoration);
             if emitted.collapse_through {
+                self.place_hoisted(stop, &mut layout);
                 pending.join(emitted.top);
                 pending.join(emitted.bottom);
                 pending_cases = pending_cases.map(|c| c.joined(emitted.top).joined(emitted.bottom));
@@ -645,7 +680,9 @@ impl Emitter<'_, '_> {
             {
                 *at = layout.members.len() - 1;
             }
+            self.place_hoisted(stop, &mut layout);
         }
+        self.hoist_into = own_hoist;
         // Its margins escape through the top too while all of it is hidden.
         let escapes_through = hidden.escaping;
         // Every block of the column is one a script can hide.
@@ -668,7 +705,8 @@ impl Emitter<'_, '_> {
         // the item's margins, so those go below the slot. A hidden slot isn't
         // laid out: margins there would be lost.
         if let Some(tail) = layout.members.iter().rposition(|m| {
-            matches!(m, Member::Child(o) if !matches!(o.get("visible"), Some(Value::Bool(false))))
+            matches!(m, Member::Child(o) if !matches!(o.get("visible"), Some(Value::Bool(false)))
+                && !super::lists::is_host(o))
         }) {
             last = tail;
         }

@@ -135,6 +135,22 @@ pub(crate) struct Emitter<'a, 'd> {
     /// over its later siblings: every QML item is a stacking context, where
     /// CSS lets a positioned box paint over the page outside its parent.
     above_flow: Option<i32>,
+    /// What the out-of-flow box just emitted holds, as `above_flow` has it:
+    /// at `z-index: auto` it makes no stacking context, so that is its level
+    /// among the boxes of its block and over what follows it.
+    overlay_inside: Option<i32>,
+    /// The stop whose column an overlay emitted here goes to when its
+    /// containing block makes no stacking context (`hoisted_host`):
+    /// every box between is a block of a column that makes none and clips
+    /// nothing, so in CSS it paints among that column's boxes.
+    hoist_into: Option<usize>,
+    /// The box being emitted is a block of a column.
+    column_child: bool,
+    /// The box whose column is about to be filled is a stop, by this number.
+    column_stop: Option<usize>,
+    stops: usize,
+    /// Overlays on their way to their stop's column, with the stop.
+    hoisted: Vec<(usize, Object)>,
     /// The content height in px of the block whose children are being
     /// laid out, when it is definite: their percentage heights resolve
     /// against it (CSS 2.2 §10.5).
@@ -279,6 +295,12 @@ impl<'a, 'd> Emitter<'a, 'd> {
             static_places: false,
             nested_z: None,
             above_flow: None,
+            overlay_inside: None,
+            hoist_into: None,
+            column_child: false,
+            column_stop: None,
+            stops: 0,
+            hoisted: Vec::new(),
             percent_height_base: None,
             column_fills: true,
             fixed: Vec::new(),
@@ -580,13 +602,51 @@ impl<'a, 'd> Emitter<'a, 'd> {
             || establishes_bfc(&b.style)
             || (b.node.is_some() && b.node == self.root_node);
         let outer_wrap = if own_context { self.wrap.take() } else { None };
+        let (outer_hoist, outer_stop) = self.enter_stop(b, layout_item);
         let e = self.block_box_in_lines(b, inherited, independent, layout_item);
+        self.hoist_into = outer_hoist;
+        self.column_stop = outer_stop;
         if outer_wrap.is_some() {
             self.wrap = outer_wrap;
         }
         self.line_align = outer;
         self.own_given = outer_given;
         e
+    }
+
+    /// Where the overlays inside `b` may go (`hoisted_host`): a box that
+    /// is a stacking context, or the page, is a stop its column's blocks go
+    /// to; a block of a column that is neither, and clips nothing, keeps its
+    /// column's. Returns what to restore.
+    fn enter_stop(
+        &mut self,
+        b: &LayoutBox<'_>,
+        layout_item: bool,
+    ) -> (Option<usize>, Option<usize>) {
+        let style = &*b.style;
+        let column_child = std::mem::take(&mut self.column_child);
+        let page = b
+            .node
+            .is_some_and(|n| Some(n) == self.doc.body() || Some(n) == self.root_node);
+        let stop = page
+            || ((boxes::is_containing_block(style) || layout_item) && style.z_index.is_some())
+            || !style.transform.is_empty()
+            || style.filter.is_some()
+            || style.opacity < 1.0;
+        let keeps = !stop
+            && column_child
+            && b.kind == BoxKind::Block
+            && style.overflow_x == Overflow::Visible
+            && style.overflow_y == Overflow::Visible;
+        let inner = if keeps { self.hoist_into } else { None };
+        let id = stop.then(|| {
+            self.stops += 1;
+            self.stops
+        });
+        (
+            std::mem::replace(&mut self.hoist_into, inner),
+            std::mem::replace(&mut self.column_stop, id),
+        )
     }
 
     fn block_box_in_lines(
@@ -688,10 +748,16 @@ impl<'a, 'd> Emitter<'a, 'd> {
             outer_backdrop
         };
         let outer_abs = boxes::is_containing_block(style).then(|| {
-            std::mem::replace(
-                &mut self.abs_block,
-                lists::ContainingBlock::of(b.node, style),
-            )
+            let mut block = lists::ContainingBlock::of(b.node, style);
+            if let Some(stop) = self.hoist_into {
+                let html_id = b
+                    .node
+                    .and_then(|n| self.doc.element(n))
+                    .and_then(|e| e.id())
+                    .map(str::to_owned);
+                block.hoist = Some((stop, html_id, hint(self.doc, b)));
+            }
+            std::mem::replace(&mut self.abs_block, block)
         });
         let outer_fixed = boxes::is_fixed_containing_block(style).then(|| {
             self.fixed_block
@@ -855,9 +921,12 @@ impl<'a, 'd> Emitter<'a, 'd> {
         self.column_fills = outer_fills;
         self.backdrop = outer_backdrop;
         self.hideable_ancestor = outer_hideable;
-        let overlays = match outer_abs {
-            Some(outer) => std::mem::replace(&mut self.abs_block, outer).overlays,
-            None => Vec::new(),
+        let (overlays, block_id) = match outer_abs {
+            Some(outer) => {
+                let own = std::mem::replace(&mut self.abs_block, outer);
+                (own.overlays, own.id)
+            }
+            None => (Vec::new(), None),
         };
         let mut overlays = overlays;
         if let Some(outer) = outer_fixed
@@ -885,6 +954,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             && bottom_open
             && !wanted
             && overlays.is_empty()
+            && block_id.is_none()
             && !self.static_animation(style)
         {
             let mut top = MarginSet::of(mt);
@@ -924,6 +994,8 @@ impl<'a, 'd> Emitter<'a, 'd> {
             .and_then(|e| e.id())
             .map(str::to_owned);
         let outer_id = match (&html_id, wanted) {
+            // Its overlays that went to a stop's column are placed by it.
+            _ if block_id.is_some() => block_id,
             (Some(id), _) => Some(self.claim_html_id(id)),
             (None, true) => Some(self.ids.claim(&hint(self.doc, b))),
             (None, false) => None,
@@ -1099,6 +1171,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             if self.writes_z_index && !page {
                 push_z_markers(obj, style.z_index, 1);
             }
+            self.overlay_inside = self.above_flow;
             self.above_flow = outer;
             return;
         }

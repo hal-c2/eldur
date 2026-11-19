@@ -136,9 +136,8 @@ TestCase {
         compare(front(page, 100, 270), "i", "#i set to 3")
         compare(front(page, 100, 390), "m", "#l set to 5 inside #k")
         compare(front(page, 100, 510), "p", "#n set to auto")
-        // Chromium has `#u` over `#w` at 630; the converter lifts `#t`'s
-        // block, `#w` with it, by `#t`'s level, so only `#t` is checked.
-        compare(front(page, 100, 650), "t", "#t still lifts its block")
+        compare(front(page, 100, 630), "u", "#w set to auto beside #t")
+        compare(front(page, 100, 650), "t", "#t over #u by its own level")
         compare(front(page, 100, 750), "mv", "#mv moved into #dst")
         compare(front(page, 100, 870), "vs", "#mv moved out of #src")
         compare(front(page, 100, 990), "vr", "#gone taken out of #rm")
