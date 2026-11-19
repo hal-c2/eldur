@@ -7,8 +7,8 @@
 //! in a test.
 
 use eldur_css::{
-    Animation, BoxSizing, ComputedStyle, Easing, Keyframe, Length, LengthAuto, Position, Rgba,
-    Size, TransformFn,
+    Animation, BoxSizing, ComputedStyle, Direction, Easing, Keyframe, Length, LengthAuto, Position,
+    Rgba, Size, TransformFn,
 };
 use eldur_dom::NodeId;
 use eldur_qml::{Member, Object, Value};
@@ -706,8 +706,21 @@ impl Emitter<'_, '_> {
                     if !moves {
                         continue;
                     }
+                    // A relative box moves from where its offset has it, which
+                    // `right` gives when `left` is `auto`. In a right-to-left
+                    // block `right` wins, so `left` moves nothing.
+                    let rtl_right = style.direction == Direction::Rtl
+                        && matches!(style.right, LengthAuto::Length(_));
+                    if style.position == Position::Relative && rtl_right {
+                        continue;
+                    }
                     let own = if style.position == Position::Relative {
-                        Some(auto_px(&style.left).unwrap_or(0.0))
+                        match (&style.left, &style.right) {
+                            (LengthAuto::Auto, LengthAuto::Length(_)) => {
+                                auto_px(&style.right).map(|px| -px)
+                            }
+                            _ => Some(auto_px(&style.left).unwrap_or(0.0)),
+                        }
                     } else {
                         auto_px(&style.left)
                     };

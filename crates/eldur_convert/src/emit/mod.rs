@@ -1682,20 +1682,30 @@ fn establishes_bfc(style: &ComputedStyle) -> bool {
 }
 
 /// How far `position: relative` moves a box from where the flow has it, when
-/// each inset that counts is in pixels: left and top win (CSS 2.2 §9.4.3).
-/// A percentage resolves against the containing block, which is not known here.
+/// each inset that counts is in pixels: top wins, and left in a left-to-right
+/// block, right in a right-to-left one (CSS 2.2 §9.4.3). The box's direction
+/// stands in for its containing block's, which it inherits unless it sets its
+/// own. A percentage resolves against the containing block, which is not
+/// known here.
 pub(super) fn relative_px(style: &ComputedStyle) -> Option<(f32, f32)> {
     if style.position != Position::Relative {
         return Some((0.0, 0.0));
     }
-    let axis = |near: &LengthAuto, far: &LengthAuto| match (near, far) {
-        (LengthAuto::Length(l), _) => l.as_px(),
-        (LengthAuto::Auto, LengthAuto::Length(l)) => l.as_px().map(|px| -px),
-        (LengthAuto::Auto, LengthAuto::Auto) => Some(0.0),
+    let px = |side: &LengthAuto| match side {
+        LengthAuto::Length(l) => l.as_px().map(Some),
+        LengthAuto::Auto => Some(None),
+    };
+    let axis = |near: &LengthAuto, far: &LengthAuto, far_wins: bool| {
+        Some(match (px(near)?, px(far)?) {
+            (Some(_), Some(f)) if far_wins => -f,
+            (Some(n), _) => n,
+            (None, Some(f)) => -f,
+            (None, None) => 0.0,
+        })
     };
     Some((
-        axis(&style.left, &style.right)?,
-        axis(&style.top, &style.bottom)?,
+        axis(&style.left, &style.right, style.direction == Direction::Rtl)?,
+        axis(&style.top, &style.bottom, false)?,
     ))
 }
 
