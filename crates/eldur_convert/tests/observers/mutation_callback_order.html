@@ -1,0 +1,42 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>mutation callback order</title></head><body>
+<div id="W1"></div><div id="W2"></div>
+<script>
+// An element's own callbacks run in the order they were queued: an attribute
+// an earlier element's connectedCallback sets on it comes after its own
+// connectedCallback, whether or not an observer records the attribute.
+function L(k){console.log("OB "+k)}
+function N(n){return n ? (n.id || n.nodeName) : "null"}
+customElements.define("x-o", class extends HTMLElement {
+  static get observedAttributes() { return ["v"]; }
+  connectedCallback() {
+    L("connected " + this.id);
+    if (this.id.charAt(0) === "A") {
+      var b = document.getElementById("B" + this.id.charAt(1));
+      b.setAttribute("v", "1");
+      L("set v on " + b.id);
+    }
+  }
+  attributeChangedCallback(name, old, now) { L("attr " + this.id + " " + name + " " + old + " " + now); }
+});
+function run(n, options) {
+  var W = document.getElementById("W" + n);
+  var mo = new MutationObserver(function(rs) {
+    L("records " + rs.map(function(r) { return r.type + ":" + r.target.id + (r.type === "childList" ? ":+" + Array.prototype.map.call(r.addedNodes, N).join("|") : ":" + r.attributeName); }).join(" "));
+  });
+  mo.observe(W, options);
+  var A = document.createElement("x-o"); A.id = "A" + n;
+  var B = document.createElement("x-o"); B.id = "B" + n;
+  W.append(A, B);
+  L("appended " + n);
+  return mo;
+}
+setTimeout(function() {
+  var one = run(1, { childList: true, subtree: true, attributes: true });
+  var two = run(2, { childList: true });
+  setTimeout(function() {
+    one.disconnect(); two.disconnect();
+    L("done");
+    var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+  }, 0);
+}, 0);
+</script></body></html>
