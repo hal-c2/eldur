@@ -254,6 +254,13 @@ fn statics() {
     page("statics");
 }
 
+/// Items a script makes take `:nth-child` by their place on a page that had
+/// none numbered when it loaded.
+#[test]
+fn numbered() {
+    page("numbered");
+}
+
 /// An inline `display` or `hidden` over a class binding.
 #[test]
 fn inline_display() {

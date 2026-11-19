@@ -713,6 +713,8 @@ function init(rootItem, baseUrl, documentUrl) {
             _resetPageState();
         } else if (_live(_root)) {
             _pageCaches.set(_root, _pageCacheSave());
+            // Whether this page numbers its items is asked of its own items.
+            _numberedItems = false;
             // The elements showing generated text are the earlier page's: this
             // page's rules must not take it off them.
             _pseudoShown = new Set();
@@ -1228,7 +1230,7 @@ function _pageCacheSave() {
         gStaticBase: _gStaticBase, gStaticControls: _gStaticControls,
         gClosedHidden: _gClosedHidden, gStaticRoot: _gStaticRoot, gSchemed: _gSchemed,
         documentListeners: _documentListeners, windowListeners: _windowListeners,
-        fallbackTitle: _fallbackTitle
+        fallbackTitle: _fallbackTitle, numberedItems: _numberedItems
     };
 }
 
@@ -1255,6 +1257,7 @@ function _pageCacheLoad(c) {
     _gClosedHidden = c.gClosedHidden; _gStaticRoot = c.gStaticRoot; _gSchemed = c.gSchemed;
     _documentListeners = c.documentListeners; _windowListeners = c.windowListeners;
     _fallbackTitle = c.fallbackTitle;
+    _numberedItems = c.numberedItems;
 }
 
 // What is kept for a page goes with it: pages made one after another, each
@@ -4677,11 +4680,27 @@ function _reflowFilled(container, force) {
     }
 }
 
-// Only the converter declares `eldurIndex` and its kin, on elements that are
-// there when the page loads; what a script makes never has them. A page whose
-// load had none has nothing to renumber, so its appends skip a walk of all
-// their new siblings.
+// Only the converter declares `eldurIndex` and its kin: on elements there when
+// the page loads, and on the templates some created elements are made from. A
+// page none of whose items has them has nothing to renumber, so its appends
+// skip a walk of all their new siblings. Each page keeps its own answer.
 var _numberedItems = false;
+
+// What goes into the page may bring numbered items with it; reading it costs
+// what it holds, not what is already there.
+function _noteNumbered(raw) {
+    if (_numberedItems || !raw || typeof raw !== "object" || raw.__eldurInline) {
+        return;
+    }
+    if (typeof raw.eldurIndex === "number" || typeof raw.eldurTypeIndex === "number") {
+        _numberedItems = true;
+        return;
+    }
+    var kids = raw.children;
+    for (var i = 0; kids && i < kids.length && !_numberedItems; ++i) {
+        _noteNumbered(kids[i]);
+    }
+}
 
 function _renumber(container) {
     if (!_numberedItems || !container || typeof container !== "object" || !container.children) {
@@ -10482,6 +10501,7 @@ function _insertInFlow(container, rawNodes, rawRef) {
         }
     }
     _reflowFilled(container, true);
+    rawNodes.forEach(_noteNumbered);
     // Before the script reads styles back; removals settle with the layouts.
     _renumber(container);
 }
@@ -10960,6 +10980,7 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
         oldRaw.destroy();
     }
     // A new item starts with its template's place.
+    _noteNumbered(next);
     _renumber(parentContainer);
 
     if (typeof next.eldurClasses === "string" && next.eldurClasses !== m.classes.join(" ")) {

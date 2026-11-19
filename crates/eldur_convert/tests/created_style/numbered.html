@@ -1,0 +1,18 @@
+<!doctype html><html><head><style>body{margin:0;font:16px/20px sans-serif}
+ul{margin:0;padding:0;list-style:none}
+li{height:20px;width:100px;background:#00ff00}
+li:nth-child(2){background:#ff0000}
+</style></head><body>
+<ul id="list"></ul>
+<script>
+// Nothing on the page is numbered when it loads; the items the script makes
+// are, by `:nth-child`, and each paints by its place as items come and go.
+var list = document.getElementById("list");
+function li(id) { var e = document.createElement("li"); e.id = id; e.dataset.probe = "50,10"; return e; }
+list.appendChild(li("n1"));
+list.appendChild(li("n2"));
+list.appendChild(li("n3"));
+list.removeChild(document.getElementById("n1"));
+list.insertBefore(li("n4"), document.getElementById("n2"));
+console.log("CS order " + Array.prototype.map.call(list.children, function(e) { return e.id; }).join(" "));
+</script></body></html>
