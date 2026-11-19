@@ -712,7 +712,7 @@ impl Emitter<'_, '_> {
 pub(super) struct StaticPlace {
     slot: String,
     /// The item the position is relative to.
-    from: &'static str,
+    from: String,
     margin: f32,
 }
 
