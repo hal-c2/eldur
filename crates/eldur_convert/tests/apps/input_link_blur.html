@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head><style>
+body { margin: 8px; font: 16px sans-serif; }
+</style></head>
+<body>
+<p><a id="first" href="#f"><svg aria-hidden="true" width="16" height="16"><rect width="16" height="16"/></svg></a>
+<a id="icon" href="#i"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24"><path d="M12 2 22 22H2z"/></svg></a></p>
+<button id="toicon">focus icon</button>
+<script>
+// Escape blurs whatever has the focus: a link whose icon holds its focus lets
+// it go, so Enter then follows nothing.
+document.addEventListener("keydown", function (ev) {
+  if (ev.key === "Escape" && document.activeElement && document.activeElement !== document.body) {
+    document.activeElement.blur();
+    console.log("blurred", document.activeElement ? document.activeElement.nodeName : "null");
+  }
+});
+document.addEventListener("click", function (ev) {
+  console.log("click", ev.target.id || ev.target.nodeName, location.hash);
+  if (ev.target.closest && ev.target.closest("a")) {
+    ev.preventDefault();
+  }
+});
+document.getElementById("toicon").addEventListener("click", function () { document.getElementById("icon").focus(); });
+document.addEventListener("focusin", function (ev) { console.log("focusin", ev.target.id); });
+document.addEventListener("focusout", function (ev) { console.log("focusout", ev.target.id); });
+</script>
+</body>
+</html>

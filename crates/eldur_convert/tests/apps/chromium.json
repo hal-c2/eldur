@@ -44873,6 +44873,154 @@
    }
   }
  ],
+ "input_link_blur": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#first": [
+     {
+      "box": [
+       8,
+       18,
+       16,
+       17
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "tab to first",
+   "log": [
+    "focusin first"
+   ],
+   "state": {
+    "#first": [
+     {
+      "box": [
+       8,
+       18,
+       16,
+       17
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "first"
+   }
+  },
+  {
+   "name": "escape blurs first",
+   "log": [
+    "focusout first",
+    "blurred BODY"
+   ],
+   "state": {
+    "#first": [
+     {
+      "box": [
+       8,
+       18,
+       16,
+       17
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "enter after first blur",
+   "log": [],
+   "state": {
+    "#first": [
+     {
+      "box": [
+       8,
+       18,
+       16,
+       17
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "script focuses icon",
+   "log": [
+    "focusin toicon",
+    "focusout toicon",
+    "focusin icon",
+    "click toicon "
+   ],
+   "state": {
+    "#first": [
+     {
+      "box": [
+       8,
+       18,
+       16,
+       17
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": "icon"
+   }
+  },
+  {
+   "name": "escape blurs icon",
+   "log": [
+    "focusout icon",
+    "blurred BODY"
+   ],
+   "state": {
+    "#first": [
+     {
+      "box": [
+       8,
+       18,
+       16,
+       17
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "enter after icon blur",
+   "log": [],
+   "state": {
+    "#first": [
+     {
+      "box": [
+       8,
+       18,
+       16,
+       17
+      ],
+      "shown": true,
+      "text": ""
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
  "input_links": [
   {
    "name": "load",
