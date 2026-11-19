@@ -35,6 +35,13 @@ const HOVER: &str = r##"<!DOCTYPE html><html><body style="margin:0;font:16px san
 <div style="height:2000px"></div><p id="next">next</p>
 </body></html>"##;
 
+/// An icon sprite: a `<use>` of a `<symbol>` kept in a hidden svg, an icon
+/// filled with a gradient kept in a 0×0 svg, and an editor's prefixed
+/// attributes, which HTML leaves unbound.
+const SPRITE: &str = r##"<!DOCTYPE html><html><body style="margin:0;color:#c00">
+<svg style="display:none"><symbol id="square" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" fill="currentColor"/></symbol></svg><svg width="0" height="0" style="position:absolute"><linearGradient id="blue"><stop offset="0" stop-color="#00c"/><stop offset="1" stop-color="#00c"/></linearGradient></svg><svg width="48" height="48" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" inkscape:label="sprite" sodipodi:docname="x"><use href="#square"/></svg><svg width="48" height="48" viewBox="0 0 24 24"><rect width="24" height="24" fill="url(#blue)"/></svg>
+</body></html>"##;
+
 /// What every test file shares: the page, its svg `Image`s in document
 /// order, the boxes of items in page coordinates, and the links QML exposes
 /// to assistive technology.
@@ -64,6 +71,13 @@ const HELPERS: &str = r##"
     function box(item) {
         const p = item.mapToItem(page, 0, 0)
         return [p.x, p.y, item.width, item.height]
+    }
+    // The item that is the icon's link: the icon, or a box around it.
+    function carrier(item) {
+        for (let at = item; at && at !== page; at = at.parent)
+            if (at.Accessible.role === Accessible.Link)
+                return at
+        return null
     }
     function links() {
         return walk(page, []).filter(i => i.Accessible.role === Accessible.Link)
@@ -103,6 +117,36 @@ HELPERS
 }
 "##;
 
+const SPRITE_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 1280
+    height: 800
+
+TestCase {
+    name: "InlineSvgSprite"
+    when: windowShown
+HELPERS
+    function test_a_sprite_and_an_outside_gradient_draw() {
+        // The 0×0 svg that only holds the gradient draws nothing.
+        const shown = icons().filter(i => i.width > 0)
+        compare(shown.length, 2)
+        compare(box(shown[0]), [0, 0, 48, 48])
+        compare(box(shown[1]), [48, 0, 48, 48])
+        // Chromium: the symbol's square in the body's #cc0000, the
+        // gradient's #0000cc, and white around the square and past both.
+        compare(colourAt(page, 24, 24), [204, 0, 0])
+        compare(colourAt(page, 2, 2), [255, 255, 255])
+        compare(colourAt(page, 72, 24), [0, 0, 204])
+        compare(colourAt(page, 100, 24), [255, 255, 255])
+    }
+}
+}
+"##;
+
 const LINKS_TEST: &str = r##"
 import QtQuick
 import QtTest
@@ -134,9 +178,15 @@ HELPERS
         compare(colourAt(shown[1], 11, 8), [0, 0, 238])
     }
 
-    function test_hidden_icons_are_not_read() {
-        for (const icon of icons())
-            verify(icon.Accessible.ignored, String(icon.source))
+    function test_hidden_icons_are_read_only_as_their_links() {
+        for (const icon of icons()) {
+            const link = carrier(icon)
+            verify(link, String(icon.source))
+            // An ignored item hides the link it carries.
+            verify(!link.Accessible.ignored, String(icon.source))
+            if (link !== icon)
+                verify(icon.Accessible.ignored, String(icon.source))
+        }
     }
 
     function test_each_link_is_named_as_chromium_names_it() {
@@ -200,6 +250,17 @@ HELPERS
 
     function test_links_are_named_as_chromium_names_them() {
         compare(links(), ["Source code", "Flex link"])
+    }
+
+    function test_return_on_an_icon_only_link_follows_it() {
+        verify(flick)
+        // As in a browser, Return on the focused link follows it, to the
+        // scrollY 1288 a click there gives.
+        const link = carrier(icons()[0])
+        verify(link.activeFocusOnTab)
+        link.forceActiveFocus()
+        keyClick(Qt.Key_Return)
+        tryCompare(flick, "contentY", 1288, 2000)
     }
 }
 }
@@ -274,6 +335,33 @@ fn a_hover_colour_is_another_asset() {
 #[test]
 fn inline_svg_draws_like_chromium() {
     run("red", RED, RED_TEST);
+}
+
+#[test]
+fn a_sprite_asset_holds_what_it_uses() {
+    let out = convert(SPRITE);
+    let assets = svg_assets(&out);
+    let sprite = assets
+        .iter()
+        .find(|s| s.contains("<use href=\"#square\"/>"))
+        .expect("the sprite's asset");
+    assert!(sprite.contains("<defs><symbol id=\"square\""), "{sprite}");
+    assert!(sprite.contains("fill=\"#cc0000\""), "{sprite}");
+    assert!(!sprite.contains("inkscape"), "{sprite}");
+    assert!(!sprite.contains("sodipodi"), "{sprite}");
+    let filled = assets
+        .iter()
+        .find(|s| s.contains("fill=\"url(#blue)\""))
+        .expect("the gradient icon's asset");
+    assert!(
+        filled.contains("<defs><linearGradient id=\"blue\">"),
+        "{filled}"
+    );
+}
+
+#[test]
+fn a_sprite_draws_like_chromium() {
+    run("sprite", SPRITE, SPRITE_TEST);
 }
 
 #[test]

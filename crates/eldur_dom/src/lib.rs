@@ -301,21 +301,133 @@ impl Document {
     /// attribute uses it) declared on the root, attribute names in their SVG
     /// case (`viewBox`), childless elements self-closed. `value` sees each
     /// attribute's local name and value, and each `<style>` element's text
-    /// with the name `"#style"`, and returns what is written.
+    /// with the name `"#style"`, and returns what is written. Its third
+    /// argument is the colour `currentColor` means there when the svg sets
+    /// one itself, by a `color` attribute or a `color` in a `style`
+    /// attribute on the element or an ancestor within the svg; `None` when
+    /// the element inherits the colour of what holds the svg.
+    ///
+    /// What the subtree refers to elsewhere in the page, a sprite's
+    /// `<symbol>` through `<use href="#id">` or a gradient through
+    /// `url(#id)`, is copied into a `<defs>` at the end: in the page those
+    /// ids resolve document-wide (SVG 2 §16.1.3), in a file of its own only
+    /// within it, and without the copies the icon draws nothing.
     #[must_use]
-    pub fn svg_markup(&self, id: NodeId, value: &dyn Fn(&str, &str) -> String) -> Option<String> {
+    pub fn svg_markup(
+        &self,
+        id: NodeId,
+        value: &dyn Fn(&str, &str, Option<&str>) -> String,
+    ) -> Option<String> {
         let element = self.element(id).filter(|e| e.is_svg())?;
-        let xlink = self.descendants(id).any(|n| {
-            self.element(n)
-                .is_some_and(|e| e.attrs.iter().any(|a| a.name.ns == ns!(xlink)))
-        });
+        let copies = self.svg_outside_references(id);
+        let xlink = std::iter::once(id)
+            .chain(copies.iter().copied())
+            .flat_map(|n| self.descendants(n))
+            .any(|n| {
+                self.element(n)
+                    .is_some_and(|e| e.attrs.iter().any(|a| a.name.ns == ns!(xlink)))
+            });
         let mut out = String::new();
         let mut root = String::from(" xmlns=\"http://www.w3.org/2000/svg\"");
         if xlink {
             root.push_str(" xmlns:xlink=\"http://www.w3.org/1999/xlink\"");
         }
-        self.write_svg(id, element, &root, value, &mut out);
+        self.write_svg(id, element, &root, None, value, &mut out);
+        if !copies.is_empty() {
+            let mut defs = String::from("<defs>");
+            for copy in copies {
+                if let Some(e) = self.element(copy) {
+                    // A copy draws where it is used, which the file cannot
+                    // follow; it takes the colour the svg starts with.
+                    self.write_svg(copy, e, "", None, value, &mut defs);
+                }
+            }
+            defs.push_str("</defs>");
+            // The root was written whole; the copies go in as its last child.
+            if let Some(open) = out.strip_suffix("/>") {
+                out = format!("{open}>{defs}</svg>");
+            } else {
+                let close = out.len() - "</svg>".len();
+                out.insert_str(close, &defs);
+            }
+        }
         Some(out)
+    }
+
+    /// The svg elements outside `id`'s subtree that it refers to by
+    /// fragment, and those they refer to in turn, in the order first met.
+    /// An id names the first element in document order that has it, as
+    /// `getElementById` finds it; ids that name nothing are left alone, as
+    /// they draw nothing in the page either.
+    fn svg_outside_references(&self, id: NodeId) -> Vec<NodeId> {
+        let mut inside: Vec<NodeId> = self.descendants(id).collect();
+        let mut wanted: Vec<String> = Vec::new();
+        let mut found = Vec::new();
+        let mut scanned = 0;
+        let mut next = 0;
+        loop {
+            for &n in &inside[scanned..] {
+                self.svg_references(n, &mut wanted);
+            }
+            scanned = inside.len();
+            let Some(name) = wanted.get(next).cloned() else {
+                break;
+            };
+            next += 1;
+            let has = |n: &NodeId| self.element(*n).and_then(Element::id) == Some(name.as_str());
+            if inside.iter().any(has) {
+                continue;
+            }
+            let Some(target) = self.descendants(self.root()).find(has) else {
+                continue;
+            };
+            // A target that holds the svg itself would copy it into itself.
+            if !self.element(target).is_some_and(Element::is_svg)
+                || self.ancestors(id).any(|a| a == target)
+            {
+                continue;
+            }
+            found.push(target);
+            inside.extend(self.descendants(target));
+        }
+        found
+    }
+
+    /// Pushes onto `out` each fragment id `n` names that is not there yet:
+    /// an `href` (plain or `xlink:`) of `#id`, and every `url(#id)` in an
+    /// attribute or a `<style>` text.
+    fn svg_references(&self, n: NodeId, out: &mut Vec<String>) {
+        let mut add = |name: &str| {
+            if !name.is_empty() && !out.iter().any(|w| w == name) {
+                out.push(name.to_owned());
+            }
+        };
+        match &self.node(n).data {
+            NodeData::Element(e) if e.is_svg() => {
+                for attr in &e.attrs {
+                    if &*attr.name.local == "href"
+                        && (attr.name.ns == ns!() || attr.name.ns == ns!(xlink))
+                        && let Some(name) = attr.value.trim().strip_prefix('#')
+                    {
+                        add(name);
+                    }
+                    for name in url_fragments(&attr.value) {
+                        add(name);
+                    }
+                }
+            }
+            NodeData::Text(t)
+                if self
+                    .parent(n)
+                    .and_then(|p| self.element(p))
+                    .is_some_and(|e| e.is_svg() && e.local_name() == "style") =>
+            {
+                for name in url_fragments(t) {
+                    add(name);
+                }
+            }
+            _ => {}
+        }
     }
 
     fn write_svg(
@@ -323,9 +435,12 @@ impl Document {
         id: NodeId,
         element: &Element,
         declarations: &str,
-        value: &dyn Fn(&str, &str) -> String,
+        inherited: Option<&str>,
+        value: &dyn Fn(&str, &str, Option<&str>) -> String,
         out: &mut String,
     ) {
+        let own = svg_own_colour(element);
+        let colour = own.as_deref().or(inherited);
         let escape = |s: &str| {
             s.replace('&', "&amp;")
                 .replace('<', "&lt;")
@@ -340,6 +455,19 @@ impl Document {
             if attr.name.ns == ns!(xmlns) || &*attr.name.local == "xmlns" {
                 continue;
             }
+            // HTML binds only the xlink, xml and xmlns prefixes; any other
+            // (an editor's `inkscape:label`) is a name with a colon and no
+            // namespace, which makes the file ill-formed to a namespace-aware
+            // reader, and browsers ignore it anyway.
+            if attr.name.ns == ns!() && attr.name.local.contains(':') {
+                continue;
+            }
+            // A name HTML accepts but XML does not (`@click`, `x.y` from a
+            // framework's template) would make the whole file unreadable;
+            // the browser draws it as if it were not there.
+            if !is_xml_name(&attr.name.local) {
+                continue;
+            }
             out.push(' ');
             if attr.name.ns == ns!(xlink) {
                 out.push_str("xlink:");
@@ -348,7 +476,7 @@ impl Document {
             }
             out.push_str(&attr.name.local);
             out.push_str("=\"");
-            out.push_str(&escape(&value(&attr.name.local, &attr.value)));
+            out.push_str(&escape(&value(&attr.name.local, &attr.value, colour)));
             out.push('"');
         }
         let children: Vec<NodeId> = self.children(id).collect();
@@ -360,9 +488,9 @@ impl Document {
         let style = element.local_name() == "style";
         for child in children {
             match &self.node(child).data {
-                NodeData::Text(t) if style => out.push_str(&escape(&value("#style", t))),
+                NodeData::Text(t) if style => out.push_str(&escape(&value("#style", t, colour))),
                 NodeData::Text(t) => out.push_str(&escape(t)),
-                NodeData::Element(e) => self.write_svg(child, e, "", value, out),
+                NodeData::Element(e) => self.write_svg(child, e, "", colour, value, out),
                 _ => {}
             }
         }
@@ -480,6 +608,60 @@ impl Iterator for Descendants<'_> {
 #[must_use]
 pub fn collapse_whitespace(s: &str) -> String {
     s.split_ascii_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// The colour an svg element sets for itself and what it holds: the last
+/// `color` in its `style` attribute, else its `color` attribute (a
+/// presentation attribute, below any style; SVG 2 §6.6). `currentColor` and
+/// `inherit` there set nothing new.
+fn svg_own_colour(element: &Element) -> Option<String> {
+    let usable = |v: &str| {
+        let v = v.trim();
+        let v = v.strip_suffix("!important").map_or(v, str::trim_end);
+        (!v.is_empty()
+            && !v.eq_ignore_ascii_case("currentcolor")
+            && !v.eq_ignore_ascii_case("inherit"))
+        .then(|| v.to_owned())
+    };
+    let plain = |name: &str| {
+        element
+            .attrs
+            .iter()
+            .find(|a| a.name.ns == ns!() && &*a.name.local == name)
+            .map(|a| &*a.value)
+    };
+    plain("style")
+        .and_then(|style| {
+            style
+                .split(';')
+                .filter_map(|d| d.split_once(':'))
+                .filter(|(name, _)| name.trim().eq_ignore_ascii_case("color"))
+                .last()
+                .and_then(|(_, v)| usable(v))
+        })
+        .or_else(|| plain("color").and_then(usable))
+}
+
+/// Whether `name` is an XML 1.0 Name without a colon (XML §2.3), the
+/// characters past ASCII taken as name characters.
+fn is_xml_name(name: &str) -> bool {
+    let mut chars = name.chars();
+    let start = |c: char| c.is_ascii_alphabetic() || c == '_' || !c.is_ascii();
+    chars.next().is_some_and(start)
+        && chars.all(|c| start(c) || c.is_ascii_digit() || c == '-' || c == '.')
+}
+
+/// The ids in each `url(#id)` of `text`, quoted or not (CSS Values 4 §4.5).
+fn url_fragments(text: &str) -> impl Iterator<Item = &str> {
+    text.match_indices("url(").filter_map(move |(at, _)| {
+        let rest = text[at + 4..].trim_start();
+        let rest = rest.strip_prefix(['"', '\'']).unwrap_or(rest);
+        let rest = rest.strip_prefix('#')?;
+        let end = rest
+            .find(|c: char| c == ')' || c == '"' || c == '\'' || c.is_whitespace())
+            .unwrap_or(rest.len());
+        Some(&rest[..end])
+    })
 }
 
 #[cfg(test)]

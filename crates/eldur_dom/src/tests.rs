@@ -98,7 +98,7 @@ fn svg_markup_is_a_standalone_svg_document() {
         .descendants(doc.root())
         .find(|&n| doc.element(n).is_some_and(Element::is_svg))
         .expect("svg");
-    let upper = |name: &str, v: &str| {
+    let upper = |name: &str, v: &str, _: Option<&str>| {
         if name == "fill" || name == "#style" {
             v.replace("currentColor", "#123456")
         } else {
@@ -117,6 +117,85 @@ fn svg_markup_is_a_standalone_svg_document() {
     // Not an svg element.
     let body = doc.body().expect("body");
     assert_eq!(doc.svg_markup(body, &upper), None);
+}
+
+#[test]
+fn svg_markup_carries_what_it_references_from_outside() {
+    // A sprite: the `<symbol>` lives in another svg, and the gradient it
+    // fills with in a third. The standalone file must hold both, or it
+    // draws nothing.
+    let doc = Document::parse(
+        "<svg style='display:none'><symbol id=s viewBox='0 0 24 24'>\
+         <rect fill='url(#g)' /></symbol><path id=unused d='M0 0'/></svg>\
+         <svg><linearGradient id=g><stop offset=0 stop-color='currentColor'/></linearGradient></svg>\
+         <svg id=icon><use href='#s'/><use xlink:href='#missing'/><circle id=own/><use href='#own'/></svg>",
+    );
+    let icon = doc
+        .descendants(doc.root())
+        .find(|&n| doc.element(n).and_then(Element::id) == Some("icon"))
+        .expect("icon");
+    let red = |_: &str, v: &str, _: Option<&str>| v.replace("currentColor", "#c00");
+    assert_eq!(
+        doc.svg_markup(icon, &red).as_deref(),
+        Some(
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" \
+             id=\"icon\"><use href=\"#s\"/><use xlink:href=\"#missing\"/><circle id=\"own\"/>\
+             <use href=\"#own\"/><defs><symbol id=\"s\" viewBox=\"0 0 24 24\"><rect fill=\"url(#g)\"/>\
+             </symbol><linearGradient id=\"g\"><stop offset=\"0\" stop-color=\"#c00\"/>\
+             </linearGradient></defs></svg>"
+        )
+    );
+}
+
+#[test]
+fn svg_markup_drops_attributes_with_an_unbound_prefix() {
+    // HTML parsing binds only `xlink:`, `xml:` and `xmlns:`; an editor's
+    // `inkscape:label` would make the file namespace-ill-formed, and an XML
+    // loader then refuses all of it. A framework's `@click` is no XML name
+    // at all; `x.y` is one, and stays.
+    let doc = Document::parse(
+        "<svg xmlns:inkscape='http://www.inkscape.org/namespaces/inkscape' \
+         inkscape:label=x sodipodi:docname=y xml:space=preserve width=4 @click=go x.y=1>\
+         <g inkscape:groupmode=layer/></svg>",
+    );
+    let svg = doc
+        .descendants(doc.root())
+        .find(|&n| doc.element(n).is_some_and(Element::is_svg))
+        .expect("svg");
+    let same = |_: &str, v: &str, _: Option<&str>| v.to_owned();
+    assert_eq!(
+        doc.svg_markup(svg, &same).as_deref(),
+        Some(
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" xml:space=\"preserve\" width=\"4\" x.y=\"1\"><g/></svg>"
+        )
+    );
+}
+
+#[test]
+fn svg_markup_tells_the_colour_the_svg_sets_itself() {
+    // `currentColor` under `<g color=blue>` is blue in the page, whatever
+    // colour holds the svg; a `style` colour beats the attribute, and
+    // `currentColor` as a colour sets nothing new.
+    let doc = Document::parse(
+        "<svg fill=currentColor><g color=blue><path d='M0 0' fill=currentColor/>\
+         <g style='stroke:red; color: #0f0 !important' color=red><path d='M1 1'/></g></g>\
+         <g color=currentColor><path d='M2 2'/></g></svg>",
+    );
+    let svg = doc
+        .descendants(doc.root())
+        .find(|&n| doc.element(n).is_some_and(Element::is_svg))
+        .expect("svg");
+    let tag = |name: &str, v: &str, c: Option<&str>| {
+        if name == "d" {
+            format!("{v} {}", c.unwrap_or("holder"))
+        } else {
+            v.to_owned()
+        }
+    };
+    let markup = doc.svg_markup(svg, &tag).expect("markup");
+    assert!(markup.contains("d=\"M0 0 blue\""), "{markup}");
+    assert!(markup.contains("d=\"M1 1 #0f0\""), "{markup}");
+    assert!(markup.contains("d=\"M2 2 holder\""), "{markup}");
 }
 
 #[test]
