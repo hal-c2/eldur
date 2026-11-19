@@ -248,36 +248,42 @@ pub(crate) fn intrinsic_size(bytes: &[u8]) -> Natural {
     std::str::from_utf8(bytes).map_or_else(|_| Natural::default(), svg_natural)
 }
 
-/// An SVG file's natural dimensions. A zero `width` or `height` is a zero
-/// size unless a `viewBox` gives the ratio, which Chromium then follows
-/// (`width="80" height="0" viewBox="0 0 20 10"` is 80×40); with no
-/// `viewBox` one length alone is a natural width or height without a ratio.
+/// An SVG file's natural dimensions, as Chromium gives them. With no
+/// `viewBox` the lengths are the dimensions, a zero included, and both
+/// positive give the ratio. With one, the `viewBox` gives the ratio and a
+/// `width` decides the size: the `height` stands only beside a positive
+/// width, else it is the width through the ratio (`width="80" height="0"`
+/// is 80×40, `width="0" height="40"` is 0×0); a `height` alone gives the
+/// width through the ratio.
 fn svg_natural(text: &str) -> Natural {
     let Some((width, height, view_box)) = svg_root(text) else {
         return Natural::default();
     };
+    let positive = |w: f32, h: f32| w > 0.0 && h > 0.0;
     let Some((vw, vh)) = view_box else {
         return Natural {
             width,
             height,
             ratio: width
                 .zip(height)
-                .filter(|(w, h)| *w > 0.0 && *h > 0.0)
+                .filter(|(w, h)| positive(*w, *h))
                 .map(|(w, h)| h / w),
         };
     };
     let r = vh / vw;
-    let (width, height) = (width.filter(|w| *w > 0.0), height.filter(|h| *h > 0.0));
-    let (width, height) = match (width, height) {
-        (Some(w), Some(h)) => (Some(w), Some(h)),
-        (Some(w), None) => (Some(w), Some(w * r)),
-        (None, Some(h)) => (Some(h / r), Some(h)),
-        (None, None) => (None, None),
+    let size = match (width, height) {
+        (Some(w), Some(h)) if positive(w, h) => Some((w, h)),
+        (Some(w), _) => Some((w, w * r)),
+        (None, Some(h)) => Some((h / r, h)),
+        (None, None) => None,
     };
     Natural {
-        width,
-        height,
-        ratio: Some(width.zip(height).map_or(r, |(w, h)| h / w)),
+        width: size.map(|s| s.0),
+        height: size.map(|s| s.1),
+        ratio: Some(
+            size.filter(|(w, h)| positive(*w, *h))
+                .map_or(r, |(w, h)| h / w),
+        ),
     }
 }
 
@@ -374,6 +380,22 @@ mod tests {
         assert_eq!(
             natural(r#"<svg width="80" height="0" viewBox="0 0 20 10">"#),
             n(Some(80.0), Some(40.0), Some(0.5))
+        );
+        assert_eq!(
+            natural(r#"<svg width="0" height="40" viewBox="0 0 20 10">"#),
+            n(Some(0.0), Some(0.0), Some(0.5))
+        );
+        assert_eq!(
+            natural(r#"<svg width="0" height="0" viewBox="0 0 20 10">"#),
+            n(Some(0.0), Some(0.0), Some(0.5))
+        );
+        assert_eq!(
+            natural(r#"<svg height="0" viewBox="0 0 20 10">"#),
+            n(Some(0.0), Some(0.0), Some(0.5))
+        );
+        assert_eq!(
+            natural(r#"<svg width="80" height="20" viewBox="0 0 20 10">"#),
+            n(Some(80.0), Some(20.0), Some(0.25))
         );
         assert_eq!(natural(r#"<svg width="80">"#), n(Some(80.0), None, None));
         assert_eq!(

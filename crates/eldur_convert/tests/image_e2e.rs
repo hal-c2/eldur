@@ -284,9 +284,16 @@ img { display: block }
 <img id=zg src="z80x0.svg" width="100">
 <img id=zh src="w80.svg" width="100" height="50" style="height:auto">
 <img id=zi src="z80x0.svg" width="100" height="50" style="height:auto">
+<img id=zj src="z00vb.svg">
+<img id=zk src="z040vb.svg">
+<img id=zl src="w0vb.svg">
+<img id=zm src="h0vb.svg">
+<img id=zn src="z040vb.svg" style="width:100px">
+<img id=zo src="both.svg">
+<img id=zp src="both.svg" style="width:100px">
 <script>
 // Named so that they get an objectName the test can find.
-var named = "n o p q r s t za zb zc zd ze zf zg zh zi".split(" ").map(function (id) { return document.getElementById(id) });
+var named = "n o p q r s t za zb zc zd ze zf zg zh zi zj zk zl zm zn zo zp".split(" ").map(function (id) { return document.getElementById(id) });
 </script></body></html>"#;
 
 /// Chromium, `getBoundingClientRect()` at 1280×800.
@@ -348,18 +355,33 @@ TestCase {
         compareBox("zh", [0, 1005.5, 100, 50])
         compareBox("zi", [0, 1055.5, 100, 50])
     }
+
+    function test_zero_lengths_beside_a_view_box() {
+        compareBox("zj", [0, 1105.5, 0, 0])
+        compareBox("zk", [0, 1105.5, 0, 0])
+        compareBox("zl", [0, 1105.5, 0, 0])
+        compareBox("zm", [0, 1105.5, 0, 0])
+        compareBox("zn", [0, 1105.5, 100, 50])
+        compareBox("zo", [0, 1155.5, 80, 20])
+        compareBox("zp", [0, 1175.5, 100, 25])
+    }
 }
 }
 "##;
 
 /// SVG files with a zero or a single natural dimension (SVG 2 §8.2).
-const SVG_FILES: [(&str, &str); 6] = [
+const SVG_FILES: [(&str, &str); 11] = [
     ("z80x0.svg", r#"width="80" height="0""#),
     ("z0x80.svg", r#"width="0" height="80""#),
     ("w80.svg", r#"width="80""#),
     ("h60.svg", r#"height="60""#),
     ("pct.svg", r#"width="50%" height="40""#),
     ("z0vb.svg", r#"width="80" height="0" viewBox="0 0 20 10""#),
+    ("z00vb.svg", r#"width="0" height="0" viewBox="0 0 20 10""#),
+    ("z040vb.svg", r#"width="0" height="40" viewBox="0 0 20 10""#),
+    ("w0vb.svg", r#"width="0" viewBox="0 0 20 10""#),
+    ("h0vb.svg", r#"height="0" viewBox="0 0 20 10""#),
+    ("both.svg", r#"width="80" height="20" viewBox="0 0 20 10""#),
 ];
 
 struct Bare;
@@ -428,6 +450,11 @@ fn ratio_attributes_are_dimension_values() {
         "a zero height is kept"
     );
     assert_eq!(implicit_size(qml, "zc"), size("80", "150"), "only a width");
+    assert_eq!(
+        implicit_size(qml, "zj"),
+        size("0", "0"),
+        "zeros and a viewBox"
+    );
 }
 
 /// A remote or `data:` image is not read, so the converter has no natural
