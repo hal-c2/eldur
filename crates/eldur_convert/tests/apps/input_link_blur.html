@@ -7,6 +7,7 @@ body { margin: 8px; font: 16px sans-serif; }
 <p><a id="first" href="#f"><svg aria-hidden="true" width="16" height="16"><rect width="16" height="16"/></svg></a>
 <a id="icon" href="#i"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24"><path d="M12 2 22 22H2z"/></svg></a></p>
 <button id="toicon">focus icon</button>
+<button id="refocus">focus icon, kept</button>
 <script>
 // Escape blurs whatever has the focus: a link whose icon holds its focus lets
 // it go, so Enter then follows nothing.
@@ -23,6 +24,12 @@ document.addEventListener("click", function (ev) {
   }
 });
 document.getElementById("toicon").addEventListener("click", function () { document.getElementById("icon").focus(); });
+// A blur listener that focuses the link again keeps it focused: one blur is heard.
+document.getElementById("refocus").addEventListener("click", function () {
+  var icon = document.getElementById("icon");
+  icon.addEventListener("blur", function () { console.log("refocus"); icon.focus(); }, { once: true });
+  icon.focus();
+});
 document.addEventListener("focusin", function (ev) { console.log("focusin", ev.target.id); });
 document.addEventListener("focusout", function (ev) { console.log("focusout", ev.target.id); });
 </script>

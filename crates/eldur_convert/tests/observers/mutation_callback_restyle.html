@@ -1,0 +1,35 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>mutation callback restyle</title>
+<style>x-r { display: block; height: 20px; }</style></head><body>
+<div id="W"></div>
+<script>
+// A callback held until a watched insert's record is made still reaches its
+// element when an earlier callback restyled that element out of flow.
+function L(k){console.log("OB "+k)}
+function N(n){return n ? (n.id || n.nodeName) : "null"}
+customElements.define("x-r", class extends HTMLElement {
+  connectedCallback() {
+    L("connected " + this.id);
+    if (this.id === "A") {
+      var b = document.getElementById("B");
+      b.style.position = "absolute";
+      L("B height " + b.getBoundingClientRect().height);
+    }
+  }
+});
+setTimeout(function() {
+  var W = document.getElementById("W");
+  var mo = new MutationObserver(function(rs) {
+    L("records " + rs.map(function(r) { return r.type + ":" + r.target.id + ":+" + Array.prototype.map.call(r.addedNodes, N).join("|"); }).join(" "));
+  });
+  mo.observe(W, { childList: true });
+  var A = document.createElement("x-r"); A.id = "A";
+  var B = document.createElement("x-r"); B.id = "B";
+  W.append(A, B);
+  L("appended");
+  setTimeout(function() {
+    mo.disconnect();
+    L("done");
+    var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+  }, 0);
+}, 0);
+</script></body></html>

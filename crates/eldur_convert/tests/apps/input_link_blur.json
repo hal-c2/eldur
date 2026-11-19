@@ -4,6 +4,9 @@
  {"name":"enter after first blur","key":"Enter"},
  {"name":"script focuses icon","click":"#toicon"},
  {"name":"escape blurs icon","key":"Escape"},
- {"name":"enter after icon blur","key":"Enter"}
+ {"name":"enter after icon blur","key":"Enter"},
+ {"name":"script focuses icon, kept","click":"#refocus"},
+ {"name":"escape with a refocusing listener","key":"Escape"},
+ {"name":"enter after the kept focus","key":"Enter"}
 ],
 "watch":[{"sel":"#first"}]}
