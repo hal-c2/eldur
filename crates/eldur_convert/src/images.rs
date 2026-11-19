@@ -269,7 +269,41 @@ pub(crate) fn without_invalid_root(text: &str) -> Option<String> {
             .collect();
         !matches!(n.as_slice(), [Some(_), Some(_), Some(w), Some(h)] if *w >= 0.0 && *h >= 0.0)
     };
-    let mut drop = Vec::new();
+    let drop: Vec<_> = root_attributes(text, start)?
+        .into_iter()
+        .filter(|a| match a.name {
+            "width" | "height" => negative(&unescape(a.value)),
+            "viewBox" => broken_view_box(&unescape(a.value)),
+            _ => false,
+        })
+        .map(|a| a.span)
+        .collect();
+    if drop.is_empty() {
+        return None;
+    }
+    let mut out = String::with_capacity(text.len());
+    let mut from = 0;
+    for range in drop {
+        out.push_str(&text[from..range.start]);
+        from = range.end;
+    }
+    out.push_str(&text[from..]);
+    Some(out)
+}
+
+/// An attribute of the root start tag: its name, its value as written
+/// (references not yet decoded) and its span, the space before it included.
+struct RootAttribute<'a> {
+    name: &'a str,
+    value: &'a str,
+    span: std::ops::Range<usize>,
+}
+
+/// The attributes of the `<svg` start tag at `start`, read as XML reads
+/// them: a `>` inside a quoted value is the value's, not the tag's end.
+/// `None` when a quoted value is never closed.
+fn root_attributes(text: &str, start: usize) -> Option<Vec<RootAttribute<'_>>> {
+    let mut attributes = Vec::new();
     let mut at = start + 4;
     loop {
         let rest = &text[at..];
@@ -278,13 +312,13 @@ pub(crate) fn without_invalid_root(text: &str) -> Option<String> {
         at += ws;
         let rest = &text[at..];
         if rest.is_empty() || rest.starts_with('>') || rest.starts_with("/>") {
-            break;
+            return Some(attributes);
         }
         let name_len = rest
             .find(|c: char| c.is_whitespace() || matches!(c, '=' | '>' | '/'))
             .unwrap_or(rest.len());
         if name_len == 0 {
-            // A stray `/` inside the tag; step over it.
+            // A stray `/` or `=` inside the tag; step over it.
             at += 1;
             continue;
         }
@@ -313,26 +347,12 @@ pub(crate) fn without_invalid_root(text: &str) -> Option<String> {
                 }
             }
         }
-        let invalid = match name {
-            "width" | "height" => negative(&unescape(value)),
-            "viewBox" => broken_view_box(&unescape(value)),
-            _ => false,
-        };
-        if invalid {
-            drop.push(attr_start..at);
-        }
+        attributes.push(RootAttribute {
+            name,
+            value,
+            span: attr_start..at,
+        });
     }
-    if drop.is_empty() {
-        return None;
-    }
-    let mut out = String::with_capacity(text.len());
-    let mut from = 0;
-    for range in drop {
-        out.push_str(&text[from..range.start]);
-        from = range.end;
-    }
-    out.push_str(&text[from..]);
-    Some(out)
 }
 
 /// Where the root `<svg` start tag begins: the first `<svg` element tag
@@ -476,23 +496,12 @@ pub(crate) fn svg_natural(text: &str) -> Natural {
 /// has no `<svg` tag.
 #[allow(clippy::type_complexity)]
 fn svg_root(text: &str) -> Option<(Option<f32>, Option<f32>, Option<(f32, f32)>)> {
-    let start = root_start(text)?;
-    let end = text[start..].find('>')?;
-    let tag = &text[start..start + end];
+    let attributes = root_attributes(text, root_start(text)?)?;
     let attr = |name: &str| {
-        let mut rest = tag;
-        loop {
-            let at = rest.find(name)?;
-            let before = rest[..at].chars().next_back();
-            rest = &rest[at + name.len()..];
-            if !before.is_some_and(char::is_whitespace) {
-                continue;
-            }
-            let value = rest.trim_start().strip_prefix('=')?.trim_start();
-            let quote = value.chars().next().filter(|c| *c == '"' || *c == '\'')?;
-            let value = &value[1..];
-            return Some(unescape(&value[..value.find(quote)?]));
-        }
+        attributes
+            .iter()
+            .find(|a| a.name == name)
+            .map(|a| unescape(a.value))
     };
     // Only absolute lengths size the image; `100%` defers to the viewBox.
     // A negative one is kept; `svg_natural` reads it as zero.
@@ -664,6 +673,29 @@ mod tests {
                 height: Some(40.0),
                 ratio: Some(0.5)
             }
+        );
+        // A `>` or an attribute's name inside a quoted value is the value's.
+        assert_eq!(
+            svg_natural(r#"<svg data-note="a > b" viewBox="0 0 20 10" height="40">"#),
+            Natural {
+                width: Some(80.0),
+                height: Some(40.0),
+                ratio: Some(0.5)
+            }
+        );
+        assert_eq!(
+            intrinsic_size(
+                br#"<svg aria-label='w > 0 width="9"' height="40" viewBox="0 0 20 10">"#
+            ),
+            Natural {
+                width: Some(80.0),
+                height: Some(40.0),
+                ratio: Some(0.5)
+            }
+        );
+        assert_eq!(
+            drop(r#"<svg data-note="a > b" width="-8">"#).as_deref(),
+            Some(r#"<svg data-note="a > b">"#)
         );
         // A raster file is never touched.
         let png = vec![0x89, b'P', b'N', b'G', 0x0d, 0x0a, 0x1a, 0x0a];
