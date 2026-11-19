@@ -534,7 +534,9 @@ impl Emitter<'_, '_> {
                 && !collapsed
                 && !child.node.is_some_and(|n| self.script_hides.contains(&n))
                 && !child.node.is_some_and(|n| self.restacks.contains(&n))
-                && matches!(child.style.position, Position::Relative | Position::Sticky)
+                // A sticky box sticks within its own block, which a frame
+                // as tall as the box would leave no room for.
+                && child.style.position == Position::Relative
                 && child.style.z_index.is_some_and(|z| z > 0);
             self.rise_out = rise;
             let emitted = self.block(child, decoration);
