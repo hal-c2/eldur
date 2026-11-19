@@ -186,6 +186,46 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[16.0, 50.0],
         toggled: &[50.0, 84.0],
+    }, // `el.style.display` reads the important declaration, which wins over
+    // the later one: the toggle clears it.
+    Case {
+        name: "important_display_read",
+        body: r#"<p id="shy" style="display:none!important;display:block"><em>Shy</em></p>
+<p id="after">After</p>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[50.0, 84.0],
+    },
+    // `flow` alone is a valid display, a block: it wins over the `none` before it.
+    Case {
+        name: "flow_display",
+        body: r#"<p id="shy" style="display:none;display:flow"><em>Shy</em></p>
+<p id="after">After</p>
+<script>const h = document.getElementById('shy'); h.hidden = true; h.hidden = false;</script>"#,
+        ids: &["after", "t"],
+        load: &[50.0, 84.0],
+        toggled: &[16.0, 50.0],
+    },
+    // An escaped `(` opens no bracket: the `display` after it is its own
+    // declaration.
+    Case {
+        name: "escaped_bracket",
+        body: r#"<p id="shy" style="font-family:a\(b;display:none"><em>Shy</em></p>
+<p id="after">After</p>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[50.0, 84.0],
+    },
+    // Two outside keywords are no display: the `none` before them still hides
+    // the box once `hidden` is removed.
+    Case {
+        name: "two_outside_keywords_dropped",
+        body: r#"<p id="shy" style="display:none;display:block inline" hidden><em>Shy</em></p>
+<p id="after">After</p>
+<script>document.getElementById('shy').removeAttribute('hidden');</script>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[50.0, 84.0],
     },
 ];
 
@@ -392,4 +432,24 @@ fn a_display_inside_a_string_does_not_hide_the_block() {
 #[test]
 fn an_invalid_later_display_does_not_show_the_block() {
     run(case("invalid_display_dropped"));
+}
+
+#[test]
+fn the_important_display_is_the_one_a_script_reads() {
+    run(case("important_display_read"));
+}
+
+#[test]
+fn a_later_flow_display_shows_the_block() {
+    run(case("flow_display"));
+}
+
+#[test]
+fn an_escaped_bracket_does_not_swallow_the_display_after_it() {
+    run(case("escaped_bracket"));
+}
+
+#[test]
+fn a_display_with_two_outside_keywords_does_not_show_the_block() {
+    run(case("two_outside_keywords_dropped"));
 }
