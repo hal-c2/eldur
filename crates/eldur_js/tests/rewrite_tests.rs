@@ -3217,7 +3217,7 @@ fn a_name_set_on_the_window_is_not_the_element_with_that_id() {
 fn a_lazy_modules_lexical_bindings_are_checked_until_initialized() {
     let resolver = FakeResolver::default();
     let main = module_script("main.js", "import(\"./lazy.js\");\n");
-    let lazy = module_script(
+    let lazy = imported_module(
         "lazy.js",
         "export const K = 1;\nexport let n = 2;\nexport class Box {}\n\
          export function read() { return K + n; }\n\
