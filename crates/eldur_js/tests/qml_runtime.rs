@@ -5302,6 +5302,14 @@ Item {
         seen.push(table.size);
         table.delete(b);
         seen.push(table.has(b));
+        // Script objects that print like a QObject are still two keys.
+        var e1 = { toString: function() { return "X(0x1)"; } };
+        var e2 = { toString: function() { return "X(0x1)"; } };
+        table.set(e1, { mark: "e1" });
+        table.set(e2, { mark: "e2" });
+        seen.push(table.get(e1).mark + table.get(e2).mark);
+        table.delete(e1);
+        table.delete(e2);
         table.set(b, { mark: "b2" });
         a.destroy();
         later.start();
@@ -5312,7 +5320,7 @@ Item {
 
     let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
     assert!(
-        output.contains("ELDUR_OK_ITEM_RECORDS abplain|false|3|false|true|1|b2"),
+        output.contains("ELDUR_OK_ITEM_RECORDS abplain|false|3|false|e1e2|true|1|b2"),
         "unexpected qml6 item record output:\n{output}"
     );
 }

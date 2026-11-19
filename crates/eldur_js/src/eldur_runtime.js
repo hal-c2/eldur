@@ -545,11 +545,14 @@ function _ItemTable() {
     this._lastSlot = null;
 }
 
+var _objectTag = Object.prototype.toString;
+
 // `String(qobject)` is `Type(0x55…)`, or `Type(0x55…, "name")` with a name.
 // Null for a QObject Qt has destroyed, which throws when printed; "" for
-// anything else without an address.
+// anything else, which is never printed: a script's object may print as it
+// likes, and two of them alike would share a record.
 function _itemAddress(key) {
-    if (!key || typeof key !== "object" || Array.isArray(key)) {
+    if (!key || typeof key !== "object" || _objectTag.call(key) !== "[object V4QObjectWrapper]") {
         return "";
     }
     var text;
@@ -570,7 +573,8 @@ function _itemAddress(key) {
 }
 
 _ItemTable.prototype._slot = function(key) {
-    if (key === this._lastKey && key) {
+    // Only while the last key is up: a destroyed one is `===` any other.
+    if (key === this._lastKey && key && typeof key.objectName === "string") {
         return this._lastSlot;
     }
     var address = _itemAddress(key);
@@ -724,6 +728,7 @@ function init(rootItem, baseUrl, documentUrl) {
             _fallbackTitle = "";
         }
         _roots.push(rootItem);
+        _rootRecords.push({ root: rootItem, record: _meta(rootItem) });
     }
     if (rootItem) {
         _setRoot(rootItem);
@@ -1266,11 +1271,27 @@ function _pageForgetDead() {
                 if (byRoot === _pageCaches) {
                     _detachAborts(value.documentListeners);
                     _detachAborts(value.windowListeners);
-                    _detachAborts(_itemMeta.get(root));
                 }
                 byRoot.delete(root);
             }
         });
+    });
+    _detachDeadRoots();
+}
+
+// Each page's root with its record, taken while the root was up: once Qt
+// destroys it, the root is `===` every other destroyed object and no longer
+// names its own record.
+var _rootRecords = [];
+
+// What a gone page's `resize` and `scroll` listeners keep on its root goes too.
+function _detachDeadRoots() {
+    _rootRecords = _rootRecords.filter(function(pair) {
+        if (_live(pair.root)) {
+            return true;
+        }
+        _detachAborts(pair.record);
+        return false;
     });
 }
 
@@ -1284,7 +1305,7 @@ function _pageGone() {
     _detachAborts(_documentListeners);
     _detachAborts(_windowListeners);
     // And those its `resize` and `scroll` listeners keep on its root.
-    _detachAborts(_itemMeta.get(_root));
+    _detachDeadRoots();
     if (_roots.length > 0) {
         _setRoot(_roots[_roots.length - 1]);
         _in = _inLayers.get(_root) || null;

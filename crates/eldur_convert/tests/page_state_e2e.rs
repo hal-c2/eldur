@@ -770,3 +770,144 @@ fn a_page_made_after_one_went_with_nothing_ticking_hears_only_its_own_listeners(
     }
     assert!(problems.is_empty(), "{}", problems.join("\n  "));
 }
+
+// A page whose items are numbered by `:nth-child`, and one with none made
+// over it. The first page's timer takes its first item away while the second
+// is up: what is left is renumbered all the same, from 1.
+const NUMBERED: &str = r#"<!doctype html><html><head><meta charset="utf-8">
+<style>li { height: 20px } li:nth-child(2) { background: rgb(220, 0, 0) }</style>
+</head><body>
+<ul id="list"></ul>
+<script>
+// The page holds what it changes: its timer runs when the other page is up.
+var list = document.getElementById("list");
+var made = ["a", "b", "c"].map(function(id) {
+  var e = document.createElement("li"); e.id = id; e.textContent = id; list.appendChild(e);
+  return e;
+});
+setTimeout(function() {
+  list.removeChild(made[0]);
+  console.log("NP removed");
+}, 300);
+</script>
+</body></html>"#;
+
+const UNNUMBERED: &str = r#"<!doctype html><html><head><meta charset="utf-8"></head><body>
+<p id="plain">plain</p>
+<script>console.log("NP plain up");</script>
+</body></html>"#;
+
+const NUMBERED_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 800
+    height: 600
+
+TestCase {
+    name: "NumberedPages"
+    when: windowShown
+
+    function make(file) {
+        const component = Qt.createComponent(file)
+        verify(component.status === Component.Ready, component.errorString())
+        const page = createTemporaryObject(component, host, { width: 800, height: 600 })
+        waitForRendering(page)
+        return page
+    }
+    function numbers(item, out) {
+        if (typeof item.eldurIndex === "number") {
+            out.push(item.eldurIndex + "/" + item.eldurCount)
+        }
+        for (let i = 0; i < item.children.length; ++i) {
+            numbers(item.children[i], out)
+        }
+        return out
+    }
+    function test_covered_page_renumbers() {
+        const first = make("Main.qml")
+        make("Plain.qml")
+        wait(700)
+        console.log("NP numbers " + numbers(first, []).join(" "))
+    }
+}
+}
+"##;
+
+#[test]
+fn a_covered_page_renumbers_its_items() {
+    if support::no_qt() {
+        return;
+    }
+    let options = Options {
+        root: RootKind::Item,
+        ..Options::default()
+    };
+    let dir = std::env::temp_dir().join(format!("eldur-numbered-pages-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    let first = eldur_convert::convert(
+        &Input {
+            html: NUMBERED.to_owned(),
+            url: "numbered/index.html".to_owned(),
+        },
+        &options,
+        &mut NoResources,
+    );
+    for file in &first.files {
+        std::fs::write(dir.join(&file.path), &file.contents).expect("write output");
+    }
+    // The second page shares the first one's runtime file, and so its state.
+    let second = eldur_convert::convert(
+        &Input {
+            html: UNNUMBERED.to_owned(),
+            url: "plain/index.html".to_owned(),
+        },
+        &options,
+        &mut NoResources,
+    );
+    for file in &second.files {
+        let name = file.path.to_string_lossy();
+        let contents = String::from_utf8_lossy(&file.contents);
+        match name.as_ref() {
+            "Main.qml" => std::fs::write(
+                dir.join("Plain.qml"),
+                contents
+                    .replace("\"page.js\"", "\"plain_page.js\"")
+                    .replace("Main.qml", "Plain.qml"),
+            ),
+            "page.js" => std::fs::write(dir.join("plain_page.js"), &file.contents),
+            _ => Ok(()),
+        }
+        .expect("write plain page");
+    }
+    std::fs::write(dir.join("tst_numbered_pages.qml"), NUMBERED_TEST).expect("write test");
+    let output = support::qmltestrunner()
+        .args(["-platform", "offscreen", "-input"])
+        .arg(dir.join("tst_numbered_pages.qml"))
+        .env("QT_FORCE_STDERR_LOGGING", "1")
+        .output()
+        .expect("run qmltestrunner");
+    let text = format!(
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
+    std::fs::remove_dir_all(&dir).expect("remove temp dir");
+    let mut problems: Vec<String> = support::problem_lines(&text, |l| {
+        l.contains("FAIL!") || l.contains("Warning:") || l.contains("QWARN") || l.contains("Error:")
+    });
+    if !output.status.success() {
+        problems.push(format!("qmltestrunner exited with {}", output.status));
+    }
+    let logged: Vec<_> = text
+        .lines()
+        .filter_map(|l| l.find("NP ").map(|at| &l[at..]))
+        .collect();
+    let want = ["NP plain up", "NP removed", "NP numbers 1/2 2/2"];
+    if logged != want {
+        problems.push(format!("logged {logged:?}, wanted {want:?}"));
+    }
+    assert!(problems.is_empty(), "{}", problems.join("\n  "));
+}
