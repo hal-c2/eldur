@@ -187,7 +187,13 @@ impl Emitter<'_, '_> {
     /// file of its own and the same icon twice is one file.
     fn svg_asset(&mut self, node: NodeId, color: Rgba) -> Option<ImageAsset> {
         let colour = svg_colour(color);
-        let resolve = |_: &str, value: &str| replace_current_color(value, &colour);
+        let resolve = |name: &str, value: &str, own: Option<&str>| {
+            if takes_a_colour(name) {
+                replace_current_color(value, own.unwrap_or(&colour))
+            } else {
+                value.to_owned()
+            }
+        };
         let markup = self.doc.svg_markup(node, &resolve)?;
         let source = format!("assets/svg-{:016x}.svg", fnv1a(markup.as_bytes()));
         let (size, ratio) = svg_size(&markup);
@@ -243,12 +249,40 @@ fn svg_colour(c: Rgba) -> String {
 }
 
 /// `value` with each `currentColor`, in any case, replaced by `colour`.
+/// Whether an svg attribute (or `"#style"`, a `<style>` text) can hold a
+/// colour, and so `currentColor`: the paint and colour properties (SVG 2
+/// §13.2, Filter Effects §9.7, §9.13) and style text. Anywhere else, an
+/// `id` or a `<text>` attribute, the word is just a word.
+fn takes_a_colour(name: &str) -> bool {
+    matches!(
+        name,
+        "fill"
+            | "stroke"
+            | "stop-color"
+            | "flood-color"
+            | "lighting-color"
+            | "color"
+            | "style"
+            | "#style"
+    )
+}
+
+/// `value` with each `currentColor` keyword, in any case, made `colour`.
+/// Only a whole identifier is the keyword (CSS Syntax 3 §4.3.11):
+/// `--currentColorX` or `my-currentcolor` stay as they are.
 fn replace_current_color(value: &str, colour: &str) -> String {
     const KEY: &str = "currentcolor";
+    let ident = |c: char| c.is_ascii_alphanumeric() || c == '-' || c == '_' || !c.is_ascii();
     let lower = value.to_ascii_lowercase();
     let mut out = String::with_capacity(value.len());
     let mut rest = 0;
     for (at, _) in lower.match_indices(KEY) {
+        let end = at + KEY.len();
+        if value[..at].chars().next_back().is_some_and(ident)
+            || value[end..].chars().next().is_some_and(ident)
+        {
+            continue;
+        }
         out.push_str(&value[rest..at]);
         out.push_str(colour);
         rest = at + KEY.len();
@@ -277,4 +311,28 @@ fn is_svg(source: &str) -> bool {
 /// Whether a `style` gives an image a percentage width.
 pub(super) fn is_percent_width(style: &ComputedStyle) -> bool {
     matches!(&style.width, Size::Length(l) if l.as_px().is_none())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{replace_current_color, takes_a_colour};
+
+    #[test]
+    fn only_the_current_color_keyword_is_replaced() {
+        assert_eq!(
+            replace_current_color("CurrentColor; stroke:currentcolor", "#c00"),
+            "#c00; stroke:#c00"
+        );
+        assert_eq!(
+            replace_current_color("var(--currentColorX) my-currentcolor _currentColor", "#c00"),
+            "var(--currentColorX) my-currentcolor _currentColor"
+        );
+        assert_eq!(replace_current_color("(currentColor)", "#c00"), "(#c00)");
+    }
+
+    #[test]
+    fn only_colour_attributes_take_the_colour() {
+        assert!(takes_a_colour("fill") && takes_a_colour("#style") && takes_a_colour("stop-color"));
+        assert!(!takes_a_colour("id") && !takes_a_colour("aria-label") && !takes_a_colour("d"));
+    }
 }
