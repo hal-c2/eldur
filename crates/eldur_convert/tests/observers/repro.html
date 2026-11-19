@@ -1,0 +1,20 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>repro</title></head><body><p id="s">waiting</p>
+<script>
+// hal-c2/eldur#23's page, with its mutation callback stopping after a few
+// rounds: as written, each round's `data-m` write is a new record, and
+// Chromium runs the callback forever.
+function L(k){console.log("OB "+k)}
+const s = document.getElementById("s");
+var order = [], rounds = 0;
+new IntersectionObserver((es) => { order.push("io"); s.textContent = "seen " + es[0].isIntersecting; }).observe(s);
+new ResizeObserver((es) => { order.push("ro"); s.dataset.w = Math.round(es[0].contentRect.width); }).observe(document.body);
+new MutationObserver((rs) => { order.push("mo" + rs.length + ":" + rs[0].attributeName); if (++rounds < 3) s.dataset.m = rs.length; }).observe(s, { attributes: true });
+L("sync " + s.textContent + " " + order.length);
+requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => {
+  L("order " + order.join(","));
+  L("text " + s.textContent);
+  L("data " + s.dataset.w + " " + s.dataset.m);
+  L("done");
+  var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+}, 0)));
+</script></body></html>

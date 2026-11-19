@@ -1,0 +1,59 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>resize</title>
+<style>
+body { margin: 0; }
+#box { width: 200px; height: 50px; padding: 10px 6px 4px 8px; border: 2px solid black; }
+#bb { width: 100px; height: 40px; padding: 5px; border: 1px solid black; box-sizing: border-box; }
+#none { display: none; width: 30px; height: 30px; }
+#zero { width: 0; height: 0; }
+</style></head><body>
+<div id="box"></div>
+<div id="bb"></div>
+<div id="none"></div>
+<div id="zero"></div>
+<script>
+function L(k){console.log("OB "+k)}
+function r(n){return Math.round(n*100)/100}
+function E(e){
+  var c = e.contentRect, cb = e.contentBoxSize[0], bb = e.borderBoxSize[0];
+  return e.target.id + ":" + r(c.x) + "," + r(c.y) + "," + r(c.width) + "," + r(c.height)
+    + ":" + r(cb.inlineSize) + "," + r(cb.blockSize) + ":" + r(bb.inlineSize) + "," + r(bb.blockSize);
+}
+function after(f){requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(f, 0)))}
+var calls = 0;
+var ro = new ResizeObserver(function(es, o) {
+  calls++;
+  L("ro " + es.map(E).join(" ") + " self:" + (o === ro));
+});
+["box", "bb", "none", "zero"].forEach(function(id) { ro.observe(document.getElementById(id)); });
+L("sync calls " + calls);
+var box = document.getElementById("box"), bb = document.getElementById("bb"), none = document.getElementById("none");
+after(function() {
+  L("step widen box, heighten bb");
+  box.style.width = "300px";
+  bb.style.height = "60px";
+  after(function() {
+    L("step same height");
+    box.style.height = "50px";
+    after(function() {
+      L("step unobserve bb, show none");
+      ro.unobserve(bb);
+      bb.style.height = "70px";
+      none.style.display = "block";
+      after(function() {
+        L("step hide none");
+        none.style.display = "none";
+        after(function() {
+          L("step disconnect");
+          ro.disconnect();
+          box.style.width = "100px";
+          after(function() {
+            L("calls " + calls);
+            L("done");
+            var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+          });
+        });
+      });
+    });
+  });
+});
+</script></body></html>

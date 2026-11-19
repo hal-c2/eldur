@@ -1,0 +1,56 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>toc and lazy loading</title>
+<style>
+body { margin: 0; }
+nav { position: fixed; top: 0; right: 0; width: 200px; }
+nav a { display: block; height: 20px; }
+nav a.active { font-weight: bold; }
+section { height: 600px; }
+.lazy { height: 100px; }
+</style></head><body>
+<nav><a id="n1" href="#s1">One</a><a id="n2" href="#s2">Two</a><a id="n3" href="#s3">Three</a><a id="n4" href="#s4">Four</a></nav>
+<section id="s1"><div class="lazy" id="p1" data-src="one.png">.</div></section>
+<section id="s2"><div class="lazy" id="p2" data-src="two.png">.</div></section>
+<section id="s3"><div class="lazy" id="p3" data-src="three.png">.</div></section>
+<section id="s4"><div class="lazy" id="p4" data-src="four.png">.</div></section>
+<script>
+function L(k){console.log("OB "+k)}
+function after(f){requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(f, 0)))}
+// The table of contents marks the section crossing the top third of the window.
+var toc = new IntersectionObserver(function(es) {
+  es.forEach(function(e) {
+    if (e.isIntersecting) {
+      document.querySelectorAll("nav a").forEach(function(a) { a.classList.remove("active"); });
+      document.getElementById("n" + e.target.id.slice(1)).classList.add("active");
+    }
+  });
+}, { rootMargin: "0px 0px -70% 0px" });
+document.querySelectorAll("section").forEach(function(s) { toc.observe(s); });
+// A picture loads when it comes within 200px of the window, once.
+var loaded = [];
+var lazy = new IntersectionObserver(function(es, o) {
+  es.forEach(function(e) {
+    if (e.isIntersecting) {
+      e.target.textContent = "loaded " + e.target.dataset.src;
+      loaded.push(e.target.id);
+      o.unobserve(e.target);
+    }
+  });
+}, { rootMargin: "200px" });
+document.querySelectorAll(".lazy").forEach(function(p) { lazy.observe(p); });
+function state() {
+  var on = document.querySelector("nav a.active");
+  return "scrollY " + window.scrollY + " active " + (on ? on.id : "none") + " loaded " + loaded.join(",");
+}
+var stops = [700, 1400, 1000, 1900];
+function next() {
+  L(state());
+  if (stops.length === 0) {
+    L("done");
+    var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+    return;
+  }
+  window.scrollTo(0, stops.shift());
+  after(next);
+}
+after(next);
+</script></body></html>

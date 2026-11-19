@@ -1,0 +1,59 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>intersection</title>
+<style>
+body { margin: 0; }
+div { margin: 0; }
+#clip { height: 50px; overflow: hidden; }
+#clipped { height: 40px; margin-top: 60px; }
+#gone { display: none; height: 30px; }
+</style></head><body>
+<div id="a" style="height: 100px"></div>
+<div id="clip"><div id="clipped"></div></div>
+<div id="gone"></div>
+<div style="height: 600px"></div>
+<div id="h" style="height: 100px"></div>
+<div style="height: 1000px"></div>
+<div id="c" style="height: 100px"></div>
+<div style="height: 1000px"></div>
+<script>
+function L(k){console.log("OB "+k)}
+function r(n){return Math.round(n*100)/100}
+function E(e){
+  var b = e.boundingClientRect, i = e.intersectionRect;
+  return e.target.id + ":" + e.isIntersecting + ":" + r(e.intersectionRatio) + ":" + r(b.top) + "," + r(b.height)
+    + ":" + r(i.top) + "," + r(i.height) + ":" + (typeof e.time);
+}
+function after(f){requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(f, 0)))}
+var calls = 0;
+var io = new IntersectionObserver(function(es, o) {
+  calls++;
+  L("io " + es.map(E).join(" ") + " self:" + (o === io) + " root:" + r(es[0].rootBounds.top) + "," + r(es[0].rootBounds.height));
+}, { threshold: [0, 0.5, 1] });
+L("thresholds " + io.thresholds.join(",") + " margin " + io.rootMargin + " root " + io.root);
+["a", "clipped", "gone", "h", "c"].forEach(function(id) { io.observe(document.getElementById(id)); });
+// Twice is once.
+io.observe(document.getElementById("a"));
+L("sync calls " + calls);
+after(function() {
+  L("step scroll 20");
+  window.scrollTo(0, 20);
+  after(function() {
+    L("step scroll 1200");
+    window.scrollTo(0, 1200);
+    after(function() {
+      L("step unobserve a, scroll 0");
+      io.unobserve(document.getElementById("a"));
+      window.scrollTo(0, 0);
+      after(function() {
+        L("step disconnect, scroll 1200");
+        io.disconnect();
+        window.scrollTo(0, 1200);
+        after(function() {
+          L("takeRecords " + io.takeRecords().length + " calls " + calls);
+          L("done");
+          var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+        });
+      });
+    });
+  });
+});
+</script></body></html>
