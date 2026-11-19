@@ -1,0 +1,41 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>mutation callbacks</title></head><body>
+<div id="A"><div id="P"></div></div><div id="D"></div>
+<script>
+// A custom element's disconnect, run while a move into a watched parent is
+// under way, makes its own records: its old parent leaving is one of them.
+function L(k){console.log("OB "+k)}
+function N(n){return n ? (n.id || n.nodeName) : "null"}
+function R(r){
+  if (r.type === "attributes") return r.type + ":" + r.target.id + ":" + r.attributeName + ":" + r.oldValue;
+  return r.type + ":" + r.target.id + ":+" + Array.prototype.map.call(r.addedNodes, N).join("|")
+    + ":-" + Array.prototype.map.call(r.removedNodes, N).join("|") + ":" + N(r.previousSibling) + ":" + N(r.nextSibling);
+}
+customElements.define("x-c", class extends HTMLElement {
+  disconnectedCallback() { var p = document.getElementById("P"); if (p) p.remove(); }
+  connectedCallback() { if (this.parentNode && this.parentNode.id === "D") { var s = document.createElement("div"); s.id = "S"; document.getElementById("D").appendChild(s); } }
+});
+// After parsing, which still adds the text after this script to the body.
+setTimeout(function() {
+// So does an attribute callback's write, after the write that called it.
+customElements.define("x-a", class extends HTMLElement {
+  static get observedAttributes() { return ["data-v"]; }
+  attributeChangedCallback(n, o, v) { document.getElementById("A").setAttribute("data-seen", v); }
+});
+var P = document.getElementById("P");
+var X = document.createElement("x-c"); X.id = "X";
+P.appendChild(X);
+var bo = new MutationObserver(function(rs) { L("body " + rs.map(R).join(" ")); });
+bo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeOldValue: true });
+document.getElementById("D").appendChild(X);
+var Y = document.createElement("x-a"); Y.id = "Y";
+document.getElementById("A").appendChild(Y);
+Y.setAttribute("data-v", "1");
+setTimeout(function() {
+  L("seen " + document.getElementById("A").getAttribute("data-seen"));
+  L("left " + document.getElementById("A").children.length + " " + document.getElementById("D").children.length);
+  bo.disconnect();
+  L("done");
+  var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+}, 0);
+}, 0);
+</script></body></html>

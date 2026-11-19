@@ -1,0 +1,36 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>root restyled in a frame</title>
+<style>
+body { margin: 0; }
+#box { height: 200px; width: 300px; overflow: auto; }
+#box div { height: 100px; }
+</style></head><body>
+<div id="box"><div id="i0"></div><div id="i1"></div><div id="i2"></div><div id="i3"></div></div>
+<script>
+// A frame callback restyles the explicit root out of flow and observes a
+// target inside it: the first entry that frame is measured against the
+// restyled root.
+function L(k){console.log("OB "+k)}
+function r(n){return Math.round(n*100)/100}
+function E(e){ return e.target.id + ":" + e.isIntersecting + ":" + r(e.intersectionRatio); }
+function after(f){requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(f, 0)))}
+var box = document.getElementById("box");
+var io = new IntersectionObserver(function(es) {
+  var rb = es[0].rootBounds;
+  L("io " + es.map(E).join(" ") + " root:" + (rb ? r(rb.top) + "," + r(rb.height) : "null"));
+}, { root: box });
+after(function() {
+  requestAnimationFrame(function() {
+    L("frame restyles");
+    box.style.position = "absolute";
+    box.style.top = "20px";
+    io.observe(document.getElementById("i0"));
+    io.observe(document.getElementById("i3"));
+  });
+  after(function() {
+    after(function() {
+      L("done");
+      var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+    });
+  });
+});
+</script></body></html>
