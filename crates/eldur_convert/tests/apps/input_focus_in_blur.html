@@ -16,6 +16,12 @@ button, input { display: block; margin: 4px 0; }
 <button id="d">d</button>
 <button id="arm4">arm4</button>
 <button id="h">h</button>
+<button id="arm5">arm5</button>
+<button id="m">m</button>
+<p id="p" tabindex="0">a <a id="l" href="#l">link</a> in p</p>
+<button id="arm6">arm6</button>
+<button id="n">n</button>
+<button id="k">k</button>
 <script>
 // Listeners that move the focus while the page hears that it moved.
 function id(el) { return el && el.id ? el.id : el ? el.nodeName : "-"; }
@@ -44,6 +50,21 @@ on("arm3").addEventListener("click", function () {
 // A blur listener that focuses where the Tab goes anyway: it hears of it once.
 on("arm4").addEventListener("click", function () {
   on("arm4").addEventListener("blur", function () { on("h").focus(); }, { once: true });
+});
+// Focusing a link, then the paragraph that holds it: the paragraph has the focus.
+on("arm5").addEventListener("click", function () {
+  on("arm5").addEventListener("blur", function () { on("l").focus(); on("p").focus(); }, { once: true });
+});
+// A control blurred by its own focus listener hears no focusin.
+on("arm6").addEventListener("click", function () {
+  on("k").addEventListener("focus", function () { on("k").blur(); }, { once: true });
+  on("arm6").addEventListener("blur", function () { on("k").focus(); }, { once: true });
+});
+document.addEventListener("click", function (ev) {
+  console.log("click", id(ev.target));
+  if (ev.target.closest && ev.target.closest("a")) {
+    ev.preventDefault();
+  }
 });
 </script>
 </body>

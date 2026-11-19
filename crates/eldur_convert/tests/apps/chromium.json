@@ -38121,7 +38121,8 @@
    "name": "click a",
    "log": [
     "focus a from - active a",
-    "focusin a from - active a"
+    "focusin a from - active a",
+    "click a"
    ],
    "state": {
     "#a": [
@@ -38170,7 +38171,8 @@
     "blur b from arm2 active BODY",
     "focusout b from arm2 active BODY",
     "focus arm2 from b active arm2",
-    "focusin arm2 from b active arm2"
+    "focusin arm2 from b active arm2",
+    "click arm2"
    ],
    "state": {
     "#a": [
@@ -38240,7 +38242,9 @@
   },
   {
    "name": "click arm3",
-   "log": [],
+   "log": [
+    "click arm3"
+   ],
    "state": {
     "#a": [
      {
@@ -38292,7 +38296,8 @@
     "blur e from arm4 active BODY",
     "focusout e from arm4 active BODY",
     "focus arm4 from e active arm4",
-    "focusin arm4 from e active arm4"
+    "focusin arm4 from e active arm4",
+    "click arm4"
    ],
    "state": {
     "#a": [
@@ -38333,6 +38338,134 @@
      }
     ],
     "(focus)": "h"
+   }
+  },
+  {
+   "name": "click arm5",
+   "log": [
+    "blur h from arm5 active BODY",
+    "focusout h from arm5 active BODY",
+    "focus arm5 from h active arm5",
+    "focusin arm5 from h active arm5",
+    "click arm5"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       8,
+       8,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "arm5"
+   }
+  },
+  {
+   "name": "tab while arm5's blur focuses a link, then its paragraph",
+   "log": [
+    "blur arm5 from m active BODY",
+    "focus l from - active l",
+    "focusin l from - active l",
+    "blur l from p active BODY",
+    "focusout l from p active BODY",
+    "focus p from l active p",
+    "focusin p from l active p",
+    "focusout arm5 from - active p",
+    "now p"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       8,
+       8,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "p"
+   }
+  },
+  {
+   "name": "enter on the paragraph",
+   "log": [
+    "now p"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       8,
+       8,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "p"
+   }
+  },
+  {
+   "name": "click arm6",
+   "log": [
+    "blur p from arm6 active BODY",
+    "focusout p from arm6 active BODY",
+    "focus arm6 from p active arm6",
+    "focusin arm6 from p active arm6",
+    "click arm6"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       8,
+       8,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "arm6"
+   }
+  },
+  {
+   "name": "tab while arm6's blur focuses k, which blurs itself",
+   "log": [
+    "blur arm6 from n active BODY",
+    "focus k from - active k",
+    "blur k from - active BODY",
+    "focusout k from - active BODY",
+    "focusout arm6 from n active BODY",
+    "focus n from arm6 active n",
+    "focusin n from arm6 active n",
+    "now n"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       8,
+       8,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "n"
    }
   }
  ],
