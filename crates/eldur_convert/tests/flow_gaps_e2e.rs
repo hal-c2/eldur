@@ -368,23 +368,23 @@ Item {
     width: 500
     height: 300
 
-    EldurFlow {
-        id: free
-        spacing: 10
-        rowSpacing: 5
-        Rectangle { width: 80; height: 20 }
-    }
-    Flow {
-        id: freeFlow
-        spacing: 10
-        Rectangle { width: 80; height: 20 }
-    }
-    EldurFlow {
-        id: fixed
-        width: 80
-        spacing: 10
-        rowSpacing: 5
-        Rectangle { width: 80; height: 20 }
+    Item {
+        id: line
+        width: 284
+        // An inline-flex with no px width: its width follows its
+        // implicitWidth under the line's.
+        EldurFlow {
+            id: capped
+            property int widthChanges: 0
+            width: Math.min(implicitWidth, line.width)
+            spacing: 30
+            rowSpacing: 5
+            onWidthChanged: widthChanges++
+            Rectangle { width: 100; height: 20 }
+            Rectangle { width: 100; height: 20 }
+            Rectangle { width: 100; height: 20 }
+            Rectangle { width: 100; height: 20 }
+        }
     }
     Item {
         id: ancestor
@@ -414,26 +414,20 @@ Item {
             Rectangle { width: 60; height: 20 }
         }
     }
-    Component {
-        id: kid
-        Rectangle { width: 80; height: 20 }
-    }
 
     TestCase {
         name: "EldurFlowAlone"
         when: windowShown
 
-        // With no width set, the items stay on one line, as in `Flow`: the
-        // last pass's widest line is no bound. A set width still wraps.
-        function test_no_width_keeps_one_line() {
-            const added = kid.createObject(free)
-            kid.createObject(freeFlow)
-            kid.createObject(fixed)
+        // A width that follows implicitWidth under a cap bounds the lines
+        // and settles: two lines of two, 230 wide.
+        function test_a_capped_width_settles() {
             wait(50)
-            compare(freeFlow.implicitHeight, 20, "Flow")
-            compare(free.implicitHeight, 20, "EldurFlow")
-            compare(added.x, 90)
-            compare(fixed.implicitHeight, 45, "a set width wraps")
+            const settled = capped.widthChanges
+            wait(200)
+            compare(capped.widthChanges, settled, "the width keeps changing")
+            compare(capped.width, 230)
+            compare(capped.implicitHeight, 45)
         }
 
         // A kid hidden on its own stays out of the lines while the box or an
