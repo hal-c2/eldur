@@ -149,7 +149,10 @@ const BATCHING: &[&str] = &[
      .b:hover{background:yellow}</style>\
      <table><tr><td class=a>A<td class=b>B<tr><td>C<td>D</table>",
     // Showing a block moves its batch-mate: the next paragraph's top margin
-    // reads whether the block is shown.
+    // reads whether the block is shown. Parity only: the shown block's id
+    // makes that margin a binding, which reshapes and takes the fallback even
+    // without the hide guard. The guard itself is pinned by
+    // `a_world_that_shows_or_hides_an_element_is_emitted_alone`.
     "<style>.x{display:none;margin:30px} .a:hover + .x{display:block} p{margin:10px}\
      .b:hover{color:red}</style><p>0</p><p class=a>a</p><p class=x id=x>x</p><p class=b>b</p>",
 ];
