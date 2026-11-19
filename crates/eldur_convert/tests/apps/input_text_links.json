@@ -1,0 +1,17 @@
+{"steps":[
+ {"name":"start","click":"#start"},
+ {"name":"tab to docs","key":"Tab"},
+ {"name":"tab to icon","key":"Tab"},
+ {"name":"tab to faq","key":"Tab"},
+ {"name":"enter on faq","key":"Enter"},
+ {"name":"tab to card","key":"Tab"},
+ {"name":"tab to lone","key":"Tab"},
+ {"name":"tab past out","key":"Tab"},
+ {"name":"back to lone","key":"Shift+Tab"},
+ {"name":"back to card","key":"Shift+Tab"},
+ {"name":"back to faq","key":"Shift+Tab"},
+ {"name":"back to icon","key":"Shift+Tab"},
+ {"name":"back to docs","key":"Shift+Tab"},
+ {"name":"enter on docs","key":"Enter","settle":200}
+],
+"watch":[{"sel":"#end"}]}

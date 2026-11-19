@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head><style>
+body { margin: 8px; font: 16px sans-serif; }
+.card { display: block; width: 240px; height: 24px; margin: 4px 0; }
+#tall { height: 1500px; }
+</style></head>
+<body>
+<button id="start">start</button>
+<p>Read <a id="docs" href="#end">the docs</a> or the
+<a id="icon" href="#end"><svg aria-hidden="true" width="16" height="16"><rect width="16" height="16"/></svg></a>
+<em>guide</em>, then <a id="faq" href="https://example.org/faq">the <b>FAQ</b></a>.</p>
+<a id="card" class="card" href="#end">a block link</a>
+<p><a id="lone" href="#end">a lone text link</a> and <a id="out" tabindex="-1" href="#end">not a stop</a> and <a id="name">no href</a>.</p>
+<button id="after">after</button>
+<div id="tall"></div>
+<div id="end">end</div>
+<script>
+document.getElementById("faq").addEventListener("click", function (ev) {
+  console.log("click", ev.target.id, ev.currentTarget.id, ev.detail, location.hash);
+  ev.preventDefault();
+});
+document.addEventListener("click", function (ev) { console.log("doc click", ev.target.id, ev.defaultPrevented, location.hash); });
+document.addEventListener("focusin", function (ev) { console.log("focus", ev.target.id); });
+</script>
+</body>
+</html>

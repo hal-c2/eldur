@@ -88930,6 +88930,323 @@
    }
   }
  ],
+ "input_text_links": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1676,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "start",
+   "log": [
+    "focus start",
+    "doc click start false "
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1676,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "start"
+   }
+  },
+  {
+   "name": "tab to docs",
+   "log": [
+    "focus docs"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1676,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "docs"
+   }
+  },
+  {
+   "name": "tab to icon",
+   "log": [
+    "focus icon"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1676,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "icon"
+   }
+  },
+  {
+   "name": "tab to faq",
+   "log": [
+    "focus faq"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1676,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "faq"
+   }
+  },
+  {
+   "name": "enter on faq",
+   "log": [
+    "click faq faq 0 ",
+    "doc click faq true "
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1676,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "faq"
+   }
+  },
+  {
+   "name": "tab to card",
+   "log": [
+    "focus card"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1676,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "card"
+   }
+  },
+  {
+   "name": "tab to lone",
+   "log": [
+    "focus lone"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1676,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "lone"
+   }
+  },
+  {
+   "name": "tab past out",
+   "log": [
+    "focus after"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1676,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "after"
+   }
+  },
+  {
+   "name": "back to lone",
+   "log": [
+    "focus lone"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1676,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "lone"
+   }
+  },
+  {
+   "name": "back to card",
+   "log": [
+    "focus card"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1676,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "card"
+   }
+  },
+  {
+   "name": "back to faq",
+   "log": [
+    "focus faq"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1676,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "faq"
+   }
+  },
+  {
+   "name": "back to icon",
+   "log": [
+    "focus icon"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1676,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "icon"
+   }
+  },
+  {
+   "name": "back to docs",
+   "log": [
+    "focus docs"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1676,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "docs"
+   }
+  },
+  {
+   "name": "enter on docs",
+   "log": [
+    "doc click docs false "
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       774,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
  "input_timing": [
   {
    "name": "load",
