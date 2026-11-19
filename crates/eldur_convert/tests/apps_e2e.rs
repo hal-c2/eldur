@@ -266,7 +266,11 @@ fn run(name: &str, html: &str, spec: &str, snapshot: &str) -> String {
     let dir = std::env::temp_dir().join(format!("eldur-app-{name}-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("temp dir");
     for file in &out.files {
-        std::fs::write(dir.join(&file.path), &file.contents).expect("write output");
+        // Assets such as an inline svg's file live in a subdirectory.
+        let path = dir.join(&file.path);
+        std::fs::create_dir_all(path.parent().expect("output path has a parent"))
+            .expect("output dir");
+        std::fs::write(path, &file.contents).expect("write output");
     }
     // `ELDUR_APPS_SHOTS=DIR` keeps each page's last state, to score it.
     let shot = match std::env::var("ELDUR_APPS_SHOTS") {
