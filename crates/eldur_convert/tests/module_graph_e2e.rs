@@ -279,8 +279,11 @@ fn root_relative_specifiers_resolve_under_the_site_root() {
 /// runs its far side first; a module that throws fails its whole cycle; a
 /// module whose own import is missing rejects before any of it runs; a class
 /// exists once its module has run; a listener for `load` or
-/// `DOMContentLoaded` added after the page loaded never hears either; and a
-/// namespace import reads the module's live bindings.
+/// `DOMContentLoaded` added after the page loaded never hears either; a
+/// namespace import reads the module's live bindings; and a `let`, `const`,
+/// `class` or default export read across a cycle before its module has run
+/// throws a `ReferenceError`, while a write to a `const` or an import throws
+/// a `TypeError`.
 #[test]
 fn lazily_imported_modules_link_and_fail_as_in_chromium() {
     if support::no_qt() {
