@@ -7102,6 +7102,16 @@ function focus(item) {
         }
         return;
     }
+    // The `Text` that holds a link's focus for it can be an element of its own
+    // (`<p tabindex=0>`): focusing that moves the page's focus off the link,
+    // though Qt's stays where it is and says nothing.
+    if (_in && _in.inlineFocus && _inInlineHolder(_in.inlineFocus) === raw) {
+        _in.inlineFocus = null;
+        if (raw.activeFocus) {
+            _inFocusChanged();
+            return;
+        }
+    }
     var prev = _activeElement;
     _activeElement = raw;
     var hadFocus = Boolean(raw.activeFocus || raw.focus);
