@@ -60,7 +60,7 @@ use eldur_qml::{Member, Object, Value};
 use crate::boxes::{self, BoxKind, Content, LayoutBox, describe, display_name, node_line};
 use crate::diag::Diagnostics;
 use crate::{Options, RootKind};
-use flow::{Emitted, MarginSet, has_height};
+use flow::{Emitted, Escape, MarginSet, has_height};
 use ids::Ids;
 use units::{ROOT_ID, color, fmt_number, number};
 
@@ -645,6 +645,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         let bottom_open = !bfc_root && deco.insets.bottom == 0.0 && !has_height(style);
 
         let mut escaped_top = MarginSet::default();
+        let mut escaped_cases = None;
         let mut escaped_bottom = MarginSet::default();
         let mut only_slots = false;
         let outer_backdrop = self.backdrop;
@@ -781,6 +782,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     obj.push_child(Object::new("Item").prop("Layout.fillHeight", true));
                 }
                 escaped_top = column.escaped_top;
+                escaped_cases = column.escaped_cases;
                 escaped_bottom = column.escaped_bottom;
                 only_slots = column.only_slots;
                 column.obj.map(|o| (o, "Content"))
@@ -862,11 +864,14 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 top,
                 bottom: MarginSet::default(),
                 collapse_through: true,
+                top_cases: None,
             };
         }
         let mut top = MarginSet::of(mt);
+        let mut top_cases = None;
         if top_open {
             top.join(escaped_top);
+            top_cases = escaped_cases.map(|e: Escape| e.joined(MarginSet::of(mt)));
         }
         let mut bottom = MarginSet::of(mb);
         if bottom_open {
@@ -968,6 +973,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             top,
             bottom,
             collapse_through: false,
+            top_cases,
         };
         self.transformed(e, b, line)
     }
@@ -1174,6 +1180,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             top: MarginSet::of(mt),
             bottom: MarginSet::of(mb),
             collapse_through: false,
+            top_cases: None,
         }
     }
 

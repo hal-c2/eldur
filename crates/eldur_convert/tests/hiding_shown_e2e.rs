@@ -82,6 +82,26 @@ const CASES: &[Case] = &[
         load: &[8.0, 100.0],
         toggled: &[8.0, 66.0],
     },
+    // An empty block after it: hidden or not, the block's margins and the
+    // empty one's collapse with the next one's.
+    Case {
+        name: "empty_after",
+        body: r#"<div style="padding:8px 0"><p id="shy" style="margin:0 0 16px">S</p><div id="e" style="margin:30px 0"></div><p id="n" style="margin:8px 0">N</p></div>"#,
+        ids: &["n"],
+        load: &[64.0],
+        toggled: &[46.0],
+    },
+    // A block a script hides earlier in the column does not decide what the
+    // column's last, hidden one passes on to the block after the column.
+    Case {
+        name: "earlier_block_hides",
+        body: r#"<div id="outer"><p id="r" style="margin:0 0 40px">r</p><p id="x">x</p><div id="holder"><p id="shy" style="display:none">h</p></div></div>
+<p id="next">next</p>
+<script>document.getElementById('r').style.display = '';</script>"#,
+        ids: &["x", "next"],
+        load: &[66.0, 100.0],
+        toggled: &[66.0, 134.0],
+    },
 ];
 
 fn page(case: &Case) -> String {
@@ -236,4 +256,14 @@ fn the_margin_escapes_through_two_parents() {
 #[test]
 fn the_margins_either_side_of_a_hidden_block_collapse() {
     run(case("between_two"));
+}
+
+#[test]
+fn an_empty_block_after_a_hidden_one_keeps_its_margins() {
+    run(case("empty_after"));
+}
+
+#[test]
+fn an_earlier_hiding_block_does_not_decide_what_a_column_passes_on() {
+    run(case("earlier_block_hides"));
 }
