@@ -445,6 +445,31 @@ pub fn state_in_document(doc: &Document, node: NodeId, state: PseudoState) -> bo
     selectors::state_in_document(doc, node, state)
 }
 
+/// Whether a `style` attribute on its own says `display: none`: its winning
+/// valid `display` declaration, an important one over a normal one and then
+/// the last, as the cascade picks it.
+#[must_use]
+pub fn style_attribute_hides(style: &str) -> bool {
+    use parse::{DeclValue, ParsedDecl};
+    use properties::Longhand;
+    let (decls, _) = parse::parse_inline_style(style, "style attribute", Origin::Author);
+    let mut won: Option<&ParsedDecl> = None;
+    for decl in &decls {
+        let display = match &decl.value {
+            DeclValue::Expanded(l, _) | DeclValue::Wide(l, _) => *l == Longhand::Display,
+            DeclValue::PendingVar { target, .. } => *target == Longhand::Display,
+            DeclValue::Custom { .. } => false,
+        };
+        if display && (decl.important || !won.is_some_and(|w| w.important)) {
+            won = Some(decl);
+        }
+    }
+    matches!(
+        won.map(|d| &d.value),
+        Some(DeclValue::Expanded(_, value)) if value.trim().eq_ignore_ascii_case("none")
+    )
+}
+
 /// Classes some selector in `sheets` names.
 #[must_use]
 pub fn styled_classes(sheets: &[Stylesheet]) -> BTreeSet<String> {
