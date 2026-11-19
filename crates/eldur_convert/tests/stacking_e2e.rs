@@ -3,7 +3,7 @@
 //! context of its own was raised for what it holds, so it rises or falls
 //! with what it holds, and one that is a stacking context keeps its own
 //! level. Run in qmltestrunner against Chromium's `elementFromPoint` at
-//! 900×800.
+//! 900×1000.
 
 mod support;
 
@@ -32,6 +32,9 @@ div { height: 40px; width: 200px }
 #t { position: absolute; top: 40px; left: 0; z-index: 5; background: red }
 #w { position: relative; z-index: 7; background: red }
 #u { z-index: 2; background: blue }
+#mv { position: relative; z-index: 3; background: red }
+#src { background: green }
+#vd, #vs { z-index: 2; background: blue }
 </style></head><body>
 <div id=a><div id=c></div></div><div id=b class=over></div>
 <div class=gap></div>
@@ -44,19 +47,25 @@ div { height: 40px; width: 200px }
 <div id=q><div id=n><div id=o></div></div></div><div id=p class=over></div>
 <div class=gap></div>
 <div id=r><div id=s><div id=w></div><div id=t></div></div></div><div id=u class=over></div>
+<div class=gap></div>
+<div id=dst></div><div id=vd class=over></div>
+<div class=gap></div>
+<div id=src><div id=mv></div></div><div id=vs class=over></div>
 <script>
 // Named so that they get an objectName the test can find.
-var named = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','w'].map(function (id) { return document.getElementById(id); });
+var named = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','w','dst','vd','src','mv','vs'].map(function (id) { return document.getElementById(id); });
 // Lowered under its ancestor's sibling; raised over it; raised through two
 // ancestors; raised inside an ancestor with its own level, which keeps it;
 // an ancestor's own level taken away; and one taken from a box beside an
-// absolutely positioned one, which still lifts their block by its own level.
+// absolutely positioned one, which still lifts their block by its own level;
+// and a raised box moved from one box into another, which each re-level.
 document.getElementById('c').style.zIndex = 'auto';
 document.getElementById('d').style.zIndex = '1';
 document.getElementById('i').style.zIndex = '3';
 document.getElementById('l').style.zIndex = '5';
 document.getElementById('n').style.zIndex = 'auto';
 document.getElementById('w').style.zIndex = 'auto';
+document.getElementById('dst').appendChild(document.getElementById('mv'));
 </script></body></html>"#;
 
 /// Chromium's `elementFromPoint(100, y)` for each row.
@@ -67,14 +76,14 @@ import QtTest
 Item {
     id: host
     width: 900
-    height: 800
+    height: 1000
 
 TestCase {
     name: "Stacking"
     when: windowShown
 
     property var page
-    readonly property var painted: ["b", "c", "d", "f", "i", "j", "l", "m", "o", "p", "t", "u", "w"]
+    readonly property var painted: ["b", "c", "d", "f", "i", "j", "l", "m", "o", "p", "t", "u", "w", "vd", "src", "mv", "vs"]
 
     // The painted box nearest the front at a point, in Qt Quick's paint
     // order: the children over an item from the last level down, then the
@@ -111,7 +120,7 @@ TestCase {
     function init() {
         const component = Qt.createComponent("Main.qml")
         verify(component.status === Component.Ready, component.errorString())
-        page = createTemporaryObject(component, host, { width: 900, height: 800 })
+        page = createTemporaryObject(component, host, { width: 900, height: 1000 })
         waitForRendering(page)
     }
 
@@ -124,12 +133,14 @@ TestCase {
         // Chromium has `#u` over `#w` at 630; the converter lifts `#t`'s
         // block, `#w` with it, by `#t`'s level, so only `#t` is checked.
         compare(front(page, 100, 650), "t", "#t still lifts its block")
+        compare(front(page, 100, 750), "mv", "#mv moved into #dst")
+        compare(front(page, 100, 870), "vs", "#mv moved out of #src")
     }
 }
 }
 "##;
 
-/// With no script, Chromium's fronts are `c f j m o w t`.
+/// With no script, Chromium's fronts are `c f j m o w t vd mv`.
 const UNSCRIPTED: &str = r##"
     function test_levels_follow_what_the_boxes_hold() {
         compare(front(page, 100, 30), "c")
@@ -139,6 +150,8 @@ const UNSCRIPTED: &str = r##"
         compare(front(page, 100, 510), "o")
         compare(front(page, 100, 630), "w")
         compare(front(page, 100, 650), "t")
+        compare(front(page, 100, 750), "vd")
+        compare(front(page, 100, 870), "mv")
     }
 }
 }
@@ -178,7 +191,7 @@ fn run(page: &str, test: &str, name: &str, no_rules: bool) {
         root: RootKind::Item,
         viewport: Viewport {
             width: 900.0,
-            height: 800.0,
+            height: 1000.0,
             ..Viewport::default()
         },
         ..Options::default()
