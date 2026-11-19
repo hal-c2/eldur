@@ -6344,9 +6344,38 @@ function _camelToKebab(propName) {
 }
 
 // `name: value` pairs of a declaration text, names in kebab case.
+// A declaration list split at its `;`s, not those in strings or `url(...)`.
+function _splitDecls(text) {
+    var out = [];
+    var start = 0;
+    var depth = 0;
+    var quote = "";
+    for (var i = 0; i < text.length; ++i) {
+        var c = text.charAt(i);
+        if (quote) {
+            if (c === "\\") {
+                ++i;
+            } else if (c === quote) {
+                quote = "";
+            }
+        } else if (c === "\"" || c === "'") {
+            quote = c;
+        } else if (c === "(") {
+            ++depth;
+        } else if (c === ")") {
+            depth = Math.max(0, depth - 1);
+        } else if (c === ";" && depth === 0) {
+            out.push(text.slice(start, i));
+            start = i + 1;
+        }
+    }
+    out.push(text.slice(start));
+    return out;
+}
+
 function _parseDecls(text) {
     var out = [];
-    var decls = String(text).split(";");
+    var decls = _splitDecls(String(text));
     for (var i = 0; i < decls.length; ++i) {
         var colon = decls[i].indexOf(":");
         if (colon <= 0) {
@@ -6388,6 +6417,25 @@ function _styleDecls(raw, m) {
     return out;
 }
 
+var _DISPLAY_ONE = /^(none|contents|block|inline|inline-block|flex|inline-flex|grid|inline-grid|flow-root|list-item|table|inline-table|table-row-group|table-header-group|table-footer-group|table-row|table-cell|table-column-group|table-column|table-caption|inherit|initial|unset|revert|revert-layer)$/;
+var _DISPLAY_PART = /^(block|inline|flow|flow-root|flex|grid|table|list-item)$/;
+
+// A single keyword, or two or three of the multi-keyword parts, none twice.
+function _validDisplay(v) {
+    if (_DISPLAY_ONE.test(v)) {
+        return true;
+    }
+    var words = v.split(/\s+/);
+    var seen = {};
+    for (var i = 0; i < words.length; ++i) {
+        if (!_DISPLAY_PART.test(words[i]) || seen[words[i]]) {
+            return false;
+        }
+        seen[words[i]] = true;
+    }
+    return words.length >= 2 && words.length <= 3;
+}
+
 // The `display` the element's own declaration gives it, as the cascade picks
 // it: an important declaration over a normal one, then the last.
 function _ownDisplay(raw, m) {
@@ -6402,6 +6450,10 @@ function _ownDisplay(raw, m) {
         var bang = /!\s*important$/.exec(v);
         if (bang) {
             v = v.slice(0, bang.index).trim();
+        }
+        // An invalid value is dropped, as the parser drops it.
+        if (!_validDisplay(v)) {
+            continue;
         }
         if (bang || !important) {
             won = v;
@@ -11389,8 +11441,14 @@ function wrap(rawItem) {
             setStyle(rawItem, prop, "");
             var rawName = String(prop);
             var camel = rawName.indexOf("--") === 0 ? rawName : _kebabToCamel(rawName);
-            delete _meta(rawItem).styles[rawName];
-            delete _meta(rawItem).styles[camel];
+            var kebab = camel.indexOf("--") === 0 ? camel : _camelToKebab(camel);
+            var attr = typeof rawItem.eldurStyle === "string" ? _parseDecls(rawItem.eldurStyle) : [];
+            // The empty override is what keeps the `style` attribute's own
+            // declaration removed.
+            if (!attr.some(function(d) { return d[0] === kebab; })) {
+                delete _meta(rawItem).styles[rawName];
+                delete _meta(rawItem).styles[camel];
+            }
             return old;
         }
     };
