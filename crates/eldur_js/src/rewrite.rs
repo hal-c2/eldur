@@ -84,9 +84,9 @@ struct PageBuffers {
     load_entries: Vec<LoadEntry>,
     window_onload_has_slot: bool,
     window_onload_value: Option<String>,
-    /// Emitting a lazy module: a class it declares does not exist until the
-    /// module runs, so it is assigned there rather than declared at load.
-    defer_classes: bool,
+    /// Emitting a lazy module: nothing it declares exists until it runs, so
+    /// its bindings are assigned in its run function, never set at load.
+    in_lazy_module: bool,
 }
 
 struct PageBuilder<'a> {
@@ -418,9 +418,20 @@ impl<'a> PageBuilder<'a> {
             self.cycle_failure_markers
                 .insert(script_idx, marker.clone());
             let outer = std::mem::take(&mut self.out.init_stmts);
-            let outer_defer = std::mem::replace(&mut self.out.defer_classes, true);
+            let outer_lazy = std::mem::replace(&mut self.out.in_lazy_module, true);
+            let decls_from = self.out.top_decls.len();
             self.process_classic_or_module(pos, Some(&mut exports));
-            self.out.defer_classes = outer_defer;
+            self.out.in_lazy_module = outer_lazy;
+            // Another module of its cycle, emitted above it, reads these
+            // bindings: `var`, so QML does not take that for a use before
+            // the declaration. Each name is the module's own.
+            for decl in &mut self.out.top_decls[decls_from..] {
+                if let Some(name) = decl.strip_prefix("let ").and_then(|d| d.strip_suffix(';'))
+                    && is_valid_js_ident(name)
+                {
+                    *decl = format!("var {name};");
+                }
+            }
             let body = std::mem::replace(&mut self.out.init_stmts, outer);
             let mut lines = vec![
                 format!("if ({run}.state === 2) throw {run}.error;"),
@@ -1155,6 +1166,12 @@ fn cycle_export_ident(
 }
 
 impl PageBuffers {
+    /// Whether a statement emitted now runs at load with nothing before it,
+    /// so a pure binding can be declared with its value.
+    fn at_load(&self) -> bool {
+        !self.in_lazy_module && self.init_stmts.is_empty()
+    }
+
     fn emit_top_function_decl(&mut self, is_classic: bool, name: &str, fn_code: String) {
         if is_classic && let Some(&(slot_idx, prev_init_len)) = self.var_func_slots.get(name) {
             if self.init_stmts.len() == prev_init_len {
@@ -1207,7 +1224,7 @@ impl PageBuffers {
             .extract_and_consume(cls.span)
             .trim()
             .to_string();
-        let deferred = self.defer_classes && cls.id.is_some();
+        let deferred = self.in_lazy_module && cls.id.is_some();
         if deferred && let Some(id) = &cls.id {
             let emitted_name = lowerer.bound_name(id).to_string();
             self.top_decls.push(format!("let {emitted_name};"));
@@ -1220,7 +1237,7 @@ impl PageBuffers {
             .post_class_static_inits
             .remove(&(cls.span.start, cls.span.end))
         {
-            if all_static_pure && self.init_stmts.is_empty() {
+            if all_static_pure && self.at_load() {
                 self.top_decls.extend(static_stmts);
             } else {
                 self.init_stmts.extend(static_stmts);
@@ -1229,7 +1246,7 @@ impl PageBuffers {
 
         if let Some(id) = &cls.id {
             let emitted_name = lowerer.bound_name(id).to_string();
-            if all_static_pure && self.init_stmts.is_empty() {
+            if all_static_pure && self.at_load() {
                 self.pure_top_vars.insert(emitted_name.clone());
             }
             if is_exported && let Some(me) = mod_exports {
@@ -1293,7 +1310,7 @@ impl PageBuffers {
                     lowerer.visit_binding_pattern(&decl.id);
                     let pat_str = lowerer.editor.extract_and_consume(decl.id.span());
                     self.top_decls.push(format!("let {pat_str};"));
-                    if !self.init_stmts.is_empty() {
+                    if !self.at_load() {
                         for ident in &bound_idents {
                             let emitted_name = lowerer.bound_name(ident).to_string();
                             self.pure_top_vars.remove(&emitted_name);
@@ -1315,7 +1332,9 @@ impl PageBuffers {
                 matches!(&decl.id, BindingPattern::ObjectPattern(obj) if obj.rest.is_some());
             let is_destructured_var = vd.kind == VariableDeclarationKind::Var
                 && !matches!(&decl.id, BindingPattern::BindingIdentifier(_));
-            let is_pure = !has_obj_rest
+            // A lazy module's bindings get their values when it runs.
+            let is_pure = !self.in_lazy_module
+                && !has_obj_rest
                 && !is_destructured_var
                 && pattern_defaults_are_pure(
                     &decl.id,
@@ -1354,14 +1373,14 @@ impl PageBuffers {
                         let slot_idx = self.top_decls.len();
                         self.top_decls
                             .push(format!("var {emitted_name} = {init_str};"));
-                        if self.init_stmts.is_empty() {
+                        if self.at_load() {
                             self.pure_top_vars.insert(emitted_name.clone());
                         }
                         self.var_func_slots
                             .insert(emitted_name.clone(), (slot_idx, self.init_stmts.len()));
                     }
                     if let Some(me) = mod_exports.as_deref_mut() {
-                        me.insert(orig_name, emitted_name, !self.init_stmts.is_empty(), true);
+                        me.insert(orig_name, emitted_name, !self.at_load(), true);
                     }
                 } else {
                     let kw = match vd.kind {
@@ -1372,7 +1391,7 @@ impl PageBuffers {
                         | VariableDeclarationKind::AwaitUsing => "let",
                     };
                     self.top_decls.push(format!("{kw} {pat_str} = {init_str};"));
-                    if vd.kind == VariableDeclarationKind::Const && self.init_stmts.is_empty() {
+                    if vd.kind == VariableDeclarationKind::Const && self.at_load() {
                         for ident in &bound_idents {
                             self.pure_top_vars
                                 .insert(lowerer.bound_name(ident).to_string());
@@ -1542,14 +1561,14 @@ impl PageBuffers {
                         .push(format!("const {def_name} = {cls_str};"));
                     (def_name, false)
                 };
-                if all_static_pure && self.init_stmts.is_empty() {
+                if all_static_pure && self.at_load() {
                     self.pure_top_vars.insert(name.clone());
                 }
                 if let Some(static_stmts) = lowerer
                     .post_class_static_inits
                     .remove(&(cls.span.start, cls.span.end))
                 {
-                    if all_static_pure && self.init_stmts.is_empty() {
+                    if all_static_pure && self.at_load() {
                         self.top_decls.extend(static_stmts);
                     } else {
                         self.init_stmts.extend(static_stmts);
@@ -1573,7 +1592,7 @@ impl PageBuffers {
                     let def_name = lowerer
                         .shared
                         .alloc_fn_name(&format!("__eldur_default_{script_idx}"));
-                    if is_pure && self.init_stmts.is_empty() {
+                    if is_pure && self.at_load() {
                         self.top_decls
                             .push(format!("const {def_name} = {expr_str};"));
                         self.pure_top_vars.insert(def_name.clone());
@@ -1632,7 +1651,7 @@ impl PageBuffers {
     }
 
     fn emit_alias_binding(&mut self, local: &str, target_ident: &str, deferred: bool) {
-        if deferred || !self.init_stmts.is_empty() {
+        if deferred || !self.at_load() {
             self.top_decls.push(format!("let {local};"));
             self.init_stmts.push(format!("{local} = {target_ident};"));
         } else {
