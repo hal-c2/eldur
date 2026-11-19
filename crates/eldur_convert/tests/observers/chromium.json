@@ -71,6 +71,12 @@
   "OB many 1200 true 1199",
   "OB done"
  ],
+ "mutation_moves": [
+  "OB fr childList:fr:+:-g1:null:g2 childList:fr:+:-g2:null:g3 childList:fr:+g2:-:g3:null",
+  "OB A childList:P:+:-X:null:null childList:A:+:-P:null:null",
+  "OB left 0 1",
+  "OB done"
+ ],
  "mutation_text": [
   "OB text newest",
   "OB mo characterData:#text:old text:+:- characterData:#text:new text:+:- characterData:#text:newer:+:-",

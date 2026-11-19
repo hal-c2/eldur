@@ -149,8 +149,9 @@ fn observers_match_chromium() {
 
 /// A mutation callback whose every run makes a new record never ends in
 /// Chromium, so this page has no recording: Eldur stops the loop after a
-/// thousand notifications in a row, says so once, and the page goes on, with
-/// its observer still hearing later changes.
+/// thousand notifications in a row, says so, and the page goes on, with its
+/// observer still hearing later changes. A callback that awaits before it
+/// writes is the same loop and stops the same way.
 #[test]
 fn a_runaway_mutation_loop_stops() {
     if support::no_qt() {
@@ -161,7 +162,12 @@ fn a_runaway_mutation_loop_stops() {
     let log = run(
         "runaway",
         &html,
-        &["OB calls 1000 1000", "OB later true", "OB done"],
+        &[
+            "OB calls 1000 1000",
+            "OB later true",
+            "OB async 1000 1000",
+            "OB done",
+        ],
     )
     .unwrap_or_else(|e| panic!("{e}"));
     assert!(

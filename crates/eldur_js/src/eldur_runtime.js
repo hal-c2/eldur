@@ -35,13 +35,15 @@
 // A page tells when its promises run: after each listener a browser runs them,
 // while the engine's own wait for the event loop, past all of a press's events.
 // Nothing reaches the engine's queue from a script, so promises are made here.
-var _micro = { queue: [], draining: false, native: false };
+var _micro = { queue: [], draining: false, native: false, cause: null };
 // Counts the resets: work begun before one (a request in flight) belongs to a
 // page that is gone, and is dropped when it ends.
 var _pageGen = 0;
 
+// A job keeps the cause of the code that queued it, so a promise begun inside
+// an observer's callback is still that callback's work when it runs.
 function _microEnqueue(job) {
-    _micro.queue.push(job);
+    _micro.queue.push({ run: job, cause: _micro.cause });
     Qt.callLater(_microDrain);
 }
 
@@ -52,12 +54,14 @@ function _microDrain() {
     _micro.draining = true;
     while (_micro.queue.length > 0) {
         var job = _micro.queue.shift();
+        _micro.cause = job.cause;
         try {
-            job();
+            job.run();
         } catch (err) {
             console.error(err && err.stack ? err.stack : err);
         }
     }
+    _micro.cause = null;
     _micro.draining = false;
 }
 
@@ -645,6 +649,7 @@ function _resetPageState() {
     _timerTurnQueued = false;
     // A job the last page queued would run in this one's document.
     _micro.queue = [];
+    _micro.cause = null;
     _mo = _moFresh();
     _obs = _obsFresh();
     _pageGen += 1;
@@ -7822,12 +7827,14 @@ var customElements = {
 // are: what it does underneath (`setAttribute("class")` setting the class
 // name) is that operation's record, not one of its own.
 var _MO_ROUNDS = 1000;
+// The cause a MutationObserver callback, and every job it queues, runs under.
+var _MO_CAUSE = {};
 var _mo = _moFresh();
 
 function _moFresh() {
     return {
         regs: new Map(), pending: [], queued: false, depth: 0, nextId: 0,
-        notifying: false, chained: false, rounds: 0, stopped: false
+        chained: false, rounds: 0, stopped: false
     };
 }
 
@@ -7935,6 +7942,11 @@ function _moWants(raw, type) {
 }
 
 function _moQueue(raw, type, name, oldValue, added, removed, prev, next) {
+    _moDeliver(_moHits(raw, type, name), raw, type, name, oldValue, added, removed, prev, next);
+}
+
+// The observers a record at `raw` goes to, found through its ancestors now.
+function _moHits(raw, type, name) {
     var hits = [];
     for (var node = raw, own = true; node; node = _logicalParent(node), own = false) {
         var regs = _moRegsOf(node);
@@ -7961,13 +7973,19 @@ function _moQueue(raw, type, name, oldValue, added, removed, prev, next) {
             }
         }
     }
+    return hits;
+}
+
+// Returns what it queued, so an operation that then fails can take it back.
+function _moDeliver(hits, raw, type, name, oldValue, added, removed, prev, next) {
+    var queued = [];
     if (hits.length === 0) {
-        return;
+        return queued;
     }
     var nodes = function(list) { return _asNodeList((list || []).map(wrap)); };
     for (var k = 0; k < hits.length; ++k) {
         var obs = hits[k].observer;
-        obs._records.push({
+        var record = {
             type: type,
             target: wrap(raw),
             addedNodes: nodes(added),
@@ -7977,17 +7995,21 @@ function _moQueue(raw, type, name, oldValue, added, removed, prev, next) {
             attributeName: name === undefined ? null : name,
             attributeNamespace: null,
             oldValue: hits[k].old && oldValue !== undefined ? oldValue : null
-        });
+        };
+        obs._records.push(record);
+        queued.push([obs, record]);
         if (_mo.pending.indexOf(obs) < 0) {
             _mo.pending.push(obs);
         }
     }
     if (!_mo.queued) {
         _mo.queued = true;
-        // Whether this notification is one the last one's callbacks made.
-        _mo.chained = _mo.notifying;
+        // Whether this notification is one the last one's callbacks made,
+        // directly or through promises they began.
+        _mo.chained = _micro.cause === _MO_CAUSE;
         _microEnqueue(_moNotify);
     }
+    return queued;
 }
 
 function _moNotify() {
@@ -7995,8 +8017,8 @@ function _moNotify() {
     var list = _mo.pending.sort(function(a, b) { return a._id - b._id; });
     _mo.pending = [];
     // A callback whose own change is always a new record is a loop a browser
-    // runs until the tab is killed. Only notifications the previous one's
-    // callbacks made count, so other code making records, however many times,
+    // runs until the tab is killed, awaiting or not. Only notifications the
+    // previous one's callbacks made count, so other code making records, however many times,
     // never trips it; past a thousand in a row, the records go.
     if (!_mo.chained) {
         _mo.rounds = 0;
@@ -8012,7 +8034,8 @@ function _moNotify() {
         list.forEach(function(obs) { obs._records = []; });
         return;
     }
-    _mo.notifying = true;
+    var cause = _micro.cause;
+    _micro.cause = _MO_CAUSE;
     try {
         for (var i = 0; i < list.length; ++i) {
             var records = list[i].takeRecords();
@@ -8026,7 +8049,7 @@ function _moNotify() {
             }
         }
     } finally {
-        _mo.notifying = false;
+        _micro.cause = cause;
     }
 }
 
@@ -8058,15 +8081,20 @@ function _moAttr(item, name, mode, write) {
 
 // The nodes an insertion takes from where they are: a fragment gives its
 // children, a string is a new text node, and so comes from nowhere.
+// `fromFragment` holds the ones a fragment argument gave.
 function _moTaken(args) {
     var out = [];
+    out.fromFragment = new Set();
     for (var i = 0; i < args.length; ++i) {
         var raw = args[i] && typeof args[i] === "object" ? _unwrap(args[i]) : null;
         if (!raw) {
             continue;
         }
         if (!raw.__eldurInline && _meta(raw).isFragment) {
-            out = out.concat(_rawChildNodes(raw));
+            _rawChildNodes(raw).forEach(function(kid) {
+                out.push(kid);
+                out.fromFragment.add(kid);
+            });
         } else {
             out.push(raw);
         }
@@ -8080,7 +8108,6 @@ function _moTaken(args) {
 function _moChildOp(parent, taken, op) {
     var watched = parent && _moWants(parent, "childList");
     var moved = [];
-    // Measured before, queued after: an operation that throws moved nothing.
     var removals = [];
     var fragments = new Map();
     for (var t = 0; t < taken.length && _mo.regs.size > 0 && _mo.depth === 0; ++t) {
@@ -8088,10 +8115,14 @@ function _moChildOp(parent, taken, op) {
         if (!from) {
             continue;
         }
-        if (!from.__eldurInline && _meta(from).isFragment) {
-            // A fragment gives up all its children in one record.
+        if (taken.fromFragment && taken.fromFragment.has(taken[t])) {
+            // A fragment given whole gives up all its children in one record.
             if (_moWants(from, "childList")) {
-                fragments.set(from, (fragments.get(from) || []).concat([taken[t]]));
+                if (!fragments.has(from)) {
+                    fragments.set(from, []);
+                    removals.push([from, fragments.get(from), null, null]);
+                }
+                fragments.get(from).push(taken[t]);
             }
             continue;
         }
@@ -8100,11 +8131,19 @@ function _moChildOp(parent, taken, op) {
             var fromKids = _rawChildNodes(from);
             var at = fromKids.indexOf(taken[t]);
             if (at >= 0) {
-                removals.push([from, taken[t], fromKids[at - 1] || null, fromKids[at + 1] || null]);
+                removals.push([from, [taken[t]], fromKids[at - 1] || null, fromKids[at + 1] || null]);
             }
         }
     }
     var before = watched ? _rawChildNodes(parent).filter(function(n) { return moved.indexOf(n) < 0; }) : null;
+    // DOM removes a moved node before it inserts it, and so before any
+    // disconnect reaction runs: the removals are queued first, and taken back
+    // if the operation throws, as one that throws moved nothing.
+    var queued = [];
+    removals.forEach(function(r) {
+        queued = queued.concat(_moDeliver(_moHits(r[0], "childList"), r[0], "childList",
+            null, null, [], r[1], r[2], r[3]));
+    });
     var out;
     // Only a watched parent's operation is the record of what it does inside.
     if (watched) {
@@ -8112,17 +8151,19 @@ function _moChildOp(parent, taken, op) {
     }
     try {
         out = op();
+    } catch (err) {
+        queued.forEach(function(q) {
+            var at = q[0]._records.indexOf(q[1]);
+            if (at >= 0) {
+                q[0]._records.splice(at, 1);
+            }
+        });
+        throw err;
     } finally {
         if (watched) {
             _mo.depth--;
         }
     }
-    fragments.forEach(function(kids, fragment) {
-        _moQueue(fragment, "childList", null, null, [], kids, null, null);
-    });
-    removals.forEach(function(r) {
-        _moQueue(r[0], "childList", null, null, [], [r[1]], r[2], r[3]);
-    });
     if (!watched) {
         return out;
     }
