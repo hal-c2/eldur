@@ -423,3 +423,44 @@ mod mutation {
         assert_eq!(doc.children(frag).count(), 0);
     }
 }
+
+#[test]
+fn a_used_symbol_is_sized_where_it_is_drawn() {
+    // A symbol with no size of its own fills the viewport its `<use>` makes
+    // (SVG 2 §5.6.2), 100 % of the svg holding it; some loaders draw it at
+    // its viewBox's size instead. Written in units it is the same picture
+    // in a browser, as a use's own size still wins.
+    let doc = Document::parse(
+        "<svg style='display:none'><symbol id=s viewBox='0 0 24 24'><rect /></symbol>\
+         <symbol id=fixed viewBox='0 0 24 24' width=10 height=auto><rect /></symbol></svg>\
+         <svg id=px width=48px height=48><use href='#s'/></svg>\
+         <svg id=box viewBox='0 0 32 30' width=64><use href='#s'/></svg>\
+         <svg id=same width=48 height=48><use href='#s' width=20 height=20 /><use href='#s' width=20 height=20 /></svg>\
+         <svg id=mixed width=48 height=48><use href='#s' width=20 height=20 /><use href='#s'/></svg>\
+         <svg id=own width=48 height=48><use href='#fixed'/></svg>\
+         <svg id=inside width=40 height=40><symbol id=i viewBox='0 0 8 8'/><use href='#i'/></svg>\
+         <svg id=unsized><use href='#s'/></svg>",
+    );
+    let same = |_: &str, v: &str, _: Option<&str>| v.to_owned();
+    let symbol = |id: &str| {
+        let markup = doc
+            .svg_markup(doc.element_by_id(id).expect(id), &same)
+            .expect("markup");
+        let at = markup.find("<symbol").expect("symbol");
+        markup[at..markup[at..].find('>').map_or(markup.len(), |e| at + e + 1)].to_owned()
+    };
+    let s = "<symbol id=\"s\" viewBox=\"0 0 24 24\"";
+    assert_eq!(symbol("px"), format!("{s} width=\"48\" height=\"48\">"));
+    assert_eq!(symbol("box"), format!("{s} width=\"32\" height=\"30\">"));
+    assert_eq!(symbol("same"), format!("{s} width=\"20\" height=\"20\">"));
+    assert_eq!(symbol("mixed"), format!("{s} width=\"48\" height=\"48\">"));
+    assert_eq!(
+        symbol("own"),
+        "<symbol id=\"fixed\" viewBox=\"0 0 24 24\" width=\"10\" height=\"48\">"
+    );
+    assert_eq!(
+        symbol("inside"),
+        "<symbol id=\"i\" viewBox=\"0 0 8 8\" width=\"40\" height=\"40\"/>"
+    );
+    assert_eq!(symbol("unsized"), format!("{s}>"));
+}

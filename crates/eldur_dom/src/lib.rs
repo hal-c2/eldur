@@ -332,14 +332,16 @@ impl Document {
         if xlink {
             root.push_str(" xmlns:xlink=\"http://www.w3.org/1999/xlink\"");
         }
-        self.write_svg(id, element, &root, None, value, &mut out);
+        let sizes = self.svg_symbol_sizes(id, element, &copies);
+        let svg = SvgWriter { value, sizes: &sizes };
+        svg.write(self, id, element, &root, None, &mut out);
         if !copies.is_empty() {
             let mut defs = String::from("<defs>");
             for copy in copies {
                 if let Some(e) = self.element(copy) {
                     // A copy draws where it is used, which the file cannot
                     // follow; it takes the colour the svg starts with.
-                    self.write_svg(copy, e, "", None, value, &mut defs);
+                    svg.write(self, copy, e, "", None, &mut defs);
                 }
             }
             defs.push_str("</defs>");
@@ -352,6 +354,73 @@ impl Document {
             }
         }
         Some(out)
+    }
+
+    /// The width and height each `<symbol>` without a length of its own is
+    /// written with: what its uses all ask for when they agree, else the
+    /// svg's viewport, which is what 100 % resolves to (SVG 2 §5.6.2). Some
+    /// loaders draw a symbol at its own size whatever the `<use>` says, and
+    /// at its viewBox's size when it has none; a browser draws the same
+    /// picture either way, as a use's width and height win over the
+    /// symbol's. A symbol whose viewport is not known in units is left alone.
+    fn svg_symbol_sizes(
+        &self,
+        id: NodeId,
+        root: &Element,
+        copies: &[NodeId],
+    ) -> Vec<(NodeId, String, String)> {
+        let viewport = |name: &str, index: usize| {
+            root.attr("viewBox")
+                .and_then(|b| {
+                    b.split(|c: char| c == ',' || c.is_whitespace())
+                        .filter(|p| !p.is_empty())
+                        .nth(index)
+                        .and_then(svg_length)
+                })
+                .or_else(|| root.attr(name).and_then(svg_length))
+        };
+        let viewport = [viewport("width", 2), viewport("height", 3)];
+        let symbols = std::iter::once(id)
+            .chain(copies.iter().copied())
+            .flat_map(|n| self.descendants(n))
+            .filter(|&n| {
+                self.element(n)
+                    .is_some_and(|e| e.is_svg() && e.local_name() == "symbol")
+            });
+        let uses: Vec<&Element> = self
+            .descendants(id)
+            .filter_map(|n| self.element(n))
+            .filter(|e| e.is_svg() && e.local_name() == "use")
+            .collect();
+        let mut sizes = Vec::new();
+        for symbol in symbols {
+            let Some(name) = self.element(symbol).and_then(Element::id) else {
+                continue;
+            };
+            let target = |e: &&Element| {
+                e.attrs.iter().any(|a| {
+                    &*a.name.local == "href"
+                        && (a.name.ns == ns!() || a.name.ns == ns!(xlink))
+                        && a.value.trim().strip_prefix('#') == Some(name)
+                })
+            };
+            let mut size = [None, None];
+            for (axis, attr) in ["width", "height"].into_iter().enumerate() {
+                let mut asked = uses
+                    .iter()
+                    .filter(target)
+                    .map(|u| u.attr(attr).and_then(svg_length));
+                let first = asked.next().flatten();
+                size[axis] = match first {
+                    Some(length) if asked.all(|a| a.as_deref() == Some(&*length)) => Some(length),
+                    _ => viewport[axis].clone(),
+                };
+            }
+            if let [Some(width), Some(height)] = size {
+                sizes.push((symbol, width, height));
+            }
+        }
+        sizes
     }
 
     /// The svg elements outside `id`'s subtree that it refers to by
@@ -428,75 +497,6 @@ impl Document {
             }
             _ => {}
         }
-    }
-
-    fn write_svg(
-        &self,
-        id: NodeId,
-        element: &Element,
-        declarations: &str,
-        inherited: Option<&str>,
-        value: &dyn Fn(&str, &str, Option<&str>) -> String,
-        out: &mut String,
-    ) {
-        let own = svg_own_colour(element);
-        let colour = own.as_deref().or(inherited);
-        let escape = |s: &str| {
-            s.replace('&', "&amp;")
-                .replace('<', "&lt;")
-                .replace('>', "&gt;")
-                .replace('"', "&quot;")
-        };
-        out.push('<');
-        out.push_str(element.local_name());
-        out.push_str(declarations);
-        for attr in &element.attrs {
-            // The namespaces are declared once, on the root.
-            if attr.name.ns == ns!(xmlns) || &*attr.name.local == "xmlns" {
-                continue;
-            }
-            // HTML binds only the xlink, xml and xmlns prefixes; any other
-            // (an editor's `inkscape:label`) is a name with a colon and no
-            // namespace, which makes the file ill-formed to a namespace-aware
-            // reader, and browsers ignore it anyway.
-            if attr.name.ns == ns!() && attr.name.local.contains(':') {
-                continue;
-            }
-            // A name HTML accepts but XML does not (`@click`, `x.y` from a
-            // framework's template) would make the whole file unreadable;
-            // the browser draws it as if it were not there.
-            if !is_xml_name(&attr.name.local) {
-                continue;
-            }
-            out.push(' ');
-            if attr.name.ns == ns!(xlink) {
-                out.push_str("xlink:");
-            } else if attr.name.ns == ns!(xml) {
-                out.push_str("xml:");
-            }
-            out.push_str(&attr.name.local);
-            out.push_str("=\"");
-            out.push_str(&escape(&value(&attr.name.local, &attr.value, colour)));
-            out.push('"');
-        }
-        let children: Vec<NodeId> = self.children(id).collect();
-        if children.is_empty() {
-            out.push_str("/>");
-            return;
-        }
-        out.push('>');
-        let style = element.local_name() == "style";
-        for child in children {
-            match &self.node(child).data {
-                NodeData::Text(t) if style => out.push_str(&escape(&value("#style", t, colour))),
-                NodeData::Text(t) => out.push_str(&escape(t)),
-                NodeData::Element(e) => self.write_svg(child, e, "", colour, value, out),
-                _ => {}
-            }
-        }
-        out.push_str("</");
-        out.push_str(element.local_name());
-        out.push('>');
     }
 
     fn write_markup(&self, id: NodeId, out: &mut String) {
@@ -608,6 +608,112 @@ impl Iterator for Descendants<'_> {
 #[must_use]
 pub fn collapse_whitespace(s: &str) -> String {
     s.split_ascii_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// Writes svg elements as XML for [`Document::svg_markup`].
+struct SvgWriter<'a> {
+    value: &'a dyn Fn(&str, &str, Option<&str>) -> String,
+    /// The symbols written with a width and height, and those lengths.
+    sizes: &'a [(NodeId, String, String)],
+}
+
+impl SvgWriter<'_> {
+    fn write(
+        &self,
+        doc: &Document,
+        id: NodeId,
+        element: &Element,
+        declarations: &str,
+        inherited: Option<&str>,
+        out: &mut String,
+    ) {
+        let value = self.value;
+        let size = self
+            .sizes
+            .iter()
+            .find(|(symbol, ..)| *symbol == id)
+            .map(|(_, w, h)| [("width", w), ("height", h)]);
+        let own = svg_own_colour(element);
+        let colour = own.as_deref().or(inherited);
+        let escape = |s: &str| {
+            s.replace('&', "&amp;")
+                .replace('<', "&lt;")
+                .replace('>', "&gt;")
+                .replace('"', "&quot;")
+        };
+        out.push('<');
+        out.push_str(element.local_name());
+        out.push_str(declarations);
+        for attr in &element.attrs {
+            // The namespaces are declared once, on the root.
+            if attr.name.ns == ns!(xmlns) || &*attr.name.local == "xmlns" {
+                continue;
+            }
+            // HTML binds only the xlink, xml and xmlns prefixes; any other
+            // (an editor's `inkscape:label`) is a name with a colon and no
+            // namespace, which makes the file ill-formed to a namespace-aware
+            // reader, and browsers ignore it anyway.
+            if attr.name.ns == ns!() && attr.name.local.contains(':') {
+                continue;
+            }
+            // A name HTML accepts but XML does not (`@click`, `x.y` from a
+            // framework's template) would make the whole file unreadable;
+            // the browser draws it as if it were not there.
+            if !is_xml_name(&attr.name.local) {
+                continue;
+            }
+            if size.is_some_and(|size| size.iter().any(|(n, _)| &*attr.name.local == *n))
+                && attr.name.ns == ns!()
+                && svg_length(&attr.value).is_none()
+            {
+                continue;
+            }
+            out.push(' ');
+            if attr.name.ns == ns!(xlink) {
+                out.push_str("xlink:");
+            } else if attr.name.ns == ns!(xml) {
+                out.push_str("xml:");
+            }
+            out.push_str(&attr.name.local);
+            out.push_str("=\"");
+            out.push_str(&escape(&value(&attr.name.local, &attr.value, colour)));
+            out.push('"');
+        }
+        for (name, length) in size.into_iter().flatten() {
+            if element.attr(name).and_then(svg_length).is_none() {
+                out.push_str(&format!(" {name}=\"{length}\""));
+            }
+        }
+        let children: Vec<NodeId> = doc.children(id).collect();
+        if children.is_empty() {
+            out.push_str("/>");
+            return;
+        }
+        out.push('>');
+        let style = element.local_name() == "style";
+        for child in children {
+            match &doc.node(child).data {
+                NodeData::Text(t) if style => out.push_str(&escape(&value("#style", t, colour))),
+                NodeData::Text(t) => out.push_str(&escape(t)),
+                NodeData::Element(e) => self.write(doc, child, e, "", colour, out),
+                _ => {}
+            }
+        }
+        out.push_str("</");
+        out.push_str(element.local_name());
+        out.push('>');
+    }
+}
+
+/// A length in user units, as written (`48`, `48px`, `1.5`); `None` for a
+/// percentage, `auto` or anything else that needs a viewport to resolve.
+fn svg_length(value: &str) -> Option<String> {
+    let v = value.trim();
+    let v = v.strip_suffix("px").unwrap_or(v);
+    v.parse::<f64>()
+        .ok()
+        .filter(|n| n.is_finite() && *n >= 0.0)
+        .map(|_| v.to_owned())
 }
 
 /// The colour an svg element sets for itself and what it holds: the last
