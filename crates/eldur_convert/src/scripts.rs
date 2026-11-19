@@ -42,6 +42,16 @@ impl Scripts {
         self.matches.get(query).map_or(&[], Vec::as_slice)
     }
 
+    /// The elements whose `style.display` or `hidden` a script writes.
+    pub(crate) fn display_writes(&self) -> HashSet<NodeId> {
+        self.analysis
+            .writes
+            .iter()
+            .filter(|(_, prop)| prop == "style.display" || prop == "hidden")
+            .flat_map(|(q, _)| self.matches(q).iter().copied())
+            .collect()
+    }
+
     /// The node of a key: `keys` holds handler-attribute elements, `wanted`
     /// everything scripts can reach.
     fn keys_to_node(&self, key: ElementKey) -> Option<NodeId> {

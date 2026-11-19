@@ -168,6 +168,9 @@ pub(crate) struct Emitter<'a, 'd> {
     pub open_elements: bool,
     /// A script writes inline styles or `hidden`, so any item can leave its layout.
     pub hides_items: bool,
+    /// Blocks a script hides or shows by `style.display` or `hidden`: the
+    /// margins either side of them collapse for both states (#51).
+    pub script_hides: HashSet<NodeId>,
     /// The page holds the rule table: the runtime computes styles of its own.
     pub cascade_rules: bool,
     /// The boxes a script may put block children in.
@@ -280,6 +283,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             runtime_dom: false,
             open_elements: false,
             hides_items: false,
+            script_hides: HashSet::new(),
             cascade_rules: false,
             gains: HashSet::new(),
             live_tables: HashSet::new(),

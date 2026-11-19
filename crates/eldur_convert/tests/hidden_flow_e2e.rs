@@ -89,11 +89,13 @@ const SCRIPTED: &str = r#"<!DOCTYPE html>
 <script>
 // Named so that they get an objectName the test can find.
 var named = ['after', 'w', 'a', 'b', 'v', 'c'].map(function(id) { return document.getElementById(id); });
+var shy = document.getElementById('shy');
+var mid = document.getElementById('mid');
+var end = document.getElementById('end');
 document.getElementById('t').addEventListener('click', function() {
-  ['shy', 'mid', 'end'].forEach(function(id) {
-    var s = document.getElementById(id).style;
-    s.display = s.display === 'none' ? '' : 'none';
-  });
+  shy.style.display = shy.style.display === 'none' ? '' : 'none';
+  mid.style.display = mid.style.display === 'none' ? '' : 'none';
+  end.style.display = end.style.display === 'none' ? '' : 'none';
 });
 </script>"#;
 
