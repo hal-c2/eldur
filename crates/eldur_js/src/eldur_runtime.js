@@ -6469,11 +6469,21 @@ function _zLift(raw) {
     return Math.max(1, _zInside(raw));
 }
 
+// The item that took an overlay out to its stop's column, as its block
+// makes no stacking context: it lifts that item, not its block.
+function _zHost(raw) {
+    var frame = raw.parent;
+    return frame && frame.eldurHoisted === true ? frame.parent : null;
+}
+
 // The highest lift of what a box holds, 0 for none.
 function _zInside(raw) {
     var kids = _rawKids(raw, false, false, false);
     var top = 0;
     for (var i = 0; i < kids.length; ++i) {
+        if (_zHost(kids[i])) {
+            continue;
+        }
         var lift = _zLift(kids[i]);
         if (lift !== null && lift > top) {
             top = lift;
@@ -6485,6 +6495,13 @@ function _zInside(raw) {
 // A box at `auto`: its hold, raised over its later siblings by what it holds.
 function _zAuto(raw, hold) {
     return Math.max(hold, _zInside(raw));
+}
+
+// An overlay at `auto`, among its block's overlays, which stack by their
+// `z-index`: at 0, with what it holds over it, as it makes no context to
+// keep that in; a kid's lift is its `z-index` plus one.
+function _zOverlayAuto(raw) {
+    return Math.max(0, _zInside(raw) - 1);
 }
 
 function _zPage(raw) {
@@ -6499,6 +6516,11 @@ function _zPage(raw) {
 // that has a level of its own or that keeps the level it had.
 function _zRelevel(box, before) {
     var after = _zLift(box);
+    var host = _zHost(box);
+    if (host) {
+        host.z = after;
+        return;
+    }
     var x = _logicalParent(box);
     for (var depth = 0; x && depth < 512; ++depth) {
         if (before !== undefined && before === after) {
@@ -6508,12 +6530,28 @@ function _zRelevel(box, before) {
             return;
         }
         if (_zOutOfFlow(x)) {
-            // Painted elsewhere, it keeps its `z`; its block sees to its lift.
+            // Its `z` orders it among its block's overlays; its block sees
+            // to its lift over the flow. The same `z` is the same lift.
+            var at = _zOverlayAuto(x);
+            if (at === x.z) {
+                return;
+            }
+            x.z = at;
             before = undefined;
             after = _zLift(x);
+            var took = _zHost(x);
+            if (took) {
+                took.z = after;
+                return;
+            }
             x = _logicalParent(x);
             continue;
         }
+        // Each box at `auto` here is at the highest of its hold and its
+        // kids' lifts (`_zAuto`), so only one kid changed: one raised to
+        // `cur` or over is the highest, one that was under `cur` and still
+        // is changes nothing, and only one that was at `cur` and dropped,
+        // or whose lift was not known, leaves its kids to scan.
         var cur = x.z;
         var next;
         if (after !== null && after >= cur) {
@@ -6560,7 +6598,11 @@ function _zLeft(from) {
             continue;
         }
         if (_zOutOfFlow(x)) {
-            _zRelevel(x, undefined);
+            var at = _zOverlayAuto(x);
+            if (at !== x.z) {
+                x.z = at;
+                _zRelevel(x, undefined);
+            }
             continue;
         }
         var next = _zAuto(x, _zHold(x));
@@ -6696,7 +6738,8 @@ function _setStyleAt(item, prop, value) {
             // last read.
             var fresh = _gFreshStyle(raw);
             var own = _stackOwn(fresh, _gLayoutItem(raw));
-            stacked = own !== null ? own : _zAuto(raw, _stackHold(fresh));
+            stacked = own !== null ? own
+                : _zOutOfFlow(raw) ? _zOverlayAuto(raw) : _zAuto(raw, _stackHold(fresh));
         } else if (typeof raw.eldurHoldZ === "number") {
             var level = parseInt(str, 10);
             var outOfFlow = _zOutOfFlow(raw);
@@ -6704,8 +6747,7 @@ function _setStyleAt(item, prop, value) {
                 : str === "auto" || isNaN(level) ? null
                 : outOfFlow ? level : level >= 0 ? level + 1 : 0;
             _meta(raw).zOwn = set;
-            // An overlay at `auto` is at 0 in its block, as the converter puts it.
-            stacked = set !== null ? set : outOfFlow ? 0 : _zAuto(raw, raw.eldurHoldZ);
+            stacked = set !== null ? set : outOfFlow ? _zOverlayAuto(raw) : _zAuto(raw, raw.eldurHoldZ);
         } else {
             stacked = parseInt(str, 10);
         }
@@ -23707,7 +23749,9 @@ function _gPaintBox(raw, s, e) {
     // at: a kid raised since lifted it on its way up.
     var own = _stackOwn(s, _gLayoutItem(raw));
     var hold = _stackHold(s);
-    var z = own !== null ? own : raw.z === hold ? hold : _zAuto(raw, hold);
+    var z = own !== null ? own
+        : _zOutOfFlow(raw) ? _zOverlayAuto(raw)
+        : raw.z === hold ? hold : _zAuto(raw, hold);
     if (raw.z !== z) {
         var before = _zOutOfFlow(raw) ? undefined : _zLift(raw);
         raw.z = z;
