@@ -2507,6 +2507,19 @@ fn a_link_of_a_runtime_page_leaves_its_keys_to_the_runtime() {
 }
 
 #[test]
+fn an_icon_link_of_a_runtime_page_is_found_by_the_runtime_through_its_icon() {
+    // The line holds no item for the link: the runtime finds it from the
+    // icon's owner, and makes it a stop there (`_inTabStops`).
+    let (qml, _) = convert(&page(
+        "",
+        r##"<details><summary>s</summary></details><p><a href="#t"><svg aria-hidden="true" width="16" height="16"><rect width="16" height="16"/></svg></a></p><div id="t"></div>"##,
+    ));
+    assert!(!qml.contains("Keys.onReturnPressed"), "{qml}");
+    assert!(qml.contains("eldurInlineOwner"), "{qml}");
+    assert!(qml.contains("Accessible.role: Accessible.Link"), "{qml}");
+}
+
+#[test]
 fn a_block_link_keeps_its_focus_styles() {
     // Tab reaches it (`link_keys`), so `:focus-visible` applies there.
     let (qml, diags) = convert(&page(

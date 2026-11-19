@@ -40396,6 +40396,154 @@
    }
   }
  ],
+ "input_icon_links": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1554,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "tab to kept",
+   "log": [
+    "focus keep"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1554,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "keep"
+   }
+  },
+  {
+   "name": "enter on kept",
+   "log": [
+    "click keep keep 0 false ",
+    "click keep document 0 true "
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1554,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "keep"
+   }
+  },
+  {
+   "name": "tab past skip",
+   "log": [
+    "focus frag"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1554,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "frag"
+   }
+  },
+  {
+   "name": "tab to after",
+   "log": [
+    "focus after"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1554,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "after"
+   }
+  },
+  {
+   "name": "back to frag",
+   "log": [
+    "focus frag"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1554,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "frag"
+   }
+  },
+  {
+   "name": "enter on frag",
+   "log": [
+    "click frag document 0 false "
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       774,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": ""
+   }
+  }
+ ],
  "input_keys": [
   {
    "name": "load",

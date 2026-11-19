@@ -777,6 +777,11 @@ fn input_links() {
 }
 
 #[test]
+fn input_icon_links() {
+    page("input_icon_links");
+}
+
+#[test]
 fn input_hit() {
     page("input_hit");
 }

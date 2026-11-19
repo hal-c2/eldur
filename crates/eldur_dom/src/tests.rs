@@ -179,7 +179,8 @@ fn svg_markup_tells_the_colour_the_svg_sets_itself() {
     let doc = Document::parse(
         "<svg fill=currentColor><g color=blue><path d='M0 0' fill=currentColor/>\
          <g style='stroke:red; color: #0f0 !important' color=red><path d='M1 1'/></g>\
-         <g color=red style='color:inherit'><path d='M3 3'/></g></g>\
+         <g color=red style='color:inherit'><path d='M3 3'/></g>\
+         <g color=red style='color: #00f !important; color: inherit'><path d='M4 4'/></g></g>\
          <g color=currentColor><path d='M2 2'/></g></svg>",
     );
     let svg = doc
@@ -200,6 +201,8 @@ fn svg_markup_tells_the_colour_the_svg_sets_itself() {
     // A declared `inherit` beats the presentation attribute: Chromium
     // draws M3 3 blue.
     assert!(markup.contains("d=\"M3 3 blue\""), "{markup}");
+    // An important colour beats a later normal `inherit`.
+    assert!(markup.contains("d=\"M4 4 #00f\""), "{markup}");
 }
 
 #[test]

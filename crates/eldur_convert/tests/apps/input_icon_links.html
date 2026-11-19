@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head><style>
+body { margin: 8px; font: 16px sans-serif; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+#tall { height: 1500px; }
+</style></head>
+<body>
+<p><a id="keep" href="https://example.org/kept"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24"><path d="M12 2 22 22H2z"/></svg></a>
+<a id="skip" tabindex="-1" href="#end"><svg aria-hidden="true" width="16" height="16"><rect width="16" height="16"/></svg></a>
+<a id="frag" href="#end"><span class="sr-only">to the end</span><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24"><path d="M12 2 22 22H2z"/></svg></a>
+<button id="after">after</button></p>
+<div id="tall"></div>
+<div id="end">end</div>
+<script>
+function line(ev) {
+  console.log(ev.type, ev.target.id, ev.currentTarget === document ? "document" : ev.currentTarget.id, ev.detail, ev.defaultPrevented, location.hash);
+}
+document.getElementById("keep").addEventListener("click", function (ev) { line(ev); ev.preventDefault(); });
+document.addEventListener("click", line);
+document.addEventListener("focusin", function (ev) { console.log("focus", ev.target.id); });
+</script>
+</body>
+</html>

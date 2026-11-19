@@ -354,7 +354,7 @@ impl Document {
         let svg = SvgWriter {
             value,
             sizes: &sizes,
-            root: id,
+            root: used.is_some().then_some(id),
         };
         svg.write(self, id, element, &root, None, &mut out);
         if !copies.is_empty() {
@@ -638,8 +638,9 @@ struct SvgWriter<'a> {
     value: &'a dyn Fn(&str, &str, Option<&str>) -> String,
     /// The symbols written with a width and height, and those lengths.
     sizes: &'a [(NodeId, String, String)],
-    /// The `<svg>` being written, whose size is always the one in `sizes`.
-    root: NodeId,
+    /// The `<svg>` being written when it takes the size it is laid out at,
+    /// in place of its own attributes.
+    root: Option<NodeId>,
 }
 
 impl SvgWriter<'_> {
@@ -689,7 +690,7 @@ impl SvgWriter<'_> {
             }
             if size.is_some_and(|size| size.iter().any(|(n, _)| &*attr.name.local == *n))
                 && attr.name.ns == ns!()
-                && (id == self.root || svg_length(&attr.value).is_none())
+                && (self.root == Some(id) || svg_length(&attr.value).is_none())
             {
                 continue;
             }
@@ -705,7 +706,7 @@ impl SvgWriter<'_> {
             out.push('"');
         }
         for (name, length) in size.into_iter().flatten() {
-            if id == self.root || element.attr(name).and_then(svg_length).is_none() {
+            if self.root == Some(id) || element.attr(name).and_then(svg_length).is_none() {
                 out.push_str(&format!(" {name}=\"{length}\""));
             }
         }
@@ -767,14 +768,23 @@ fn svg_own_colour(element: &Element) -> Option<String> {
             .find(|a| a.name.ns == ns!() && &*a.name.local == name)
             .map(|a| &*a.value)
     };
-    // A declared `color: inherit` still overrides the attribute below it.
+    // An important declaration beats a later normal one (Cascade 5 §6.4.1);
+    // then the last wins. A declared `color: inherit` still overrides the
+    // attribute below it.
     let declared = plain("style").and_then(|style| {
-        style
+        let colours: Vec<&str> = style
             .split(';')
             .filter_map(|d| d.split_once(':'))
             .filter(|(name, v)| name.trim().eq_ignore_ascii_case("color") && !v.trim().is_empty())
-            .last()
             .map(|(_, v)| v)
+            .collect();
+        let important = |v: &&str| v.trim_end().ends_with("!important");
+        colours
+            .iter()
+            .rev()
+            .find(important)
+            .or_else(|| colours.last())
+            .copied()
     });
     match declared {
         Some(v) => usable(v),

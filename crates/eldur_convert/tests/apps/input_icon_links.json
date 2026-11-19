@@ -1,0 +1,9 @@
+{"steps":[
+ {"name":"tab to kept","key":"Tab"},
+ {"name":"enter on kept","key":"Enter"},
+ {"name":"tab past skip","key":"Tab"},
+ {"name":"tab to after","key":"Tab"},
+ {"name":"back to frag","key":"Shift+Tab"},
+ {"name":"enter on frag","key":"Enter","settle":200}
+],
+"watch":[{"sel":"#end"}]}
