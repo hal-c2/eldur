@@ -789,6 +789,11 @@ fn input_text_links() {
 }
 
 #[test]
+fn input_link_blur() {
+    page("input_link_blur");
+}
+
+#[test]
 fn input_hit() {
     page("input_hit");
 }

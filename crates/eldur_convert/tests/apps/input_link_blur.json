@@ -1,0 +1,9 @@
+{"steps":[
+ {"name":"tab to first","key":"Tab"},
+ {"name":"escape blurs first","key":"Escape"},
+ {"name":"enter after first blur","key":"Enter"},
+ {"name":"script focuses icon","click":"#toicon"},
+ {"name":"escape blurs icon","key":"Escape"},
+ {"name":"enter after icon blur","key":"Enter"}
+],
+"watch":[{"sel":"#first"}]}
