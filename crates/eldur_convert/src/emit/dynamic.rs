@@ -43,6 +43,14 @@ const MAX_POSITIONED: usize = 32;
 
 const MARKER: &str = "\u{1}eldur:";
 
+#[cfg(test)]
+thread_local! {
+    /// Page emissions so far on this thread, for the work tests.
+    pub(super) static PAGE_EMISSIONS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+    /// Emit every world alone, as the shared emissions must agree with.
+    pub(super) static ONE_WORLD_AT_A_TIME: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
 /// The marker comment [`Emitter`] puts on `node`'s outermost object.
 pub(super) fn marker(node: NodeId) -> String {
     format!("{MARKER}{}", node.index())
@@ -1104,6 +1112,8 @@ impl Dynamic<'_, '_> {
         collapsed: HashSet<NodeId>,
         diags: &mut Diagnostics,
     ) -> Emitted {
+        #[cfg(test)]
+        PAGE_EMISSIONS.with(|c| c.set(c.get() + 1));
         let tree = boxes::build_with(
             cx.doc,
             styles,
