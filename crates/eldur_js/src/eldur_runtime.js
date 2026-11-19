@@ -6831,14 +6831,15 @@ function focus(item) {
     if (!raw.__eldurInline && _itHidden(raw)) {
         return;
     }
-    // A link in a line is not an item: its `Text` holds the focus for it.
-    if (_in && raw.__eldurInline && raw.model) {
+    // A link in a line is not an item: its `Text` holds the focus for it, or
+    // with no words of its own, the icon it carries.
+    var holder = _in && raw.__eldurInline ? _inInlineHolder(raw) : null;
+    if (holder) {
         _in.inlineFocus = raw;
-        var line = raw.model.text;
-        if (line.activeFocus) {
+        if (holder.activeFocus) {
             _inFocusChanged();
         } else {
-            line.forceActiveFocus();
+            holder.forceActiveFocus();
         }
         return;
     }
@@ -16984,6 +16985,33 @@ function _inIsLink(raw) {
     return _nodeTag(raw) === "a" && getAttribute(raw, "href") !== null;
 }
 
+// The link in a line an atomic inline (an icon) is drawn in: the line holds no
+// item of the link's own, so the icon is its box.
+function _inCarriedLink(item) {
+    if (!item || item.__eldurInline || item.eldurInlineOwner === undefined) {
+        return null;
+    }
+    for (var at = _logicalParent(item); at && at.__eldurInline; at = _logicalParent(at)) {
+        if (_inIsLink(at)) {
+            return at;
+        }
+    }
+    return null;
+}
+
+// What holds an inline element's focus: the `Text` of its words, else the
+// first icon it carries, once found.
+function _inInlineHolder(raw) {
+    if (raw.model) {
+        return raw.model.text;
+    }
+    var m = _meta(raw);
+    if (!m.carrier || _inCarriedLink(m.carrier) !== raw) {
+        m.carrier = _elementsUnder(_root, function(node) { return _inCarriedLink(node) === raw; }, true)[0] || null;
+    }
+    return m.carrier;
+}
+
 // A key's click comes from nowhere: no point, no count, and it is a click all
 // the same, with the element's default action after it.
 // Qt's `click()` also takes the focus, which a click from a key does not.
@@ -17086,14 +17114,26 @@ function _inCanFocus(raw) {
 function _inTabStops() {
     var positive = [];
     var natural = [];
-    _elementsUnder(_root, function(node) { return !node.__eldurInline; }, false).forEach(function(node) {
+    // A link in a line is a stop where the first icon it carries stands.
+    var carried = [];
+    _elementsUnder(_root, function(item) { return !item.__eldurInline; }, false).forEach(function(item) {
+        var node = item;
+        var link = _inCarriedLink(item);
+        if (link && carried.indexOf(link) < 0) {
+            carried.push(link);
+            _meta(link).carrier = item;
+            if (!_inCanFocus(item)) {
+                return;
+            }
+            node = link;
+        }
         var written = getAttribute(node, "tabindex");
         var tag = _nodeTag(node);
         var natively = typeof node.clicked === "function" || _inIsField(node) || typeof node.activated === "function"
             || typeof node.moved === "function" || typeof node.valueModified === "function"
             || _inIsLink(node) || tag === "summary";
         var index = written === null ? (natively ? 0 : -1) : parseInt(written, 10);
-        if (isNaN(index) || index < 0 || !_inCanFocus(node)) {
+        if (isNaN(index) || index < 0 || (node === item && !_inCanFocus(node))) {
             return;
         }
         if (_inIsRadio(node) && !node.checked && _inRadioGroup(node).some(function(r) { return r.checked; })) {
@@ -17122,7 +17162,8 @@ function _inTabFrom(stops, from, back) {
     var best = -1;
     var bestAt = back ? -1 : order.length;
     for (var i = 0; i < stops.length; ++i) {
-        var at = order.indexOf(stops[i]);
+        // A link in a line stands where its icon does (`_inTabStops`).
+        var at = order.indexOf(stops[i].__eldurInline ? _meta(stops[i]).carrier : stops[i]);
         if (back ? at < here && at > bestAt : at > here && at < bestAt) {
             best = i;
             bestAt = at;
@@ -17181,7 +17222,7 @@ function _inTabStep(back) {
 function _inFocusElement() {
     var item = _in.focusProbe.held;
     var body = _vBody();
-    if (_in.inlineFocus && item === _in.inlineFocus.model.text) {
+    if (_in.inlineFocus && item === _inInlineHolder(_in.inlineFocus)) {
         return _in.inlineFocus;
     }
     _in.inlineFocus = null;
