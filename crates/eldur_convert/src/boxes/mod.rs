@@ -126,7 +126,7 @@ pub(crate) fn build<'a>(
     styles: &'a StyleMap,
     diags: &mut Diagnostics,
 ) -> Option<LayoutBox<'a>> {
-    build_with(doc, styles, None, None, diags)
+    build_with(doc, styles, None, None, None, diags)
 }
 
 /// An element a script reaches as a node of its line or `<select>`
@@ -257,11 +257,15 @@ pub(crate) fn hidden_elements(doc: &Document, styles: &StyleMap) -> Vec<NodeId> 
 /// Each inline element in `own` is laid out as an atomic inline-level box
 /// of its own: the elements a script creates in a line need an item to be
 /// materialised into (dynamic-styles.md §6.8).
+/// Each element in `uncounted` is laid out as shown but hidden in the
+/// combination being built: like a `display: none` one, it counts nothing,
+/// so the list items after it are numbered as if it were not there.
 pub(crate) fn build_with<'a>(
     doc: &'a Document,
     styles: &'a StyleMap,
     keep: Option<&'a HashSet<NodeId>>,
     own: Option<&'a HashSet<NodeId>>,
+    uncounted: Option<&'a HashSet<NodeId>>,
     diags: &mut Diagnostics,
 ) -> Option<LayoutBox<'a>> {
     let root = doc.html()?;
@@ -274,6 +278,7 @@ pub(crate) fn build_with<'a>(
         styles,
         keep,
         own,
+        uncounted,
         diags,
         counters: counters::Counters::new(),
         quote_depth: 0,
@@ -308,6 +313,7 @@ struct Builder<'a, 'd> {
     styles: &'a StyleMap,
     keep: Option<&'a HashSet<NodeId>>,
     own: Option<&'a HashSet<NodeId>>,
+    uncounted: Option<&'a HashSet<NodeId>>,
     diags: &'d mut Diagnostics,
     counters: counters::Counters,
     quote_depth: usize,
@@ -526,6 +532,12 @@ impl<'a> Builder<'a, '_> {
         let Some(style) = style else {
             return;
         };
+        // Hidden in this combination, it counts nothing outside itself; its
+        // own marker still reads what it would show.
+        let before = self
+            .uncounted
+            .is_some_and(|u| u.contains(&node))
+            .then(|| self.counters.clone());
         if let Some(e) = self.doc.element(node)
             && matches!(e.local_name(), "ol" | "ul" | "menu")
         {
@@ -584,6 +596,9 @@ impl<'a> Builder<'a, '_> {
                 out.push(Child::Inline(whitespace::Raw::Atomic(Box::new(atomic))));
             }
             Level::LineBreak => out.push(Child::Inline(whitespace::Raw::LineBreak)),
+        }
+        if let Some(counters) = before {
+            self.counters = counters;
         }
     }
 
@@ -848,6 +863,8 @@ impl<'a> Builder<'a, '_> {
                 self.styles
                     .style(c)
                     .is_some_and(|s| s.display == Display::ListItem)
+                    // A sibling hidden in this combination is not numbered.
+                    && (c == node || !self.uncounted.is_some_and(|u| u.contains(&c)))
             })
             .collect();
         let parent_element = self.doc.element(parent);

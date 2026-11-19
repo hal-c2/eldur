@@ -264,6 +264,9 @@ pub(crate) struct Emitter<'a, 'd> {
     /// Elements `display: none` in the combination being emitted, laid out
     /// as shown and hidden with `visible`.
     collapsed: HashSet<NodeId>,
+    /// Elements `display: none` in some combination: each has an id in
+    /// every one, so the margins after it can follow its `visible`.
+    hideable: HashSet<NodeId>,
     /// The control being emitted is sticky.
     force_paint: bool,
     /// The run being written has its elements' boxes painted by `EldurInlineBox`.
@@ -364,6 +367,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             shares: HashSet::new(),
             plain_control: false,
             collapsed: HashSet::new(),
+            hideable: HashSet::new(),
             force_paint: false,
             boxes_drawn: false,
             inline_items: HashSet::new(),
@@ -1036,6 +1040,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
             _ if block_id.is_some() => block_id,
             (Some(id), _) => Some(self.claim_html_id(id)),
             (None, true) => Some(self.ids.claim(&hint(self.doc, b))),
+            (None, false) if b.node.is_some_and(|n| self.hideable.contains(&n)) => {
+                Some(self.ids.claim(&hint(self.doc, b)))
+            }
             (None, false) => None,
         };
         // A layout whose children refer to it by id keeps that id, so an
