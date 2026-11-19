@@ -926,30 +926,36 @@ pub(crate) fn keyframe_style(
     // First update any custom properties declared inside the keyframe.
     for (name, raw_val) in &keyframe.declarations {
         if properties::kind(name) == PropertyKind::Custom {
-            if let Some(kw) = CssWide::parse(raw_val) {
+            let wide = CssWide::parse(raw_val);
+            let resolved = wide
+                .is_none()
+                .then(|| substitute_from_map(raw_val, &style.custom_properties))
+                .flatten();
+            let custom = std::sync::Arc::make_mut(&mut style.custom_properties);
+            if let Some(kw) = wide {
                 match kw {
                     CssWide::Initial => {
-                        style.custom_properties.remove(name);
+                        custom.remove(name);
                     }
                     CssWide::Inherit | CssWide::Unset | CssWide::Revert => {
                         if let Some(v) = parent_style.and_then(|p| p.custom_properties.get(name)) {
-                            style.custom_properties.insert(name.clone(), v.clone());
+                            custom.insert(name.clone(), v.clone());
                         } else {
-                            style.custom_properties.remove(name);
+                            custom.remove(name);
                         }
                     }
                     CssWide::RevertLayer => {
                         if let Some(v) = base.custom_properties.get(name) {
-                            style.custom_properties.insert(name.clone(), v.clone());
+                            custom.insert(name.clone(), v.clone());
                         } else {
-                            style.custom_properties.remove(name);
+                            custom.remove(name);
                         }
                     }
                 }
-            } else if let Some(resolved) = substitute_from_map(raw_val, &style.custom_properties) {
-                style.custom_properties.insert(name.clone(), resolved);
+            } else if let Some(resolved) = resolved {
+                custom.insert(name.clone(), resolved);
             } else {
-                style.custom_properties.remove(name);
+                custom.remove(name);
             }
         }
     }
@@ -1575,8 +1581,8 @@ impl<'a> CascadeEngine<'a> {
 
         if !custom_candidates.is_empty() {
             resolve_element_custom_properties(
-                &mut style.custom_properties,
-                parent_style.map(|p| &p.custom_properties),
+                std::sync::Arc::make_mut(&mut style.custom_properties),
+                parent_style.map(|p| &*p.custom_properties),
                 custom_candidates,
             );
         }
