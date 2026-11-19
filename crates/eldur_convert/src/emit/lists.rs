@@ -415,6 +415,7 @@ impl Emitter<'_, '_> {
         lift: i32,
     ) -> Object {
         self.static_places = true;
+        self.hoisted_frames = true;
         let host = self.ids.claim(&format!("{} host", hint(self.doc, b)));
         let mut frame = Object::new("Item");
         frame.members.push(Member::PropertyDecl {
@@ -426,11 +427,13 @@ impl Emitter<'_, '_> {
         });
         match block {
             Some(block) => {
-                for (axis, function) in [("x", "staticX"), ("y", "staticY")] {
+                for (axis, function, shift) in
+                    [("x", "staticX", "shiftX"), ("y", "staticY", "shiftY")]
+                {
                     frame.set(
                         axis,
                         Value::expr(format!(
-                            "{ROOT_ID}.{function}({block}, {host}.parent) - {ROOT_ID}.{function}({host}, {host}.parent)"
+                            "{ROOT_ID}.{function}({block}, {host}.parent) + {ROOT_ID}.{shift}({block}, {host}.parent) - {ROOT_ID}.{function}({host}, {host}.parent)"
                         )),
                     );
                 }
@@ -870,7 +873,7 @@ pub(super) fn split_out_of_flow<'c, 'l>(
 
 /// How far a slot is from the item a box's static position is relative to.
 /// Reads every `x` or `y` on the way, so the binding follows layout.
-pub(super) fn static_place_functions(root: &mut Object) {
+pub(super) fn static_place_functions(root: &mut Object, hoisted: bool) {
     for (name, axis) in [("staticX", "x"), ("staticY", "y")] {
         root.members.push(Member::Function {
             name: name.to_owned(),
@@ -882,7 +885,37 @@ pub(super) fn static_place_functions(root: &mut Object) {
             ],
         });
     }
+    if !hoisted {
+        return;
+    }
+    // A hoisted overlay's frame lies where its block is painted, so it adds
+    // the relative offsets on the way. An item's `transform` list says
+    // nothing when it changes, so the runtime counts the shifts it adds.
+    root.members.push(Member::PropertyDecl {
+        ty: "int".to_owned(),
+        name: SHIFTS_PROPERTY.to_owned(),
+        value: Some(Value::Number(0.0)),
+        readonly: false,
+        required: false,
+    });
+    let shift = super::transform::SHIFT_NAME;
+    for (name, axis) in [("shiftX", "x"), ("shiftY", "y")] {
+        root.members.push(Member::Function {
+            name: name.to_owned(),
+            params: vec!["item".to_owned(), "block".to_owned()],
+            body: vec![
+                format!("let at = 0 * {ROOT_ID}.{SHIFTS_PROPERTY}"),
+                format!(
+                    "for (; item && item !== block; item = item.parent) for (let i = 0; i < item.transform.length; ++i) if (item.transform[i].objectName === \"{shift}\") at += item.transform[i].{axis}"
+                ),
+                "return at".to_owned(),
+            ],
+        });
+    }
 }
+
+/// The root's count of the relative offsets the runtime has added.
+const SHIFTS_PROPERTY: &str = "eldurShifts";
 
 /// Whether a box has text somewhere in flow that wraps at the width it gets.
 fn has_text(b: &LayoutBox<'_>) -> bool {

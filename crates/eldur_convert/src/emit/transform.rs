@@ -148,6 +148,30 @@ impl Emitter<'_, '_> {
         obj.set("transform", value);
     }
 
+    /// `position: relative`, last in the list: like a transform it moves the
+    /// box's painting, and what it holds, not its place in the flow. The
+    /// runtime takes the `Translate` over by its name when its rules move the
+    /// box, and a hoisted overlay's frame reads it.
+    pub(super) fn relative_shift(obj: &mut Object, style: &ComputedStyle) {
+        let Some((x, y)) = super::relative_px(style).filter(|&at| at != (0.0, 0.0)) else {
+            return;
+        };
+        let mut shift = translate(number(x), number(y));
+        shift.set("objectName", SHIFT_NAME);
+        let mut values = match obj.get("transform") {
+            Some(Value::List(old)) => old.clone(),
+            Some(old) => vec![old.clone()],
+            None => Vec::new(),
+        };
+        values.push(Value::Object(Box::new(shift)));
+        let value = if values.len() == 1 {
+            values.pop().expect("one transform")
+        } else {
+            Value::List(values)
+        };
+        obj.set("transform", value);
+    }
+
     /// `position: sticky`, last in the list: it moves the box as transformed.
     pub(super) fn sticky_transform(&mut self, obj: &mut Object, style: &ComputedStyle, hint: &str) {
         if style.position != Position::Sticky {
@@ -256,6 +280,9 @@ impl Emitter<'_, '_> {
         }
     }
 }
+
+/// The name of the `Translate` a relative offset moves a box by.
+pub(super) const SHIFT_NAME: &str = "eldurShift";
 
 fn translate(x: Value, y: Value) -> Object {
     let mut t = Object::new("Translate");

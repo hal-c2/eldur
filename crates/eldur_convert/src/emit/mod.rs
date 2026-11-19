@@ -128,6 +128,9 @@ pub(crate) struct Emitter<'a, 'd> {
     hideable_ancestor: bool,
     /// Some overlay reads where its slot is, through the root's functions.
     static_places: bool,
+    /// Some overlay was taken out of its block into a frame where the block
+    /// is, which reads the block's relative offsets too.
+    hoisted_frames: bool,
     /// The highest `z-index` of an overlay inside the page, which cannot
     /// reach above the initial containing block's.
     nested_z: Option<i32>,
@@ -300,6 +303,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             fixed_block: None,
             hideable_ancestor: false,
             static_places: false,
+            hoisted_frames: false,
             nested_z: None,
             above_flow: None,
             overlay_inside: None,
@@ -552,7 +556,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             Self::table_solver(&mut root);
         }
         if self.static_places {
-            lists::static_place_functions(&mut root);
+            lists::static_place_functions(&mut root, self.hoisted_frames);
         }
         if self.fragment_links {
             self.scroll_to_fragment(&mut root);
@@ -1253,6 +1257,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             self.transform(&mut e.obj, &b.style, &hint(self.doc, b), &what, line);
         }
         self.sticky_transform(&mut e.obj, &b.style, &hint(self.doc, b));
+        Self::relative_shift(&mut e.obj, &b.style);
         // The runtime shows, hides and keeps in place what a class change
         // gives or takes from the element, and a script does not see it.
         if self.runtime_dom
@@ -1459,7 +1464,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         let positioned = std::mem::take(&mut self.positioned_child);
         match style.position {
             Position::Static => {}
-            Position::Relative if is_unmoved(style) => {}
+            Position::Relative if relative_px(style).is_some() => {}
             Position::Sticky => {}
             Position::Absolute | Position::Fixed if positioned => {}
             Position::Absolute | Position::Fixed => self.diags.warning(
@@ -1676,13 +1681,22 @@ fn establishes_bfc(style: &ComputedStyle) -> bool {
         || !matches!(style.display, Display::Block | Display::ListItem)
 }
 
-fn is_unmoved(style: &ComputedStyle) -> bool {
-    [&style.top, &style.right, &style.bottom, &style.left]
-        .iter()
-        .all(|v| match v {
-            LengthAuto::Auto => true,
-            LengthAuto::Length(l) => l.as_px() == Some(0.0),
-        })
+/// How far `position: relative` moves a box from where the flow has it, when
+/// each inset that counts is in pixels: left and top win (CSS 2.2 §9.4.3).
+/// A percentage resolves against the containing block, which is not known here.
+pub(super) fn relative_px(style: &ComputedStyle) -> Option<(f32, f32)> {
+    if style.position != Position::Relative {
+        return Some((0.0, 0.0));
+    }
+    let axis = |near: &LengthAuto, far: &LengthAuto| match (near, far) {
+        (LengthAuto::Length(l), _) => l.as_px(),
+        (LengthAuto::Auto, LengthAuto::Length(l)) => l.as_px().map(|px| -px),
+        (LengthAuto::Auto, LengthAuto::Auto) => Some(0.0),
+    };
+    Some((
+        axis(&style.left, &style.right)?,
+        axis(&style.top, &style.bottom)?,
+    ))
 }
 
 /// The first child `<legend>` of a `<fieldset>` and the boxes after it. A
