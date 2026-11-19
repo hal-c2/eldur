@@ -6001,7 +6001,8 @@ function _setTextAt(item, value) {
         return;
     }
     var m = _meta(raw);
-    if (_holdsLines(raw)) {
+    // A fragment draws nothing of its own, so its text is a text node it holds.
+    if (m.isFragment || _holdsLines(raw)) {
         // Every child goes, and the runs with them; the line stays for the text.
         _rawKids(raw, true).forEach(function(kid) {
             if (kid.__eldurInline || _meta(kid).createdTag || kid.objectName) {
@@ -12376,18 +12377,27 @@ function wrap(rawItem) {
             if (!p) {
                 return null;
             }
-            var kids = _scriptElementChildren(p);
-            var idx = kids.indexOf(rawItem);
-            return idx !== -1 && idx + 1 < kids.length ? wrap(kids[idx + 1]) : null;
+            // Found among all the raw kids, so a text node finds its neighbours too.
+            var kids = _rawElementChildren(p);
+            for (var i = kids.indexOf(rawItem) + 1; i > 0 && i < kids.length; ++i) {
+                if (!_isTextNode(kids[i])) {
+                    return wrap(kids[i]);
+                }
+            }
+            return null;
         },
         get previousElementSibling() {
             var p = _logicalParent(rawItem);
             if (!p) {
                 return null;
             }
-            var kids = _scriptElementChildren(p);
-            var idx = kids.indexOf(rawItem);
-            return idx > 0 ? wrap(kids[idx - 1]) : null;
+            var kids = _rawElementChildren(p);
+            for (var i = kids.indexOf(rawItem) - 1; i >= 0; --i) {
+                if (!_isTextNode(kids[i])) {
+                    return wrap(kids[i]);
+                }
+            }
+            return null;
         },
         get nextSibling() {
             var nextIn = _logicalParent(rawItem);
@@ -12617,6 +12627,10 @@ function wrap(rawItem) {
         cloneNode: function(deep) {
             if (rawItem.__eldurInline) {
                 return wrap(_vClone(rawItem, Boolean(deep)));
+            }
+            // An item for `#text` holds its text as a node's, not as an element's.
+            if (_isTextNode(rawItem)) {
+                return document.createTextNode(getText(rawItem));
             }
             if (m.isFragment) {
                 var whole = document.createDocumentFragment();
