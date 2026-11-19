@@ -55,6 +55,66 @@ fn worlds_that_repaint_subtrees_apart_share_one_emission() {
     );
 }
 
+/// `items` cards whose `:hover` shows a block inside, each card a world of
+/// its own.
+fn cards_showing(items: usize) -> String {
+    let cards: String = (0..items)
+        .map(|i| format!("<div class=c{i}><p>card {i}</p><p class=h>more</p></div>"))
+        .collect();
+    let rules: String = (0..items)
+        .map(|i| format!(".c{i}:hover .h{{display:block}} "))
+        .collect();
+    format!("<!DOCTYPE html><style>.h{{display:none}} {rules}</style>{cards}")
+}
+
+/// A table of `cells` cells, four to a row, each recoloured by its own
+/// `:hover`, with borders `collapse` or `separate`.
+fn table_hovers(cells: usize, borders: &str) -> String {
+    let rows: String = (0..cells.div_ceil(4))
+        .map(|r| {
+            let row: String = (r * 4..(r * 4 + 4).min(cells))
+                .map(|i| format!("<td class=c{i}>{i}</td>"))
+                .collect();
+            format!("<tr>{row}</tr>")
+        })
+        .collect();
+    let rules: String = (0..cells)
+        .map(|i| format!(".c{i}:hover{{color:red}} "))
+        .collect();
+    format!(
+        "<!DOCTYPE html><style>table{{border-collapse:{borders}}} \
+         td{{border:1px solid black}} {rules}</style><table>{rows}</table>"
+    )
+}
+
+#[test]
+fn a_world_that_shows_or_hides_an_element_is_emitted_alone() {
+    // Showing an element moves what follows it, which is not a repaint:
+    // the document's world, then each card's world on its own.
+    for items in [4, 8] {
+        assert_eq!(emissions(&cards_showing(items)), 1 + items, "{items} cards");
+    }
+}
+
+#[test]
+fn a_collapsed_table_s_cells_repaint_the_table() {
+    // A collapsed table draws half of each cell's border in its neighbour,
+    // so its cells' worlds are never emitted together.
+    for cells in [8, 16] {
+        assert_eq!(
+            emissions(&table_hovers(cells, "collapse")),
+            1 + cells,
+            "{cells} collapsed cells"
+        );
+    }
+    // Apart, each cell draws its own borders and they share an emission.
+    assert_eq!(
+        emissions(&table_hovers(16, "separate")),
+        emissions(&table_hovers(8, "separate")),
+        "separate cells"
+    );
+}
+
 /// Pages whose worlds can and cannot share an emission.
 const BATCHING: &[&str] = &[
     // Repainted siblings, a nested hover and colour inherited by inline text.
@@ -88,6 +148,10 @@ const BATCHING: &[&str] = &[
      .a{border-right:2px solid black} .a:hover{border-right-color:red}\
      .b:hover{background:yellow}</style>\
      <table><tr><td class=a>A<td class=b>B<tr><td>C<td>D</table>",
+    // Showing a block moves its batch-mate: the next paragraph's top margin
+    // reads whether the block is shown.
+    "<style>.x{display:none;margin:30px} .a:hover + .x{display:block} p{margin:10px}\
+     .b:hover{color:red}</style><p>0</p><p class=a>a</p><p class=x id=x>x</p><p class=b>b</p>",
 ];
 
 /// Files next to a corpus page, as the corpus snapshot test reads them.
