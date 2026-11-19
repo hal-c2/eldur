@@ -6596,10 +6596,11 @@ function _splitDecls(text) {
     var quote = "";
     for (var i = 0; i < text.length; ++i) {
         var c = text.charAt(i);
-        if (quote) {
-            if (c === "\\") {
-                ++i;
-            } else if (c === quote) {
+        if (c === "\\") {
+            // An escaped character is never a quote, a bracket or a `;`.
+            ++i;
+        } else if (quote) {
+            if (c === quote) {
                 quote = "";
             }
         } else if (c === "\"" || c === "'") {
@@ -6661,50 +6662,72 @@ function _styleDecls(raw, m) {
     return out;
 }
 
-var _DISPLAY_ONE = /^(none|contents|block|inline|inline-block|flex|inline-flex|grid|inline-grid|flow-root|list-item|table|inline-table|table-row-group|table-header-group|table-footer-group|table-row|table-cell|table-column-group|table-column|table-caption|inherit|initial|unset|revert|revert-layer)$/;
-var _DISPLAY_PART = /^(block|inline|flow|flow-root|flex|grid|table|list-item)$/;
+var _DISPLAY_ONE = /^(none|contents|block|inline|run-in|flow|flow-root|flex|grid|table|ruby|math|list-item|inline-block|inline-flex|inline-grid|inline-table|table-row-group|table-header-group|table-footer-group|table-row|table-cell|table-column-group|table-column|table-caption|ruby-base|ruby-text|ruby-base-container|ruby-text-container|inherit|initial|unset|revert|revert-layer)$/;
+var _DISPLAY_OUTSIDE = /^(block|inline|run-in)$/;
+var _DISPLAY_INSIDE = /^(flow|flow-root|flex|grid|table|ruby)$/;
 
-// A single keyword, or two or three of the multi-keyword parts, none twice.
+// A single keyword, or at most one outside and one inside keyword and
+// `list-item`, as CSS Display 3 allows: `list-item` goes with a flow inside
+// only, and without it a value takes both an outside and an inside keyword.
 function _validDisplay(v) {
     if (_DISPLAY_ONE.test(v)) {
         return true;
     }
     var words = v.split(/\s+/);
-    var seen = {};
+    var outside = "";
+    var inside = "";
+    var listItem = false;
     for (var i = 0; i < words.length; ++i) {
-        if (!_DISPLAY_PART.test(words[i]) || seen[words[i]]) {
+        var w = words[i];
+        if (_DISPLAY_OUTSIDE.test(w) && !outside) {
+            outside = w;
+        } else if (_DISPLAY_INSIDE.test(w) && !inside) {
+            inside = w;
+        } else if (w === "list-item" && !listItem) {
+            listItem = true;
+        } else {
             return false;
         }
-        seen[words[i]] = true;
     }
-    return words.length >= 2 && words.length <= 3;
+    if (listItem) {
+        return inside === "" || inside === "flow" || inside === "flow-root";
+    }
+    return outside !== "" && inside !== "";
+}
+
+// The declaration of `name` that wins among `decls`, as the cascade picks it:
+// an important one over a normal one, then the last; an invalid `display` is
+// dropped, as the parser drops it. Its value has no priority, and a
+// `display` keyword is lowercased, as CSSOM serializes it.
+function _winningDecl(decls, name) {
+    var won = null;
+    for (var i = 0; i < decls.length; ++i) {
+        if (decls[i][0] !== name) {
+            continue;
+        }
+        var v = String(decls[i][1]).trim();
+        var bang = /!\s*important$/i.exec(v);
+        if (bang) {
+            v = v.slice(0, bang.index).trim();
+        }
+        if (name === "display") {
+            v = v.toLowerCase().replace(/\s+/g, " ");
+            if (!_validDisplay(v)) {
+                continue;
+            }
+        }
+        if (bang || !(won && won.important)) {
+            won = { value: v, important: Boolean(bang) };
+        }
+    }
+    return won;
 }
 
 // The `display` the element's own declaration gives it, as the cascade picks
 // it: an important declaration over a normal one, then the last.
 function _ownDisplay(raw, m) {
-    var decls = _styleDecls(raw, m);
-    var won = "";
-    var important = false;
-    for (var i = 0; i < decls.length; ++i) {
-        if (decls[i][0] !== "display") {
-            continue;
-        }
-        var v = String(decls[i][1]).trim().toLowerCase();
-        var bang = /!\s*important$/.exec(v);
-        if (bang) {
-            v = v.slice(0, bang.index).trim();
-        }
-        // An invalid value is dropped, as the parser drops it.
-        if (!_validDisplay(v)) {
-            continue;
-        }
-        if (bang || !important) {
-            won = v;
-            important = Boolean(bang);
-        }
-    }
-    return won;
+    var won = _winningDecl(_styleDecls(raw, m), "display");
+    return won ? won.value : "";
 }
 
 function getStyle(item, prop) {
@@ -6731,12 +6754,9 @@ function getStyle(item, prop) {
     // until a script writes over it.
     if (raw && typeof raw.eldurStyle === "string" && raw.eldurStyle !== "") {
         var wanted = camel.indexOf("--") === 0 ? camel : _camelToKebab(camel);
-        var decls = raw.eldurStyle.split(";");
-        for (var d = decls.length - 1; d >= 0; --d) {
-            var colon = decls[d].indexOf(":");
-            if (colon > 0 && decls[d].slice(0, colon).trim().toLowerCase() === wanted) {
-                return decls[d].slice(colon + 1).trim();
-            }
+        var won = _winningDecl(_parseDecls(raw.eldurStyle), wanted);
+        if (won) {
+            return won.value;
         }
     }
     if (camel === "display" && raw && typeof raw.visible === "boolean") {
