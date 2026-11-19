@@ -45,7 +45,8 @@ impl Emitter<'_, '_> {
         if obj.type_name == "Text" {
             return;
         }
-        self.link_handlers(obj, &href);
+        self.link_handlers(obj, &href, node);
+        self.link_keys(obj, &href);
         self.link_accessible(obj, node);
     }
 
@@ -66,12 +67,22 @@ impl Emitter<'_, '_> {
     /// not the box, which follows the link when tapped. The first box of a
     /// link is the link assistive technology finds, named as a browser
     /// names it, as a link that is only an icon has nothing else to read.
-    pub(super) fn atomic_link(&mut self, obj: &mut Object, link: NodeId, first: bool) {
+    /// `item` is the atomic inline's own element, whose `pointer-events`
+    /// (inherited from the link unless it sets its own) decides the tap.
+    pub(super) fn atomic_link(
+        &mut self,
+        obj: &mut Object,
+        item: Option<NodeId>,
+        link: NodeId,
+        first: bool,
+    ) {
         let Some(href) = self.href(link) else {
             return;
         };
-        self.link_handlers(obj, &href);
+        self.link_handlers(obj, &href, item.unwrap_or(link));
+        // One stop in the focus chain per link, as a browser has.
         if first {
+            self.link_keys(obj, &href);
             self.link_accessible(obj, link);
         }
     }
@@ -84,7 +95,18 @@ impl Emitter<'_, '_> {
         element.attr("href").map(str::to_owned)
     }
 
-    fn link_handlers(&mut self, obj: &mut Object, href: &str) {
+    /// The tap and the pointing hand. A box with `pointer-events: none`
+    /// gets neither: a click there goes to what is under it, and the cursor
+    /// is what that shows (CSS UI 4 §6.2). Its keyboard reach and its role
+    /// stay, as they do in a browser.
+    fn link_handlers(&mut self, obj: &mut Object, href: &str, node: NodeId) {
+        if self
+            .styles
+            .computed(node)
+            .is_some_and(|c| c.style.pointer_events == eldur_css::PointerEvents::None)
+        {
+            return;
+        }
         let follow = self.follow(href);
         // This handler may hear the tap before the one a listener is on.
         let (params, body) = if self.runtime_dom {
@@ -109,12 +131,34 @@ impl Emitter<'_, '_> {
         obj.push_child(hover);
     }
 
+    /// A link is a stop in the tab chain, and Return or Enter there follows
+    /// it (HTML §6.6.3, "activation behavior"). The plain follow, in a page
+    /// with a runtime too: a key press dispatches no click there to wait on.
+    fn link_keys(&mut self, obj: &mut Object, href: &str) {
+        let follow = self.follow(href);
+        if obj.get("activeFocusOnTab").is_none() {
+            obj.set("activeFocusOnTab", true);
+        }
+        for name in ["Keys.onReturnPressed", "Keys.onEnterPressed"] {
+            obj.members.push(Member::Handler {
+                name: name.to_owned(),
+                params: Vec::new(),
+                body: vec![follow.clone()],
+            });
+        }
+    }
+
     /// A link's role and name: its ARIA name, else what it reads (AccName
     /// step 2F), visually hidden text included, `aria-hidden` icons not.
+    /// The box may be an `aria-hidden` icon that carries the link; the link
+    /// is not hidden, so the box is no longer ignored.
     fn link_accessible(&self, obj: &mut Object, link: NodeId) {
         if accessible::hidden(self.doc, self.styles, link) {
             return;
         }
+        obj.members.retain(
+            |m| !matches!(m, Member::Property { name, .. } if name == "Accessible.ignored"),
+        );
         let name = accessible::aria_name(self.doc, self.styles, link).unwrap_or_else(|| {
             accessible::content_text(self.doc, self.styles, link, None, accessible::Reading::Read)
         });

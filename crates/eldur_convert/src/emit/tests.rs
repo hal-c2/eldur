@@ -2452,3 +2452,19 @@ fn a_form_reset_writes_a_scrolled_textarea_s_own_text() {
         .expect("the TextArea has its own id");
     assert!(qml.contains(&format!("{id}.text = \"hi\";")), "{qml}");
 }
+
+#[test]
+fn a_block_link_without_pointer_events_is_reached_by_keyboard_only() {
+    // Chromium: a click on a `pointer-events: none` link goes to what is
+    // under it and shows its cursor; Tab still stops there and Return
+    // follows it, and it is still read as a link.
+    let (qml, _) = convert(&page(
+        "a{display:block}",
+        r##"<a href="#t" style="pointer-events:none"><div style="height:20px"></div></a><div id="t"></div>"##,
+    ));
+    assert!(!qml.contains("TapHandler"), "{qml}");
+    assert!(!qml.contains("Qt.PointingHandCursor"), "{qml}");
+    assert!(qml.contains("Keys.onReturnPressed"), "{qml}");
+    assert!(qml.contains("activeFocusOnTab: true"), "{qml}");
+    assert!(qml.contains("Accessible.Link"), "{qml}");
+}
