@@ -301,9 +301,14 @@ img, svg { display: block }
 <svg id=ia xmlns="http://www.w3.org/2000/svg" width="-80" height="40" viewBox="0 0 20 10"><rect width="20" height="10" fill="#c60"/></svg>
 <svg id=ib xmlns="http://www.w3.org/2000/svg" width="80" height="-40" viewBox="0 0 20 10"><rect width="20" height="10" fill="#c60"/></svg>
 <svg id=ic xmlns="http://www.w3.org/2000/svg" width="-80" height="-40"><rect width="20" height="10" fill="#c60"/></svg>
+<svg id=ie xmlns="http://www.w3.org/2000/svg"><rect width="20" height="10" fill="#c60"/></svg>
+<svg id=ig xmlns="http://www.w3.org/2000/svg" width="-80"><rect width="20" height="10" fill="#c60"/></svg>
+<svg id=ih xmlns="http://www.w3.org/2000/svg" width="-80" height="40"><rect width="20" height="10" fill="#c60"/></svg>
+<svg id=ij xmlns="http://www.w3.org/2000/svg" width="80"><rect width="20" height="10" fill="#c60"/></svg>
+<svg id=ik xmlns="http://www.w3.org/2000/svg" width="-80" viewBox="0 0 20 10"><rect width="20" height="10" fill="#c60"/></svg>
 <script>
 // Named so that they get an objectName the test can find.
-var named = "n o p q r s t za zb zc zd ze zf zg zh zi zj zk zl zm zn zo zp zq zr zs zt zu zv zw ia ib ic".split(" ").map(function (id) { return document.getElementById(id) });
+var named = "n o p q r s t za zb zc zd ze zf zg zh zi zj zk zl zm zn zo zp zq zr zs zt zu zv zw ia ib ic ie ig ih ij ik".split(" ").map(function (id) { return document.getElementById(id) });
 </script></body></html>"##;
 
 /// Chromium, `getBoundingClientRect()` at 1280×800.
@@ -388,12 +393,18 @@ TestCase {
         compareBox("zw", [0, 1690.5, 100, 150])
     }
 
-    // Inline, a negative length is ignored rather than read as zero: the
-    // other side and the viewBox decide, and with neither it is 0×0.
+    // Inline, a negative length is no size but a zero natural length: a
+    // viewBox carries the other side over (80×40), else the side is 0; a
+    // missing length is the default object size's.
     function test_inline_svg_negative_lengths() {
         compareBox("ia", [0, 1840.5, 80, 40])
         compareBox("ib", [0, 1880.5, 80, 40])
         compareBox("ic", [0, 1920.5, 0, 0])
+        compareBox("ie", [0, 1920.5, 300, 150])
+        compareBox("ig", [0, 2070.5, 0, 150])
+        compareBox("ih", [0, 2220.5, 0, 40])
+        compareBox("ij", [0, 2260.5, 80, 150])
+        compareBox("ik", [0, 2410.5, 0, 0])
     }
 }
 }
