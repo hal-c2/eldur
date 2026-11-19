@@ -152,13 +152,19 @@ qt_version_of() {
 }
 
 # `qt_tool_runs <tool>`: whether a Qt tool, named by its path or by a bare
-# name on PATH, is an executable file there to run. A bare name is never
-# looked for in ".", and a shell builtin (QMLTESTRUNNER=:) is no tool.
+# name on PATH, is an executable file there to run. A bare name is looked
+# for only in PATH's absolute directories (type -P also reads an empty or
+# relative entry, as "." or from here), as the QML tests look for it
+# (crates/eldur_convert/tests/support), and a shell builtin
+# (QMLTESTRUNNER=:) is no tool.
 qt_tool_runs() {
   local found
   case "$1" in
     */*) [ -f "$1" ] && [ -x "$1" ] ;;
-    *) found="$(type -P "$1" 2>/dev/null)" && [ -n "$found" ] && [ -f "$found" ] && [ -x "$found" ] ;;
+    *)
+      found="$(type -P "$1" 2>/dev/null)" && [ -f "$found" ] && [ -x "$found" ] || return 1
+      case "$found" in /*) ;; *) return 1 ;; esac
+      ;;
   esac
 }
 
