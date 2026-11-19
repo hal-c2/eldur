@@ -649,3 +649,29 @@ fn an_inline_svg_box_lends_it_no_ratio() {
         "no ratio from the written box:\n{qml}"
     );
 }
+
+/// An inline `<svg>`'s natural size is read past an attribute holding `>`:
+/// the `viewBox` after it still gives the ratio, so `height: 40px` is 80 wide.
+#[test]
+fn an_inline_svg_ratio_is_read_past_a_greater_than() {
+    let html = r#"<!doctype html><html><head><style>body{margin:0} svg{display:block}</style></head><body>
+<svg xmlns="http://www.w3.org/2000/svg" width="&gt;" viewBox="0 0 20 10" style="width:auto;height:40px"><rect width="20" height="10" fill="red"/></svg>
+</body></html>"#;
+    let options = Options {
+        root: RootKind::Item,
+        ..Options::default()
+    };
+    let out = eldur_convert::convert(
+        &Input {
+            html: html.to_owned(),
+            url: "/page/index.html".to_owned(),
+        },
+        &options,
+        &mut Bare,
+    );
+    let qml = out.main_qml().expect("Main.qml");
+    assert!(
+        qml.contains("implicitWidth: 80") && qml.contains("implicitHeight: 40"),
+        "80x40 from the viewBox:\n{qml}"
+    );
+}

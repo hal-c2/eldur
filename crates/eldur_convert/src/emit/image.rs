@@ -248,7 +248,13 @@ impl Emitter<'_, '_> {
         let mut root = String::from("<svg");
         for name in ["width", "height", "viewBox"] {
             if let Some(value) = element.attr(name) {
-                let value = value.replace('&', "&amp;").replace('"', "&quot;");
+                // Escaped as a file's attribute would be: a bare `>` would
+                // end the tag before the attributes after it.
+                let value = value
+                    .replace('&', "&amp;")
+                    .replace('"', "&quot;")
+                    .replace('<', "&lt;")
+                    .replace('>', "&gt;");
                 root.push_str(&format!(" {name}=\"{value}\""));
             }
         }
