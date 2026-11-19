@@ -241,14 +241,19 @@ fn one_side_box(
 }
 
 impl Emitter<'_, '_> {
-    /// An inline `<svg>`'s natural size, from its root's attributes.
+    /// An inline `<svg>`'s natural size, from its own `width`, `height` and
+    /// `viewBox` as written, never from the box its file is written at.
     fn svg_natural_of(&self, node: NodeId) -> Option<Natural> {
-        let markup =
-            self.doc
-                .svg_markup(node, None, &|_: &str, value: &str, _: Option<&str>| {
-                    value.to_owned()
-                })?;
-        Some(svg_natural(&markup))
+        let element = self.doc.element(node).filter(|e| e.is_svg())?;
+        let mut root = String::from("<svg");
+        for name in ["width", "height", "viewBox"] {
+            if let Some(value) = element.attr(name) {
+                let value = value.replace('&', "&amp;").replace('"', "&quot;");
+                root.push_str(&format!(" {name}=\"{value}\""));
+            }
+        }
+        root.push('>');
+        Some(svg_natural(&root))
     }
 
     /// The file an inline `<svg>` is shown from: its markup as a document of
@@ -270,10 +275,10 @@ impl Emitter<'_, '_> {
                 value.to_owned()
             }
         };
+        // Sized as written, not by `used`; the file drops what Chromium
+        // ignores, which Qt would refuse to draw at all.
+        let natural = self.svg_natural_of(node)?;
         let markup = self.doc.svg_markup(node, used, &resolve)?;
-        // Sized as written; the file drops what Chromium ignores, which Qt
-        // would refuse to draw at all.
-        let natural = svg_natural(&markup);
         let markup = without_invalid_root(&markup).unwrap_or(markup);
         let source = format!("assets/svg-{:016x}.svg", fnv1a(markup.as_bytes()));
         self.svgs
