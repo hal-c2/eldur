@@ -1,0 +1,34 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>mutation moves</title></head><body>
+<ul id="list"></ul>
+<div id="A"><div id="P"></div></div><div id="D"></div>
+<script>
+function L(k){console.log("OB "+k)}
+function N(n){return n ? (n.id || n.nodeName) : "null"}
+function R(r){
+  return r.type + ":" + (r.target === fr ? "fr" : r.target.id) + ":+" + Array.prototype.map.call(r.addedNodes, N).join("|")
+    + ":-" + Array.prototype.map.call(r.removedNodes, N).join("|") + ":" + N(r.previousSibling) + ":" + N(r.nextSibling);
+}
+// One child taken from a fragment is a plain removal there, siblings and all.
+var fr = document.createDocumentFragment();
+["g1", "g2", "g3"].forEach(function(id) { var e = document.createElement("li"); e.id = id; fr.appendChild(e); });
+var fo = new MutationObserver(function(rs) { L("fr " + rs.map(R).join(" ")); });
+fo.observe(fr, { childList: true });
+document.getElementById("list").appendChild(fr.firstChild);
+// A move inside the fragment is a removal and then an insertion.
+fr.appendChild(fr.firstChild);
+// A child whose disconnect takes its old parent away still reports leaving it.
+customElements.define("x-k", class extends HTMLElement {
+  disconnectedCallback() { var p = document.getElementById("P"); if (p) p.remove(); }
+});
+var A = document.getElementById("A"), P = document.getElementById("P");
+var X = document.createElement("x-k"); X.id = "X";
+P.appendChild(X);
+var ao = new MutationObserver(function(rs) { L("A " + rs.map(R).join(" ")); });
+ao.observe(A, { childList: true, subtree: true });
+document.getElementById("D").appendChild(X);
+setTimeout(function() {
+  L("left " + A.children.length + " " + document.getElementById("D").children.length);
+  L("done");
+  var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+}, 0);
+</script></body></html>

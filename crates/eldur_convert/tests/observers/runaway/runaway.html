@@ -13,8 +13,16 @@ setTimeout(function() {
   s.dataset.m = "again";
   setTimeout(function() {
     L("later " + (calls > 1000));
-    L("done");
-    var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+    // A callback that awaits before its write is the same loop.
+    var t = document.createElement("p"), acalls = 0;
+    document.body.appendChild(t);
+    new MutationObserver(async function() { await 0; ++acalls; t.dataset.m = acalls; }).observe(t, { attributes: true });
+    t.dataset.m = "start";
+    setTimeout(function() {
+      L("async " + acalls + " " + t.dataset.m);
+      L("done");
+      var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+    }, 0);
   }, 0);
 }, 0);
 </script></body></html>
