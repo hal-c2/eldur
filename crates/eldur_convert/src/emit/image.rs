@@ -2,7 +2,10 @@
 //! §10.3.2, §10.6.2): a given width or height keeps the intrinsic ratio,
 //! both stretch the image (`object-fit: fill`).
 
-use eldur_css::{BoxSizing, ComputedStyle, LengthPercentage, ObjectFit, Rgba, Size};
+use eldur_css::{
+    BoxSizing, ComputedStyle, HtmlDimension, LengthPercentage, ObjectFit, Rgba, Size,
+    html_dimension,
+};
 use eldur_dom::{NodeId, collapse_whitespace};
 use eldur_qml::{Object, Value};
 
@@ -26,11 +29,11 @@ impl Emitter<'_, '_> {
         // The `width`/`height` attributes reached the cascade as
         // presentational hints, so `style` already holds them unless an
         // author rule beat them; here they only give a ratio to an image
-        // whose file has none.
-        let attr_px = |name: &str| {
-            element
-                .attr(name)
-                .and_then(|v| v.trim().trim_end_matches("px").parse::<f32>().ok())
+        // whose file has none. Both go through the same dimension rule
+        // (HTML §15.4.3), so `80junk` is 80 in each; a percentage is no ratio.
+        let attr_px = |name: &str| match html_dimension(element.attr(name)?)? {
+            HtmlDimension::Length(px) => Some(px),
+            HtmlDimension::Percentage(_) => None,
         };
         let css_px = |s: &Size, extra: f32| match s {
             Size::Length(l) => l.as_px().map(|px| (px - extra).max(0.0)),
@@ -49,15 +52,23 @@ impl Emitter<'_, '_> {
         let ratio = size
             .map(|(w, h)| h / w)
             .or_else(|| asset.as_ref().and_then(|a| a.ratio))
-            .or_else(|| Some(attr_px("height")? / attr_px("width")?))
+            // An `<svg>`'s own attributes are presentation attributes, read
+            // into `size` and `ratio` with its `viewBox` (SVG 2 §8.2).
+            .or_else(|| (!inline_svg).then(|| Some(attr_px("height")? / attr_px("width")?))?)
             .filter(|r| r.is_finite() && *r > 0.0);
+        // A file with neither a natural size nor a ratio (an SVG with no
+        // `width`, `height` or `viewBox`) is the default object size, 300×150
+        // (CSS 2.2 §10.3.2, §10.6.2). A missing file has no box to size.
+        let natural = size.or_else(|| {
+            (!inline_svg && asset.is_some() && ratio.is_none()).then_some((300.0, 150.0))
+        });
         let content = match (width, height, ratio) {
             (Some(w), Some(h), _) => Some((w, h)),
             (Some(w), None, Some(r)) => Some((w, w * r)),
             (None, Some(h), Some(r)) => Some((h / r, h)),
-            (None, None, _) => size,
-            (Some(w), None, None) => Some((w, size.map_or(0.0, |s| s.1))),
-            (None, Some(h), None) => Some((size.map_or(0.0, |s| s.0), h)),
+            (None, None, _) => natural,
+            (Some(w), None, None) => Some((w, natural.map_or(0.0, |s| s.1))),
+            (None, Some(h), None) => Some((natural.map_or(0.0, |s| s.0), h)),
         };
         // A percentage or `max-width`, or no intrinsic size, makes the
         // width the layout's: the height follows it through the ratio.

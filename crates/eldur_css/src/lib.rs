@@ -7,6 +7,8 @@
 
 pub mod values;
 
+pub use cascade::{HtmlDimension, html_dimension};
+
 pub use inline_rules::{CounterRule, InlineRule, PaintValue, PseudoPart, PseudoRule, RuntimeRule};
 
 pub use values::*;
