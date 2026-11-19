@@ -190,7 +190,9 @@ HELPERS
         // Chromium: at (58.69, 20), after "Flex link ".
         const at = box(arrow)
         fuzzyCompare(at[0], 58.69, 3)
-        compare([at[1], at[2], at[3]], [20, 16, 16])
+        fuzzyCompare(at[1], 20, 0.01)
+        // Its size attributes are its height: the row doesn't stretch it.
+        compare([at[2], at[3]], [16, 16])
         const p = arrow.mapToItem(page, 11, 8)
         mouseClick(page, p.x, p.y)
         tryCompare(flick, "contentY", 1288, 2000)
