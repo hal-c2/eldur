@@ -172,6 +172,13 @@ chmod +x "$scratch/rel/qmltestrunner-rel"
 up="$(printf '%s' "$PWD" | sed 's|/[^/]*|../|g')"
 expect missing 0 "qmltestrunner (qmltestrunner-rel) is not on PATH" \
   PATH="${up}${scratch#/}/rel:$scratch/missing:$sys" QMLTESTRUNNER=qmltestrunner-rel QMLLINT="$scratch/qt-pinned/qmllint"
+# And one in a relative entry hides none further down: the absolute one is
+# the tests' runner, and its Qt is the one asked.
+mkdir -p "$scratch/rel-newer" "$scratch/abs-pinned"
+ln -s "$scratch/qt-newer/qmltestrunner" "$scratch/rel-newer/qmltestrunner-two"
+ln -s "$scratch/qt-pinned/qmltestrunner" "$scratch/abs-pinned/qmltestrunner-two"
+absent="note, a Qt" expect missing 0 "Qt 6 found: qml6" \
+  PATH="${up}${scratch#/}/rel-newer:$scratch/abs-pinned:$scratch/missing:$sys" QMLTESTRUNNER=qmltestrunner-two QMLLINT="$scratch/qt-pinned/qmllint"
 # A shell builtin is no runner, though command -v answers for it.
 mkdir -p "$scratch/builtin"
 ln -s "$scratch/qt-pinned/qml" "$scratch/builtin/qml6"

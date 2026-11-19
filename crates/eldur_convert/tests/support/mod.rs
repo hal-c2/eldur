@@ -151,7 +151,7 @@ fn find() -> Option<PathBuf> {
 }
 
 /// The tool a variable (QMLTESTRUNNER, QMLLINT) names, as setup finds it
-/// (`qt_tool_runs` in mise-tasks/_lib/common.sh): a path as written, a bare
+/// (`qt_tool_path` in mise-tasks/_lib/common.sh): a path as written, a bare
 /// name as an executable file in one of `search`'s (PATH's) absolute
 /// directories, so never in "." nor a file that cannot run. Absolute, as the tests
 /// start it from their own working directories. A bare name PATH lacks stays
