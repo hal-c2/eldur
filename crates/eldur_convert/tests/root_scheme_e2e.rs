@@ -112,14 +112,14 @@ TestCase {
 
     // Every piece of page text the converter made, skipping controls, whose
     // text the style draws.
-    // The `.shy` blocks are only there for their sizes: a scheme that hides
-    // them leaves them showing in the old colours (#29). `.mine` has a colour
-    // of its own.
+    // A `.shy` block the scheme hides is not painted, so its colours are
+    // asked for only while it shows. `.mine` has a colour of its own.
     function texts(item, out) {
         if (item.eldurTag === "button")
             return out
         if (item.text !== undefined && item.color !== undefined && item.font !== undefined
-                && String(item.text).trim() !== "" && String(item.text).indexOf("Shy") < 0
+                && String(item.text).trim() !== ""
+                && (String(item.text).indexOf("Shy") < 0 || item.visible)
                 && String(item.text).indexOf("Own colour") < 0)
             out.push(item)
         for (const child of item.children)
@@ -381,6 +381,7 @@ TestCase {
         compare(tiny.font.pixelSize, 1, "light: .tiny")
         compare(shyFrac.font.pixelSize, 14, "light: .frac.shy")
         compare(shyTiny.font.pixelSize, 1, "light: .tiny.shy")
+        verify(!shyFrac.visible && !shyTiny.visible, "light: a .shy block is on screen")
         let writes = 0
         const count = () => ++writes
         sized.forEach(t => t.fontChanged.connect(count))
@@ -395,10 +396,129 @@ TestCase {
         compare(tiny.font.pixelSize, 2, "dark: .tiny")
         compare(shyFrac.font.pixelSize, 16, "dark: .frac.shy")
         compare(shyTiny.font.pixelSize, 2, "dark: .tiny.shy")
+        verify(shyFrac.visible && shyTiny.visible, "dark: a .shy block is not shown")
         button.clicked()
         wait(50)
         compare(frac.font.pixelSize, 14, "light again: .frac")
         compare(tiny.font.pixelSize, 1, "light again: .tiny")
+        verify(!shyFrac.visible && !shyTiny.visible, "light again: a .shy block is on screen")
+    }
+}
+}
+"##;
+
+// The page of #29 as written, with a paragraph after the hidden one and a
+// toggle. Chromium, after the head script: `.shy` is `display: none`, out of
+// the flow; toggled to `dark`, `.shy` is 18 px tall in `#c1c3c8` and
+// `#after` is 34 px lower; toggled back, it is gone again. Of the 34 px, the
+// 16 px margin is #51: a block hidden after conversion leaves the next one's
+// margin as converted, however it was hidden. This asks for `.shy`'s line.
+// `#kept` is `.shy` too, but a script wrote its display: it shows throughout.
+const SHY_PAGE: &str = r##"<style>
+:root { --fg: #c1c3c8; }
+:root[data-theme='light'] { --fg: #23262f; }
+body { color: var(--fg); }
+:root[data-theme='light'] .shy { display: none; }
+</style>
+<script>document.documentElement.dataset.theme = 'light';</script>
+<p class="shy"><em>Shy</em></p>
+<p id="after">After</p>
+<p class="shy" id="kept"><em>Kept</em></p>
+<button id="t">Toggle</button>
+<script>
+// What a script writes on the element wins over the scheme's rule.
+document.getElementById('kept').style.display = 'block';
+document.getElementById('t').addEventListener('click', () => {
+  const r = document.documentElement;
+  r.dataset.theme = r.dataset.theme === 'light' ? 'dark' : 'light';
+});
+</script>
+"##;
+
+const SHY_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 800
+    height: 600
+
+TestCase {
+    name: "RootSchemeDisplay"
+    when: windowShown
+
+    function find(item, test) {
+        if (test(item))
+            return item
+        for (const child of item.children) {
+            const got = find(child, test)
+            if (got)
+                return got
+        }
+        return null
+    }
+
+    function textOf(page, words) {
+        return find(page, i => i.text !== undefined && i.font !== undefined && String(i.text).indexOf(words) >= 0)
+    }
+
+    // Where an item is on the page, whatever holds it.
+    function pageY(page, item) {
+        return item.mapToItem(page, 0, 0).y
+    }
+
+    // The scheme's settle can come after a fixed wait on a loaded machine:
+    // wait a bounded time for what is asked, then say what is wrong.
+    function settle(test) {
+        for (let waited = 0; waited < 40 && !test(); ++waited)
+            wait(50)
+    }
+
+    function hidden(page, shy, step) {
+        settle(() => shy.visible === false)
+        verify(shy.visible === false, step + ": .shy is on screen in " + shy.color + " " + shy.text)
+    }
+
+    function test_display_follows_scheme() {
+        const component = Qt.createComponent("Main.qml")
+        verify(component.status === Component.Ready, component.errorString())
+        const page = createTemporaryObject(component, host, { width: 800, height: 600 })
+        waitForRendering(page)
+        wait(50)
+        const shy = textOf(page, "Shy")
+        verify(shy !== null, "no .shy")
+        const after = textOf(page, "After")
+        verify(after !== null, "no #after")
+        const button = find(page, i => i.eldurTag === "button" && i.text === "Toggle")
+        verify(button !== null, "no #t")
+        const kept = textOf(page, "Kept")
+        verify(kept !== null, "no #kept")
+        hidden(page, shy, "load")
+        verify(kept.visible, "load: #kept, which a script shows, is hidden")
+        verify(Qt.colorEqual(kept.color, "#23262f"), "load: #kept is painted " + kept.color)
+        const light = pageY(page, after)
+
+        button.clicked()
+        settle(() => shy.visible === true && Qt.colorEqual(shy.color, "#c1c3c8"))
+        verify(shy.visible === true, "dark: .shy is not shown")
+        verify(Qt.colorEqual(shy.color, "#c1c3c8"), "dark: .shy is painted " + shy.color)
+        verify(Qt.colorEqual(after.color, "#c1c3c8"), "dark: #after is painted " + after.color)
+        verify(kept.visible && Qt.colorEqual(kept.color, "#c1c3c8"),
+               "dark: #kept is " + (kept.visible ? "painted " + kept.color : "hidden"))
+        settle(() => pageY(page, after) > light)
+        // Chromium: 34 px, .shy's 18 px line and the 16 px margin (#51).
+        compare(pageY(page, after) - light, shy.height,
+                "dark: #after moved " + (pageY(page, after) - light) + " px for a .shy "
+                + shy.height + " px tall")
+
+        button.clicked()
+        hidden(page, shy, "light")
+        verify(Qt.colorEqual(after.color, "#23262f"), "light: #after is painted " + after.color)
+        verify(kept.visible && Qt.colorEqual(kept.color, "#23262f"),
+               "light: #kept is " + (kept.visible ? "painted " + kept.color : "hidden"))
+        settle(() => pageY(page, after) === light)
+        compare(pageY(page, after), light, "light: #after did not move back up")
     }
 }
 }
@@ -406,6 +526,15 @@ TestCase {
 
 #[test]
 fn a_root_attribute_repaints_inherited_text() {
+    run(PAGE, TEST, "eldur-root-scheme");
+}
+
+#[test]
+fn a_root_attribute_hides_and_shows_blocks() {
+    run(SHY_PAGE, SHY_TEST, "eldur-root-scheme-shy");
+}
+
+fn run(page: &str, test: &str, name: &str) {
     if support::no_qt() {
         return;
     }
@@ -413,13 +542,13 @@ fn a_root_attribute_repaints_inherited_text() {
         root: RootKind::Item,
         ..Options::default()
     };
-    let out = convert_str(PAGE, &options);
-    let dir = std::env::temp_dir().join(format!("eldur-root-scheme-{}", std::process::id()));
+    let out = convert_str(page, &options);
+    let dir = std::env::temp_dir().join(format!("{name}-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("temp dir");
     for file in &out.files {
         std::fs::write(dir.join(&file.path), &file.contents).expect("write output");
     }
-    std::fs::write(dir.join("tst_scheme.qml"), TEST).expect("write test");
+    std::fs::write(dir.join("tst_scheme.qml"), test).expect("write test");
     let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_scheme.qml"))
