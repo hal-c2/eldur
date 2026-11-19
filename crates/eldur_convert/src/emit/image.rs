@@ -177,6 +177,7 @@ impl Emitter<'_, '_> {
             top: MarginSet::of(mt),
             bottom: MarginSet::of(mb),
             collapse_through: false,
+            top_cases: None,
         }
     }
 }
