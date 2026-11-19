@@ -325,9 +325,11 @@ fn scripts_see_the_wrapping_items_as_in_chromium() {
     );
     std::fs::remove_dir_all(&dir).expect("remove temp dir");
     assert!(output.status.success(), "{text}");
-    // What the page's script read, as Chromium logged it.
+    // What the page's script read, as Chromium logged it; qmltestrunner
+    // writes a test's console.log to stdout.
     assert!(
-        stderr.contains("DOM kids=3 parent=true first=k1 kids=4 last=k4 kids=2"),
+        String::from_utf8_lossy(&output.stdout)
+            .contains("DOM kids=3 parent=true first=k1 kids=4 last=k4 kids=2"),
         "{text}"
     );
     assert!(!stderr.contains("Binding loop"), "{text}");
