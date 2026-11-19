@@ -88,8 +88,9 @@ TestCase {
 
     property var page
     readonly property var painted: ["b", "c", "d", "f", "i", "j", "l", "m", "o", "p", "t", "u", "w", "vd", "src", "mv", "vs", "rm", "gone", "vr",
-        "c1", "o1", "c2", "o2", "c3", "o3", "hv", "o4", "fc", "o5", "c6", "o6", "c7", "o7",
-        "k1", "v1", "k2", "v2", "k3", "v3", "k4", "v4", "k5", "m5", "v5"]
+        "c1", "o1", "c2", "o2", "c3", "o3", "hv", "o4", "fc", "o5", "c6", "o6", "c7", "o7", "e8", "o8",
+        "k1", "v1", "k2", "v2", "k3", "v3", "k4", "v4", "k5", "m5", "v5",
+        "c1", "v1", "c2", "v2", "c3", "v3", "c4", "e4", "v4", "e5", "v5", "a6", "a7"]
 
     // The painted box nearest the front at a point, in Qt Quick's paint
     // order: the children over an item from the last level down, then the
@@ -190,10 +191,13 @@ div { height: 40px; width: 200px }
 <div id=a6><div id=c6 class=in></div></div><div id=o6 class=over></div>
 <div class=gap></div>
 <div id=a7></div><div id=o7 class=over></div>
+<div class=gap></div>
+<div id=a8><div id=e8 class=in></div></div><div id=o8 class=over></div>
 <script>
-var named = ['a1','c1','o1','a2','c2','o2','a3','c3','o3','a4','hv','o4','a5','fc','o5','a6','c6','o6','a7','o7'].map(function (id) { return document.getElementById(id); });
-// A class added, set and taken away; focus; an attribute; and a box made
-// with a level of its own. The hover is the test's.
+var named = ['a1','c1','o1','a2','c2','o2','a3','c3','o3','a4','hv','o4','a5','fc','o5','a6','c6','o6','a7','o7','a8','e8','o8'].map(function (id) { return document.getElementById(id); });
+// A class added, set and taken away; focus; an attribute; a box made
+// with a level of its own; and a fixed one with a level, painted over the
+// window, which lifts nothing it is in. The hover is the test's.
 document.getElementById('c1').classList.add('up');
 document.getElementById('c2').className = 'in up';
 document.getElementById('c3').classList.remove('up');
@@ -203,6 +207,10 @@ var made = document.createElement('div');
 made.id = 'c7';
 made.className = 'in up';
 document.getElementById('a7').appendChild(made);
+var fixed = document.createElement('div');
+fixed.id = 'f8';
+fixed.style.cssText = 'position: fixed; top: 1150px; left: 600px; width: 50px; z-index: 10; background: green';
+document.getElementById('a8').appendChild(fixed);
 </script></body></html>"#;
 
 /// Chromium's fronts, with the pointer over `#hv`.
@@ -217,12 +225,13 @@ const PATHS_TEST: &str = r##"
         compare(front(page, 100, 510), "fc", ":focus")
         compare(front(page, 100, 630), "c6", "attribute set")
         compare(front(page, 100, 750), "c7", "a box put in with a level")
+        compare(front(page, 100, 870), "o8", "a fixed box put in lifts nothing")
     }
 }
 }
 "##;
 
-/// With no script and no pointer, Chromium's fronts are `o1 o2 c3 o4 o5 o6 o7`.
+/// With no script and no pointer, Chromium's fronts are `o1 o2 c3 o4 o5 o6 o7 o8`.
 const PATHS_UNSCRIPTED: &str = r##"
     function test_levels_follow_what_the_boxes_hold() {
         compare(front(page, 100, 30), "o1")
@@ -232,6 +241,7 @@ const PATHS_UNSCRIPTED: &str = r##"
         compare(front(page, 100, 510), "o5")
         compare(front(page, 100, 630), "o6")
         compare(front(page, 100, 750), "o7")
+        compare(front(page, 100, 870), "o8")
     }
 }
 }
@@ -375,6 +385,83 @@ const OUT_OF_FLOW_MOVES_UNSCRIPTED: &str = r##"
 }
 "##;
 
+/// What stops a lift and what gives none: a transformed or sticky box at
+/// `auto` is a stacking context, which keeps what it holds in, so it stays
+/// at its own level; a box with no box (`display: none`) lifts nothing; a
+/// fixed box is painted over the window, not in its block. And an overlay
+/// taken out of its block keeps the place its block's relative offset, and
+/// that of a positioned box its block is in, give it.
+const CONTEXTS: &str = r#"<!doctype html><html><head><style>
+body { margin: 0 }
+div { height: 40px; width: 200px }
+.gap { height: 40px }
+.over { position: relative; transform: translate(20px, -20px); z-index: 2; background: blue }
+.aside { margin-left: 400px }
+.in { position: relative; background: red }
+.up { z-index: 10 }
+.tf { transform: translateX(0px) }
+.st { position: sticky }
+.rel { position: relative }
+.ab { position: absolute; left: 0; top: 0; width: 50px; background: green }
+#f5 { position: fixed; top: 1150px; left: 600px; z-index: 10; width: 50px; background: green }
+#h6 { position: relative; left: 40px; top: 20px }
+#o7 { position: relative; left: 30px }
+</style></head><body>
+<div id=t1 class=tf><div id=c1 class=in></div></div><div id=v1 class=over></div>
+<div class=gap></div>
+<div id=t2 class=tf><div id=c2 class="in up"></div></div><div id=v2 class=over></div>
+<div class=gap></div>
+<div id=t3 class=st><div id=c3 class="in up"></div></div><div id=v3 class=over></div>
+<div class=gap></div>
+<div id=p4 class=rel><div id=c4 class="in up"></div><div id=e4 class=in></div></div><div id=v4 class=over></div>
+<div class=gap></div>
+<div id=p5 class=rel><div id=e5 class=in></div><div id=f5></div></div><div id=v5 class=over></div>
+<div class=gap></div>
+<div id=h6><div id=a6 class=ab></div></div><div id=v6 class="over aside"></div>
+<div class=gap></div>
+<div id=o7><div id=h7 class=rel><div id=a7 class=ab></div></div></div><div id=v7 class="over aside"></div>
+<script>
+var named = ['t1','c1','v1','t2','c2','v2','t3','c3','v3','p4','c4','e4','v4','p5','e5','f5','v5','h6','a6','v6','o7','h7','a7','v7'].map(function (id) { return document.getElementById(id); });
+// A box raised inside a transformed box at `auto`, which keeps it in; a
+// box that lifted its block hidden.
+document.getElementById('c1').style.zIndex = '10';
+document.getElementById('c4').style.display = 'none';
+</script></body></html>"#;
+
+/// Chromium's fronts.
+const CONTEXTS_TEST: &str = r##"
+    function test_levels_follow_what_the_boxes_hold() {
+        compare(front(page, 100, 30), "v1", "raised in a transformed box")
+        compare(front(page, 100, 150), "v2", "a transformed box keeps its kid's level in")
+        compare(front(page, 100, 270), "v3", "a sticky box keeps its kid's level in")
+        compare(front(page, 100, 390), "v4", "the box that lifted its block hidden")
+        compare(front(page, 100, 510), "v5", "a fixed box lifts nothing")
+        compare(front(page, 70, 630), "a6", "at its block's relative offset")
+        compare(front(page, 20, 610), "", "not where its block would be unmoved")
+        compare(front(page, 70, 730), "a7", "at the offset of its block's block")
+        compare(front(page, 10, 730), "", "not where that block would be unmoved")
+    }
+}
+}
+"##;
+
+/// With no script, Chromium's fronts are the same but `c4` on row four.
+const CONTEXTS_UNSCRIPTED: &str = r##"
+    function test_levels_follow_what_the_boxes_hold() {
+        compare(front(page, 100, 30), "v1")
+        compare(front(page, 100, 150), "v2")
+        compare(front(page, 100, 270), "v3")
+        compare(front(page, 100, 390), "c4")
+        compare(front(page, 100, 510), "v5")
+        compare(front(page, 70, 630), "a6")
+        compare(front(page, 20, 610), "")
+        compare(front(page, 70, 730), "a7")
+        compare(front(page, 10, 730), "")
+    }
+}
+}
+"##;
+
 #[test]
 fn a_scripted_level_restacks_the_boxes_around_it() {
     run(PAGE, TEST, "plain", false);
@@ -481,6 +568,31 @@ fn the_moved_out_of_flow_rules_levels_match_chromium() {
         &unscripted(OUT_OF_FLOW_MOVES, "// A raised box"),
         &with_test(OUT_OF_FLOW_MOVES_UNSCRIPTED),
         "out-of-flow-moves-unscripted",
+        false,
+    );
+}
+
+#[test]
+fn contexts_keep_what_they_hold_in() {
+    run(CONTEXTS, &with_test(CONTEXTS_TEST), "contexts", false);
+}
+
+#[test]
+fn contexts_keep_what_they_hold_in_without_the_rules() {
+    run(
+        CONTEXTS,
+        &with_test(CONTEXTS_TEST),
+        "contexts-no-rules",
+        true,
+    );
+}
+
+#[test]
+fn the_contexts_rules_levels_match_chromium() {
+    run(
+        &unscripted(CONTEXTS, "// A box raised"),
+        &with_test(CONTEXTS_UNSCRIPTED),
+        "contexts-unscripted",
         false,
     );
 }
