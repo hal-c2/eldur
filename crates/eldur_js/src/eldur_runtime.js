@@ -25894,10 +25894,12 @@ function _gVariantSupports(raw, name) {
 // Shows or hides an item as the rules now say. The converter's binding answers
 // for all it knows; only where it disagrees does something hold over it.
 // A closed disclosure folds every child but its summary away, whatever the
-// cascade says; `_detailsShow` reads the cascade when it opens.
+// cascade says; `_detailsShow` reads the cascade when it opens. Only one the
+// runtime closed has folded anything: a `<details>` a script makes never went
+// through `_detailsShow`, so its children are on screen and follow the rules.
 function _gFoldedAway(raw) {
     var up = _elementParent(raw);
-    return Boolean(up) && _nodeTag(up) === "details" && _meta(up).detailsOpen !== true
+    return Boolean(up) && _nodeTag(up) === "details" && _meta(up).detailsOpen === false
         && _nodeTag(raw) !== "summary";
 }
 
