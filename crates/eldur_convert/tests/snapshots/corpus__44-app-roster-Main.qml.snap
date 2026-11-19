@@ -499,7 +499,6 @@ ApplicationWindow {
                                         color: "#333344"
                                         implicitWidth: byNameText.implicitWidth + 20
                                         implicitHeight: byNameText.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
                                         objectName: "by-name"
 
                                         Rectangle {
@@ -527,11 +526,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                         }
                                     }
@@ -546,7 +543,6 @@ ApplicationWindow {
                                         color: "#333344"
                                         implicitWidth: byTeamText.implicitWidth + 20
                                         implicitHeight: byTeamText.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
                                         objectName: "by-team"
 
                                         Rectangle {
@@ -574,11 +570,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                         }
                                     }
@@ -593,7 +587,6 @@ ApplicationWindow {
                                         color: "#333344"
                                         implicitWidth: byYearsText.implicitWidth + 20
                                         implicitHeight: byYearsText.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
                                         objectName: "by-years"
 
                                         Rectangle {
@@ -621,11 +614,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                         }
                                     }
@@ -676,7 +667,6 @@ ApplicationWindow {
                                         color: p1.cls_picked ? "#ccddee" : (p1Hover.hovered ? "#ffe9b0" : (p1.eldurIndex % 2 === 0 ? "#f2f4f8" : "#00000000"))
                                         implicitWidth: tdText.implicitWidth + 20
                                         implicitHeight: tdText.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -702,11 +692,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                             font.weight: p1.cls_picked ? 700 : 400
                                         }
@@ -720,7 +708,6 @@ ApplicationWindow {
                                         color: p1.cls_picked ? "#ccddee" : (p1Hover.hovered ? "#ffe9b0" : (p1.eldurIndex % 2 === 0 ? "#f2f4f8" : "#00000000"))
                                         implicitWidth: td2Text.implicitWidth + 20
                                         implicitHeight: td2Text.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -746,11 +733,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                             font.weight: p1.cls_picked ? 700 : 400
                                         }
@@ -765,7 +750,6 @@ ApplicationWindow {
                                         color: p1.cls_picked ? "#ccddee" : (p1Hover.hovered ? "#ffe9b0" : (p1.eldurIndex % 2 === 0 ? "#f2f4f8" : "#00000000"))
                                         implicitWidth: numText.implicitWidth + 20
                                         implicitHeight: numText.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -792,11 +776,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                             font.weight: p1.cls_picked ? 700 : 400
                                         }
@@ -834,7 +816,6 @@ ApplicationWindow {
                                         color: p2.cls_picked ? "#ccddee" : (p2Hover.hovered ? "#ffe9b0" : (p2.eldurIndex % 2 === 0 ? "#f2f4f8" : "#00000000"))
                                         implicitWidth: td3Text.implicitWidth + 20
                                         implicitHeight: td3Text.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -860,11 +841,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                             font.weight: p2.cls_picked ? 700 : 400
                                         }
@@ -878,7 +857,6 @@ ApplicationWindow {
                                         color: p2.cls_picked ? "#ccddee" : (p2Hover.hovered ? "#ffe9b0" : (p2.eldurIndex % 2 === 0 ? "#f2f4f8" : "#00000000"))
                                         implicitWidth: td4Text.implicitWidth + 20
                                         implicitHeight: td4Text.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -904,11 +882,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                             font.weight: p2.cls_picked ? 700 : 400
                                         }
@@ -923,7 +899,6 @@ ApplicationWindow {
                                         color: p2.cls_picked ? "#ccddee" : (p2Hover.hovered ? "#ffe9b0" : (p2.eldurIndex % 2 === 0 ? "#f2f4f8" : "#00000000"))
                                         implicitWidth: num2Text.implicitWidth + 20
                                         implicitHeight: num2Text.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -950,11 +925,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                             font.weight: p2.cls_picked ? 700 : 400
                                         }
@@ -992,7 +965,6 @@ ApplicationWindow {
                                         color: p3.cls_picked ? "#ccddee" : (p3Hover.hovered ? "#ffe9b0" : (p3.eldurIndex % 2 === 0 ? "#f2f4f8" : "#00000000"))
                                         implicitWidth: td5Text.implicitWidth + 20
                                         implicitHeight: td5Text.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -1018,11 +990,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                             font.weight: p3.cls_picked ? 700 : 400
                                         }
@@ -1036,7 +1006,6 @@ ApplicationWindow {
                                         color: p3.cls_picked ? "#ccddee" : (p3Hover.hovered ? "#ffe9b0" : (p3.eldurIndex % 2 === 0 ? "#f2f4f8" : "#00000000"))
                                         implicitWidth: td6Text.implicitWidth + 20
                                         implicitHeight: td6Text.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -1062,11 +1031,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                             font.weight: p3.cls_picked ? 700 : 400
                                         }
@@ -1081,7 +1048,6 @@ ApplicationWindow {
                                         color: p3.cls_picked ? "#ccddee" : (p3Hover.hovered ? "#ffe9b0" : (p3.eldurIndex % 2 === 0 ? "#f2f4f8" : "#00000000"))
                                         implicitWidth: num3Text.implicitWidth + 20
                                         implicitHeight: num3Text.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -1108,11 +1074,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                             font.weight: p3.cls_picked ? 700 : 400
                                         }
@@ -1150,7 +1114,6 @@ ApplicationWindow {
                                         color: p4.cls_picked ? "#ccddee" : (p4Hover.hovered ? "#ffe9b0" : (p4.eldurIndex % 2 === 0 ? "#f2f4f8" : "#00000000"))
                                         implicitWidth: td7Text.implicitWidth + 20
                                         implicitHeight: td7Text.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -1176,11 +1139,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                             font.weight: p4.cls_picked ? 700 : 400
                                         }
@@ -1194,7 +1155,6 @@ ApplicationWindow {
                                         color: p4.cls_picked ? "#ccddee" : (p4Hover.hovered ? "#ffe9b0" : (p4.eldurIndex % 2 === 0 ? "#f2f4f8" : "#00000000"))
                                         implicitWidth: td8Text.implicitWidth + 20
                                         implicitHeight: td8Text.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -1220,11 +1180,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                             font.weight: p4.cls_picked ? 700 : 400
                                         }
@@ -1239,7 +1197,6 @@ ApplicationWindow {
                                         color: p4.cls_picked ? "#ccddee" : (p4Hover.hovered ? "#ffe9b0" : (p4.eldurIndex % 2 === 0 ? "#f2f4f8" : "#00000000"))
                                         implicitWidth: num4Text.implicitWidth + 20
                                         implicitHeight: num4Text.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -1266,11 +1223,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                             font.weight: p4.cls_picked ? 700 : 400
                                         }
@@ -1308,7 +1263,6 @@ ApplicationWindow {
                                         color: p5.cls_picked ? "#ccddee" : (p5Hover.hovered ? "#ffe9b0" : (p5.eldurIndex % 2 === 0 ? "#f2f4f8" : "#00000000"))
                                         implicitWidth: td9Text.implicitWidth + 20
                                         implicitHeight: td9Text.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -1334,11 +1288,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                             font.weight: p5.cls_picked ? 700 : 400
                                         }
@@ -1352,7 +1304,6 @@ ApplicationWindow {
                                         color: p5.cls_picked ? "#ccddee" : (p5Hover.hovered ? "#ffe9b0" : (p5.eldurIndex % 2 === 0 ? "#f2f4f8" : "#00000000"))
                                         implicitWidth: td10Text.implicitWidth + 20
                                         implicitHeight: td10Text.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -1378,11 +1329,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                             font.weight: p5.cls_picked ? 700 : 400
                                         }
@@ -1397,7 +1346,6 @@ ApplicationWindow {
                                         color: p5.cls_picked ? "#ccddee" : (p5Hover.hovered ? "#ffe9b0" : (p5.eldurIndex % 2 === 0 ? "#f2f4f8" : "#00000000"))
                                         implicitWidth: num5Text.implicitWidth + 20
                                         implicitHeight: num5Text.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -1424,11 +1372,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                             font.weight: p5.cls_picked ? 700 : 400
                                         }
@@ -1466,7 +1412,6 @@ ApplicationWindow {
                                         color: p6.cls_picked ? "#ccddee" : (p6Hover.hovered ? "#ffe9b0" : (p6.eldurIndex % 2 === 0 ? "#f2f4f8" : "#00000000"))
                                         implicitWidth: td11Text.implicitWidth + 20
                                         implicitHeight: td11Text.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -1492,11 +1437,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                             font.weight: p6.cls_picked ? 700 : 400
                                         }
@@ -1510,7 +1453,6 @@ ApplicationWindow {
                                         color: p6.cls_picked ? "#ccddee" : (p6Hover.hovered ? "#ffe9b0" : (p6.eldurIndex % 2 === 0 ? "#f2f4f8" : "#00000000"))
                                         implicitWidth: td12Text.implicitWidth + 20
                                         implicitHeight: td12Text.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -1536,11 +1478,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                             font.weight: p6.cls_picked ? 700 : 400
                                         }
@@ -1555,7 +1495,6 @@ ApplicationWindow {
                                         color: p6.cls_picked ? "#ccddee" : (p6Hover.hovered ? "#ffe9b0" : (p6.eldurIndex % 2 === 0 ? "#f2f4f8" : "#00000000"))
                                         implicitWidth: num6Text.implicitWidth + 20
                                         implicitHeight: num6Text.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -1582,11 +1521,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                             font.weight: p6.cls_picked ? 700 : 400
                                         }
@@ -1635,7 +1572,6 @@ ApplicationWindow {
                                         color: "#eeeeee"
                                         implicitWidth: td13Text.implicitWidth + 20
                                         implicitHeight: td13Text.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -1662,11 +1598,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                         }
                                     }
@@ -1679,7 +1613,6 @@ ApplicationWindow {
                                         color: "#eeeeee"
                                         implicitWidth: td14Text.implicitWidth + 20
                                         implicitHeight: (td14Text.text === "" ? 0 : td14Text.implicitHeight) + 13
-                                        anchors.alignWhenCentered: false
 
                                         Rectangle {
                                             anchors.left: parent.left
@@ -1706,11 +1639,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                         }
                                     }
@@ -1724,7 +1655,6 @@ ApplicationWindow {
                                         color: "#eeeeee"
                                         implicitWidth: totalText.implicitWidth + 20
                                         implicitHeight: totalText.implicitHeight + 13
-                                        anchors.alignWhenCentered: false
                                         objectName: "total"
 
                                         Rectangle {
@@ -1753,11 +1683,9 @@ ApplicationWindow {
                                             wrapMode: Text.WordWrap
                                             anchors.left: parent.left
                                             anchors.right: parent.right
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            anchors.alignWhenCentered: false
+                                            y: (parent.height - height) / 2 - 0.5
                                             anchors.leftMargin: 10
                                             anchors.rightMargin: 10
-                                            anchors.verticalCenterOffset: -0.5
                                             renderType: Text.NativeRendering
                                         }
                                     }

@@ -18,8 +18,13 @@ Translate {
     // A table cell moves within its table, not within its row.
     property bool cell: false
 
-    readonly property Flickable scroller: {
-        for (let at = target.parent; at; at = at.parent) {
+    readonly property Flickable scroller: scrollerOf(target.parent)
+
+    // `eldurScrollPort` is declared by the boxes that have one, not by Item,
+    // so the walk goes through an untyped parameter: typed as Item, qmllint
+    // 6.11 reports the property missing and the result as an Item.
+    function scrollerOf(at) {
+        for (; at; at = at.parent) {
             if (at.eldurScrollPort) return at.eldurScrollPort;
             if (at instanceof Flickable) return at;
         }

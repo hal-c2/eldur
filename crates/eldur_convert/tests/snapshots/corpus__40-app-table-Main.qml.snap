@@ -454,7 +454,6 @@ ApplicationWindow {
                                     color: "#f0f0f0"
                                     implicitWidth: thNameText.implicitWidth + 21
                                     implicitHeight: thNameText.implicitHeight + 14
-                                    anchors.alignWhenCentered: false
                                     objectName: "th-name"
 
                                     Rectangle {
@@ -498,8 +497,7 @@ ApplicationWindow {
                                         wrapMode: Text.WordWrap
                                         anchors.left: parent.left
                                         anchors.right: parent.right
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        anchors.alignWhenCentered: false
+                                        y: (parent.height - height) / 2
                                         anchors.leftMargin: 11
                                         anchors.rightMargin: 10
                                         renderType: Text.NativeRendering
@@ -517,7 +515,6 @@ ApplicationWindow {
                                     color: "#f0f0f0"
                                     implicitWidth: thCityText.implicitWidth + 21
                                     implicitHeight: thCityText.implicitHeight + 14
-                                    anchors.alignWhenCentered: false
                                     objectName: "th-city"
 
                                     Rectangle {
@@ -561,8 +558,7 @@ ApplicationWindow {
                                         wrapMode: Text.WordWrap
                                         anchors.left: parent.left
                                         anchors.right: parent.right
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        anchors.alignWhenCentered: false
+                                        y: (parent.height - height) / 2
                                         anchors.leftMargin: 11
                                         anchors.rightMargin: 10
                                         renderType: Text.NativeRendering
@@ -582,7 +578,6 @@ ApplicationWindow {
                                     implicitHeight: thAgeText.implicitHeight + 14
                                     border.width: 1
                                     border.color: "#dddddd"
-                                    anchors.alignWhenCentered: false
                                     objectName: "th-age"
 
                                     Text {
@@ -602,8 +597,7 @@ ApplicationWindow {
                                         wrapMode: Text.WordWrap
                                         anchors.left: parent.left
                                         anchors.right: parent.right
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        anchors.alignWhenCentered: false
+                                        y: (parent.height - height) / 2
                                         anchors.leftMargin: 11
                                         anchors.rightMargin: 11
                                         renderType: Text.NativeRendering
@@ -702,7 +696,6 @@ ApplicationWindow {
             implicitHeight: (tdText.text === "" ? 0 : tdText.implicitHeight) + 14
             border.width: 1
             border.color: "#dddddd"
-            anchors.alignWhenCentered: false
 
             Text {
                 id: tdText
@@ -720,8 +713,7 @@ ApplicationWindow {
                 wrapMode: Text.WordWrap
                 anchors.left: parent.left
                 anchors.right: parent.right
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.alignWhenCentered: false
+                y: (parent.height - height) / 2
                 anchors.leftMargin: 11
                 anchors.rightMargin: 11
                 renderType: Text.NativeRendering

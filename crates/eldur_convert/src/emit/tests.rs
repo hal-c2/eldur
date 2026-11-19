@@ -773,7 +773,7 @@ fn collapsed_table_loses_its_padding_and_separated_one_gets_spacing() {
 }
 
 #[test]
-fn cell_vertical_align_picks_the_anchor() {
+fn cell_vertical_align_places_the_content() {
     let (qml, _) = convert(&page(
         "td{vertical-align:bottom}",
         "<table><tr><td>a</td></tr></table>",
@@ -783,10 +783,7 @@ fn cell_vertical_align_picks_the_anchor() {
         "td{vertical-align:middle}",
         "<table><tr><td>a</td></tr></table>",
     ));
-    assert!(
-        qml.contains("anchors.verticalCenter: parent.verticalCenter"),
-        "{qml}"
-    );
+    assert!(qml.contains("y: (parent.height - height) / 2"), "{qml}");
 }
 
 #[test]
@@ -1326,17 +1323,20 @@ fn a_fractional_caption_keeps_the_table_on_its_exact_y() {
 
 #[test]
 fn a_middle_table_cell_centres_exactly() {
-    // A cell's content is centred without Qt's rounding, on both ends of the
-    // anchor; the values behind it are `cN` in tools/visual/paint/gen.mjs.
+    // A cell's content is centred without Qt's rounding; the values behind it
+    // are `cN` in tools/visual/paint/gen.mjs. The cell is a layout's item, so
+    // it takes no anchors (Qt 6.11's qmllint: layout-positioning), and the
+    // content isn't anchored to its centre either.
     let (qml, _) = convert(&page(
-        "table{border-collapse:collapse} td{border:1px solid #000;padding:4px}",
+        "table{border-collapse:collapse} td{border:1px solid #000;padding:4px 4px 6px}",
         "<table><tr><td>a</td></tr></table>",
     ));
-    assert_eq!(
-        qml.matches("anchors.alignWhenCentered: false").count(),
-        2,
+    assert!(
+        qml.contains("y: (parent.height - height) / 2 - 1\n"),
         "{qml}"
     );
+    assert!(!qml.contains("anchors.verticalCenter"), "{qml}");
+    assert!(!qml.contains("alignWhenCentered"), "{qml}");
     // `vertical-align: top` is not centred.
     let (qml, _) = convert(&page(
         "td{vertical-align:top;padding:4px}",
