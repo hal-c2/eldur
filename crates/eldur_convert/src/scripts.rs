@@ -30,6 +30,9 @@ pub(crate) struct Scripts {
     pub(crate) live_tables: HashSet<NodeId>,
     /// A `<details>` opens and closes by the runtime, script or no script.
     has_details: bool,
+    /// Blocks a rule on a written attribute can hide or show: see
+    /// `pipeline::displays_by_written_attributes`.
+    pub(crate) attribute_displays: HashSet<NodeId>,
 }
 
 impl Scripts {
@@ -42,13 +45,15 @@ impl Scripts {
         self.matches.get(query).map_or(&[], Vec::as_slice)
     }
 
-    /// The elements whose `style.display` or `hidden` a script writes.
+    /// The elements whose `style.display` or `hidden` a script writes, and
+    /// those a rule on an attribute it writes can hide or show.
     pub(crate) fn display_writes(&self) -> HashSet<NodeId> {
         self.analysis
             .writes
             .iter()
             .filter(|(_, prop)| prop == "style.display" || prop == "hidden")
             .flat_map(|(q, _)| self.matches(q).iter().copied())
+            .chain(self.attribute_displays.iter().copied())
             .collect()
     }
 
@@ -267,6 +272,7 @@ pub(crate) fn collect(
         gains,
         live_tables,
         has_details,
+        attribute_displays: HashSet::new(),
     }
 }
 

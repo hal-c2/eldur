@@ -60,15 +60,17 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     for d in &scripts.analysis.diagnostics {
         diags.push(js_diagnostic(d));
     }
-    if !scripts.is_empty()
-        && selectors_outrun_templates(
-            &doc,
-            &scripts,
-            &eldur_css::runtime_rules(&sheets, &options.viewport),
-        )
-    {
+    let runtime_rules = eldur_css::runtime_rules(&sheets, &options.viewport);
+    if !scripts.is_empty() && selectors_outrun_templates(&doc, &scripts, &runtime_rules) {
         scripts.analysis.open_elements = true;
         scripts.analysis.adopts_for_inline = true;
+    }
+    if !scripts.is_empty() {
+        let reached =
+            displays_by_written_attributes(&doc, &styles, &scripts.analysis, &runtime_rules);
+        // Each needs an item of its own for the margins around it to follow it.
+        scripts.wanted.extend(reached.iter().copied());
+        scripts.attribute_displays = reached;
     }
 
     // 4–5: boxes, then QML.
@@ -574,6 +576,115 @@ fn names_after(selector: &str, mark: char) -> impl Iterator<Item = &str> {
     })
 }
 
+/// The blocks shown as converted that a rule on an attribute a script writes
+/// can give another `display` (#51): the runtime hides one when, say, the
+/// root's `data-theme` changes, and the margins either side of it must then
+/// collapse together, as they do around a block a script hides itself. The
+/// written attributes are taken as any value, so a block is counted when the
+/// rule could match it under some value of them.
+fn displays_by_written_attributes(
+    doc: &Document,
+    styles: &eldur_css::StyleMap,
+    analysis: &eldur_js::Analysis,
+    rules: &[eldur_css::RuntimeRule],
+) -> HashSet<eldur_dom::NodeId> {
+    let written = |name: &str| {
+        analysis.writes_computed_attribute
+            || analysis
+                .written_attributes
+                .contains(&name.to_ascii_lowercase())
+    };
+    let relaxed: Vec<String> = rules
+        .iter()
+        .filter(|r| !r.user_agent && r.declarations.iter().any(|(p, _, _)| p == "display"))
+        .filter_map(|r| without_attributes(&r.selector, &written))
+        .collect();
+    if relaxed.is_empty() {
+        return HashSet::new();
+    }
+    doc.descendants(doc.root())
+        .filter(|&n| doc.element(n).is_some())
+        .filter(|&n| {
+            styles.style(n).is_some_and(|s| {
+                s.display != Display::None && crate::boxes::is_block_level(s.display)
+            })
+        })
+        .filter(|&n| {
+            relaxed
+                .iter()
+                .any(|sel| eldur_css::element_matches(doc, n, sel) == Some(true))
+        })
+        .collect()
+}
+
+/// `selector` with every condition on a `written` attribute taken out, or
+/// `None` when it has none. A `:not()` that names one goes whole, since some
+/// value of the attribute satisfies it.
+fn without_attributes(selector: &str, written: &dyn Fn(&str) -> bool) -> Option<String> {
+    let mut out = String::with_capacity(selector.len());
+    let mut dropped = false;
+    let mut rest = selector;
+    while let Some(c) = rest.chars().next() {
+        let lower = rest.get(..5).map(str::to_ascii_lowercase);
+        let group = if c == '[' {
+            Some((closing(rest, '[', ']'), &rest[1..]))
+        } else if lower.as_deref() == Some(":not(") {
+            Some((closing(rest, '(', ')'), &rest[5..]))
+        } else {
+            None
+        };
+        if let Some((Some(end), inner)) = group {
+            let names_written = if c == '[' {
+                written(attribute_name(inner))
+            } else {
+                without_attributes(&inner[..end - 5], written).is_some()
+            };
+            if names_written {
+                dropped = true;
+                // An emptied compound still has to say "any element".
+                if out.is_empty() || out.ends_with([' ', '>', '+', '~', '(', ',']) {
+                    out.push('*');
+                }
+                rest = &rest[end + 1..];
+                continue;
+            }
+        }
+        out.push(c);
+        rest = &rest[c.len_utf8()..];
+    }
+    dropped.then_some(out)
+}
+
+/// The byte index of the `close` that ends the group `text` opens.
+fn closing(text: &str, open: char, close: char) -> Option<usize> {
+    let mut depth = 0_u32;
+    let mut quote = None;
+    for (at, c) in text.char_indices() {
+        match (quote, c) {
+            (Some(q), _) if c == q => quote = None,
+            (Some(_), _) => {}
+            (None, '"' | '\'') => quote = Some(c),
+            (None, _) if c == open => depth += 1,
+            (None, _) if c == close => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(at);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn attribute_name(inner: &str) -> &str {
+    let inner = inner.trim_start();
+    let end = inner
+        .find(|c: char| !(c.is_alphanumeric() || c == '-' || c == '_'))
+        .unwrap_or(inner.len());
+    &inner[..end]
+}
+
 fn names_written_id(selector: &str, analysis: &eldur_js::Analysis) -> bool {
     names_after(selector, '#')
         .any(|name| analysis.writes_computed_id || analysis.written_ids.contains(name))
@@ -876,4 +987,36 @@ fn compound_names(compound: &str) -> (String, Vec<String>) {
     let tag_end = outer.find(['.', '#', ':']).unwrap_or(outer.len());
     let classes = names_after(&outer, '.').map(str::to_owned).collect();
     (outer[..tag_end].to_owned(), classes)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::without_attributes;
+
+    fn theme(name: &str) -> bool {
+        name == "data-theme"
+    }
+
+    #[test]
+    fn a_written_attribute_is_any_value() {
+        let relax = |s| without_attributes(s, &theme);
+        assert_eq!(
+            relax(":root[data-theme='light'] .shy").as_deref(),
+            Some(":root .shy")
+        );
+        assert_eq!(relax("[data-theme=\"a]b\"] p").as_deref(), Some("* p"));
+        assert_eq!(
+            relax("html:not([data-theme]) > p").as_deref(),
+            Some("html > p")
+        );
+        assert_eq!(relax("p:not([data-theme], .x)").as_deref(), Some("p"));
+        assert_eq!(relax("[data-theme].a, b").as_deref(), Some("*.a, b"));
+    }
+
+    #[test]
+    fn a_rule_without_a_written_attribute_is_left_out() {
+        let relax = |s| without_attributes(s, &theme);
+        assert_eq!(relax(":root[lang='is'] .shy"), None);
+        assert_eq!(relax(".shy:not(.x)"), None);
+    }
 }
