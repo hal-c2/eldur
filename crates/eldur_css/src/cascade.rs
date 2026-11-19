@@ -380,8 +380,6 @@ pub(crate) struct BasePass {
     variant_candidates: BTreeSet<(NodeId, PseudoState)>,
 }
 
-/// Runs the full CSS cascade, inheritance, computed-value fix-ups, pseudo-elements,
-/// and dynamic state variants over `doc`.
 /// `<font>`'s attributes as the declarations they are presentational hints for
 /// (WHATWG HTML §15.3.4). `None` for any other element.
 fn font_hints(elem: &eldur_dom::Element) -> Option<String> {
@@ -461,6 +459,28 @@ fn dimension(value: &str) -> Option<String> {
         "px"
     };
     Some(format!("{number}{unit}"))
+}
+
+/// An `<svg>`'s `width` and `height` attributes as the `width` and `height`
+/// properties they are presentation attributes for (SVG 2 §8.1, §6.6): a flex
+/// row doesn't stretch a 16×16 icon. A bare number is in px; a value that
+/// isn't a length is dropped by the parser, as Chromium ignores it.
+fn svg_hints(elem: &eldur_dom::Element) -> Option<String> {
+    if !elem.is_svg() || elem.local_name() != "svg" {
+        return None;
+    }
+    let mut hints = String::new();
+    for name in ["width", "height"] {
+        let Some(value) = elem.attr(name).map(str::trim).filter(|v| !v.is_empty()) else {
+            continue;
+        };
+        if value.parse::<f32>().is_ok() {
+            hints.push_str(&format!("{name}:{value}px;"));
+        } else {
+            hints.push_str(&format!("{name}:{value};"));
+        }
+    }
+    Some(hints)
 }
 
 pub(crate) fn compute_styles(
@@ -568,7 +588,8 @@ pub(crate) fn prepare<'a>(
         };
         let hints = font_hints(elem)
             .map(|h| (h, "<font> attributes"))
-            .or_else(|| img_hints(elem).map(|h| (h, "<img> attributes")));
+            .or_else(|| img_hints(elem).map(|h| (h, "<img> attributes")))
+            .or_else(|| svg_hints(elem).map(|h| (h, "<svg> attributes")));
         if let Some((hints, source)) = hints {
             let (decls, _) = parse_inline_style(&hints, source, Origin::Author);
             for d in &decls {
@@ -2060,6 +2081,24 @@ mod tests {
             Size::Length(Length::Linear(LengthPercentage::percent(50.0)))
         );
         assert_eq!(of("e").height, Size::Length(Length::px(50.0)));
+    }
+
+    #[test]
+    fn svg_size_attributes_are_presentational_hints() {
+        // Chromium: a 16×16 svg in a stretching flex row stays 16 high.
+        let doc = Document::parse(
+            r#"<!doctype html><body><svg id="a" width="16" height="16"></svg>
+            <svg id="b" width="50%" height="2em" style="height:20px"></svg>
+            <svg id="c" width="wide"></svg></body>"#,
+        );
+        let map = compute_styles(&doc, &[], &Viewport::default());
+        let of = |id: &str| map.style(doc.element_by_id(id).expect(id)).expect(id);
+        assert_eq!(of("a").width, Size::Length(Length::px(16.0)));
+        assert_eq!(of("a").height, Size::Length(Length::px(16.0)));
+        // A percentage stays one; the style attribute wins over the hint.
+        assert!(matches!(&of("b").width, Size::Length(l) if l.as_px().is_none()));
+        assert_eq!(of("b").height, Size::Length(Length::px(20.0)));
+        assert_eq!(of("c").width, Size::Auto);
     }
 
     #[test]
