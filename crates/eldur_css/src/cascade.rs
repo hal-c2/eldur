@@ -1214,6 +1214,8 @@ impl<'a> CascadeEngine<'a> {
         match_ctx: &MatchContext<'_>,
         cascade_out: Option<&mut ElementCascade>,
     ) -> ElementStyle {
+        #[cfg(test)]
+        crate::work::count_style_compute();
         let bloom = self.ancestor_blooms[node.index()] | self.dynamic_bloom;
         let extra_classes = self.extra_classes(node);
         let mut matched_decls: Vec<(CascadeKey, &DeclValue)> = Vec::new();
@@ -2032,6 +2034,9 @@ pub(crate) fn layer_ranks(sheets: &[Stylesheet], viewport: &Viewport) -> LayerRa
     keys.dedup();
     LayerRanks { tree, keys }
 }
+
+#[cfg(test)]
+mod variant_work;
 
 #[cfg(test)]
 mod tests {
