@@ -6542,7 +6542,9 @@ function _shownByAttribute(raw, hidden) {
         _gShowAsRules(raw);
     } else if (hidden) {
         _setShown(raw, false);
-    } else if (_meta(raw).styles.display === "none") {
+    } else if (_ownDisplay(raw, _meta(raw)) === "none") {
+        // The element's own declaration, its `style` attribute's part too,
+        // still hides it.
         _setShown(raw, false);
     } else {
         // Nothing here but the page's item says it is hidden, and the attribute
@@ -6628,6 +6630,29 @@ function _styleDecls(raw, m) {
         }
     }
     return out;
+}
+
+// The `display` the element's own declaration gives it, as the cascade picks
+// it: an important declaration over a normal one, then the last.
+function _ownDisplay(raw, m) {
+    var decls = _styleDecls(raw, m);
+    var won = "";
+    var important = false;
+    for (var i = 0; i < decls.length; ++i) {
+        if (decls[i][0] !== "display") {
+            continue;
+        }
+        var v = String(decls[i][1]).trim().toLowerCase();
+        var bang = /!\s*important$/.exec(v);
+        if (bang) {
+            v = v.slice(0, bang.index).trim();
+        }
+        if (bang || !important) {
+            won = v;
+            important = Boolean(bang);
+        }
+    }
+    return won;
 }
 
 function getStyle(item, prop) {
@@ -6925,6 +6950,9 @@ function _removeAttributeAt(item, attrName) {
     } else if (name === "disabled" && typeof raw.enabled === "boolean") {
         raw.enabled = true;
     } else if (name === "hidden" && typeof raw.visible === "boolean") {
+        // `el.hidden = true` set it as well; with the attribute gone,
+        // `el.hidden` reads false again.
+        m.explicitHidden = false;
         _shownByAttribute(raw, false);
     } else if (name === "readonly" && typeof raw.readOnly === "boolean") {
         raw.readOnly = false;
