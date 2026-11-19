@@ -92,7 +92,8 @@ TestCase {
         "k1", "v1", "k2", "v2", "k3", "v3", "k4", "v4", "k5", "m5", "v5",
         "c1", "v1", "c2", "v2", "c3", "v3", "c4", "e4", "v4", "e5", "v5", "a6", "a7", "h8", "a8", "h9", "h10", "c11", "v11", "c12", "v12", "c13", "v13",
         "p1", "p2", "r2", "a2",
-        "b3", "b4", "da", "db", "k6", "n6", "v6"]
+        "b3", "b4", "da", "db", "k6", "n6", "v6",
+        "g1", "g2", "mq", "oq", "pq"]
 
     // The painted box nearest the front at a point, in Qt Quick's paint
     // order: the children over an item from the last level down, then the
@@ -709,6 +710,89 @@ fn the_initial_blocks_overlays_keep_one_layer_with_the_page() {
         INITIAL_BLOCK,
         &with_test(INITIAL_BLOCK_TEST),
         "initial-block",
+        false,
+    );
+}
+
+/// Boxes a script makes out of flow are painted in gates over the page,
+/// which stack as the boxes do: the earlier one raised over the later. And
+/// a raised block a script moves into a stacking context (`#dq`, by its
+/// opacity) is held in it, under what that context is under.
+const MADE_AND_MOVED: &str = r#"<!doctype html><html><head><style>
+body { margin: 0 }
+div { height: 40px; width: 200px }
+.gap { height: 40px }
+.over { position: relative; transform: translate(20px, -20px); z-index: 2; background: blue }
+.in { position: relative; background: red }
+.up { z-index: 3 }
+.made { position: absolute; top: 0; width: 100px; background: green }
+#dq { opacity: .5 }
+</style></head><body>
+<div id=hq></div>
+<div class=gap></div>
+<div id=dq></div><div id=oq class=over></div>
+<div class=gap></div>
+<div id=sq><div id=mq class="in up"></div></div><div id=pq class=over></div>
+<script>
+var named = ['hq','dq','oq','sq','mq','pq'].map(function (id) { return document.getElementById(id); });
+// Two boxes made out of flow, the earlier raised over the later; and a
+// raised box moved into a stacking context, which holds it.
+var g1 = document.createElement('div');
+g1.id = 'g1';
+g1.className = 'made';
+g1.style.left = '0px';
+var g2 = document.createElement('div');
+g2.id = 'g2';
+g2.className = 'made';
+g2.style.left = '50px';
+document.getElementById('hq').appendChild(g1);
+document.getElementById('hq').appendChild(g2);
+g1.style.zIndex = '10';
+document.getElementById('dq').appendChild(document.getElementById('mq'));
+</script></body></html>"#;
+
+/// Chromium's fronts.
+const MADE_AND_MOVED_TEST: &str = r##"
+    function test_levels_follow_what_the_boxes_hold() {
+        compare(front(page, 25, 20), "g1")
+        compare(front(page, 75, 20), "g1", "the earlier made box, raised over the later")
+        compare(front(page, 125, 20), "g2")
+        compare(front(page, 100, 90), "mq", "the moved box, where it went")
+        compare(front(page, 100, 110), "oq", "held in the context it went into")
+        compare(front(page, 100, 230), "pq")
+    }
+}
+}
+"##;
+
+/// With no script, Chromium's fronts are `oq mq` where the boxes paint.
+const MADE_AND_MOVED_UNSCRIPTED: &str = r##"
+    function test_levels_follow_what_the_boxes_hold() {
+        compare(front(page, 75, 20), "")
+        compare(front(page, 100, 90), "")
+        compare(front(page, 100, 110), "oq")
+        compare(front(page, 100, 230), "mq")
+    }
+}
+}
+"##;
+
+#[test]
+fn boxes_a_script_makes_or_moves_stack_where_they_are_painted() {
+    run(
+        MADE_AND_MOVED,
+        &with_test(MADE_AND_MOVED_TEST),
+        "made-and-moved",
+        false,
+    );
+}
+
+#[test]
+fn the_made_and_moved_rules_levels_match_chromium() {
+    run(
+        &unscripted(MADE_AND_MOVED, "// Two boxes made"),
+        &with_test(MADE_AND_MOVED_UNSCRIPTED),
+        "made-and-moved-unscripted",
         false,
     );
 }
