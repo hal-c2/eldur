@@ -1704,7 +1704,7 @@ mod tests {
         let below = side("b", &[12.0, 24.0, 36.0], 2.0);
         let met = above.meet(&below);
         assert!(met.cases.len() <= HiddenRun::NEAREST);
-        let names = |p: &str| (0..3).map(move |i| format!("{p}{i}"));
+        let names = |p: &'static str| (0..3).map(move |i| format!("{p}{i}"));
         for a in (0..=3).map(|n| names("a").take(n).collect::<Vec<_>>()) {
             for b in (0..=3).map(|n| names("b").take(n).collect::<Vec<_>>()) {
                 // Each side shows its nearest boxes: the dropped ones are
