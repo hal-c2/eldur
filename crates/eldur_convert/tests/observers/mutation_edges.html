@@ -1,0 +1,46 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>mutation edges</title></head><body>
+<ul id="list"><li id="a">a</li></ul>
+<script>
+function L(k){console.log("OB "+k)}
+function N(n){return n ? (n.id || n.nodeName) : "null"}
+function R(r){
+  return r.type + ":" + (r.target === frag ? "frag" : r.target.id) + ":+" + Array.prototype.map.call(r.addedNodes, N).join("|")
+    + ":-" + Array.prototype.map.call(r.removedNodes, N).join("|") + ":" + N(r.previousSibling) + ":" + N(r.nextSibling);
+}
+var list = document.getElementById("list");
+var mo = new MutationObserver(function(rs) { L("mo " + rs.map(R).join(" ")); });
+mo.observe(list, { childList: true });
+// A fragment gives up its children: one record at the fragment, one at the list.
+var frag = document.createDocumentFragment();
+var f1 = document.createElement("li"); f1.id = "f1";
+var f2 = document.createElement("li"); f2.id = "f2";
+frag.appendChild(f1); frag.appendChild(f2);
+var fo = new MutationObserver(function(rs) { L("frag " + rs.map(R).join(" ")); });
+fo.observe(frag, { childList: true });
+list.appendChild(frag);
+// A sibling method on a node with no parent does nothing, so nothing moved.
+var loose = document.createElement("b");
+loose.before(document.getElementById("a"));
+L("sync " + list.children.length);
+setTimeout(function() {
+  // A thousand and more awaits, each making a record, are no runaway loop:
+  // every record is delivered.
+  var got = 0, calls = 0;
+  var many = new MutationObserver(function(rs) { got += rs.length; ++calls; });
+  var sink = document.createElement("div");
+  sink.id = "sink";
+  document.body.appendChild(sink);
+  many.observe(sink, { attributes: true });
+  (async function() {
+    for (var i = 0; i < 1200; ++i) {
+      await null;
+      sink.setAttribute("data-n", i);
+    }
+    setTimeout(function() {
+      L("many " + got + " " + (calls > 1000) + " " + sink.getAttribute("data-n"));
+      L("done");
+      var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+    }, 0);
+  })();
+}, 0);
+</script></body></html>

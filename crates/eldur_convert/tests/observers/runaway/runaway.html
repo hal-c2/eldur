@@ -1,0 +1,20 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>runaway</title></head><body><p id="s">waiting</p>
+<script>
+// Each callback's write is a new record, so the callbacks never end: Chromium
+// runs this until the tab is killed, which is why the page is not in
+// chromium.json. Eldur stops it, and the page goes on.
+function L(k){console.log("OB "+k)}
+var s = document.getElementById("s"), calls = 0;
+new MutationObserver(function() { ++calls; s.dataset.m = calls; }).observe(s, { attributes: true });
+s.dataset.m = "start";
+setTimeout(function() {
+  L("calls " + calls + " " + s.dataset.m);
+  // Stopped once, it still hears the next change.
+  s.dataset.m = "again";
+  setTimeout(function() {
+    L("later " + (calls > 1000));
+    L("done");
+    var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+  }, 0);
+}, 0);
+</script></body></html>

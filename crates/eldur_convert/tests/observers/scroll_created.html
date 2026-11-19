@@ -1,0 +1,25 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>scroll created</title>
+<style>body { margin: 0; }</style></head><body>
+<script>
+// A scrolling box the script makes, then scrolls: its target comes into view.
+function L(k){console.log("OB "+k)}
+function r(n){return Math.round(n*100)/100}
+function E(e){ return e.target.id + ":" + e.isIntersecting + ":" + r(e.intersectionRatio); }
+function after(f){requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(f, 0)))}
+var c = document.createElement("div");
+c.id = "c";
+c.style.cssText = "height: 100px; width: 200px; overflow: auto";
+c.innerHTML = '<div id="a" style="height: 80px"></div><div id="b" style="height: 80px"></div><div id="t" style="height: 80px"></div>';
+document.body.appendChild(c);
+var io = new IntersectionObserver(function(es) { L("io " + es.map(E).join(" ")); });
+io.observe(document.getElementById("t"));
+after(function() {
+  L("step scrollTop 100");
+  c.scrollTop = 100;
+  after(function() {
+    L("scrolled " + c.scrollTop);
+    L("done");
+    var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+  });
+});
+</script></body></html>
