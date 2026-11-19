@@ -10,9 +10,10 @@ import QtQuick
 // the width starts a new line unless it is the line's first, an item that is
 // hidden or has no width or height takes no place, and with no width the
 // items stay on one line. `implicitWidth` is the max-content width, every
-// item on one line, which does not depend on the width, so a box capped by
-// `Math.min(implicitWidth, line)` is CSS's shrink-to-fit width and widens
-// again with its line. `implicitHeight` is the last line's bottom. Both are
+// item on one line at its `eldurBasis` (its width before the line clamps
+// it, when it declares one), which does not depend on the width, so a box
+// capped by `Math.min(implicitWidth, line)` is CSS's shrink-to-fit width
+// and widens again with its line. `implicitHeight` is the last line's bottom. Both are
 // only defaults, so a box with a set width keeps it.
 Item {
     id: eldurFlow
@@ -43,6 +44,9 @@ Item {
         for (const old of eldurWatched) {
             // A destroyed item has no signals left to leave.
             if (!now.has(old) && old && old.widthChanged) {
+                if (old.eldurBasisChanged) {
+                    old.eldurBasisChanged.disconnect(eldurQueue);
+                }
                 old.widthChanged.disconnect(eldurQueue);
                 old.heightChanged.disconnect(eldurQueue);
                 old.visibleChanged.disconnect(eldurQueue);
@@ -50,6 +54,9 @@ Item {
         }
         for (const kid of kids) {
             if (!before.has(kid)) {
+                if (kid.eldurBasisChanged) {
+                    kid.eldurBasisChanged.connect(eldurQueue);
+                }
                 kid.widthChanged.connect(eldurQueue);
                 kid.heightChanged.connect(eldurQueue);
                 kid.visibleChanged.connect(eldurQueue);
@@ -81,9 +88,13 @@ Item {
         let oneLine = 0;
         let placed = 0;
         for (const kid of children) {
+            // Its width before the line clamps it, when it says one: a box
+            // capped by `implicitWidth` that summed clamped widths could
+            // never widen, its items clamped to nothing by it.
+            const basis = kid.eldurBasis !== undefined ? kid.eldurBasis : kid.width;
             // Never placed and hidden: every kid counts, as none can be told
             // to be hidden on its own.
-            if ((visible && !kid.visible) || kid.width <= 0 || kid.height <= 0) {
+            if ((visible && !kid.visible) || basis <= 0 || kid.height <= 0) {
                 continue;
             }
             // A hair of slack: a line whose items sum to the width fits.
@@ -96,7 +107,7 @@ Item {
             }
             line.push({ item: kid, x: x });
             widest = Math.max(widest, x + kid.width);
-            oneLine += kid.width;
+            oneLine += basis;
             placed += 1;
             tallest = Math.max(tallest, kid.height);
             x += kid.width + spacing;
