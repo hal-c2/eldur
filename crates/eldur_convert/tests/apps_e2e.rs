@@ -794,6 +794,11 @@ fn input_link_blur() {
 }
 
 #[test]
+fn input_focus_in_blur() {
+    page("input_focus_in_blur");
+}
+
+#[test]
 fn input_hit() {
     page("input_hit");
 }

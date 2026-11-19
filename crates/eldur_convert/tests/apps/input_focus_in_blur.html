@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head><style>
+body { margin: 8px; font: 16px sans-serif; }
+button, input { display: block; margin: 4px 0; }
+</style></head>
+<body>
+<button id="a">a</button>
+<input id="c">
+<button id="b">b</button>
+<button id="arm2">arm2</button>
+<input id="g">
+<input id="f" value="pre">
+<button id="arm3">arm3</button>
+<button id="e">e</button>
+<button id="d">d</button>
+<script>
+// Listeners that move the focus while the page hears that it moved.
+function id(el) { return el && el.id ? el.id : el ? el.nodeName : "-"; }
+function on(id_) { return document.getElementById(id_); }
+["focus", "blur", "focusin", "focusout"].forEach(function (type) {
+  document.addEventListener(type, function (ev) {
+    console.log(type, id(ev.target), "from", id(ev.relatedTarget), "active", id(document.activeElement));
+  }, true);
+});
+document.addEventListener("change", function (ev) { console.log("change", id(ev.target), ev.target.value); });
+document.addEventListener("keyup", function () { console.log("now", id(document.activeElement)); });
+// Tab from a to c, and a's blur listener focuses b: c never hears of a focus.
+on("a").addEventListener("click", function () {
+  on("a").addEventListener("blur", function () { on("b").focus(); }, { once: true });
+});
+// A field focused from a blur listener changes only if typed into while
+// focused, whatever a script set it to before.
+on("arm2").addEventListener("click", function () {
+  on("f").value = "post";
+  on("arm2").addEventListener("blur", function () { on("f").focus(); }, { once: true });
+});
+// A control focused and blurred again from a blur listener keeps nothing.
+on("arm3").addEventListener("click", function () {
+  on("arm3").addEventListener("blur", function () { on("d").focus(); on("d").blur(); }, { once: true });
+});
+</script>
+</body>
+</html>

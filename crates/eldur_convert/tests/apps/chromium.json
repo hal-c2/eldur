@@ -38097,6 +38097,196 @@
    }
   }
  ],
+ "input_focus_in_blur": [
+  {
+   "name": "load",
+   "log": [],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       8,
+       8,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "click a",
+   "log": [
+    "focus a from - active a",
+    "focusin a from - active a"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       8,
+       8,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "a"
+   }
+  },
+  {
+   "name": "tab while a's blur focuses b",
+   "log": [
+    "blur a from c active BODY",
+    "focus b from - active b",
+    "focusin b from - active b",
+    "focusout a from - active b",
+    "now b"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       8,
+       8,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "b"
+   }
+  },
+  {
+   "name": "click arm2",
+   "log": [
+    "blur b from arm2 active BODY",
+    "focusout b from arm2 active BODY",
+    "focus arm2 from b active arm2",
+    "focusin arm2 from b active arm2"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       8,
+       8,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "arm2"
+   }
+  },
+  {
+   "name": "tab while arm2's blur focuses a field",
+   "log": [
+    "blur arm2 from g active BODY",
+    "focus f from - active f",
+    "focusin f from - active f",
+    "focusout arm2 from - active f",
+    "now f"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       8,
+       8,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "f"
+   }
+  },
+  {
+   "name": "tab from the untouched field",
+   "log": [
+    "blur f from arm3 active BODY",
+    "focusout f from arm3 active BODY",
+    "focus arm3 from f active arm3",
+    "focusin arm3 from f active arm3",
+    "now arm3"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       8,
+       8,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "arm3"
+   }
+  },
+  {
+   "name": "click arm3",
+   "log": [],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       8,
+       8,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "arm3"
+   }
+  },
+  {
+   "name": "tab while arm3's blur focuses and blurs d",
+   "log": [
+    "blur arm3 from e active BODY",
+    "focus d from - active d",
+    "focusin d from - active d",
+    "blur d from - active BODY",
+    "focusout d from - active BODY",
+    "focusout arm3 from e active BODY",
+    "focus e from arm3 active e",
+    "focusin e from arm3 active e",
+    "now e"
+   ],
+   "state": {
+    "#a": [
+     {
+      "box": [
+       8,
+       8,
+       23.42,
+       21
+      ],
+      "shown": true,
+      "text": "a"
+     }
+    ],
+    "(focus)": "e"
+   }
+  }
+ ],
  "input_forms": [
   {
    "name": "load",
