@@ -2102,6 +2102,24 @@ mod tests {
     }
 
     #[test]
+    fn a_layered_rule_beats_a_presentational_hint() {
+        // Chromium: `@layer theme { svg { width: 32px } }` draws a
+        // `<svg width=16>` 32 wide, and `<font size=7>` takes a layered size.
+        let doc = Document::parse(
+            r#"<!doctype html><body><svg id="a" width="16" height="16"></svg>
+            <font id="f" size="7">x</font></body>"#,
+        );
+        let css = "@layer theme { svg { width: 32px } font { font-size: 11px } }";
+        let (sheet, diags) = Stylesheet::parse(css, Origin::Author, "test.css", None);
+        assert!(diags.is_empty(), "{diags:?}");
+        let map = compute_styles(&doc, &[sheet], &Viewport::default());
+        let of = |id: &str| map.style(doc.element_by_id(id).expect(id)).expect(id);
+        assert_eq!(of("a").width, Size::Length(Length::px(32.0)));
+        assert_eq!(of("a").height, Size::Length(Length::px(16.0)));
+        assert_eq!(of("f").font_size, 11.0);
+    }
+
+    #[test]
     fn ua_defaults_cascade_layers_vars_and_state_variants() {
         let doc = Document::parse(
             r#"<!doctype html>
