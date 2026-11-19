@@ -58,16 +58,20 @@ fn settled(run: &mut HiddenRun) -> (Option<MarginSet>, Option<Escape>) {
 
 /// The cases of what escapes through a block, met by the margins `before` it,
 /// each also on the condition `shown` the block is; and what escapes when
-/// none holds.
+/// none holds. Only the first `room` cases are kept, so that nesting does not
+/// multiply them past `HiddenRun::NEAREST`: past those, what escapes is as if
+/// all were hidden.
 fn nested(
     shown: Option<&str>,
     cases: &Escape,
     before: MarginSet,
+    room: usize,
 ) -> (Vec<(String, MarginSet)>, MarginSet) {
     let cases = cases.clone().joined(before);
     let each = cases
         .cases
         .into_iter()
+        .take(room)
         .map(|(c, m)| match shown {
             Some(shown) => (format!("{shown} && ({c})"), m),
             None => (c, m),
@@ -112,7 +116,9 @@ impl HiddenRun {
     ) {
         let otherwise = match cases {
             Some(cases) => {
-                let (each, otherwise) = nested(Some(id), cases, before);
+                // The box's own case takes one place too.
+                let room = Self::NEAREST.saturating_sub(self.escapes.len() + 1);
+                let (each, otherwise) = nested(Some(id), cases, before, room);
                 self.escapes
                     .extend(each.into_iter().map(|(c, m)| (c, m, None)));
                 otherwise
@@ -142,7 +148,8 @@ impl HiddenRun {
             .unwrap_or(at);
         let otherwise = match cases {
             Some(cases) => {
-                let (each, otherwise) = nested(None, cases, before);
+                let room = Self::NEAREST.saturating_sub(escapes.len());
+                let (each, otherwise) = nested(None, cases, before, room);
                 escapes.extend(each.into_iter().map(|(c, m)| (c, m, None)));
                 otherwise
             }
@@ -183,20 +190,47 @@ impl Escape {
 
     /// The item's `Layout.topMargin`, where the margins come to rest.
     fn set_on(&self, obj: &mut Object) {
-        let value = |m: MarginSet| round(m.value().max(0.0));
+        set_top(obj, self.gap(0.0));
+    }
+
+    /// The gap the margins leave, `less` what is already given above it: a
+    /// number, or a condition on the cases when they leave different ones.
+    fn gap(&self, less: f32) -> Gap {
+        let value = |m: MarginSet| round((m.value() - less).max(0.0));
         let otherwise = value(self.otherwise);
         if self.cases.iter().all(|(_, m)| value(*m) == otherwise) {
-            let otherwise = value(self.otherwise);
-            if otherwise > 0.0 {
-                obj.set("Layout.topMargin", Value::Number(otherwise));
-            }
-            return;
+            return Gap::Number(otherwise);
         }
-        let mut expr = fmt_number(value(self.otherwise));
+        let mut expr = fmt_number(otherwise);
         for (id, m) in self.cases.iter().rev() {
             expr = format!("{id} ? {} : {expr}", fmt_number(value(*m)));
         }
-        obj.set("Layout.topMargin", Value::expr(expr));
+        Gap::Expr(expr)
+    }
+}
+
+/// A `Layout.topMargin` as written.
+#[derive(PartialEq)]
+enum Gap {
+    Number(f64),
+    Expr(String),
+}
+
+impl Gap {
+    /// As a branch of a condition.
+    fn branch(&self) -> String {
+        match self {
+            Gap::Number(n) => fmt_number(*n),
+            Gap::Expr(e) => format!("({e})"),
+        }
+    }
+}
+
+fn set_top(obj: &mut Object, gap: Gap) {
+    match gap {
+        Gap::Number(n) if n > 0.0 => obj.set("Layout.topMargin", Value::Number(n)),
+        Gap::Number(_) => {}
+        Gap::Expr(e) => obj.set("Layout.topMargin", Value::expr(e)),
     }
 }
 
@@ -246,27 +280,31 @@ fn waits_for_text(obj: &Object) -> Option<String> {
 }
 
 /// The top margin of the item after a hidden run: collapsed with the bottom
-/// margin of the nearest box shown, or with what came before them all.
-fn set_hidden_margin(obj: &mut Object, run: &HiddenRun, top: MarginSet) {
-    let joined = |mut margin: MarginSet| {
-        margin.join(top);
-        round(margin.value().max(0.0))
+/// margin of the nearest box shown, or with what came before them all. Its
+/// own top margin is `top`, or `cases` when its first blocks may hide too.
+fn set_hidden_margin(obj: &mut Object, run: &HiddenRun, top: MarginSet, cases: Option<&Escape>) {
+    let gap = |base: MarginSet, less: f32| match cases {
+        Some(cases) => cases.clone().joined(base).gap(less),
+        None => {
+            let mut margin = base;
+            margin.join(top);
+            Gap::Number(round((margin.value() - less).max(0.0)))
+        }
     };
     // While all of an escaping run is hidden, the margins are the parent's.
     let otherwise = if run.escaping {
-        0.0
+        Gap::Number(0.0)
     } else {
-        round((joined(run.before) as f32 - run.given).max(0.0))
+        gap(run.before, run.given)
     };
-    if run.boxes.iter().all(|(_, b)| joined(*b) == otherwise) {
-        if otherwise > 0.0 {
-            obj.set("Layout.topMargin", number(otherwise as f32));
-        }
+    let shown: Vec<_> = run.boxes.iter().map(|(id, b)| (id, gap(*b, 0.0))).collect();
+    if shown.iter().all(|(_, g)| *g == otherwise) {
+        set_top(obj, otherwise);
         return;
     }
-    let mut expr = fmt_number(otherwise);
-    for (id, bottom) in &run.boxes {
-        expr = format!("{id} ? {} : {expr}", fmt_number(joined(*bottom)));
+    let mut expr = otherwise.branch();
+    for (id, g) in shown {
+        expr = format!("{id} ? {} : {expr}", g.branch());
     }
     obj.set("Layout.topMargin", Value::expr(expr));
 }
@@ -499,7 +537,7 @@ impl Emitter<'_, '_> {
             } else {
                 // Shown, a box before this one separates the margins before
                 // it from this one's; hidden, they collapse with this one's.
-                set_hidden_margin(&mut obj, &hidden, emitted.top);
+                set_hidden_margin(&mut obj, &hidden, emitted.top, emitted.top_cases.as_ref());
                 if hidden.escaping {
                     let mut at = hidden.before;
                     at.join(emitted.top);
