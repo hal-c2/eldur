@@ -46,6 +46,8 @@ pub(crate) mod units;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod world_work;
 
 use std::collections::{BTreeMap, HashMap, HashSet};
 
