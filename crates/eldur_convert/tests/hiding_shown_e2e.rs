@@ -154,6 +154,39 @@ const CASES: &[Case] = &[
         load: &[16.0, 50.0],
         toggled: &[50.0, 84.0],
     },
+    // Its `style` attribute's display removed as loaded: `hidden` set and
+    // cleared again does not bring that declaration back.
+    Case {
+        name: "removed_display_stays_removed",
+        body: r#"<p id="shy" style="display:none"><em>Shy</em></p>
+<p id="after">After</p>
+<script>const h = document.getElementById('shy'); h.style.removeProperty('display'); h.hidden = true; h.hidden = false;</script>"#,
+        ids: &["after", "t"],
+        load: &[50.0, 84.0],
+        toggled: &[16.0, 50.0],
+    },
+    // A `display: none` inside a string of its `style` attribute is no
+    // declaration: `hidden` set and cleared shows it again.
+    Case {
+        name: "display_in_a_string",
+        body: r#"<p id="shy" style='display:block;font-family:"x;display:none;"'><em>Shy</em></p>
+<p id="after">After</p>
+<script>const h = document.getElementById('shy'); h.hidden = true; h.hidden = false;</script>"#,
+        ids: &["after", "t"],
+        load: &[50.0, 84.0],
+        toggled: &[16.0, 50.0],
+    },
+    // An invalid later `display` is dropped: with `hidden` removed, the
+    // valid `display: none` before it still hides the box.
+    Case {
+        name: "invalid_display_dropped",
+        body: r#"<p id="shy" style="display:none;display:bogus" hidden><em>Shy</em></p>
+<p id="after">After</p>
+<script>document.getElementById('shy').removeAttribute('hidden');</script>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[50.0, 84.0],
+    },
 ];
 
 fn page(case: &Case) -> String {
@@ -344,4 +377,19 @@ fn a_block_whose_hidden_attribute_is_removed_stays_hidden_by_its_style_until_cle
 #[test]
 fn a_removed_hidden_attribute_no_longer_keeps_a_cleared_block_hidden() {
     run(case("hidden_set_removed"));
+}
+
+#[test]
+fn a_removed_style_attribute_display_stays_removed() {
+    run(case("removed_display_stays_removed"));
+}
+
+#[test]
+fn a_display_inside_a_string_does_not_hide_the_block() {
+    run(case("display_in_a_string"));
+}
+
+#[test]
+fn an_invalid_later_display_does_not_show_the_block() {
+    run(case("invalid_display_dropped"));
 }

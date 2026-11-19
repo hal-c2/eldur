@@ -2580,13 +2580,14 @@ fn only_a_block_its_own_style_attribute_hides_is_shown_when_a_script_clears_it()
 <p id="d" style="display:none!important;display:block">d</p>
 <p id="e" style="display:none !IMPORTANT">e</p>
 <p id="f" style="display:none;font-family:'a;display:block'">f</p>
+<p id="g" style="display:none;display:bogus">g</p>
 <button id="t">t</button>
 <script>
 document.getElementById('t').addEventListener('click', () => {
   document.getElementById('a').style.display = '';
   document.getElementById('b').style.display = '';
   document.getElementById('c').classList.toggle('on');
-  for (const id of ['d', 'e', 'f']) document.getElementById(id).style.display = '';
+  for (const id of ['d', 'e', 'f', 'g']) document.getElementById(id).style.display = '';
 });
 </script>"#,
     ));
@@ -2610,4 +2611,6 @@ document.getElementById('t').addEventListener('click', () => {
     assert!(hides("e"), "{qml}");
     // A `;` in a string does not end the declaration.
     assert!(hides("f"), "{qml}");
+    // An invalid later declaration is dropped.
+    assert!(hides("g"), "{qml}");
 }
