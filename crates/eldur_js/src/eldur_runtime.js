@@ -8091,17 +8091,15 @@ function _moAttr(item, name, mode, write) {
 // children, a string is a new text node, and so comes from nowhere.
 // `fromFragment` holds the ones a fragment argument gave. DOM takes the
 // arguments one by one, so a fragment given again has nothing left to give,
-// and a node given again is only where it was given last.
+// and a node given again leaves its old place only the first time.
 function _moTaken(args) {
     var out = [];
     out.fromFragment = new Set();
     var emptied = new Set();
     var take = function(raw) {
-        var at = out.indexOf(raw);
-        if (at >= 0) {
-            out.splice(at, 1);
+        if (out.indexOf(raw) < 0) {
+            out.push(raw);
         }
-        out.push(raw);
     };
     for (var i = 0; i < args.length; ++i) {
         var raw = args[i] && typeof args[i] === "object" ? _unwrap(args[i]) : null;
