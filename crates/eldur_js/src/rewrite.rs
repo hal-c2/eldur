@@ -433,7 +433,7 @@ impl<'a> PageBuilder<'a> {
                     continue;
                 };
                 let names: Vec<&str> = list.split(", ").collect();
-                if !names.iter().all(|n| is_valid_js_ident(n)) {
+                if !names.iter().all(|n| is_bare_binding_name(n)) {
                     continue;
                 }
                 let vars: Vec<String> = names
@@ -845,8 +845,6 @@ impl<'a> PageBuilder<'a> {
                 v,
                 &bindings,
                 resolver,
-                scripts,
-                module_exports,
                 &symbol_renames,
                 lowerer.shared,
             );
@@ -855,7 +853,21 @@ impl<'a> PageBuilder<'a> {
         lowerer.dynamic_imports = dynamic_imports;
         lowerer.after_load = is_lazy;
 
-        for stmt in &v.parsed.program.body {
+        // An import's bindings exist before any of its module runs. A lazy
+        // module copies some of them in its run function, so those copies
+        // come first there; at load they are declared with their values.
+        let body: Vec<&Statement<'_>> = if is_lazy {
+            let (imports, rest): (Vec<_>, Vec<_>) = v
+                .parsed
+                .program
+                .body
+                .iter()
+                .partition(|s| matches!(s, Statement::ImportDeclaration(_)));
+            imports.into_iter().chain(rest).collect()
+        } else {
+            v.parsed.program.body.iter().collect()
+        };
+        for stmt in body {
             match stmt {
                 Statement::EmptyStatement(_) => {}
 
@@ -2628,17 +2640,24 @@ fn format_lifecycle_invocation(
     }
 }
 
+/// Whether `name`, from a declaration this rewriter emitted, is a name alone
+/// rather than one with an initializer. Unlike [`is_valid_js_ident`], any
+/// identifier a source may use counts, `café` among them.
+fn is_bare_binding_name(name: &str) -> bool {
+    let mut chars = name.chars();
+    chars
+        .next()
+        .is_some_and(|c| c == '_' || c == '$' || c.is_alphabetic())
+        && chars.all(|c| c == '_' || c == '$' || c == '\u{200c}' || c == '\u{200d}' || c.is_alphanumeric())
+}
+
 /// What a lazy module reads that can be uninitialized: its own `let`,
 /// `const` and `class` bindings, whose page names it adds to
-/// `shared.tdz_names`, and its live imports of other modules' ones. A copied
-/// import is checked where it is copied.
-#[allow(clippy::too_many_arguments)]
+/// `shared.tdz_names`, and its imports, which also cannot be written.
 fn lazy_module_tdz_bindings(
     v: &ValidScript<'_>,
     bindings: &ScriptQueryBindings<'_>,
     resolver: &dyn DomResolver,
-    scripts: &[ScriptInput],
-    module_exports: &HashMap<usize, ModuleExports>,
     symbol_renames: &HashMap<SymbolId, String>,
     shared: &mut SharedRewriteState,
 ) -> HashMap<SymbolId, TdzBinding> {
@@ -2720,36 +2739,27 @@ fn lazy_module_tdz_bindings(
         let Statement::ImportDeclaration(imp) = stmt else {
             continue;
         };
-        let Some(dep_exports) =
-            resolve_module_specifier(v.input, imp.source.value.as_str(), scripts)
-                .and_then(|dep| module_exports.get(&dep))
-        else {
-            continue;
-        };
         for spec in imp.specifiers.iter().flatten() {
-            let (imported, local) = match spec {
-                ImportDeclarationSpecifier::ImportSpecifier(named) => {
-                    (named.imported.name().as_str(), &named.local)
-                }
-                ImportDeclarationSpecifier::ImportDefaultSpecifier(def) => ("default", &def.local),
-                ImportDeclarationSpecifier::ImportNamespaceSpecifier(_) => continue,
+            let local = match spec {
+                ImportDeclarationSpecifier::ImportSpecifier(named) => &named.local,
+                ImportDeclarationSpecifier::ImportDefaultSpecifier(def) => &def.local,
+                ImportDeclarationSpecifier::ImportNamespaceSpecifier(ns) => &ns.local,
             };
-            let Some((target, _, _)) = dep_exports.entries.get(imported) else {
+            let Some((sym_id, _)) = emitted(local) else {
                 continue;
             };
-            let Some((sym_id, name)) = emitted(local) else {
-                continue;
-            };
-            // Read under the exporter's own name: the import is live.
-            if name == *target && shared.tdz_names.contains(target) {
-                tdz.insert(
-                    sym_id,
-                    TdzBinding {
-                        kind: TdzKind::Import,
-                        declared_at: None,
-                    },
-                );
-            }
+            // A write to any import throws. A live one, read under the
+            // exporter's own name, is checked as the exporter's binding is
+            // (`tdz_read` leaves alone a name that is never uninitialized);
+            // a copy is checked where it is copied.
+            shared.tdz_helpers();
+            tdz.insert(
+                sym_id,
+                TdzBinding {
+                    kind: TdzKind::Import,
+                    declared_at: None,
+                },
+            );
         }
     }
     tdz
