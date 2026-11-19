@@ -14,7 +14,7 @@ use super::flow::{Emitted, MarginSet};
 use super::units::{fmt_number, number, round};
 use super::{Emitter, hint};
 use crate::boxes::LayoutBox;
-use crate::images::{ImageAsset, svg_size};
+use crate::images::{ImageAsset, Natural, svg_size};
 
 impl Emitter<'_, '_> {
     pub(super) fn image(&mut self, b: &LayoutBox<'_>, node: NodeId, line: Option<u32>) -> Emitted {
@@ -48,27 +48,41 @@ impl Emitter<'_, '_> {
         } else {
             self.images.get(&node).cloned()
         };
-        let size = asset.as_ref().and_then(|a| a.size);
-        let ratio = size
-            .map(|(w, h)| h / w)
-            .or_else(|| asset.as_ref().and_then(|a| a.ratio))
-            // An `<svg>`'s own attributes are presentation attributes, read
-            // into `size` and `ratio` with its `viewBox` (SVG 2 §8.2).
-            .or_else(|| (!inline_svg).then(|| Some(attr_px("height")? / attr_px("width")?))?)
+        let natural = asset.as_ref().and_then(|a| a.natural);
+        let size = natural.and_then(|n| n.size());
+        let ratio = natural
+            .and_then(|n| n.ratio)
+            .or_else(|| {
+                // An `<svg>`'s own attributes are presentation attributes,
+                // already read into `natural` with its `viewBox` (SVG 2 §8.2).
+                if inline_svg {
+                    None
+                } else {
+                    Some(attr_px("height")? / attr_px("width")?)
+                }
+            })
             .filter(|r| r.is_finite() && *r > 0.0);
-        // A file with neither a natural size nor a ratio (an SVG with no
-        // `width`, `height` or `viewBox`) is the default object size, 300×150
-        // (CSS 2.2 §10.3.2, §10.6.2). A missing file has no box to size.
-        let natural = size.or_else(|| {
-            (!inline_svg && asset.is_some() && ratio.is_none()).then_some((300.0, 150.0))
-        });
+        // A read file lacking a natural width or height takes the default
+        // object size's, 300×150, for it (CSS 2.2 §10.3.2, §10.6.2). A file
+        // that was not read, or an inline svg, has no box of its own.
+        let defaults = !inline_svg && natural.is_some();
+        let (nw, nh) = natural.map_or((None, None), |n| (n.width, n.height));
+        let default_w = nw.unwrap_or(if defaults { 300.0 } else { 0.0 });
+        let default_h = nh.unwrap_or(if defaults { 150.0 } else { 0.0 });
         let content = match (width, height, ratio) {
             (Some(w), Some(h), _) => Some((w, h)),
             (Some(w), None, Some(r)) => Some((w, w * r)),
             (None, Some(h), Some(r)) => Some((h / r, h)),
-            (None, None, _) => natural,
-            (Some(w), None, None) => Some((w, natural.map_or(0.0, |s| s.1))),
-            (None, Some(h), None) => Some((natural.map_or(0.0, |s| s.0), h)),
+            (Some(w), None, None) => Some((w, default_h)),
+            (None, Some(h), None) => Some((default_w, h)),
+            (None, None, _) if size.is_some() => size,
+            (None, None, Some(r)) => match (nw, nh) {
+                (Some(w), _) => Some((w, w * r)),
+                (None, Some(h)) => Some((h / r, h)),
+                // Only a ratio: the width is the layout's.
+                (None, None) => None,
+            },
+            (None, None, None) => defaults.then_some((default_w, default_h)),
         };
         // A percentage or `max-width`, or no intrinsic size, makes the
         // width the layout's: the height follows it through the ratio.
@@ -215,14 +229,13 @@ impl Emitter<'_, '_> {
         };
         let markup = self.doc.svg_markup(node, used, &resolve)?;
         let source = format!("assets/svg-{:016x}.svg", fnv1a(markup.as_bytes()));
-        let (size, ratio) = svg_size(&markup);
+        let natural = Natural::of_svg_size(svg_size(&markup));
         self.svgs
             .entry(source.clone())
             .or_insert_with(|| markup.into_bytes());
         Some(ImageAsset {
             source,
-            size,
-            ratio,
+            natural: Some(natural),
         })
     }
 
