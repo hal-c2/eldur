@@ -344,6 +344,13 @@ fn wrapping_row_whose_gaps_differ_is_an_eldur_flow() {
         r#"<div class="w"><div>a</div></div>"#,
     ));
     assert!(!qml.contains("EldurFlow"), "{qml}");
+    // Equal percentages resolve against different axes.
+    let (qml, _) = convert(&page(
+        ".w{display:flex;flex-wrap:wrap;width:400px;height:200px;gap:10%}",
+        r#"<div class="w"><div>a</div></div>"#,
+    ));
+    let w = object_after(&qml, r#"<div class="w">"#);
+    assert!(w.contains("EldurFlow {"), "{w}");
 }
 
 #[test]

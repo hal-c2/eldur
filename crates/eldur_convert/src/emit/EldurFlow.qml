@@ -34,16 +34,19 @@ Item {
 
     function eldurWatch() {
         const kids = Array.from(children);
+        // Sets, so a box built one child at a time stays linear per pass.
+        const now = new Set(kids);
+        const before = new Set(eldurWatched);
         for (const old of eldurWatched) {
             // A destroyed item has no signals left to leave.
-            if (kids.indexOf(old) === -1 && old && old.widthChanged) {
+            if (!now.has(old) && old && old.widthChanged) {
                 old.widthChanged.disconnect(eldurQueue);
                 old.heightChanged.disconnect(eldurQueue);
                 old.visibleChanged.disconnect(eldurQueue);
             }
         }
         for (const kid of kids) {
-            if (eldurWatched.indexOf(kid) === -1) {
+            if (!before.has(kid)) {
                 kid.widthChanged.connect(eldurQueue);
                 kid.heightChanged.connect(eldurQueue);
                 kid.visibleChanged.connect(eldurQueue);
