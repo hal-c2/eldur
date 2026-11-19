@@ -60,10 +60,11 @@ fn a_state_variant_restyles_only_the_elements_its_state_reaches() {
     let (small, small_computes, _) = styles(&cards(40));
     let (large, large_computes, _) = styles(&cards(80));
     // Every card has a `:hover` and a `:focus-within` variant on its `div`
-    // (four elements each) and an `a:hover` one (one element), on top of the
-    // base cascade: about 13 cascades per card.
-    assert_eq!(small.variants.len(), 3 * 40);
-    assert_eq!(large.variants.len(), 3 * 80);
+    // (four elements each); its link's `:hover` cascades the link alone and
+    // changes nothing, as links are underlined already. With the base
+    // cascade that is 13 cascades per card.
+    assert_eq!(small.variants.len(), 2 * 40);
+    assert_eq!(large.variants.len(), 2 * 80);
     assert!(
         large_computes <= 4 * elements(80),
         "{large_computes} element cascades for {} elements",
