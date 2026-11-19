@@ -21,6 +21,7 @@ Item {
     property real eldurLinesWidth: 0
     property real eldurLinesHeight: 0
     property var eldurWatched: []
+    property bool eldurPlaced: false
     // Tells a line of inline boxes this lays out a flex row's lines.
     readonly property bool eldurFlowLines: true
 
@@ -58,6 +59,13 @@ Item {
     }
 
     function eldurPlace() {
+        // `visible` is the effective one, so while this box is hidden every
+        // kid reads hidden and a kid hidden on its own cannot be told apart.
+        // A hidden box keeps the lines it last had, as `Flow` keeps a hidden
+        // kid out of them; shown again, it is placed at once.
+        if (!visible && eldurPlaced) {
+            return;
+        }
         // Unbounded without a width, as `Flow` is.
         const bound = width > 0 ? width : Infinity;
         const lines = [];
@@ -67,9 +75,8 @@ Item {
         let tallest = 0;
         let widest = 0;
         for (const kid of children) {
-            // `visible` is the effective one: while this box is hidden every
-            // kid reads hidden, and `Flow` skips only the kids hidden
-            // themselves, so a hidden box keeps its lines.
+            // Never placed and hidden: every kid counts, as none can be told
+            // to be hidden on its own.
             if ((visible && !kid.visible) || kid.width <= 0 || kid.height <= 0) {
                 continue;
             }
@@ -99,6 +106,7 @@ Item {
         }
         eldurLinesWidth = widest;
         eldurLinesHeight = lines.length > 0 ? y + tallest : 0;
+        eldurPlaced = visible;
     }
 
     onChildrenChanged: eldurWatch()
