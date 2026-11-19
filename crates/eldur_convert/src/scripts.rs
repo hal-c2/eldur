@@ -339,9 +339,10 @@ pub(crate) fn collect(
     // so each has an item of its own. A script or style it holds never
     // renders, so it needs none.
     if has_details {
-        wanted.extend(doc.descendants(doc.root()).filter(|&n| {
-            details_fold(doc, n).is_some() && crate::boxes::renders_ever(doc, n)
-        }));
+        wanted.extend(
+            doc.descendants(doc.root())
+                .filter(|&n| details_fold(doc, n).is_some() && crate::boxes::renders_ever(doc, n)),
+        );
     }
     Scripts {
         inputs,
