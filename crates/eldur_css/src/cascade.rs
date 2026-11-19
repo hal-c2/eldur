@@ -14,7 +14,7 @@ use crate::parse::{
 use crate::properties::{self, ComputeContext, CssWide, Longhand, PropertyKind};
 use crate::selectors::{
     DynamicFact, DynamicFacts, MatchContext, PseudoElement, RuleIndex, Selector, Specificity,
-    compute_ancestor_blooms, matches_selector,
+    StateReach, compute_ancestor_blooms, matches_selector, note_state_reach,
 };
 use crate::{
     ComputedStyle, Diagnostic, Display, ElementStyle, Float, FontFace, Keyframe, Origin, Position,
@@ -355,6 +355,8 @@ pub(crate) struct CascadeEngine<'a> {
     element_rules: RuleIndex<IndexedRule<'a>>,
     pseudo_rules: RuleIndex<(PseudoElement, IndexedRule<'a>)>,
     variant_prefixes: RuleIndex<PseudoState>,
+    /// How far each state some selector reads can reach; see [`StateReach`].
+    state_reach: BTreeMap<PseudoState, StateReach>,
     inline_styles: Vec<Vec<ParsedDecl>>,
     hint_styles: Vec<Vec<ParsedDecl>>,
     /// All active longhands sorted by `(properties::priority(l), l)`.
@@ -529,6 +531,25 @@ pub(crate) fn compute_styles(
     sheets: &[Stylesheet],
     viewport: &Viewport,
 ) -> StyleMap {
+    compute_styles_walking(doc, sheets, viewport, VariantWalk::Reach)
+}
+
+/// Which elements a state variant cascades again.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum VariantWalk {
+    /// Those the state's selectors can reach (`StateReach`).
+    Reach,
+    /// Every element, which the reach must agree with (tests only).
+    #[cfg_attr(not(test), allow(dead_code))]
+    Document,
+}
+
+pub(crate) fn compute_styles_walking(
+    doc: &Document,
+    sheets: &[Stylesheet],
+    viewport: &Viewport,
+    walk: VariantWalk,
+) -> StyleMap {
     let _memo = properties::ParseMemo::enter();
     let Prepared {
         engine,
@@ -562,17 +583,22 @@ pub(crate) fn compute_styles(
             });
             continue;
         }
+        let reach = match walk {
+            VariantWalk::Reach => engine.state_reach.get(&state).copied().unwrap_or_default(),
+            VariantWalk::Document => StateReach::Document,
+        };
+        let start = engine.variant_start(cond_node, reach, &styles);
         let changed_when = |holds: bool| {
             let mut facts = DynamicFacts::default();
             facts.set(cond_node, DynamicFact::State(state), Some(holds), 0);
             let mut variant_root_fs = root_font_size;
             let mut changed: Vec<(NodeId, Box<ComputedStyle>)> = Vec::new();
-            for child in doc.element_children(doc.root()) {
+            for &node in &start.nodes {
                 engine.compute_variant_subtree(
-                    child,
+                    node,
                     &facts,
-                    None,
-                    None,
+                    start.parent_style,
+                    start.enclosing_box_display,
                     &mut variant_root_fs,
                     &styles,
                     &mut changed,
@@ -680,6 +706,7 @@ pub(crate) fn prepare<'a>(
     let mut element_rules: RuleIndex<IndexedRule<'_>> = RuleIndex::new();
     let mut pseudo_rules: RuleIndex<(PseudoElement, IndexedRule<'_>)> = RuleIndex::new();
     let mut variant_prefixes: RuleIndex<PseudoState> = RuleIndex::new();
+    let mut state_reach: BTreeMap<PseudoState, StateReach> = BTreeMap::new();
     let mut keyframes: BTreeMap<String, Vec<Keyframe>> = BTreeMap::new();
     let mut font_faces: Vec<FontFace> = Vec::new();
     let mut next_order: u32 = 0;
@@ -713,6 +740,7 @@ pub(crate) fn prepare<'a>(
                     declarations: &rule.declarations,
                 };
 
+                note_state_reach(sel, &mut state_reach);
                 if let Some(pe) = sel.pseudo_element {
                     pseudo_rules.insert(sel.without_pseudo_element(), (pe, indexed));
                 } else {
@@ -760,6 +788,7 @@ pub(crate) fn prepare<'a>(
         element_rules,
         pseudo_rules,
         variant_prefixes,
+        state_reach,
         inline_styles,
         hint_styles,
         ordered_longhands,
@@ -1022,7 +1051,77 @@ enum ResolvedAction {
     Value(String),
 }
 
+/// Where a state variant's walk starts: the subtrees it cascades again, and
+/// what they inherit from outside, which the state cannot change.
+struct VariantStart<'s> {
+    nodes: Vec<NodeId>,
+    parent_style: Option<&'s ComputedStyle>,
+    enclosing_box_display: Option<Display>,
+}
+
 impl<'a> CascadeEngine<'a> {
+    /// The subtrees a state of `node` can change: `node`'s, with its following
+    /// siblings' when `reach` says so, or the whole document's. Elements
+    /// outside them match the same rules in the state as without it, so their
+    /// base styles are what the walk inherits.
+    fn variant_start<'s>(
+        &self,
+        node: NodeId,
+        reach: StateReach,
+        base_styles: &'s [Option<ElementStyle>],
+    ) -> VariantStart<'s> {
+        let doc = self.doc;
+        let whole = || VariantStart {
+            nodes: doc.element_children(doc.root()).collect(),
+            parent_style: None,
+            enclosing_box_display: None,
+        };
+        let nodes: Vec<NodeId> = match reach {
+            StateReach::Document => return whole(),
+            StateReach::Subtree => vec![node],
+            StateReach::FollowingSiblings => std::iter::once(node)
+                .chain(doc.next_siblings(node).filter(|&n| doc.element(n).is_some()))
+                .collect(),
+        };
+        let Some(parent) = doc.parent_element(node) else {
+            // The root: its walk is the document's.
+            return VariantStart {
+                nodes,
+                parent_style: None,
+                enclosing_box_display: None,
+            };
+        };
+        let base = |n: NodeId| {
+            base_styles
+                .get(n.index())
+                .and_then(Option::as_ref)
+                .map(|es| &es.style)
+        };
+        // A box for `node` means its ancestors have boxes too.
+        let Some(parent_style) = base(parent) else {
+            return whole();
+        };
+        // What `compute_variant_subtree` passes its children: the nearest box
+        // up the tree that is not `display: contents`.
+        let mut enclosing_box_display = None;
+        let mut at = Some(parent);
+        while let Some(a) = at {
+            let Some(style) = base(a) else {
+                return whole();
+            };
+            if style.display != Display::Contents {
+                enclosing_box_display = Some(style.display);
+                break;
+            }
+            at = doc.parent_element(a);
+        }
+        VariantStart {
+            nodes,
+            parent_style: Some(parent_style),
+            enclosing_box_display,
+        }
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn compute_base_subtree(
         &self,
