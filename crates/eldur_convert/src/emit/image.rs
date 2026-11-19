@@ -14,7 +14,7 @@ use super::flow::{Emitted, MarginSet};
 use super::units::{fmt_number, number, round};
 use super::{Emitter, hint};
 use crate::boxes::LayoutBox;
-use crate::images::{ImageAsset, Natural, svg_size};
+use crate::images::{ImageAsset, svg_natural};
 
 impl Emitter<'_, '_> {
     pub(super) fn image(&mut self, b: &LayoutBox<'_>, node: NodeId, line: Option<u32>) -> Emitted {
@@ -62,10 +62,11 @@ impl Emitter<'_, '_> {
                 }
             })
             .filter(|r| r.is_finite() && *r > 0.0);
-        // A read file lacking a natural width or height takes the default
-        // object size's, 300×150, for it (CSS 2.2 §10.3.2, §10.6.2). A file
-        // that was not read, or an inline svg, has no box of its own.
-        let defaults = !inline_svg && natural.is_some();
+        // A read file or an inline svg lacking a natural width or height
+        // takes the default object size's, 300×150, for it (CSS 2.2 §10.3.2,
+        // §10.6.2): `<svg width="80" style="width:200px">` is 200×150. A file
+        // that was not read has no size of its own until Qt loads it.
+        let defaults = natural.is_some();
         let (nw, nh) = natural.map_or((None, None), |n| (n.width, n.height));
         let default_w = nw.unwrap_or(if defaults { 300.0 } else { 0.0 });
         let default_h = nh.unwrap_or(if defaults { 150.0 } else { 0.0 });
@@ -229,7 +230,7 @@ impl Emitter<'_, '_> {
         };
         let markup = self.doc.svg_markup(node, used, &resolve)?;
         let source = format!("assets/svg-{:016x}.svg", fnv1a(markup.as_bytes()));
-        let natural = Natural::of_svg_size(svg_size(&markup));
+        let natural = svg_natural(&markup);
         self.svgs
             .entry(source.clone())
             .or_insert_with(|| markup.into_bytes());
