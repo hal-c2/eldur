@@ -16,11 +16,35 @@ pub(crate) struct ImageAsset {
     /// The `Image.source`: a copied file under `assets/`, or the URL as
     /// written when it is not a local file.
     pub source: String,
-    /// Intrinsic width and height in CSS px, when the file says.
-    pub size: Option<(f32, f32)>,
-    /// Height over width, when the file has a ratio but no size (an SVG
-    /// with only a `viewBox`): Chromium then fills the container's width.
+    /// What the file says of its size; `None` when it was not read (a
+    /// remote or `data:` URL, which Qt loads itself).
+    pub natural: Option<Natural>,
+}
+
+/// A file's natural dimensions (CSS Images 3 §4.1), each of which it may
+/// lack: an SVG with only a `width` has no natural height, one with only a
+/// `viewBox` has just a ratio (Chromium then fills the container's width).
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub(crate) struct Natural {
+    pub width: Option<f32>,
+    pub height: Option<f32>,
+    /// Height over width.
     pub ratio: Option<f32>,
+}
+
+impl Natural {
+    pub fn size(&self) -> Option<(f32, f32)> {
+        self.width.zip(self.height)
+    }
+
+    /// An inline `<svg>`'s size and ratio, as [`svg_size`] reads them.
+    pub fn of_svg_size((size, ratio): (Option<(f32, f32)>, Option<f32>)) -> Self {
+        Natural {
+            width: size.map(|s| s.0),
+            height: size.map(|s| s.1),
+            ratio: size.map(|(w, h)| h / w).or(ratio),
+        }
+    }
 }
 
 #[derive(Debug, Default)]
@@ -57,8 +81,7 @@ pub(crate) fn collect(
                 node,
                 ImageAsset {
                     source: src.to_owned(),
-                    size: None,
-                    ratio: None,
+                    natural: None,
                 },
             );
             continue;
@@ -76,11 +99,9 @@ pub(crate) fn collect(
             continue;
         }
         let path = unique_path(asset_path(src), &images.files);
-        let (size, ratio) = intrinsic_size(&resource.bytes);
         let asset = ImageAsset {
             source: path.to_string_lossy().replace('\\', "/"),
-            size,
-            ratio,
+            natural: Some(intrinsic_size(&resource.bytes)),
         };
         images.files.push(OutputFile {
             path,
@@ -212,24 +233,76 @@ fn unique_path(path: PathBuf, files: &[OutputFile]) -> PathBuf {
         .expect("an unused name")
 }
 
-/// Width and height of a raster image, or of an SVG's root `width` and
-/// `height` (one of them with the `viewBox` ratio); else the `viewBox`
-/// ratio alone.
-pub(crate) fn intrinsic_size(bytes: &[u8]) -> (Option<(f32, f32)>, Option<f32>) {
+/// A raster image's width and height, or what an SVG's root `width`,
+/// `height` and `viewBox` give (SVG 2 §8.2), as Chromium reads them.
+pub(crate) fn intrinsic_size(bytes: &[u8]) -> Natural {
     if let Ok(size) = imagesize::blob_size(bytes) {
         #[allow(clippy::cast_precision_loss)]
-        return (Some((size.width as f32, size.height as f32)), None);
+        let (w, h) = (size.width as f32, size.height as f32);
+        return Natural {
+            width: Some(w),
+            height: Some(h),
+            ratio: (w > 0.0 && h > 0.0).then(|| h / w),
+        };
     }
-    std::str::from_utf8(bytes).map_or((None, None), svg_size)
+    std::str::from_utf8(bytes).map_or_else(|_| Natural::default(), svg_natural)
 }
 
+/// An SVG file's natural dimensions. A zero `width` or `height` is a zero
+/// size unless a `viewBox` gives the ratio, which Chromium then follows
+/// (`width="80" height="0" viewBox="0 0 20 10"` is 80×40); with no
+/// `viewBox` one length alone is a natural width or height without a ratio.
+fn svg_natural(text: &str) -> Natural {
+    let Some((width, height, view_box)) = svg_root(text) else {
+        return Natural::default();
+    };
+    let Some((vw, vh)) = view_box else {
+        return Natural {
+            width,
+            height,
+            ratio: width
+                .zip(height)
+                .filter(|(w, h)| *w > 0.0 && *h > 0.0)
+                .map(|(w, h)| h / w),
+        };
+    };
+    let r = vh / vw;
+    let (width, height) = (width.filter(|w| *w > 0.0), height.filter(|h| *h > 0.0));
+    let (width, height) = match (width, height) {
+        (Some(w), Some(h)) => (Some(w), Some(h)),
+        (Some(w), None) => (Some(w), Some(w * r)),
+        (None, Some(h)) => (Some(h / r), Some(h)),
+        (None, None) => (None, None),
+    };
+    Natural {
+        width,
+        height,
+        ratio: Some(width.zip(height).map_or(r, |(w, h)| h / w)),
+    }
+}
+
+/// An inline `<svg>`'s size from its root `width` and `height` (one of them
+/// with the `viewBox` ratio); else the `viewBox` ratio alone.
 pub(crate) fn svg_size(text: &str) -> (Option<(f32, f32)>, Option<f32>) {
-    let Some(start) = text.find("<svg") else {
+    let Some((width, height, view_box)) = svg_root(text) else {
         return (None, None);
     };
-    let Some(end) = text[start..].find('>') else {
-        return (None, None);
-    };
+    let (width, height) = (width.filter(|w| *w > 0.0), height.filter(|h| *h > 0.0));
+    match (width, height, view_box) {
+        (Some(w), Some(h), _) => (Some((w, h)), None),
+        (Some(w), None, Some((vw, vh))) => (Some((w, w * vh / vw)), None),
+        (None, Some(h), Some((vw, vh))) => (Some((h * vw / vh, h)), None),
+        (None, None, Some((vw, vh))) => (None, Some(vh / vw)),
+        _ => (None, None),
+    }
+}
+
+/// The root `<svg>`'s absolute `width` and `height` (zero included) and its
+/// `viewBox` size; `None` when the text has no `<svg` tag.
+#[allow(clippy::type_complexity)]
+fn svg_root(text: &str) -> Option<(Option<f32>, Option<f32>, Option<(f32, f32)>)> {
+    let start = text.find("<svg")?;
+    let end = text[start..].find('>')?;
     let tag = &text[start..start + end];
     let attr = |name: &str| {
         let mut rest = tag;
@@ -251,7 +324,7 @@ pub(crate) fn svg_size(text: &str) -> (Option<(f32, f32)>, Option<f32>) {
         attr(name)
             .map(|v| v.trim().trim_end_matches("px"))
             .and_then(|v| v.parse::<f32>().ok())
-            .filter(|v| *v > 0.0)
+            .filter(|v| v.is_finite() && *v >= 0.0)
     };
     let view_box = attr("viewBox").and_then(|v| {
         let n: Vec<f32> = v
@@ -261,13 +334,7 @@ pub(crate) fn svg_size(text: &str) -> (Option<(f32, f32)>, Option<f32>) {
             .collect();
         (n.len() == 4 && n[2] > 0.0 && n[3] > 0.0).then(|| (n[2], n[3]))
     });
-    match (length("width"), length("height"), view_box) {
-        (Some(w), Some(h), _) => (Some((w, h)), None),
-        (Some(w), None, Some((vw, vh))) => (Some((w, w * vh / vw)), None),
-        (None, Some(h), Some((vw, vh))) => (Some((h * vw / vh, h)), None),
-        (None, None, Some((vw, vh))) => (None, Some(vh / vw)),
-        _ => (None, None),
-    }
+    Some((length("width"), length("height"), view_box))
 }
 
 #[cfg(test)]
@@ -290,6 +357,34 @@ mod tests {
             (Some((20.0, 40.0)), None)
         );
         assert_eq!(svg_size(r#"<svg viewBox="0 0 64 32">"#), (None, Some(0.5)));
+    }
+
+    #[test]
+    fn svg_files_keep_zero_and_single_dimensions() {
+        let natural = |text: &str| intrinsic_size(text.as_bytes());
+        let n = |width, height, ratio| Natural {
+            width,
+            height,
+            ratio,
+        };
+        assert_eq!(
+            natural(r#"<svg width="80" height="0">"#),
+            n(Some(80.0), Some(0.0), None)
+        );
+        assert_eq!(
+            natural(r#"<svg width="80" height="0" viewBox="0 0 20 10">"#),
+            n(Some(80.0), Some(40.0), Some(0.5))
+        );
+        assert_eq!(natural(r#"<svg width="80">"#), n(Some(80.0), None, None));
+        assert_eq!(
+            natural(r#"<svg width="50%" height="40">"#),
+            n(None, Some(40.0), None)
+        );
+        assert_eq!(
+            natural(r#"<svg viewBox="0 0 64 32">"#),
+            n(None, None, Some(0.5))
+        );
+        assert_eq!(natural("<svg>"), Natural::default());
     }
 
     #[test]
@@ -317,6 +412,13 @@ mod tests {
         png.extend(b"IHDR");
         png.extend([0, 0, 0, 3, 0, 0, 0, 2, 8, 6, 0, 0, 0]);
         png.extend([0, 0, 0, 0]);
-        assert_eq!(intrinsic_size(&png), (Some((3.0, 2.0)), None));
+        assert_eq!(
+            intrinsic_size(&png),
+            Natural {
+                width: Some(3.0),
+                height: Some(2.0),
+                ratio: Some(2.0 / 3.0)
+            }
+        );
     }
 }

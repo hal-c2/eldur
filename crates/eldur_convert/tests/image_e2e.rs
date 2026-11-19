@@ -261,9 +261,9 @@ const BARE: &str = r##"<svg xmlns="http://www.w3.org/2000/svg"><rect width="1000
 
 /// The attributes map to `aspect-ratio` through the same rule they are
 /// hints with (HTML §15.4.3, §2.3.4.4): `80junk` is 80, `60e1` is 60, `45.`
-/// is 45, while `+80`, a percentage or a zero gives no ratio. With neither
-/// a natural size nor a ratio, the image is 300×150 (CSS 2.2 §10.3.2,
-/// §10.6.2).
+/// is 45, while `+80`, a percentage or a zero gives no ratio. A natural
+/// width or height the file lacks is the default object size's, 300×150
+/// (CSS 2.2 §10.3.2, §10.6.2); a zero one is kept.
 const BARE_PAGE: &str = r#"<!doctype html><html><head><style>
 body { margin: 0 }
 img { display: block }
@@ -275,9 +275,18 @@ img { display: block }
 <div style="width:300px"><img id=r src="bare.svg" width="50%" height="40" style="height:auto"></div>
 <img id=s src="bare.svg" width="80" height="0" style="height:auto">
 <img id=t src="bare.svg" width="+80" height="40" style="height:auto">
+<img id=za src="z80x0.svg">
+<img id=zb src="z0x80.svg">
+<img id=zc src="w80.svg">
+<img id=zd src="h60.svg">
+<img id=ze src="pct.svg">
+<img id=zf src="z0vb.svg">
+<img id=zg src="z80x0.svg" width="100">
+<img id=zh src="w80.svg" width="100" height="50" style="height:auto">
+<img id=zi src="z80x0.svg" width="100" height="50" style="height:auto">
 <script>
 // Named so that they get an objectName the test can find.
-var named = "nopqrst".split("").map(function (id) { return document.getElementById(id) });
+var named = "n o p q r s t za zb zc zd ze zf zg zh zi".split(" ").map(function (id) { return document.getElementById(id) });
 </script></body></html>"#;
 
 /// Chromium, `getBoundingClientRect()` at 1280×800.
@@ -327,17 +336,47 @@ TestCase {
         compareBox("s", [0, 335.5, 80, 150])
         compareBox("t", [0, 485.5, 300, 150])
     }
+
+    function test_zero_and_single_natural_dimensions() {
+        compareBox("za", [0, 635.5, 80, 0])
+        compareBox("zb", [0, 635.5, 0, 80])
+        compareBox("zc", [0, 715.5, 80, 150])
+        compareBox("zd", [0, 865.5, 300, 60])
+        compareBox("ze", [0, 925.5, 300, 40])
+        compareBox("zf", [0, 965.5, 80, 40])
+        compareBox("zg", [0, 1005.5, 100, 0])
+        compareBox("zh", [0, 1005.5, 100, 50])
+        compareBox("zi", [0, 1055.5, 100, 50])
+    }
 }
 }
 "##;
+
+/// SVG files with a zero or a single natural dimension (SVG 2 §8.2).
+const SVG_FILES: [(&str, &str); 6] = [
+    ("z80x0.svg", r#"width="80" height="0""#),
+    ("z0x80.svg", r#"width="0" height="80""#),
+    ("w80.svg", r#"width="80""#),
+    ("h60.svg", r#"height="60""#),
+    ("pct.svg", r#"width="50%" height="40""#),
+    ("z0vb.svg", r#"width="80" height="0" viewBox="0 0 20 10""#),
+];
 
 struct Bare;
 
 impl Resources for Bare {
     fn read(&mut self, url: &str, _base: &str) -> Option<Resource> {
-        (url == "bare.svg").then(|| Resource {
-            resolved: "/page/bare.svg".to_owned(),
-            bytes: BARE.as_bytes().to_vec(),
+        let bytes = if url == "bare.svg" {
+            BARE.to_owned()
+        } else {
+            let (_, attrs) = SVG_FILES.iter().find(|(name, _)| *name == url)?;
+            format!(
+                r##"<svg xmlns="http://www.w3.org/2000/svg" {attrs}><rect width="1000" height="1000" fill="#c60"/></svg>"##
+            )
+        };
+        Some(Resource {
+            resolved: format!("/page/{url}"),
+            bytes: bytes.into_bytes(),
         })
     }
 }
@@ -383,6 +422,12 @@ fn ratio_attributes_are_dimension_values() {
         size("300", "150"),
         "+80 is no width"
     );
+    assert_eq!(
+        implicit_size(qml, "za"),
+        size("80", "0"),
+        "a zero height is kept"
+    );
+    assert_eq!(implicit_size(qml, "zc"), size("80", "150"), "only a width");
 }
 
 #[test]
