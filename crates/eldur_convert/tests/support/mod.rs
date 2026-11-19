@@ -139,7 +139,8 @@ fn find() -> Option<PathBuf> {
 
 /// The tool a variable (QMLTESTRUNNER, QMLLINT) names, as setup finds it
 /// (`qt_tool_runs` in mise-tasks/_lib/common.sh): a path as written, a bare
-/// name through `search` (PATH) and never in ".". Absolute, as the tests
+/// name as an executable file in one of `search`'s (PATH's) absolute
+/// directories, so never in "." nor a file that cannot run. Absolute, as the tests
 /// start it from their own working directories. A bare name PATH lacks stays
 /// as written, so the caller's is-a-file check names it.
 pub fn named(set: &OsStr, search: Option<&OsStr>) -> PathBuf {
@@ -162,7 +163,20 @@ fn in_dirs(dirs: &OsStr, name: &OsStr) -> Option<PathBuf> {
         // An empty entry means "." to a shell; setup never looks there.
         .filter(|dir| dir.is_absolute())
         .map(|dir| dir.join(name))
-        .find(|path| path.is_file())
+        // A shell passes over a file it cannot run and goes on down PATH.
+        .find(|path| runs(path))
+}
+
+#[cfg(unix)]
+fn runs(path: &Path) -> bool {
+    use std::os::unix::fs::PermissionsExt;
+    path.metadata()
+        .is_ok_and(|meta| meta.is_file() && meta.permissions().mode() & 0o111 != 0)
+}
+
+#[cfg(not(unix))]
+fn runs(path: &Path) -> bool {
+    path.is_file()
 }
 
 fn query(tool: &str, args: &[&str]) -> Option<String> {

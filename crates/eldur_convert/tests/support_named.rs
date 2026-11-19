@@ -7,8 +7,21 @@ use std::ffi::OsStr;
 use std::fs;
 use std::path::PathBuf;
 
-/// A fresh directory holding an empty file named `name`.
+/// A fresh directory holding an empty file named `name`, which can run.
 fn dir_with(case: &str, name: &str) -> PathBuf {
+    let dir = plain_dir_with(case, name);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(dir.join(name), fs::Permissions::from_mode(0o755))
+            .expect("the tool made runnable");
+    }
+    dir
+}
+
+/// A fresh directory holding an empty file named `name`, with no mode bits
+/// added (a file that cannot run, on Unix).
+fn plain_dir_with(case: &str, name: &str) -> PathBuf {
     let dir =
         std::env::temp_dir().join(format!("eldur-support-named-{case}-{}", std::process::id()));
     let _ = fs::remove_dir_all(&dir);
@@ -45,4 +58,16 @@ fn a_path_is_taken_as_written() {
     let found = support::named(written.as_os_str(), Some(OsStr::new("/nonexistent")));
     assert_eq!(found, written);
     fs::remove_dir_all(&dir).expect("the temp dir removed");
+}
+
+#[cfg(unix)]
+#[test]
+fn a_file_that_cannot_run_is_passed_over_for_one_further_down_path() {
+    let first = plain_dir_with("cannot-run", "qmltestrunner-standin");
+    let second = dir_with("runs", "qmltestrunner-standin");
+    let search = std::env::join_paths([&first, &second]).expect("a PATH");
+    let found = support::named(OsStr::new("qmltestrunner-standin"), Some(&search));
+    assert_eq!(found, second.join("qmltestrunner-standin"));
+    fs::remove_dir_all(&first).expect("the temp dir removed");
+    fs::remove_dir_all(&second).expect("the temp dir removed");
 }

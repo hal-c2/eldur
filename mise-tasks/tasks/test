@@ -164,6 +164,14 @@ expect gone 0 "Qt 6 (qml6, qmllint, qmltestrunner) not all found: QMLLINT names 
 # The QML tests take a set QMLLINT as asked too (crates/eldur_convert/tests/support).
 expect gone 0 "so mise run qml:check and mise run test fail on it: point QMLLINT at Qt $qt_pinned's qmllint, or unset it" \
   QMLTESTRUNNER="$scratch/qt-pinned/qmltestrunner" QMLLINT="$scratch/gone/qmllint"
+# Nor is a runner that only a relative PATH entry finds: the QML tests look
+# only in PATH's absolute directories.
+mkdir -p "$scratch/rel"
+printf '#!/bin/sh\nexit 0\n' >"$scratch/rel/qmltestrunner-rel"
+chmod +x "$scratch/rel/qmltestrunner-rel"
+up="$(printf '%s' "$PWD" | sed 's|/[^/]*|../|g')"
+expect missing 0 "qmltestrunner (qmltestrunner-rel) is not on PATH" \
+  PATH="${up}${scratch#/}/rel:$scratch/missing:$sys" QMLTESTRUNNER=qmltestrunner-rel QMLLINT="$scratch/qt-pinned/qmllint"
 # A shell builtin is no runner, though command -v answers for it.
 mkdir -p "$scratch/builtin"
 ln -s "$scratch/qt-pinned/qml" "$scratch/builtin/qml6"
