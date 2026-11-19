@@ -82,8 +82,16 @@ fn warnings(out: &eldur_convert::Output) -> Vec<String> {
 fn modules_a_module_script_reaches_are_read_beside_it_and_inlined() {
     let mut site = Site::new();
     let out = convert("repro", &mut site);
-    for file in ["/repro/js/main.js", "/repro/js/helper.js", "/repro/js/chunk.js"] {
-        assert!(site.read.iter().any(|r| r == file), "{file}: {:?}", site.read);
+    for file in [
+        "/repro/js/main.js",
+        "/repro/js/helper.js",
+        "/repro/js/chunk.js",
+    ] {
+        assert!(
+            site.read.iter().any(|r| r == file),
+            "{file}: {:?}",
+            site.read
+        );
     }
     let warnings = warnings(&out);
     assert!(
@@ -107,10 +115,7 @@ fn a_module_that_cannot_be_loaded_is_reported() {
         site.read
     );
     let warnings = warnings(&out);
-    let about_imports: Vec<&String> = warnings
-        .iter()
-        .filter(|w| w.contains("import"))
-        .collect();
+    let about_imports: Vec<&String> = warnings.iter().filter(|w| w.contains("import")).collect();
     assert_eq!(
         about_imports,
         vec![

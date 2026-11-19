@@ -342,7 +342,8 @@ pub(crate) fn rewrite(
 /// The modules the converter read that run lazily: those no module script
 /// reaches through static imports.
 fn lazy_modules(valid_scripts: &[ValidScript<'_>], scripts: &[ScriptInput]) -> HashSet<usize> {
-    let by_idx: HashMap<usize, &ValidScript<'_>> = valid_scripts.iter().map(|v| (v.idx, v)).collect();
+    let by_idx: HashMap<usize, &ValidScript<'_>> =
+        valid_scripts.iter().map(|v| (v.idx, v)).collect();
     let mut eager: HashSet<usize> = HashSet::new();
     let mut work: Vec<usize> = valid_scripts
         .iter()
@@ -369,7 +370,9 @@ fn lazy_modules(valid_scripts: &[ValidScript<'_>], scripts: &[ScriptInput]) -> H
         .collect()
 }
 
-fn static_module_specifiers<'p>(program: &'p oxc_ast::ast::Program<'_>) -> impl Iterator<Item = &'p str> {
+fn static_module_specifiers<'p>(
+    program: &'p oxc_ast::ast::Program<'_>,
+) -> impl Iterator<Item = &'p str> {
     program.body.iter().filter_map(|stmt| match stmt {
         Statement::ImportDeclaration(imp) => Some(imp.source.value.as_str()),
         Statement::ExportAllDeclaration(exp) => Some(exp.source.value.as_str()),
@@ -478,7 +481,9 @@ impl<'a> PageBuilder<'a> {
         if let Some(run) = self.lazy_runs.get(&script_idx) {
             return run.clone();
         }
-        let run = self.shared.alloc_fn_name(&format!("__eldur_run_m{script_idx}"));
+        let run = self
+            .shared
+            .alloc_fn_name(&format!("__eldur_run_m{script_idx}"));
         self.lazy_runs.insert(script_idx, run.clone());
         run
     }
@@ -1011,7 +1016,8 @@ impl<'a> PageBuilder<'a> {
             self.cycle_placeholders.iter().collect();
         placeholders.sort_by(|a, b| a.1.cmp(b.1));
         for ((dep, name), placeholder) in placeholders {
-            let ident = cycle_export_ident(&self.module_exports, &self.cycle_placeholders, *dep, name);
+            let ident =
+                cycle_export_ident(&self.module_exports, &self.cycle_placeholders, *dep, name);
             let ident = ident.unwrap_or_else(|| {
                 let source = self.scripts[*dep].name.clone();
                 diagnostics.push(Diagnostic {

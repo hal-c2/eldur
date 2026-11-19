@@ -2968,7 +2968,10 @@ fn an_imported_module_runs_before_its_importer_and_a_lazy_one_on_its_first_impor
         "/site/js/helper.js",
         "console.log('helper');\nexport function label(n) { return 'n=' + n; }\n",
     );
-    let decoy = imported_module("/site/js/lib/helper.js", "export function label() { return 'no'; }\n");
+    let decoy = imported_module(
+        "/site/js/lib/helper.js",
+        "export function label() { return 'no'; }\n",
+    );
     let chunk = imported_module(
         "/site/js/chunk.js",
         "console.log('chunk');\nwindow.addEventListener('load', () => console.log('never'));\nexport const word = 'chunk';\n",
@@ -2979,14 +2982,20 @@ fn an_imported_module_runs_before_its_importer_and_a_lazy_one_on_its_first_impor
     let main_at = out.page_js.find("console.log('main'").expect("main");
     assert!(init < helper_at && helper_at < main_at, "{}", out.page_js);
     assert!(!out.page_js.contains("'no'"), "{}", out.page_js);
-    let run = out.page_js.find("function __eldur_run_m3()").expect("chunk's run function");
+    let run = out
+        .page_js
+        .find("function __eldur_run_m3()")
+        .expect("chunk's run function");
     let chunk_at = out.page_js.find("console.log('chunk')").expect("chunk");
     assert!(run < chunk_at && chunk_at < init, "{}", out.page_js);
     // Its load listener goes through the runtime, which has fired load by then.
     assert!(!out.page_js[init..].contains("never"), "{}", out.page_js);
     assert!(
-        out.page_js.contains("Eldur.importModule(__eldur_module_namespace)")
-            && out.page_js.contains("__eldur_run_m3(), __eldur_module_namespace.value ="),
+        out.page_js
+            .contains("Eldur.importModule(__eldur_module_namespace)")
+            && out
+                .page_js
+                .contains("__eldur_run_m3(), __eldur_module_namespace.value ="),
         "{}",
         out.page_js
     );
@@ -3004,21 +3013,48 @@ fn an_imported_module_runs_before_its_importer_and_a_lazy_one_on_its_first_impor
 #[test]
 fn a_lazy_modules_lazy_dependencies_run_first_and_a_handler_imports_from_the_page() {
     let resolver = FakeResolver::default().with_element(1, "go", TargetKind::Button);
-    let main = module_script("/order/main.js", "export const later = () => import('./lazy.js');\n");
+    let main = module_script(
+        "/order/main.js",
+        "export const later = () => import('./lazy.js');\n",
+    );
     let lazy = imported_module(
         "/order/lazy.js",
         "import { only } from './lazydep.js';\nconsole.log('lazy', only);\nexport const word = 'chunk';\n",
     );
-    let dep = imported_module("/order/lazydep.js", "console.log('lazydep');\nexport const only = 'dep';\n");
+    let dep = imported_module(
+        "/order/lazydep.js",
+        "console.log('lazydep');\nexport const only = 'dep';\n",
+    );
     let click = imported_module("/order/click.js", "export const word = 'clicked';\n");
-    let go = handler(1, "click", "import('./click.js').then((m) => console.log(m.word))");
+    let go = handler(
+        1,
+        "click",
+        "import('./click.js').then((m) => console.log(m.word))",
+    );
     let out = run_rewrite(&[main, lazy, dep, click, go], &resolver);
-    let dep_run = out.page_js.find("function __eldur_run_m2()").expect("lazydep runs");
-    let lazy_run = out.page_js.find("function __eldur_run_m1()").expect("lazy runs");
-    let calls_dep = out.page_js[lazy_run..].find("__eldur_run_m2();").expect("lazy runs lazydep") + lazy_run;
+    let dep_run = out
+        .page_js
+        .find("function __eldur_run_m2()")
+        .expect("lazydep runs");
+    let lazy_run = out
+        .page_js
+        .find("function __eldur_run_m1()")
+        .expect("lazy runs");
+    let calls_dep = out.page_js[lazy_run..]
+        .find("__eldur_run_m2();")
+        .expect("lazy runs lazydep")
+        + lazy_run;
     let lazy_log = out.page_js.find("console.log('lazy'").expect("lazy");
-    assert!(dep_run < lazy_run && calls_dep < lazy_log, "{}", out.page_js);
-    assert!(out.page_js.contains("function __eldur_run_m3()"), "{}", out.page_js);
+    assert!(
+        dep_run < lazy_run && calls_dep < lazy_log,
+        "{}",
+        out.page_js
+    );
+    assert!(
+        out.page_js.contains("function __eldur_run_m3()"),
+        "{}",
+        out.page_js
+    );
     assert!(!out.page_js.contains("dynamicImport"), "{}", out.page_js);
 }
 
@@ -3028,7 +3064,10 @@ fn a_lazy_modules_lazy_dependencies_run_first_and_a_handler_imports_from_the_pag
 #[test]
 fn a_module_in_a_cycle_reads_the_bindings_of_the_one_that_imports_it() {
     let resolver = FakeResolver::default();
-    let main = module_script("/m/main.js", "import { ping } from './a.js';\nconsole.log(ping());\n");
+    let main = module_script(
+        "/m/main.js",
+        "import { ping } from './a.js';\nconsole.log(ping());\n",
+    );
     let a = imported_module(
         "/m/a.js",
         "import { pong } from './b.js';\nexport function ping() { return 'ping' + pong(); }\n",
@@ -3039,9 +3078,15 @@ fn a_module_in_a_cycle_reads_the_bindings_of_the_one_that_imports_it() {
     );
     let out = run_rewrite(&[main, a, b], &resolver);
     assert!(!out.page_js.contains("__eldur_cycle"), "{}", out.page_js);
-    assert!(out.page_js.contains("console.log('b', typeof ping)"), "{}", out.page_js);
     assert!(
-        !out.diagnostics.iter().any(|d| d.message.contains("circular") || d.message.contains("cycle")),
+        out.page_js.contains("console.log('b', typeof ping)"),
+        "{}",
+        out.page_js
+    );
+    assert!(
+        !out.diagnostics
+            .iter()
+            .any(|d| d.message.contains("circular") || d.message.contains("cycle")),
         "{:?}",
         out.diagnostics
     );
@@ -3052,13 +3097,16 @@ fn a_module_in_a_cycle_reads_the_bindings_of_the_one_that_imports_it() {
 #[test]
 fn export_star_from_a_module_that_imports_this_one_is_reported() {
     let resolver = FakeResolver::default();
-    let a = module_script("/m/a.js", "import { b } from './b.js';\nexport const a = 1;\nconsole.log(b);\n");
+    let a = module_script(
+        "/m/a.js",
+        "import { b } from './b.js';\nexport const a = 1;\nconsole.log(b);\n",
+    );
     let b = imported_module("/m/b.js", "export * from './a.js';\nexport const b = 2;\n");
     let out = run_rewrite(&[a, b], &resolver);
     assert!(
-        out.diagnostics
-            .iter()
-            .any(|d| d.message.starts_with("export * from './a.js', a module importing this one")),
+        out.diagnostics.iter().any(|d| d
+            .message
+            .starts_with("export * from './a.js', a module importing this one")),
         "{:?}",
         out.diagnostics
     );

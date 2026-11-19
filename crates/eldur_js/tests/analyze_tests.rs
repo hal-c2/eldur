@@ -1577,3 +1577,30 @@ fn a_computed_read_hears_nothing_unless_its_value_can_go_on_to_be_called() {
         assert!(hears(heard), "{heard}");
     }
 }
+
+/// What a module asks the converter to read (hal-c2/eldur#22): the files its
+/// static imports and re-exports name and its literal `import()`s, once each;
+/// a computed `import()` names nothing.
+#[test]
+fn a_modules_requests_are_its_static_and_literal_dynamic_specifiers() {
+    let input = eldur_js::ScriptInput {
+        source: "import { a } from \"./a.js\";\nexport * from '../b.js';\nexport { c } from '/c.js';\nimport('./d.js'); import('./a.js'); import(x);\n".to_owned(),
+        name: "/js/main.js".to_owned(),
+        kind: eldur_js::ScriptKind::Module,
+        line_offset: 1,
+    };
+    assert_eq!(
+        eldur_js::module_requests(&input),
+        vec!["./a.js", "../b.js", "/c.js", "./d.js"]
+    );
+    for (spec, path) in [
+        ("./a.js", true),
+        ("../a.js", true),
+        ("/a.js", true),
+        ("//cdn/a.js", false),
+        ("https://cdn/a.js", false),
+        ("lodash", false),
+    ] {
+        assert_eq!(eldur_js::is_path_specifier(spec), path, "{spec}");
+    }
+}
