@@ -88,10 +88,13 @@ Item {
         let oneLine = 0;
         let placed = 0;
         for (const kid of children) {
-            // Its width before the line clamps it, when it says one: a box
-            // capped by `implicitWidth` that summed clamped widths could
-            // never widen, its items clamped to nothing by it.
-            const basis = kid.eldurBasis !== undefined ? kid.eldurBasis : kid.width;
+            // Its width before the line clamps it, while its width is still
+            // that clamp: a box capped by `implicitWidth` that summed clamped
+            // widths could never widen, its items clamped to nothing by it.
+            // A width set some other way is the item's own.
+            const clamped = kid.eldurBasis !== undefined
+                && kid.width === Math.min(kid.eldurBasis, width);
+            const basis = clamped ? kid.eldurBasis : kid.width;
             // Never placed and hidden: every kid counts, as none can be told
             // to be hidden on its own.
             if ((visible && !kid.visible) || basis <= 0 || kid.height <= 0) {

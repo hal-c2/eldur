@@ -241,8 +241,11 @@ body { margin: 0 }
 <div id=s3 style="height:10px"></div>
 <div><span id=j style="display:inline-flex;flex-wrap:wrap;width:400px;gap:10px" class=w><div id=j1></div><div id=j2></div><div id=j3></div></span></div>
 <div id=s4 style="height:10px"></div>
+<div><span id=p style="display:inline-flex;flex-wrap:wrap;row-gap:5px;column-gap:30px" class=w><div id=p1></div><div id=p2></div><div id=p3></div></span></div>
+<div id=s5 style="height:10px"></div>
 <script>
 var k = document.getElementById('k');
+document.getElementById('p1').style.width = '300px';
 var m = document.getElementById('m');
 var log = [];
 log.push('kids=' + k.children.length);
@@ -254,12 +257,12 @@ log.push('last=' + k.lastElementChild.id);
 m.removeChild(document.getElementById('m2'));
 log.push('kids=' + m.children.length);
 console.log('DOM ' + log.join(' '));
-var named = [document.getElementById('k1'), document.getElementById('k2'), document.getElementById('k3'), document.getElementById('s1'), document.getElementById('m1'), document.getElementById('m3'), document.getElementById('s2'), document.getElementById('i'), document.getElementById('i1'), document.getElementById('i2'), document.getElementById('i3'), document.getElementById('s3'), document.getElementById('j'), document.getElementById('j1'), document.getElementById('j2'), document.getElementById('j3'), document.getElementById('s4')];
+var named = [document.getElementById('k1'), document.getElementById('k2'), document.getElementById('k3'), document.getElementById('s1'), document.getElementById('m1'), document.getElementById('m3'), document.getElementById('s2'), document.getElementById('i'), document.getElementById('i1'), document.getElementById('i2'), document.getElementById('i3'), document.getElementById('s3'), document.getElementById('j'), document.getElementById('j1'), document.getElementById('j2'), document.getElementById('j3'), document.getElementById('s4'), document.getElementById('p'), document.getElementById('p1'), document.getElementById('p2'), document.getElementById('p3'), document.getElementById('s5')];
 </script></body></html>"#;
 
 /// Chromium, `getBoundingClientRect()` at 900×800, after the page's script
-/// appended `k4` and removed `m2`. It logged `DOM kids=3 parent=true
-/// first=k1 kids=4 last=k4 kids=2`.
+/// appended `k4`, removed `m2` and set `p1` to 300px wide. It logged `DOM
+/// kids=3 parent=true first=k1 kids=4 last=k4 kids=2`.
 const DOM_TEST: &str = r##"
 import QtQuick
 import QtTest
@@ -310,6 +313,12 @@ TestCase {
         check("j2", 160, 140, 150, 20)
         check("j3", 0, 170, 150, 20)
         check("s4", 0, 190, 900, 10)
+        // The script set p1 to 300px: the shrink-to-fit box takes its new
+        // width, and its items stay on one line.
+        check("p", 0, 200, 660, 20)
+        check("p1", 0, 200, 300, 20)
+        check("p2", 330, 200, 150, 20)
+        check("p3", 510, 200, 150, 20)
     }
 }
 }
@@ -403,6 +412,20 @@ Item {
             Rectangle { property real eldurBasis: 100; width: Math.min(eldurBasis, parent.width); height: 20 }
         }
     }
+    // Items whose width something other than the clamp set.
+    Item {
+        id: wide
+        y: 200
+        width: 900
+        EldurFlow {
+            id: held
+            width: Math.min(implicitWidth, wide.width)
+            spacing: 30
+            Rectangle { id: held1; property real eldurBasis: 100; width: Math.min(eldurBasis, parent.width); height: 20 }
+            Rectangle { id: held2; property real eldurBasis: 100; width: Math.min(eldurBasis, parent.width); height: 20 }
+            Rectangle { property real eldurBasis: 100; width: Math.min(eldurBasis, parent.width); height: 20 }
+        }
+    }
     EldurFlow {
         id: free
         y: 50
@@ -483,6 +506,19 @@ Item {
             wait(50)
             compare(clamped.width, 490)
             compare(clamped.implicitHeight, 20)
+        }
+
+        // A width set some other way is the item's own: the box widens to
+        // it, and an item set to no width takes no place.
+        function test_a_width_set_otherwise_is_the_items() {
+            wait(50)
+            compare(held.width, 360)
+            held1.width = 300
+            wait(50)
+            compare(held.width, 560)
+            held2.width = 0
+            wait(50)
+            compare(held.width, 430)
         }
 
         // With no width set, the items stay on one line, as in `Flow`, even
