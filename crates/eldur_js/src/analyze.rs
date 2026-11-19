@@ -427,6 +427,15 @@ impl AnalysisVisitor<'_, '_> {
         static_member: Option<&StaticMemberExpression<'_>>,
         computed_member: Option<&ComputedMemberExpression<'_>>,
     ) {
+        let stacks = if let Some(member) = static_member {
+            is_style_receiver(&member.object) && is_z_index(member.property.name.as_str())
+        } else {
+            computed_member.is_some_and(|comp| {
+                is_style_receiver(&comp.object)
+                    && extract_string_literal(&comp.expression).is_none_or(|prop| is_z_index(&prop))
+            })
+        };
+        self.analysis.writes_z_index |= stacks;
         let opens = if let Some(member) = static_member {
             is_style_object(&member.object) && !inline_holds_in_place(member.property.name.as_str())
         } else if let Some(comp) = computed_member {
@@ -898,6 +907,12 @@ impl AnalysisVisitor<'_, '_> {
             return;
         }
 
+        if matches!(method, "setProperty" | "removeProperty")
+            && is_style_receiver(&member.object)
+            && literal_arg(0).is_none_or(|prop| is_z_index(&prop))
+        {
+            self.analysis.writes_z_index = true;
+        }
         if matches!(method, "setProperty" | "removeProperty")
             && is_style_object(&member.object)
             && !literal_arg(0).is_some_and(|prop| inline_holds_in_place(&prop))
@@ -1395,6 +1410,18 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
 
 fn is_style_object(expr: &Expression<'_>) -> bool {
     matches!(unwrap_parens(expr), Expression::StaticMemberExpression(m) if m.property.name == "style")
+}
+
+/// `x.style` in either form, `x["style"]` too. Only for noting `z-index`:
+/// what opens a page reads the dotted form alone.
+fn is_style_receiver(expr: &Expression<'_>) -> bool {
+    is_style_object(expr)
+        || matches!(unwrap_parens(expr), Expression::ComputedMemberExpression(m)
+            if extract_string_literal(&m.expression).as_deref() == Some("style"))
+}
+
+fn is_z_index(prop: &str) -> bool {
+    matches!(prop, "zIndex" | "z-index")
 }
 
 /// An inline property the page's item can take as it is, in either spelling.

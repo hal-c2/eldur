@@ -107,6 +107,7 @@ fn tracks_listeners_and_property_writes_across_variables_functions_and_loops() {
         static_tables: _,
         reads_computed_style: _,
         touches_inline_style: _,
+        writes_z_index: _,
         adopts_for_inline: _,
         heard_events: _,
         hears_unnamed_events: _,
@@ -1624,4 +1625,29 @@ fn a_modules_requests_are_its_static_and_literal_dynamic_specifiers() {
     ] {
         assert_eq!(eldur_js::is_path_specifier(spec), path, "{spec}");
     }
+}
+
+#[test]
+fn an_inline_z_index_is_noted_in_any_spelling() {
+    let writes = |source: &str| analyze(&[classic("inline script #1", source)]).writes_z_index;
+    assert!(writes(
+        r#"document.getElementById("a").style.zIndex = "2";"#
+    ));
+    assert!(writes(
+        r#"document.getElementById("a").style["z-index"] = "2";"#
+    ));
+    assert!(writes(
+        r#"document.getElementById("a").style.setProperty("z-index", "2");"#
+    ));
+    // A name the script computes may be `z-index`.
+    assert!(writes(
+        r#"document.getElementById("a").style[name()] = "2";"#
+    ));
+    assert!(writes(
+        r#"document.getElementById("a")["style"].zIndex = "2";"#
+    ));
+    assert!(!writes(
+        r#"document.getElementById("a").style.color = "red";"#
+    ));
+    assert!(!writes(r#"document.getElementById("a").zIndex = 2;"#));
 }

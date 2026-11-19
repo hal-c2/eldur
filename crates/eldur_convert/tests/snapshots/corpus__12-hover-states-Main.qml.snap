@@ -126,6 +126,7 @@ ApplicationWindow {
                         property real eldurCarry: Math.ceil(Layout.topMargin) - Layout.topMargin + buttonRow.eldurCarry + 0.000001
 
                         spacing: 0
+                        z: 1
                         Layout.fillWidth: true
                         Layout.maximumWidth: Number.POSITIVE_INFINITY
                         Layout.topMargin: 28 - lead.eldurCarry
@@ -160,6 +161,7 @@ ApplicationWindow {
                             property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                             spacing: 12
+                            z: 1
                             Layout.fillWidth: true
                             Layout.topMargin: 12 - sectionTitle.eldurCarry
                             Layout.preferredHeight: implicitHeight
@@ -229,6 +231,7 @@ ApplicationWindow {
                                         }
                                     }
                                 }
+                                z: 1
                                 width: Math.min(implicitWidth, parent.width)
                                 hoverEnabled: true
 
@@ -302,6 +305,7 @@ ApplicationWindow {
                                         }
                                     }
                                 }
+                                z: 1
                                 width: Math.min(implicitWidth, parent.width)
                                 hoverEnabled: true
 
@@ -375,6 +379,7 @@ ApplicationWindow {
                                         }
                                     }
                                 }
+                                z: 1
                                 width: Math.min(implicitWidth, parent.width)
                                 hoverEnabled: true
 

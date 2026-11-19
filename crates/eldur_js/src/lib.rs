@@ -204,6 +204,10 @@ pub struct Analysis {
     /// Some script reaches an inline style or `hidden`: clearing either leaves
     /// what the rules say, so the runtime needs them.
     pub touches_inline_style: bool,
+    /// Some script writes an inline `z-index`, or an inline property it does
+    /// not name: the level it gives a box is over the box's place in the
+    /// flow, which the runtime cannot tell without the page's rules.
+    pub writes_z_index: bool,
     /// Some script writes an inline property only a generic box answers to, so
     /// the item an id names may be replaced: its queries stay live.
     pub adopts_for_inline: bool,

@@ -331,7 +331,7 @@ impl Emitter<'_, '_> {
             } else {
                 Given::Content
             };
-            let mut obj = self.item(child, decoration).obj;
+            let mut obj = self.layout_item(child, decoration).obj;
             let lead_gap = if spacers && i > 0 {
                 gap.clone()
             } else {
@@ -780,7 +780,10 @@ impl Emitter<'_, '_> {
                     self.what(b)
                 ),
             );
-            let objs: Vec<Object> = items.iter().map(|c| self.item(c, decoration).obj).collect();
+            let objs: Vec<Object> = items
+                .iter()
+                .map(|c| self.layout_item(c, decoration).obj)
+                .collect();
             let comments: Vec<Option<String>> = items
                 .iter()
                 .map(|c| c.node.map(|n| describe(self.doc, n)))
@@ -839,7 +842,7 @@ impl Emitter<'_, '_> {
         let mut grows = false;
         let mut fixed_heights = Vec::new();
         for child in items {
-            let mut obj = self.item(child, decoration).obj;
+            let mut obj = self.layout_item(child, decoration).obj;
             let cs = &*child.style;
             let cline = child.node.and_then(|n| node_line(self.doc, n));
             let insets = self.insets(cs, cline);

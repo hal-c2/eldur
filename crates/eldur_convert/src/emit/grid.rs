@@ -901,7 +901,7 @@ impl Emitter<'_, '_> {
             let objs: Vec<(Object, Option<String>)> = items
                 .iter()
                 .map(|c| {
-                    let obj = self.item(c, decoration).obj;
+                    let obj = self.layout_item(c, decoration).obj;
                     (obj, c.node.map(|n| describe(self.doc, n)))
                 })
                 .collect();
@@ -1302,7 +1302,7 @@ impl Emitter<'_, '_> {
             } else {
                 Given::Stretched
             };
-            let mut obj = self.item(child, decoration).obj;
+            let mut obj = self.layout_item(child, decoration).obj;
             let keeper =
                 kept.then(
                     || match areas.iter().find(|a| (a.0, a.1) == (p.col, p.col_span)) {

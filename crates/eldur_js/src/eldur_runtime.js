@@ -6373,6 +6373,40 @@ function setStyle(item, prop, value) {
     _moAttr(item, "style", "set", function() { _setStyleAt(item, prop, value); });
 }
 
+// The `z` a box with this computed style stacks at among its siblings, as
+// the converter emits it: a box in the flow that holds positioned boxes
+// (it is positioned, transformed or filtered), or a flex or grid item with
+// a `z-index` (`item`), sits above the flow, `z-index: 0` included, so it
+// takes its `z-index` plus one, and a negative one stays in the flow, as Qt
+// would paint it under its parent. An absolute or fixed box is its overlay,
+// which takes the `z-index` as it is. `null` is a box `z-index` does not
+// apply to.
+function _stackZ(s, item) {
+    var at = s["z-index"];
+    var level = at === "auto" || at === undefined || at === "" ? null : parseInt(at, 10);
+    if (level !== null && isNaN(level)) {
+        level = null;
+    }
+    if (s.position === "absolute" || s.position === "fixed") {
+        return level === null ? 1 : level;
+    }
+    var holds = s.position === "relative" || s.position === "sticky"
+        || (s.transform !== undefined && s.transform !== "none")
+        || (s.filter !== undefined && s.filter !== "none");
+    if (level !== null && (holds || item)) {
+        return level >= 0 ? level + 1 : 0;
+    }
+    return holds ? 1 : null;
+}
+
+// Whether the box is a flex or grid item, whose `z-index` applies though
+// it is not positioned (CSS Flexbox 1 §4.3, CSS Grid 2 §9.5).
+function _gLayoutItem(raw) {
+    var parent = _gParent(raw);
+    return Boolean(parent) && typeof parent.visible === "boolean"
+        && /^(inline-)?(flex|grid)$/.test(_gStyle(parent).display);
+}
+
 function _setStyleAt(item, prop, value) {
     var raw = _unwrap(item);
     if (!raw) {
@@ -6460,9 +6494,26 @@ function _setStyleAt(item, prop, value) {
     } else if (name === "left" || name === "top" || name === "right" || name === "bottom") {
         _setOffset(raw, name, str);
     } else if (name === "zIndex") {
-        var zi = parseInt(str, 10);
-        if (!isNaN(zi) && typeof raw.z === "number") {
-            raw.z = zi;
+        // The level the rules give it, so a script's `z-index` and a
+        // stylesheet's stack the same. Without the rules, the converter
+        // gives a box `z-index` applies to its own level and its level at
+        // `auto`, and one it raises takes its number plus one; any other box
+        // takes the number.
+        var stacked;
+        if (_gHasCascade() && typeof raw.visible === "boolean") {
+            // Fresh: the declaration just written is a write since the
+            // last read.
+            stacked = _stackZ(_gFreshStyle(raw), _gLayoutItem(raw));
+        } else if (typeof raw.eldurRuleZ === "number") {
+            var level = parseInt(str, 10);
+            stacked = str === "" ? raw.eldurRuleZ
+                : str === "auto" ? raw.eldurAutoZ
+                : isNaN(level) ? null : level >= 0 ? level + 1 : 0;
+        } else {
+            stacked = parseInt(str, 10);
+        }
+        if (stacked !== null && !isNaN(stacked) && typeof raw.z === "number") {
+            raw.z = stacked;
         }
     } else if (name === "color") {
         _inlineColor(raw, Boolean(m.styles.color));
@@ -22768,8 +22819,8 @@ function _gPaintBox(raw, s, e) {
     }
     _gPaintEdges(raw, s, e, !uniform && !drawn);
     _gPaintOutline(raw, s);
-    var z = s["z-index"] === "auto" ? (s.position !== "static" ? 1 : 0) : _gNumber(s["z-index"]);
-    _gSet(raw, "z", z);
+    var z = _stackZ(s, _gLayoutItem(raw));
+    _gSet(raw, "z", z === null ? 0 : z);
     _gSet(raw, "clip", s["overflow-x"] !== "visible" || s["overflow-y"] !== "visible");
     _gPlaceRelative(raw, s);
     _gPaintDecor(raw, s, e, radius);

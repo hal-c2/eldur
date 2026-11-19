@@ -222,6 +222,7 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
     if let Some(scripts) = cx.scripts {
         emitter.open_elements = scripts.analysis.open_elements;
         emitter.hides_items = scripts.analysis.touches_inline_style;
+        emitter.writes_z_index = scripts.analysis.writes_z_index;
         emitter.script_hides = scripts.display_writes();
         emitter.cascade_rules = scripts.analysis.needs_cascade();
         // Rows a script makes are sized by the same solver, table or no table.
@@ -1384,6 +1385,7 @@ impl Dynamic<'_, '_> {
         if let Some(scripts) = cx.scripts {
             emitter.open_elements = scripts.analysis.open_elements;
             emitter.hides_items = scripts.analysis.touches_inline_style;
+            emitter.writes_z_index = scripts.analysis.writes_z_index;
             emitter.script_hides = scripts.display_writes();
             emitter.gains.clone_from(&scripts.gains.nodes);
             emitter.live_tables.clone_from(&scripts.live_tables);

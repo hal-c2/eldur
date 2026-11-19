@@ -16,6 +16,9 @@ use eldur_convert::{Options, RootKind, Viewport, convert_str};
 const PAGE: &str = r#"<!doctype html><html><head><style>
 body { margin: 0 }
 div div { height: 20px }
+#y1 { position: relative }
+#y2 { position: relative; z-index: 2 }
+#y3 { position: relative; z-index: 2 }
 </style></head><body>
 <div style="display:flex;flex-wrap:wrap;width:400px;gap:10%"><div id=a1 style="width:100%"></div><div id=a2 style="width:100%"></div></div>
 <div id=s1 style="height:10px"></div>
@@ -31,9 +34,29 @@ div div { height: 20px }
 <div id=s6 style="height:10px"></div>
 <div style="display:flex;flex-wrap:wrap;width:300px;row-gap:10px;column-gap:40px"><span id=g1>Alpha</span><span id=g2>Beta</span></div>
 <div style="display:flex;flex-wrap:wrap;width:400px;row-gap:5px;column-gap:30px"><div id=h1 style="width:150px"></div><div id=h2 style="width:150px"></div><div id=h3 style="width:150px"></div></div>
+<div style="display:flex;flex-wrap:wrap;width:400px;row-gap:5px;column-gap:30px"><div id=z1 style="width:150px;position:relative;z-index:2;transform:translateX(100px);background:red"></div><div id=z2 style="width:150px;background:blue"></div></div>
+<div style="display:flex;flex-wrap:wrap;width:400px;row-gap:5px;column-gap:30px"><div id=y1 style="width:150px"></div><div id=y2 style="width:150px"></div></div>
+<div style="display:flex;flex-wrap:wrap;width:400px;row-gap:5px;column-gap:30px"><div id=y3 style="width:150px"></div><div id=y4 style="width:150px"></div></div>
+<div style="display:flex;flex-wrap:wrap;width:400px;row-gap:5px;column-gap:30px"><button id=w1 style="width:150px;height:20px;z-index:2">w</button><div id=w2 style="width:150px;height:20px"></div></div>
+<div id=v1 style="height:10px"></div>
 <script>
 // Named so that they get an objectName the test can find.
-var named = [document.getElementById('a1'), document.getElementById('a2'), document.getElementById('s1'), document.getElementById('b1'), document.getElementById('b2'), document.getElementById('b3'), document.getElementById('s2'), document.getElementById('c1'), document.getElementById('c2'), document.getElementById('c3'), document.getElementById('s3'), document.getElementById('d1'), document.getElementById('d2'), document.getElementById('d3'), document.getElementById('s4'), document.getElementById('e1'), document.getElementById('e2'), document.getElementById('s5'), document.getElementById('f1'), document.getElementById('f2'), document.getElementById('f3'), document.getElementById('s6'), document.getElementById('g1'), document.getElementById('g2'), document.getElementById('h1'), document.getElementById('h2'), document.getElementById('h3')];
+var named = [document.getElementById('a1'), document.getElementById('a2'), document.getElementById('s1'), document.getElementById('b1'), document.getElementById('b2'), document.getElementById('b3'), document.getElementById('s2'), document.getElementById('c1'), document.getElementById('c2'), document.getElementById('c3'), document.getElementById('s3'), document.getElementById('d1'), document.getElementById('d2'), document.getElementById('d3'), document.getElementById('s4'), document.getElementById('e1'), document.getElementById('e2'), document.getElementById('s5'), document.getElementById('f1'), document.getElementById('f2'), document.getElementById('f3'), document.getElementById('s6'), document.getElementById('g1'), document.getElementById('g2'), document.getElementById('h1'), document.getElementById('h2'), document.getElementById('h3'), document.getElementById('z1'), document.getElementById('z2'), document.getElementById('y1'), document.getElementById('y2'), document.getElementById('y3'), document.getElementById('y4'), document.getElementById('w1'), document.getElementById('w2'), document.getElementById('v1')];
+// A level from a script, over a box the rules place; one cleared again;
+// one on a flex item that is not positioned.
+document.getElementById('y1').style.zIndex = '3';
+document.getElementById('y3').style.zIndex = '5';
+document.getElementById('y3').style.zIndex = '';
+document.getElementById('y4').style.zIndex = '2';
+// Each item is still its container's child: what a script
+// sees of them is `#v1`'s height, 10 plus one bit for each that holds.
+var z1 = document.getElementById('z1');
+var z2 = document.getElementById('z2');
+var box = z1.parentNode;
+var seen = (box.children.length === 2 ? 1 : 0) + (box.children[0] === z1 ? 2 : 0)
+    + (box.firstElementChild === z1 ? 4 : 0) + (z1.nextElementSibling === z2 ? 8 : 0)
+    + (z2.previousElementSibling === z1 ? 16 : 0);
+document.getElementById('v1').style.height = (10 + seen) + 'px';
 </script></body></html>"#;
 
 /// Chromium, `getBoundingClientRect()` at 900×800 and 450×800: `[x, y,
@@ -161,6 +184,71 @@ TestCase {
         near("h1 back: box height", box.implicitHeight, 45)
     }
 
+    // A positioned item with a stacking level paints over the next item it
+    // overlaps: Chromium paints `#z1` (`z-index: 2`, moved 100px right) over
+    // `#z2` from x 180 to 250. The items are their flow's own children, so
+    // their `z` is what stacks them.
+    function test_a_raised_item_stays_above_the_next() {
+        const z1 = findChild(page, "z1")
+        const z2 = findChild(page, "z2")
+        verify(z1 && z2, "z1, z2")
+        verify(z1.parent === z2.parent, "the items are siblings")
+        verify(z1.z > z2.z, "z1 z " + z1.z + ", z2 z " + z2.z)
+        near("z1 x", z1.mapToItem(page, 0, 0).x + 0, z2.mapToItem(page, 0, 0).x - 80)
+        // A script's `style.zIndex` sets the item's `z` (the runtime writes
+        // it there), so the item raised now paints on top.
+        // Above z1's own `z`, which is its `z-index` plus one.
+        z2.z = z1.z + 1
+        verify(z2.z > z1.z, "after: z1 z " + z1.z + ", z2 z " + z2.z)
+    }
+
+    // A script's `style.zIndex` stacks as the same `z-index` in a rule does:
+    // `#y1`, positioned by a rule, takes level 3 from the page's script and
+    // `#y2` has `z-index: 2` from its rule, so `#y1` paints over `#y2` as
+    // in Chromium, and both are at the `z` the converter gives a rule's
+    // level, `#z1`'s 2 included.
+    function test_a_scripted_level_stacks_as_a_rules() {
+        const z1 = findChild(page, "z1")
+        const y1 = findChild(page, "y1")
+        const y2 = findChild(page, "y2")
+        verify(z1 && y1 && y2, "z1, y1, y2")
+        compare(y2.z, z1.z, "y2 z, z1 z")
+        compare(y1.z, y2.z + 1, "y1 z (script), y2 z (rule)")
+        verify(y1.parent === y2.parent, "y1, y2 siblings")
+    }
+
+    // `#y3`'s script level is cleared, so it is back at its rule's 2. `#y4`
+    // is a flex item, whose `z-index` stacks though it is not positioned
+    // (CSS Flexbox 1 §4.3): its script's 2 is the `z` of a rule's 2.
+    function test_a_cleared_level_and_a_flex_items() {
+        const y2 = findChild(page, "y2")
+        const y3 = findChild(page, "y3")
+        const y4 = findChild(page, "y4")
+        verify(y2 && y3 && y4, "y2, y3, y4")
+        compare(y3.z, y2.z, "y3 z (cleared), y2 z (rule)")
+        compare(y4.z, y2.z, "y4 z (script, flex item), y2 z (rule)")
+    }
+
+    // A control is a replaced box, emitted by a path of its own, and a flex
+    // item's `z-index` stacks it all the same: `#w1`'s 2 is a rule's 2, and
+    // it is over `#w2`.
+    function test_a_controls_level_stacks_as_a_boxs() {
+        const y2 = findChild(page, "y2")
+        const w1 = findChild(page, "w1")
+        const w2 = findChild(page, "w2")
+        verify(y2 && w1 && w2, "y2, w1, w2")
+        compare(w1.z, y2.z, "w1 z (flex item button), y2 z (rule)")
+        verify(w1.z > w2.z, "w1 z " + w1.z + ", w2 z " + w2.z)
+    }
+
+    // A script sees `#z1` and `#z2` as its flex container's two children, in
+    // order: 10 + 1 + 2 + 4 + 8 + 16.
+    function test_items_are_the_containers_children() {
+        const v1 = findChild(page, "v1")
+        verify(v1, "v1")
+        compare(v1.height, 41, "children, first, next and previous")
+    }
+
     function test_gaps_follow_the_width() {
         page.width = 450
         waitForRendering(page)
@@ -191,8 +279,83 @@ TestCase {
 }
 "##;
 
+/// The same levels on a page whose script reads computed styles, so the
+/// runtime has the page's rules: a read between two writes must not keep the
+/// first one's level.
+const RULES_PAGE: &str = r#"<!doctype html><html><head><style>
+body { margin: 0 }
+div div { height: 20px }
+#x1 { position: relative }
+#x2, #x3 { position: relative; z-index: 2 }
+</style></head><body>
+<div style="display:flex;flex-wrap:wrap;width:400px;row-gap:5px;column-gap:30px"><div id=x1 style="width:150px"></div><div id=x2 style="width:150px"></div></div>
+<div style="display:flex;flex-wrap:wrap;width:400px;row-gap:5px;column-gap:30px"><div id=x3 style="width:150px"></div><div id=x4 style="width:150px"></div></div>
+<script>
+var x1 = document.getElementById('x1');
+var x3 = document.getElementById('x3');
+var x4 = document.getElementById('x4');
+var named = [x1, document.getElementById('x2'), x3, x4];
+getComputedStyle(x1).zIndex;
+x1.style.zIndex = '1';
+getComputedStyle(x1).zIndex;
+x1.style.zIndex = '3';
+x3.style.zIndex = '5';
+getComputedStyle(x3).zIndex;
+x3.style.zIndex = '';
+x4.style.zIndex = '2';
+</script></body></html>"#;
+
+/// `#x2` and `#x3` have `z-index: 2` from a rule. `#x1` ends at its
+/// script's 3, `#x3`'s script level is cleared, and `#x4`, a flex item, has
+/// its script's 2, each at the `z` a rule's level gives.
+const RULES_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 900
+    height: 800
+
+TestCase {
+    name: "FlowGapsRules"
+    when: windowShown
+
+    property var page
+
+    function initTestCase() {
+        const component = Qt.createComponent("Main.qml")
+        verify(component.status === Component.Ready, component.errorString())
+        page = createTemporaryObject(component, host, { width: 900, height: 800 })
+        waitForRendering(page)
+    }
+
+    function test_scripted_levels_stack_as_the_rules() {
+        const x1 = findChild(page, "x1")
+        const x2 = findChild(page, "x2")
+        const x3 = findChild(page, "x3")
+        const x4 = findChild(page, "x4")
+        verify(x1 && x2 && x3 && x4, "x1, x2, x3, x4")
+        compare(x2.z, 3, "x2 z (rule 2)")
+        compare(x1.z, x2.z + 1, "x1 z (script 3), x2 z (rule 2)")
+        compare(x3.z, x2.z, "x3 z (cleared), x2 z (rule 2)")
+        compare(x4.z, x2.z, "x4 z (script 2, flex item), x2 z (rule 2)")
+    }
+}
+}
+"##;
+
+#[test]
+fn scripted_levels_stack_as_the_rules() {
+    run(RULES_PAGE, RULES_TEST, "rules");
+}
+
 #[test]
 fn wrapping_gaps_match_chromium() {
+    run(PAGE, TEST, "gaps");
+}
+
+fn run(page: &str, test: &str, name: &str) {
     if support::no_qt() {
         return;
     }
@@ -205,11 +368,11 @@ fn wrapping_gaps_match_chromium() {
         },
         ..Options::default()
     };
-    let out = convert_str(PAGE, &options);
-    let dir = std::env::temp_dir().join(format!("eldur-flow-gaps-{}", std::process::id()));
+    let out = convert_str(page, &options);
+    let dir = std::env::temp_dir().join(format!("eldur-flow-gaps-{name}-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("temp dir");
     write(&dir, &out);
-    std::fs::write(dir.join("tst_flow_gaps.qml"), TEST).expect("write test");
+    std::fs::write(dir.join("tst_flow_gaps.qml"), test).expect("write test");
     let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_flow_gaps.qml"))
