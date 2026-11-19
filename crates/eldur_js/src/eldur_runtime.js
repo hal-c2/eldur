@@ -4983,6 +4983,10 @@ function _setShownNow(raw, shown) {
         raw.visible = Qt.binding(function() {
             return shown && (slot.parent ? slot.parent.visible : false);
         });
+        // A raised block's slot holds its room in the flow.
+        if (slot.eldurRisen === true) {
+            _inlineHold(raw, slot, "visible", shown);
+        }
     } else {
         _inlineHold(raw, raw, "visible", shown);
     }
@@ -17028,11 +17032,12 @@ function _deepestUnder(item, scene, parentOff) {
         return painted;
     }
     // Positioned boxes hang from the initial containing block; it paints nothing,
-    // and lies over the page.
+    // and lies over the page. So does the frame that takes an overlay out to
+    // its stop's column, over its block.
     if (inside && _isPlainTextItem(item) && _isLines(item.parent) && !item.parent.runCovers(item, local.x, local.y)) {
         return null;
     }
-    return inside && !off && item !== _root.eldurInitialBlock ? item : null;
+    return inside && !off && item !== _root.eldurInitialBlock && item.eldurHoisted !== true ? item : null;
 }
 
 function _isElementBetween(found, top) {
@@ -26286,13 +26291,9 @@ function _gPlaceRelative(raw, s) {
         dx = left !== null ? left : right !== null ? -right : 0;
         dy = top !== null ? top : bottom !== null ? -bottom : 0;
     }
-    if (!m.gShift) {
+    if (!m.gShift && raw.eldurShift) {
         // The converter moved the box by its offset with one of its own.
-        for (var i = 0; i < raw.transform.length && !m.gShift; ++i) {
-            if (raw.transform[i].objectName === "eldurShift") {
-                m.gShift = raw.transform[i];
-            }
-        }
+        m.gShift = raw.eldurShift;
     }
     if (!m.gShift && dx === 0 && dy === 0) {
         return;
@@ -26306,8 +26307,8 @@ function _gPlaceRelative(raw, s) {
     m.gShift.y = dy;
     // A hoisted overlay's frame reads the shifts on its block's way, which
     // a `transform` list does not say it has changed.
-    if (added && _root && typeof _root.eldurShifts === "number") {
-        ++_root.eldurShifts;
+    if (added && _root && Array.isArray(_root.eldurShifts)) {
+        _root.eldurShifts = _root.eldurShifts.concat([[raw, m.gShift]]);
     }
 }
 

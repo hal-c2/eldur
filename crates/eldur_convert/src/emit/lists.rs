@@ -28,6 +28,8 @@ pub(super) const SLOT_PROPERTY: &str = "eldurSlot";
 pub(super) const BOX_PROPERTY: &str = "eldurBox";
 /// Marks the frame an overlay that went to its stop's column is in.
 pub(super) const HOISTED_PROPERTY: &str = "eldurHoisted";
+/// On the slot a raised block leaves in the flow, which holds its room.
+pub(super) const RISEN_PROPERTY: &str = "eldurRisen";
 
 /// A bullet's side, in px. Chromium draws it about 0.3em across at any font
 /// size (measured at 12, 16, 24 and 40px).
@@ -516,6 +518,38 @@ impl Emitter<'_, '_> {
                 obj.set(size, Value::expr(format!("parent.{size}")));
             }
         }
+        // In the DOM it is still where its slot is (`_gSlotted`), and goes
+        // with what that slot is in.
+        slot.members.push(Member::PropertyDecl {
+            ty: "Item".to_owned(),
+            name: BOX_PROPERTY.to_owned(),
+            value: Some(Value::expr(id.clone())),
+            readonly: false,
+            required: false,
+        });
+        slot.members.push(Member::PropertyDecl {
+            ty: "bool".to_owned(),
+            name: RISEN_PROPERTY.to_owned(),
+            value: Some(Value::Bool(true)),
+            readonly: true,
+            required: false,
+        });
+        obj.members.insert(
+            0,
+            Member::PropertyDecl {
+                ty: "Item".to_owned(),
+                name: SLOT_PROPERTY.to_owned(),
+                value: Some(Value::expr(slot_id.clone())),
+                readonly: false,
+                required: false,
+            },
+        );
+        obj.set(
+            "visible",
+            Value::expr(format!(
+                "{slot_id}.parent ? {slot_id}.parent.visible : false"
+            )),
+        );
         let lift = match obj.get("z") {
             Some(Value::Number(z)) => *z as i32,
             _ => 1,
@@ -889,12 +923,12 @@ pub(super) fn static_place_functions(root: &mut Object, hoisted: bool) {
         return;
     }
     // A hoisted overlay's frame lies where its block is painted, so it adds
-    // the relative offsets on the way. An item's `transform` list says
-    // nothing when it changes, so the runtime counts the shifts it adds.
+    // the relative offsets on the way: the converter's, which an item names
+    // (`eldurShift`), and those the runtime's rules add, which it lists.
     root.members.push(Member::PropertyDecl {
-        ty: "int".to_owned(),
+        ty: "var".to_owned(),
         name: SHIFTS_PROPERTY.to_owned(),
-        value: Some(Value::Number(0.0)),
+        value: Some(Value::expr("[]")),
         readonly: false,
         required: false,
     });
@@ -904,9 +938,10 @@ pub(super) fn static_place_functions(root: &mut Object, hoisted: bool) {
             name: name.to_owned(),
             params: vec!["item".to_owned(), "block".to_owned()],
             body: vec![
-                format!("let at = 0 * {ROOT_ID}.{SHIFTS_PROPERTY}"),
+                "let at = 0".to_owned(),
+                format!("const added = {ROOT_ID}.{SHIFTS_PROPERTY}"),
                 format!(
-                    "for (; item && item !== block; item = item.parent) for (let i = 0; i < item.transform.length; ++i) if (item.transform[i].objectName === \"{shift}\") at += item.transform[i].{axis}"
+                    "for (; item && item !== block; item = item.parent) {{ if (item.{shift}) at += item.{shift}.{axis}; else for (let i = 0; i < added.length; ++i) if (added[i][0] === item) at += added[i][1].{axis} }}"
                 ),
                 "return at".to_owned(),
             ],
@@ -914,7 +949,7 @@ pub(super) fn static_place_functions(root: &mut Object, hoisted: bool) {
     }
 }
 
-/// The root's count of the relative offsets the runtime has added.
+/// The relative offsets the runtime's rules add, as `[item, Translate]`.
 const SHIFTS_PROPERTY: &str = "eldurShifts";
 
 /// Whether a box has text somewhere in flow that wraps at the width it gets.

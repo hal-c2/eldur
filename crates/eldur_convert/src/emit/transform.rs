@@ -11,7 +11,7 @@
 use eldur_css::{
     ComputedStyle, Display, Length, LengthAuto, LengthPercentage, Position, TransformFn,
 };
-use eldur_qml::{Object, Value};
+use eldur_qml::{Member, Object, Value};
 
 use super::Emitter;
 use super::units::{fmt_number, length_expr, number};
@@ -150,13 +150,15 @@ impl Emitter<'_, '_> {
 
     /// `position: relative`, last in the list: like a transform it moves the
     /// box's painting, and what it holds, not its place in the flow. The
-    /// runtime takes the `Translate` over by its name when its rules move the
-    /// box, and a hoisted overlay's frame reads it.
-    pub(super) fn relative_shift(obj: &mut Object, style: &ComputedStyle) {
+    /// runtime takes the `Translate` over (`eldurShift`) when its rules move
+    /// the box, and a hoisted overlay's frame reads it there, as an item's
+    /// `transform` list says nothing when it changes.
+    pub(super) fn relative_shift(&mut self, obj: &mut Object, style: &ComputedStyle, hint: &str) {
         let Some((x, y)) = super::relative_px(style).filter(|&at| at != (0.0, 0.0)) else {
             return;
         };
-        let mut shift = translate(number(x), number(y));
+        let id = self.ids.claim(&format!("{hint} shift"));
+        let mut shift = translate(number(x), number(y)).with_id(id.clone());
         shift.set("objectName", SHIFT_NAME);
         let mut values = match obj.get("transform") {
             Some(Value::List(old)) => old.clone(),
@@ -170,6 +172,13 @@ impl Emitter<'_, '_> {
             Value::List(values)
         };
         obj.set("transform", value);
+        obj.members.push(Member::PropertyDecl {
+            ty: "Translate".to_owned(),
+            name: SHIFT_NAME.to_owned(),
+            value: Some(Value::expr(id)),
+            readonly: false,
+            required: false,
+        });
     }
 
     /// `position: sticky`, last in the list: it moves the box as transformed.

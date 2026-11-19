@@ -90,7 +90,8 @@ TestCase {
     readonly property var painted: ["b", "c", "d", "f", "i", "j", "l", "m", "o", "p", "t", "u", "w", "vd", "src", "mv", "vs", "rm", "gone", "vr",
         "c1", "o1", "c2", "o2", "c3", "o3", "hv", "o4", "fc", "o5", "c6", "o6", "c7", "o7", "e8", "o8",
         "k1", "v1", "k2", "v2", "k3", "v3", "k4", "v4", "k5", "m5", "v5",
-        "c1", "v1", "c2", "v2", "c3", "v3", "c4", "e4", "v4", "e5", "v5", "a6", "a7"]
+        "c1", "v1", "c2", "v2", "c3", "v3", "c4", "e4", "v4", "e5", "v5", "a6", "a7", "h8", "a8",
+        "b3", "b4", "da", "db"]
 
     // The painted box nearest the front at a point, in Qt Quick's paint
     // order: the children over an item from the last level down, then the

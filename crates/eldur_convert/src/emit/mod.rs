@@ -1252,7 +1252,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             self.transform(&mut e.obj, &b.style, &hint(self.doc, b), &what, line);
         }
         self.sticky_transform(&mut e.obj, &b.style, &hint(self.doc, b));
-        Self::relative_shift(&mut e.obj, &b.style);
+        self.relative_shift(&mut e.obj, &b.style, &hint(self.doc, b));
         // The runtime shows, hides and keeps in place what a class change
         // gives or takes from the element, and a script does not see it.
         if self.runtime_dom
