@@ -27,6 +27,8 @@ document.getElementById("faq").addEventListener("click", function (ev) {
 });
 document.getElementById("toout").addEventListener("click", function () { document.getElementById("out").focus(); });
 document.addEventListener("click", function (ev) { console.log("doc click", ev.target.id, ev.defaultPrevented, location.hash); });
+// A focused link that loses its box loses the focus.
+document.addEventListener("keydown", function (ev) { if (ev.key === "s") document.getElementById("next").style.display = "none"; });
 document.addEventListener("focusin", function (ev) { console.log("focus", ev.target.id); });
 </script>
 </body>

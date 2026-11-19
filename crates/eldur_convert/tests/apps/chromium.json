@@ -89503,6 +89503,109 @@
    }
   },
   {
+   "name": "tab to next again",
+   "log": [
+    "focus next"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1744,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "next"
+   }
+  },
+  {
+   "name": "hide next",
+   "log": [],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1744,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "enter on hidden",
+   "log": [],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1744,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "out last",
+   "log": [
+    "focus toout",
+    "focus out",
+    "doc click toout false "
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1744,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "out"
+   }
+  },
+  {
+   "name": "back from out last",
+   "log": [
+    "focus lone"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1744,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "lone"
+   }
+  },
+  {
    "name": "enter on lone",
    "log": [
     "doc click lone false "

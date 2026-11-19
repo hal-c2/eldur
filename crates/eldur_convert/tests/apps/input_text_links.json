@@ -25,6 +25,11 @@
  {"name":"tab on from out","key":"Tab"},
  {"name":"out again","click":"#toout"},
  {"name":"back from out","key":"Shift+Tab"},
+ {"name":"tab to next again","key":"Tab"},
+ {"name":"hide next","key":"KeyS"},
+ {"name":"enter on hidden","key":"Enter","settle":200},
+ {"name":"out last","click":"#toout"},
+ {"name":"back from out last","key":"Shift+Tab"},
  {"name":"enter on lone","key":"Enter","settle":200}
 ],
 "watch":[{"sel":"#end"}]}
