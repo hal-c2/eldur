@@ -17,7 +17,7 @@ import("./cb.js")
   .then(() => import("./broken.js"))
   .then(() => log("broken resolved"), (e) => log("broken " + e.name + " " + e.message.startsWith("Failed to fetch dynamically imported module")))
   .then(() => import("./shape.js"))
-  .then((m) => log("shape " + new m.Square(3).area()))
+  .then((m) => log("shape " + new m.Square(3).area() + " " + new m.default(3).perimeter()))
   .then(() => import("./listens.js"))
   .then(() => new Promise((resolve) => setTimeout(resolve, 50)))
   .then(() => { document.getElementById("out").textContent = "done"; log("done"); });

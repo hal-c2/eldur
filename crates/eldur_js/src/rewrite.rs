@@ -1545,9 +1545,17 @@ impl PageBuffers {
                     .extract_and_consume(cls.span)
                     .trim()
                     .to_string();
+                // In a lazy module the class exists once the module runs, as
+                // a named class declaration there does.
+                let lazy = self.in_lazy_module;
                 let (name, is_mutated) = if let Some(id) = &cls.id {
-                    self.top_decls.push(cls_str);
                     let n = lowerer.bound_name(id).to_string();
+                    if lazy {
+                        self.top_decls.push(format!("let {n};"));
+                        self.init_stmts.push(format!("{n} = {cls_str};"));
+                    } else {
+                        self.top_decls.push(cls_str);
+                    }
                     let m = id
                         .symbol_id
                         .get()
@@ -1557,8 +1565,13 @@ impl PageBuffers {
                     let def_name = lowerer
                         .shared
                         .alloc_fn_name(&format!("__eldur_default_{script_idx}"));
-                    self.top_decls
-                        .push(format!("const {def_name} = {cls_str};"));
+                    if lazy {
+                        self.top_decls.push(format!("let {def_name};"));
+                        self.init_stmts.push(format!("{def_name} = {cls_str};"));
+                    } else {
+                        self.top_decls
+                            .push(format!("const {def_name} = {cls_str};"));
+                    }
                     (def_name, false)
                 };
                 if all_static_pure && self.at_load() {
@@ -1575,7 +1588,7 @@ impl PageBuffers {
                     }
                 }
                 if let Some(me) = mod_exports {
-                    me.insert("default", name, false, is_mutated);
+                    me.insert("default", name, lazy, is_mutated);
                 }
             }
             ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {}
