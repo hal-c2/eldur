@@ -306,9 +306,15 @@ img, svg { display: block }
 <svg id=ih xmlns="http://www.w3.org/2000/svg" width="-80" height="40"><rect width="20" height="10" fill="#c60"/></svg>
 <svg id=ij xmlns="http://www.w3.org/2000/svg" width="80"><rect width="20" height="10" fill="#c60"/></svg>
 <svg id=ik xmlns="http://www.w3.org/2000/svg" width="-80" viewBox="0 0 20 10"><rect width="20" height="10" fill="#c60"/></svg>
+<svg id=ja xmlns="http://www.w3.org/2000/svg" width="80" style="width:200px"><rect width="20" height="10" fill="#c60"/></svg>
+<svg id=jb xmlns="http://www.w3.org/2000/svg" style="width:50%"><rect width="20" height="10" fill="#c60"/></svg>
+<svg id=jc xmlns="http://www.w3.org/2000/svg" width="80" height="40" style="width:200px;height:auto"><rect width="20" height="10" fill="#c60"/></svg>
+<svg id=jd xmlns="http://www.w3.org/2000/svg" width="80" height="40" viewBox="0 0 20 20" style="width:200px;height:auto"><rect width="20" height="10" fill="#c60"/></svg>
+<svg id=je xmlns="http://www.w3.org/2000/svg" width="80" height="0" style="width:200px;height:auto"><rect width="20" height="10" fill="#c60"/></svg>
+<svg id=jf xmlns="http://www.w3.org/2000/svg" width="-80" height="40" style="width:200px;height:auto"><rect width="20" height="10" fill="#c60"/></svg>
 <script>
 // Named so that they get an objectName the test can find.
-var named = "n o p q r s t za zb zc zd ze zf zg zh zi zj zk zl zm zn zo zp zq zr zs zt zu zv zw ia ib ic ie ig ih ij ik".split(" ").map(function (id) { return document.getElementById(id) });
+var named = "n o p q r s t za zb zc zd ze zf zg zh zi zj zk zl zm zn zo zp zq zr zs zt zu zv zw ia ib ic ie ig ih ij ik ja jb jc jd je jf".split(" ").map(function (id) { return document.getElementById(id) });
 </script></body></html>"##;
 
 /// Chromium, `getBoundingClientRect()` at 1280×800.
@@ -405,6 +411,18 @@ TestCase {
         compareBox("ih", [0, 2220.5, 0, 40])
         compareBox("ij", [0, 2260.5, 80, 150])
         compareBox("ik", [0, 2410.5, 0, 0])
+    }
+
+    // CSS over an inline svg's own lengths: a side CSS leaves auto takes the
+    // natural length or the default one, and only two positive lengths (or
+    // a viewBox) give a ratio, never a filled-in default.
+    function test_inline_svg_under_css() {
+        compareBox("ja", [0, 2410.5, 200, 150])
+        compareBox("jb", [0, 2560.5, 640, 150])
+        compareBox("jc", [0, 2710.5, 200, 100])
+        compareBox("jd", [0, 2810.5, 200, 100])
+        compareBox("je", [0, 2910.5, 200, 0])
+        compareBox("jf", [0, 2910.5, 200, 40])
     }
 }
 }
