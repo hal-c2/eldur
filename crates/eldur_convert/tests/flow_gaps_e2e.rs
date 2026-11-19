@@ -138,6 +138,25 @@ TestCase {
         near("shown: h3 y", h3.mapToItem(page, 0, 0).y, top.y + 25)
     }
 
+    // A box a script hides keeps its lines, as `Flow` does: shown again, it
+    // has them in its first frame, before any later pass.
+    function test_a_hidden_box_keeps_its_lines() {
+        const h1 = findChild(page, "h1")
+        const h3 = findChild(page, "h3")
+        const box = h1.parent
+        const top = h1.mapToItem(page, 0, 0)
+        near("box height", box.implicitHeight, 45)
+        box.visible = false
+        near("hidden: box height", box.implicitHeight, 45)
+        h1.visible = false
+        box.visible = true
+        near("shown: box height", box.implicitHeight, 20)
+        near("shown: h3 x", h3.mapToItem(page, 0, 0).x, top.x + 180)
+        h1.visible = true
+        waitForRendering(page)
+        near("h1 back: box height", box.implicitHeight, 45)
+    }
+
     function test_gaps_follow_the_width() {
         page.width = 450
         waitForRendering(page)
