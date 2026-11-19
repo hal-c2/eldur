@@ -694,7 +694,7 @@ ApplicationWindow {
                     objectName: "done"
                     visible: false
                     Layout.fillWidth: true
-                    Layout.topMargin: 16 - signup.eldurCarry
+                    Layout.topMargin: (signup.visible ? 16 : 21.44) - signup.eldurCarry
                     Layout.preferredHeight: implicitHeight
 
                     Text {

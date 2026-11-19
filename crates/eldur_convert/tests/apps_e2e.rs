@@ -39,7 +39,6 @@ const DIALOGTEXT: &str =
 const MADEINLINE: &str = "controls from innerHTML stack as blocks: a created box is laid out by itself, without a line to share";
 const BUTTONKIDS: &str = "a Button shows only the text of what it holds: an element inside is no item, so the button is the target";
 const NOBUBBLE: &str = "Qt has no validation bubble: the message goes to the log, on purpose";
-const CONTROLROW: &str = "with the form between them hidden, the heading's bottom margin of 21.44 looks lost, leaving only #done's 16; not confirmed";
 const AREALINE: &str = "a TextArea has no line height to set: `font: 13px/16px` keeps Qt's taller line, so three lines overflow what Chromium fits";
 const NEVER_SCRIPT: &str =
     "a script in the body makes no item, so its source is not in the body's textContent";
@@ -89,7 +88,6 @@ const KNOWN: &[(&str, &str, &str)] = &[
         NOBUBBLE,
     ),
     ("theme", "* body[*] text:", NEVER_SCRIPT),
-    ("form", "* #done[*] y:", CONTROLROW),
     (
         "input_real_widgets",
         "report 6 (enter2) log:*scrollH=true*",
