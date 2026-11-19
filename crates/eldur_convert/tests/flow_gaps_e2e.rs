@@ -3,7 +3,9 @@
 //! column gap resolves, CSS Box Alignment 3 §8.1) keeps each gap on its own
 //! axis, and the box ends at its last line. Run in qmltestrunner against
 //! Chromium's boxes at 900 and 450 px wide; one page converted at 900 and
-//! resized live.
+//! resized live. A second page holds scripts: the items stay the box's
+//! children in the DOM, so reading, appending and removing them work as in
+//! Chromium; and an `inline-flex` box with a width keeps it.
 
 mod support;
 
@@ -200,6 +202,134 @@ fn wrapping_gaps_match_chromium() {
     std::fs::remove_dir_all(&dir).expect("remove temp dir");
     assert!(output.status.success(), "{text}");
     // The gaps and the box's height must not feed back into the layout.
+    assert!(!stderr.contains("Binding loop"), "{text}");
+    assert!(!stderr.contains("recursive rearrange"), "{text}");
+}
+
+const DOM_PAGE: &str = r#"<!doctype html><html><head><style>
+body { margin: 0 }
+.w > div { height: 20px; width: 150px }
+</style></head><body>
+<div id=k style="display:flex;flex-wrap:wrap;width:400px;row-gap:5px;column-gap:30px" class=w><div id=k1></div><div id=k2></div><div id=k3></div></div>
+<div id=s1 style="height:10px"></div>
+<div id=m style="display:flex;flex-wrap:wrap;width:400px;row-gap:5px;column-gap:30px" class=w><div id=m1></div><div id=m2></div><div id=m3></div></div>
+<div id=s2 style="height:10px"></div>
+<div><span id=i style="display:inline-flex;flex-wrap:wrap;width:400px;row-gap:5px;column-gap:30px" class=w><div id=i1></div><div id=i2></div><div id=i3></div></span></div>
+<div id=s3 style="height:10px"></div>
+<div><span id=j style="display:inline-flex;flex-wrap:wrap;width:400px;gap:10px" class=w><div id=j1></div><div id=j2></div><div id=j3></div></span></div>
+<div id=s4 style="height:10px"></div>
+<script>
+var k = document.getElementById('k');
+var m = document.getElementById('m');
+var log = [];
+log.push('kids=' + k.children.length);
+log.push('parent=' + (document.getElementById('k1').parentNode === k));
+log.push('first=' + (k.firstElementChild && k.firstElementChild.id));
+var n = document.createElement('div'); n.id = 'k4'; k.appendChild(n);
+log.push('kids=' + k.children.length);
+log.push('last=' + k.lastElementChild.id);
+m.removeChild(document.getElementById('m2'));
+log.push('kids=' + m.children.length);
+console.log('DOM ' + log.join(' '));
+var named = [document.getElementById('k1'), document.getElementById('k2'), document.getElementById('k3'), document.getElementById('s1'), document.getElementById('m1'), document.getElementById('m3'), document.getElementById('s2'), document.getElementById('i'), document.getElementById('i1'), document.getElementById('i2'), document.getElementById('i3'), document.getElementById('s3'), document.getElementById('j'), document.getElementById('j1'), document.getElementById('j2'), document.getElementById('j3'), document.getElementById('s4')];
+</script></body></html>"#;
+
+/// Chromium, `getBoundingClientRect()` at 900×800, after the page's script
+/// appended `k4` and removed `m2`. It logged `DOM kids=3 parent=true
+/// first=k1 kids=4 last=k4 kids=2`.
+const DOM_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 900
+    height: 800
+
+TestCase {
+    name: "FlowGapsDom"
+    when: windowShown
+
+    property var page
+    function check(name, x, y, width, height) {
+        const item = findChild(page, name)
+        verify(item, name)
+        const at = item.mapToItem(page, 0, 0)
+        verify(Math.abs(at.x - x) <= 0.5, name + " x " + at.x + ", Chromium " + x)
+        verify(Math.abs(at.y - y) <= 1, name + " y " + at.y + ", Chromium " + y)
+        verify(Math.abs(item.width - width) <= 0.5, name + " width " + item.width + ", Chromium " + width)
+        verify(Math.abs(item.height - height) <= 1, name + " height " + item.height + ", Chromium " + height)
+    }
+
+    function init() {
+        const component = Qt.createComponent("Main.qml")
+        verify(component.status === Component.Ready, component.errorString())
+        page = createTemporaryObject(component, host, { width: 900, height: 800 })
+        waitForRendering(page)
+    }
+
+    function test_scripted_items_at_900() {
+        check("k1", 0, 0, 150, 20)
+        check("k2", 180, 0, 150, 20)
+        check("k3", 0, 25, 150, 20)
+        check("k4", 180, 25, 150, 20)
+        check("s1", 0, 45, 900, 10)
+        check("m1", 0, 55, 150, 20)
+        check("m3", 180, 55, 150, 20)
+        check("s2", 0, 75, 900, 10)
+        check("i", 0, 85, 400, 45)
+        check("i1", 0, 85, 150, 20)
+        check("i2", 180, 85, 150, 20)
+        check("i3", 0, 110, 150, 20)
+        check("s3", 0, 130, 900, 10)
+        check("j", 0, 140, 400, 50)
+        check("j1", 0, 140, 150, 20)
+        check("j2", 160, 140, 150, 20)
+        check("j3", 0, 170, 150, 20)
+        check("s4", 0, 190, 900, 10)
+    }
+}
+}
+"##;
+
+#[test]
+fn scripts_see_the_wrapping_items_as_in_chromium() {
+    if support::no_qt() {
+        return;
+    }
+    let options = Options {
+        root: RootKind::Item,
+        viewport: Viewport {
+            width: 900.0,
+            height: 800.0,
+            ..Viewport::default()
+        },
+        ..Options::default()
+    };
+    let out = convert_str(DOM_PAGE, &options);
+    let dir = std::env::temp_dir().join(format!("eldur-flow-gaps-dom-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    write(&dir, &out);
+    std::fs::write(dir.join("tst_flow_gaps_dom.qml"), DOM_TEST).expect("write test");
+    let output = support::qmltestrunner()
+        .args(["-platform", "offscreen", "-input"])
+        .arg(dir.join("tst_flow_gaps_dom.qml"))
+        .env("QT_FORCE_STDERR_LOGGING", "1")
+        .output()
+        .expect("run qmltestrunner");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let text = format!(
+        "{}\n{stderr}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        out.main_qml().unwrap_or_default()
+    );
+    std::fs::remove_dir_all(&dir).expect("remove temp dir");
+    assert!(output.status.success(), "{text}");
+    // What the page's script read, as Chromium logged it.
+    assert!(
+        stderr.contains("DOM kids=3 parent=true first=k1 kids=4 last=k4 kids=2"),
+        "{text}"
+    );
     assert!(!stderr.contains("Binding loop"), "{text}");
     assert!(!stderr.contains("recursive rearrange"), "{text}");
 }
