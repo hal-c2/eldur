@@ -1080,7 +1080,10 @@ impl<'a> CascadeEngine<'a> {
             StateReach::Document => return whole(),
             StateReach::Subtree => vec![node],
             StateReach::FollowingSiblings => std::iter::once(node)
-                .chain(doc.next_siblings(node).filter(|&n| doc.element(n).is_some()))
+                .chain(
+                    doc.next_siblings(node)
+                        .filter(|&n| doc.element(n).is_some()),
+                )
                 .collect(),
         };
         let Some(parent) = doc.parent_element(node) else {
@@ -1530,8 +1533,11 @@ impl<'a> CascadeEngine<'a> {
 
         let mut custom_candidates: HashMap<&str, Vec<(CascadeKey, &CustomDeclValue)>> =
             HashMap::new();
-        let mut longhand_candidates: HashMap<Longhand, Vec<(CascadeKey, LonghandCandidate<'_>)>> =
-            HashMap::new();
+        // Each longhand's candidates, in the order the longhands are computed
+        // (`ordered_longhands`); hashing the ~170 longhands every element
+        // cascade costs more than the cascade itself.
+        let mut longhand_candidates: Vec<(Longhand, (CascadeKey, LonghandCandidate<'_>))> =
+            Vec::with_capacity(matched_decls.len());
 
         for (key, decl_val) in matched_decls {
             match decl_val {
@@ -1543,27 +1549,25 @@ impl<'a> CascadeEngine<'a> {
                 }
                 DeclValue::Expanded(l, val) => {
                     longhand_candidates
-                        .entry(*l)
-                        .or_default()
-                        .push((key.clone(), LonghandCandidate::Expanded(val.as_str())));
+                        .push((*l, (key.clone(), LonghandCandidate::Expanded(val.as_str()))));
                 }
                 DeclValue::Wide(l, kw) => {
-                    longhand_candidates
-                        .entry(*l)
-                        .or_default()
-                        .push((key.clone(), LonghandCandidate::Wide(*kw)));
+                    longhand_candidates.push((*l, (key.clone(), LonghandCandidate::Wide(*kw))));
                 }
                 DeclValue::PendingVar {
                     target,
                     prop_name,
                     raw_value,
                 } => {
-                    longhand_candidates.entry(*target).or_default().push((
-                        key.clone(),
-                        LonghandCandidate::PendingVar {
-                            prop_name: prop_name.as_str(),
-                            raw_value: raw_value.as_str(),
-                        },
+                    longhand_candidates.push((
+                        *target,
+                        (
+                            key.clone(),
+                            LonghandCandidate::PendingVar {
+                                prop_name: prop_name.as_str(),
+                                raw_value: raw_value.as_str(),
+                            },
+                        ),
                     ));
                 }
             }
@@ -1585,6 +1589,14 @@ impl<'a> CascadeEngine<'a> {
         }
 
         // 3. Compute winning longhands in `properties::priority` order.
+        // A stable sort keeps the declarations' order among equal keys, as
+        // sorting each longhand's own list did.
+        longhand_candidates.sort_by(|(la, (ka, _)), (lb, (kb, _))| {
+            (properties::priority(*la), *la, ka).cmp(&(properties::priority(*lb), *lb, kb))
+        });
+        let (longhands, candidates): (Vec<Longhand>, Vec<_>) =
+            longhand_candidates.into_iter().unzip();
+        let mut at = 0;
         let mut root_fs_updated = !is_root;
         let mut settled = false;
         for &l in &self.ordered_longhands {
@@ -1597,14 +1609,22 @@ impl<'a> CascadeEngine<'a> {
                 root_fs_updated = true;
             }
 
-            if let Some(mut cands) = longhand_candidates.remove(&l) {
-                cands.sort_by(|(ka, _), (kb, _)| ka.cmp(kb));
+            // A longhand the engine does not compute is left out, as before.
+            let rank = |c: Longhand| (properties::priority(c), c);
+            at += longhands[at..]
+                .iter()
+                .take_while(|&&c| rank(c) < rank(l))
+                .count();
+            let start = at;
+            at += longhands[at..].iter().take_while(|&&c| c == l).count();
+            if at > start {
+                let cands = &candidates[start..at];
                 let author = cands
                     .last()
                     .is_some_and(|(k, _)| k.tier.origin() == Origin::Author);
                 style.author_background |= author && properties::is_background(l);
                 style.author_border |= author && properties::is_border(l);
-                let action = select_winning_longhand_action(l, &cands, &style.custom_properties);
+                let action = select_winning_longhand_action(l, cands, &style.custom_properties);
                 if let Some(casc) = cascade_out.as_deref_mut() {
                     casc.base_actions.insert(l, action.clone());
                     let ua_cands: Vec<(CascadeKey, LonghandCandidate<'_>)> = cands
