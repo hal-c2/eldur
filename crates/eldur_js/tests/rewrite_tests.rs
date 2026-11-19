@@ -3209,7 +3209,8 @@ fn a_name_set_on_the_window_is_not_the_element_with_that_id() {
 
 /// A lazily imported module's `let`, `const` and `class` bindings hold a
 /// sentinel until their declarations run: a read of one checks it and throws
-/// a `ReferenceError`, a write to a `const` throws a `TypeError`. Code at the
+/// a `ReferenceError`, a write to a `const` throws a `TypeError`, and a
+/// destructuring target is a setter that checks as an assignment does. Code at the
 /// module's top level after a declaration reads it unchecked, as it always
 /// finds it initialized.
 #[test]
@@ -3221,6 +3222,7 @@ fn a_lazy_modules_lexical_bindings_are_checked_until_initialized() {
         "export const K = 1;\nexport let n = 2;\nexport class Box {}\n\
          export function read() { return K + n; }\n\
          export function write() { K = 3; n = 4; }\n\
+         export function destructure(v) { [n] = [v]; ({ K } = { K: v }); }\n\
          export const after = K;\n",
     );
     let out = run_rewrite(&[main, lazy], &resolver);
@@ -3239,6 +3241,8 @@ fn a_lazy_modules_lexical_bindings_are_checked_until_initialized() {
         r#"(3, __eldur_const_write(K === __eldur_tdz, "K"));"#,
         r#"n = __eldur_tdz_set(4, n, "n");"#,
         "after = K;",
+        r#"[({ set v(__eldur_value) { n = __eldur_tdz_set(__eldur_value, n, "n"); } }).v] = [v];"#,
+        r#"({ K: ({ set v(__eldur_value) { (__eldur_value, __eldur_const_write(K === __eldur_tdz, "K")); } }).v } = { K: v });"#,
     ] {
         assert!(js.contains(checked), "{checked}\n{js}");
     }
