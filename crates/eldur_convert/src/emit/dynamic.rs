@@ -934,6 +934,7 @@ struct Across {
     strips: HashMap<NodeId, [bool; 4]>,
     plain_edges: HashSet<NodeId>,
     shares: HashSet<NodeId>,
+    restacks: HashSet<NodeId>,
 }
 
 impl Dynamic<'_, '_> {
@@ -980,11 +981,20 @@ impl Dynamic<'_, '_> {
             .filter(|e| e.by_mask.iter().any(|s| super::grid::is_share(&s.width)))
             .map(|e| e.node)
             .collect();
+        let doc = self.cx.doc;
+        let restacks: HashSet<NodeId> = self
+            .found
+            .elements
+            .iter()
+            .filter(|e| restacks(&e.by_mask))
+            .flat_map(|e| doc.descendants(e.node))
+            .collect();
         let across = Across {
             sticky,
             strips,
             plain_edges,
             shares,
+            restacks,
         };
         // The display an element hidden in some combinations has when shown.
         let shown: HashMap<NodeId, Display> = self
@@ -1442,6 +1452,7 @@ impl Dynamic<'_, '_> {
         emitter.strips = across.strips.clone();
         emitter.plain_edges = across.plain_edges.clone();
         emitter.shares = across.shares.clone();
+        emitter.restacks = across.restacks.clone();
         emitter.collapsed = collapsed;
         let root = emitter.document(tree.as_ref(), body);
         cx.svgs.borrow_mut().append(&mut emitter.svgs);
@@ -1945,6 +1956,17 @@ fn border_strips(styles: &[Box<ComputedStyle>]) -> Option<[bool; 4]> {
 
 /// Whether some combination paints the box, or they differ in what makes
 /// a wrapper (padding, border, shadow, radius).
+/// Whether a class or state changes a box's level, its positioning, or
+/// whether it makes a stacking context at `auto`.
+fn restacks(styles: &[Box<ComputedStyle>]) -> bool {
+    let first = &styles[0];
+    styles.iter().any(|s| {
+        s.z_index != first.z_index
+            || s.position != first.position
+            || crate::boxes::is_context_at_auto(s) != crate::boxes::is_context_at_auto(first)
+    })
+}
+
 fn is_sticky(styles: &[Box<ComputedStyle>]) -> bool {
     let paints = |s: &ComputedStyle| {
         !s.background_color.is_transparent()
