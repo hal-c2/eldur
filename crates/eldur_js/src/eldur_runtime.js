@@ -6375,30 +6375,159 @@ function setStyle(item, prop, value) {
     _moAttr(item, "style", "set", function() { _setStyleAt(item, prop, value); });
 }
 
-// The `z` a box with this computed style stacks at among its siblings, as
-// the converter emits it: a box in the flow that holds positioned boxes
-// (it is positioned, transformed or filtered), or a flex or grid item with
-// a `z-index` (`item`), sits above the flow, `z-index: 0` included, so it
-// takes its `z-index` plus one, and a negative one stays in the flow, as Qt
-// would paint it under its parent. An absolute or fixed box is its overlay,
-// which takes the `z-index` as it is. `null` is a box `z-index` does not
-// apply to.
-function _stackZ(s, item) {
+// The level a box's own `z-index` gives it, as the converter emits it: a
+// box in the flow that holds positioned boxes (it is positioned,
+// transformed or filtered), or a flex or grid item with a `z-index`
+// (`item`), sits above the flow, `z-index: 0` included, so it takes its
+// `z-index` plus one, and a negative one stays in the flow, as Qt would
+// paint it under its parent. An absolute or fixed box is its overlay,
+// which takes the `z-index` as it is. `null` is `auto`, or a box `z-index`
+// does not apply to. A box with one is a stacking context: what it holds
+// stacks inside it (CSS 2.2 Appendix E).
+function _stackOwn(s, item) {
     var at = s["z-index"];
     var level = at === "auto" || at === undefined || at === "" ? null : parseInt(at, 10);
-    if (level !== null && isNaN(level)) {
-        level = null;
+    if (level === null || isNaN(level)) {
+        return null;
     }
     if (s.position === "absolute" || s.position === "fixed") {
-        return level === null ? 1 : level;
+        return level;
     }
-    var holds = s.position === "relative" || s.position === "sticky"
-        || (s.transform !== undefined && s.transform !== "none")
-        || (s.filter !== undefined && s.filter !== "none");
-    if (level !== null && (holds || item)) {
+    if (_stackHolds(s) || item) {
         return level >= 0 ? level + 1 : 0;
     }
-    return holds ? 1 : null;
+    return null;
+}
+
+function _stackHolds(s) {
+    return s.position === "relative" || s.position === "sticky"
+        || (s.transform !== undefined && s.transform !== "none")
+        || (s.filter !== undefined && s.filter !== "none");
+}
+
+// The least level a box at `z-index: auto` has, whatever it holds.
+function _stackHold(s) {
+    if (s.position === "absolute" || s.position === "fixed" || _stackHolds(s)) {
+        return 1;
+    }
+    // A runtime-laid float is over the blocks beside it, under positioned boxes.
+    if (_gActive() && (s.float === "left" || s.float === "right")) {
+        return 0.5;
+    }
+    return 0;
+}
+
+function _zStyled(raw) {
+    return _gHasCascade() && typeof raw.visible === "boolean";
+}
+
+function _zOutOfFlow(raw) {
+    return raw.eldurSlot !== undefined || Boolean(_meta(raw).gSlot);
+}
+
+// The box's own level, or null at `auto`. Without the rules, the converter
+// gives a box `z-index` applies to its rule's level (-1 at `auto`), and a
+// script's write is kept beside it.
+function _zOwn(raw) {
+    if (_zStyled(raw)) {
+        return _stackOwn(_gStyle(raw), _gLayoutItem(raw));
+    }
+    if (typeof raw.eldurRuleZ === "number") {
+        var set = _meta(raw).zOwn;
+        if (set !== undefined) {
+            return set;
+        }
+        return raw.eldurRuleZ >= 0 ? raw.eldurRuleZ : null;
+    }
+    return null;
+}
+
+function _zHold(raw) {
+    if (_zStyled(raw)) {
+        return _stackHold(_gStyle(raw));
+    }
+    return typeof raw.eldurHoldZ === "number" ? raw.eldurHoldZ : 0;
+}
+
+// How high a box lifts the box it is in over that box's later siblings:
+// an in-flow box by its own `z`, which is already its level; an
+// out-of-flow one, painted elsewhere, by its level over the flow, and at
+// `auto` by what it holds too, as nothing in it makes a context to keep
+// that in. A level under 1 lifts nothing.
+function _zLift(raw) {
+    if (!_zOutOfFlow(raw)) {
+        var z = raw.z;
+        return typeof z === "number" && Math.floor(z) === z && z >= 1 ? z : null;
+    }
+    var own = _zOwn(raw);
+    if (own !== null) {
+        return Math.max(own, 0) + 1;
+    }
+    return Math.max(1, _zInside(raw));
+}
+
+// The highest lift of what a box holds, 0 for none.
+function _zInside(raw) {
+    var kids = _rawKids(raw, false, false, false);
+    var top = 0;
+    for (var i = 0; i < kids.length; ++i) {
+        var lift = _zLift(kids[i]);
+        if (lift !== null && lift > top) {
+            top = lift;
+        }
+    }
+    return top;
+}
+
+// A box at `auto`: its hold, raised over its later siblings by what it holds.
+function _zAuto(raw, hold) {
+    return Math.max(hold, _zInside(raw));
+}
+
+function _zPage(raw) {
+    return !raw || raw === _root || raw.eldurTag === "body" || raw.eldurTag === "html"
+        || typeof raw.z !== "number";
+}
+
+// A box's level changed, and with it how high it lifts the box it is in
+// (`before`, undefined when unknown). The converter raised each box that is
+// no stacking context to the level of what it holds; each such box up from
+// here takes its new level, as Chromium re-stacks, up to the first one
+// that has a level of its own or that keeps the level it had.
+function _zRelevel(box, before) {
+    var after = _zLift(box);
+    var x = _logicalParent(box);
+    for (var depth = 0; x && depth < 512; ++depth) {
+        if (before !== undefined && before === after) {
+            return;
+        }
+        if (_zPage(x) || _zOwn(x) !== null) {
+            return;
+        }
+        if (_zOutOfFlow(x)) {
+            // Painted elsewhere, it keeps its `z`; its block sees to its lift.
+            before = undefined;
+            after = _zLift(x);
+            x = _logicalParent(x);
+            continue;
+        }
+        var cur = x.z;
+        var next;
+        if (after !== null && after >= cur) {
+            next = after;
+        } else if (before !== undefined && (before === null || before < cur)) {
+            next = cur;
+        } else {
+            next = _zAuto(x, _zHold(x));
+        }
+        if (next === cur) {
+            return;
+        }
+        before = _zLift(x);
+        x.z = next;
+        after = _zLift(x);
+        x = _logicalParent(x);
+    }
 }
 
 // Whether the box is a flex or grid item, whose `z-index` applies though
@@ -6504,24 +6633,29 @@ function _setStyleAt(item, prop, value) {
     } else if (name === "zIndex") {
         // The level the rules give it, so a script's `z-index` and a
         // stylesheet's stack the same. Without the rules, the converter
-        // gives a box `z-index` applies to its own level and its level at
-        // `auto`, and one it raises takes its number plus one; any other box
-        // takes the number.
+        // gives a box `z-index` applies to its own level (-1 at `auto`) and
+        // its level at `auto` before what it holds, and one it raises takes
+        // its number plus one; any other box takes the number.
         var stacked;
-        if (_gHasCascade() && typeof raw.visible === "boolean") {
+        var before = _zOutOfFlow(raw) ? undefined : _zLift(raw);
+        if (_zStyled(raw)) {
             // Fresh: the declaration just written is a write since the
             // last read.
-            stacked = _stackZ(_gFreshStyle(raw), _gLayoutItem(raw));
+            var fresh = _gFreshStyle(raw);
+            var own = _stackOwn(fresh, _gLayoutItem(raw));
+            stacked = own !== null ? own : _zAuto(raw, _stackHold(fresh));
         } else if (typeof raw.eldurRuleZ === "number") {
             var level = parseInt(str, 10);
-            stacked = str === "" ? raw.eldurRuleZ
-                : str === "auto" ? raw.eldurAutoZ
-                : isNaN(level) ? null : level >= 0 ? level + 1 : 0;
+            var set = str === "" ? (raw.eldurRuleZ >= 0 ? raw.eldurRuleZ : null)
+                : str === "auto" || isNaN(level) ? null : level >= 0 ? level + 1 : 0;
+            _meta(raw).zOwn = set;
+            stacked = set !== null ? set : _zAuto(raw, raw.eldurHoldZ || 0);
         } else {
             stacked = parseInt(str, 10);
         }
         if (stacked !== null && !isNaN(stacked) && typeof raw.z === "number") {
             raw.z = stacked;
+            _zRelevel(raw, before);
         }
     } else if (name === "color") {
         _inlineColor(raw, Boolean(m.styles.color));
@@ -23507,8 +23641,15 @@ function _gPaintBox(raw, s, e) {
     }
     _gPaintEdges(raw, s, e, !uniform && !drawn);
     _gPaintOutline(raw, s);
-    var z = _stackZ(s, _gLayoutItem(raw));
-    _gSet(raw, "z", z === null ? 0 : z);
+    // At `auto`, over its later siblings by what it holds, as the converter
+    // levels a box it lays out.
+    var own = _stackOwn(s, _gLayoutItem(raw));
+    var z = own !== null ? own : _zAuto(raw, _stackHold(s));
+    if (raw.z !== z) {
+        var before = _zOutOfFlow(raw) ? undefined : _zLift(raw);
+        raw.z = z;
+        _zRelevel(raw, before);
+    }
     _gSet(raw, "clip", s["overflow-x"] !== "visible" || s["overflow-y"] !== "visible");
     _gPlaceRelative(raw, s);
     _gPaintDecor(raw, s, e, radius);
