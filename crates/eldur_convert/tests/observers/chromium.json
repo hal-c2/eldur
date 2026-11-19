@@ -39,12 +39,24 @@
   "OB takeRecords 0 calls 4",
   "OB done"
  ],
+ "intersection_gated_scroll": [
+  "OB io t:false:0",
+  "OB step scrollTop 100",
+  "OB io t:true:1",
+  "OB scrolled 100 50",
+  "OB done"
+ ],
  "intersection_root": [
   "OB margin 0px 0px 50px 0px root true thresholds 0",
   "OB io i0:true:1 i1:true:1 i2:true:0.5 i3:false:0 i4:false:0 i5:false:0 root:0,250",
   "OB step scrollTop 250",
   "OB io i0:false:0 i1:false:0 i3:true:1 i4:true:1 i5:true:0 root:0,250",
   "OB scrolled 250",
+  "OB done"
+ ],
+ "intersection_root_frame": [
+  "OB frame restyles",
+  "OB io i0:true:1 i3:false:0 root:20,200",
   "OB done"
  ],
  "mutation_attributes": [
@@ -61,6 +73,12 @@
   "OB taken fired 1",
   "OB again attributes:q:data-two:null:null",
   "OB chain attributes:q:data-two:null:null",
+  "OB done"
+ ],
+ "mutation_callbacks": [
+  "OB body childList:P:+:-X:null:null childList:D:+X:-:null:null childList:A:+:-P:null:null childList:D:+S:-:X:null childList:A:+Y:-:null:null attributes:Y:data-v:null attributes:A:data-seen:null",
+  "OB seen 1",
+  "OB left 1 2",
   "OB done"
  ],
  "mutation_children": [

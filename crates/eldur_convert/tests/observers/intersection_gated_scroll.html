@@ -1,0 +1,32 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>gated scroll</title>
+<style>body { margin: 0; }</style></head><body>
+<script>
+// An absolutely placed box inside a scrolling box the script makes: scrolling
+// the box moves the target, and the observer hears of it.
+function L(k){console.log("OB "+k)}
+function r(n){return Math.round(n*100)/100}
+function E(e){ return e.target.id + ":" + e.isIntersecting + ":" + r(e.intersectionRatio); }
+function after(f){requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(f, 0)))}
+var c = document.createElement("div");
+c.id = "c";
+c.style.cssText = "position: relative; height: 100px; width: 200px; overflow: auto";
+var tall = document.createElement("div");
+tall.style.height = "400px";
+c.appendChild(tall);
+var t = document.createElement("div");
+t.id = "t";
+t.style.cssText = "position: absolute; left: 0; top: 150px; width: 50px; height: 40px";
+c.appendChild(t);
+document.body.appendChild(c);
+var io = new IntersectionObserver(function(es) { L("io " + es.map(E).join(" ")); });
+io.observe(t);
+after(function() {
+  L("step scrollTop 100");
+  c.scrollTop = 100;
+  after(function() {
+    L("scrolled " + c.scrollTop + " " + r(t.getBoundingClientRect().top));
+    L("done");
+    var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+  });
+});
+</script></body></html>
