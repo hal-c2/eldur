@@ -16,6 +16,13 @@
  {"name":"click arm7","click":"#arm7"},
  {"name":"tab while arm7's blur starts moves within moves","key":"Tab"},
  {"name":"click arm8","click":"#arm8"},
- {"name":"tab while arm8's blur blurs where it goes","key":"Tab"}
+ {"name":"tab while arm8's blur blurs where it goes","key":"Tab"},
+ {"name":"x1 hides itself, its blur focuses y1","click":"#x1"},
+ {"name":"x2 disables itself, its blur focuses and blurs y2","click":"#x2"},
+ {"name":"x3 disables itself, its blur focuses y3","click":"#x3"},
+ {"name":"click x4","click":"#x4"},
+ {"name":"press y4, which hides x4, whose blur focuses z4","click":"#y4"},
+ {"name":"click x5","click":"#x5"},
+ {"name":"press y5, which hides x5, whose blur blurs y5","click":"#y5"}
 ],
 "watch":[{"sel":"#a"}]}
