@@ -4,6 +4,17 @@
   "OB io true",
   "OB done"
  ],
+ "fragment": [
+  "OB identity #document-fragment 11 null null undefined",
+  "OB empty 0 null []",
+  "OB filled 3 2 f1 #text [onetwotail] #document-fragment",
+  "OB query f2 2 f1",
+  "OB moved 0 null 4 l0|f1|f2|#text list",
+  "OB template #document-fragment 11 1 t0",
+  "OB clone #document-fragment 11 4",
+  "OB mo childList:list:+f1|f2|#text:- childList:list:+t0:-",
+  "OB done"
+ ],
  "intersection": [
   "OB thresholds 0,0.5,1 margin 0px 0px 0px 0px root null",
   "OB sync calls 0",

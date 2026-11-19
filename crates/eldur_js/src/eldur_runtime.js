@@ -5023,6 +5023,13 @@ function _rawElementChildren(raw) {
     return _rawKids(raw, false);
 }
 
+// The element children a script sees. Layout still places a script's text node
+// in a box that is not lines (an anonymous item of a flex row), so it stays in
+// `_rawElementChildren`; it is never an element.
+function _scriptElementChildren(raw) {
+    return _rawElementChildren(raw).filter(function(kid) { return !_isTextNode(kid); });
+}
+
 function _tableCaptions(raw) {
     var out = [];
     if (_meta(raw).tableGrid && typeof raw.spacing === "number") {
@@ -5274,6 +5281,10 @@ function getText(item) {
     }
     if (raw.__eldurInline) {
         return _vTextContent(raw);
+    }
+    // A fragment has no text of its own to draw, only its nodes'.
+    if (_meta(raw).isFragment) {
+        return _rawChildNodes(raw).map(getText).join("");
     }
     var vOwn = _vModelOf(raw);
     if (vOwn) {
@@ -9551,8 +9562,9 @@ function _expandInsertRawNodes(nodes) {
         if (!raw) {
             continue;
         }
+        // Its text nodes go with its elements.
         if (_meta(raw).isFragment) {
-            var fragKids = _rawElementChildren(raw);
+            var fragKids = _rawKids(raw, true);
             for (var j = 0; j < fragKids.length; ++j) {
                 out.push(fragKids[j]);
             }
@@ -11543,8 +11555,12 @@ function wrap(rawItem) {
                 _gNameChanged(rawItem, ["#" + was, "#" + s]);
             });
         },
-        get tagName() { return _inferTagName(rawItem); },
+        // A fragment is a node but not an element: it has a name and no tag.
+        get tagName() { return m.isFragment ? undefined : _inferTagName(rawItem); },
         get nodeName() {
+            if (m.isFragment) {
+                return "#document-fragment";
+            }
             // "#text" and "#comment" are names, not tags, and are never upper case.
             var name = _inferTagName(rawItem);
             return name.charAt(0) === "#" ? name.toLowerCase() : name;
@@ -11595,6 +11611,9 @@ function wrap(rawItem) {
         get innerHTML() { return getInnerHTML(rawItem); },
         set innerHTML(v) { setInnerHTML(rawItem, v); },
         get nodeType() {
+            if (m.isFragment) {
+                return 11;
+            }
             return rawItem.vtext || (_isPlainTextItem(rawItem) && !_vIsTagged(rawItem) && !m.createdTag)
                 || m.createdTag === "#text" ? 3 : 1;
         },
@@ -12120,7 +12139,7 @@ function wrap(rawItem) {
         get children() {
             if (!m.childCollection) {
                 m.childCollection = _liveCollection(function() {
-                    return _rawElementChildren(rawItem);
+                    return _scriptElementChildren(rawItem);
                 });
             }
             return m.childCollection;
@@ -12129,14 +12148,14 @@ function wrap(rawItem) {
             return _asNodeList(_rawChildNodes(rawItem).map(wrap));
         },
         get childElementCount() {
-            return _rawElementChildren(rawItem).length;
+            return _scriptElementChildren(rawItem).length;
         },
         get firstElementChild() {
-            var kids = _rawElementChildren(rawItem);
+            var kids = _scriptElementChildren(rawItem);
             return kids.length > 0 ? wrap(kids[0]) : null;
         },
         get lastElementChild() {
-            var kids = _rawElementChildren(rawItem);
+            var kids = _scriptElementChildren(rawItem);
             return kids.length > 0 ? wrap(kids[kids.length - 1]) : null;
         },
         get firstChild() {
@@ -12152,7 +12171,7 @@ function wrap(rawItem) {
             if (!p) {
                 return null;
             }
-            var kids = _rawElementChildren(p);
+            var kids = _scriptElementChildren(p);
             var idx = kids.indexOf(rawItem);
             return idx !== -1 && idx + 1 < kids.length ? wrap(kids[idx + 1]) : null;
         },
@@ -12161,7 +12180,7 @@ function wrap(rawItem) {
             if (!p) {
                 return null;
             }
-            var kids = _rawElementChildren(p);
+            var kids = _scriptElementChildren(p);
             var idx = kids.indexOf(rawItem);
             return idx > 0 ? wrap(kids[idx - 1]) : null;
         },
@@ -12396,9 +12415,11 @@ function wrap(rawItem) {
             }
             if (m.isFragment) {
                 var whole = document.createDocumentFragment();
-                _rawElementChildren(rawItem).forEach(function(kid) {
-                    whole.appendChild(wrap(kid).cloneNode(true));
-                });
+                if (deep) {
+                    _rawKids(rawItem, true).forEach(function(kid) {
+                        whole.appendChild(wrap(kid).cloneNode(true));
+                    });
+                }
                 return whole;
             }
             var tag = _inferTagName(rawItem).toLowerCase() || "div";
@@ -12496,6 +12517,19 @@ function wrap(rawItem) {
         }
     };
 
+    // DocumentFragment has the one lookup by id that elements lack.
+    if (m.isFragment) {
+        wrapper.getElementById = function(id) {
+            var targetId = String(id);
+            if (targetId === "") {
+                return null;
+            }
+            var found = _elementsUnder(rawItem, function(node) {
+                return _nodeId(node) === targetId;
+            }, true);
+            return found.length > 0 ? wrap(found[0]) : null;
+        };
+    }
     _moHookTree(wrapper);
     m.wrapper = wrapper;
     return wrapper;
