@@ -329,6 +329,24 @@ fn baseline_alignment_uses_qt_baseline() {
 }
 
 #[test]
+fn wrapping_row_whose_gaps_differ_is_an_eldur_flow() {
+    let (qml, _) = convert(&page(
+        ".w{display:flex;flex-wrap:wrap;row-gap:5px;column-gap:30px} .w>div{width:150px}",
+        r#"<div class="w"><div>a</div><div>b</div></div>"#,
+    ));
+    let w = object_after(&qml, r#"<div class="w">"#);
+    assert!(w.contains("EldurFlow {"), "{w}");
+    assert!(own_lines(w).contains(&"spacing: 30"), "{w}");
+    assert!(own_lines(w).contains(&"rowSpacing: 5"), "{w}");
+    // Equal gaps stay a plain Flow.
+    let (qml, _) = convert(&page(
+        ".w{display:flex;flex-wrap:wrap;gap:8px}",
+        r#"<div class="w"><div>a</div></div>"#,
+    ));
+    assert!(!qml.contains("EldurFlow"), "{qml}");
+}
+
+#[test]
 fn wrapping_row_is_a_flow_with_item_widths() {
     let (qml, diags) = convert(&page(
         ".cards{display:flex;flex-wrap:wrap;gap:24px} .card{width:280px;box-sizing:border-box} \
