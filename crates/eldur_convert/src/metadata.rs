@@ -207,9 +207,13 @@ pub(crate) fn declare_style_hides(obj: &mut Object, doc: &Document, node: NodeId
     };
     let display = style.split(';').rev().find_map(|d| {
         let (name, value) = d.split_once(':')?;
-        name.trim()
-            .eq_ignore_ascii_case("display")
-            .then(|| value.trim().trim_end_matches("!important").trim().to_ascii_lowercase())
+        name.trim().eq_ignore_ascii_case("display").then(|| {
+            value
+                .trim()
+                .trim_end_matches("!important")
+                .trim()
+                .to_ascii_lowercase()
+        })
     });
     if display.as_deref() == Some("none") {
         obj.members
