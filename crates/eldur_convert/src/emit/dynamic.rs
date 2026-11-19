@@ -1289,12 +1289,9 @@ impl Dynamic<'_, '_> {
             if !repaints_only(&here, &there, classify(doc, e.node).is_some()) {
                 return None;
             }
-            let Some(root) = std::iter::once(e.node)
+            let root = std::iter::once(e.node)
                 .chain(doc.ancestors(e.node))
-                .find(|n| markers.contains_key(&n.index()))
-            else {
-                return None;
-            };
+                .find(|n| markers.contains_key(&n.index()))?;
             region.roots.insert(root);
         }
         Some(region)
