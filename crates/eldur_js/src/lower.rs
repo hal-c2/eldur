@@ -56,6 +56,47 @@ pub(crate) struct SharedRewriteState {
     /// property, as in a browser, where the window's properties are global
     /// bindings. QML's global object takes no new properties.
     pub window_globals: HashSet<String>,
+    /// The page names of lazy modules' `let`, `const` and `class` bindings,
+    /// and of the placeholders a cycle reads them by. Each holds
+    /// [`TdzHelpers::sentinel`] until its declaration runs, as a binding in
+    /// its temporal dead zone: QML takes a `let` named before its declaration
+    /// in page.js for an error, so these are `var`s.
+    pub tdz_names: HashSet<String>,
+    pub tdz: Option<TdzHelpers>,
+}
+
+/// The functions page.js checks a lazy module's lexical bindings with. All
+/// are function declarations, so they exist before any binding is declared.
+#[derive(Clone)]
+pub(crate) struct TdzHelpers {
+    /// What an uninitialized binding holds: a function nothing else has.
+    pub sentinel: String,
+    /// Throws the `ReferenceError` of a binding read before it is initialized.
+    pub error: String,
+    /// `set(value, current, name)`: `value`, or that error if `current` is
+    /// the sentinel; a `let` assigned before its declaration runs.
+    pub set: String,
+    /// `const_write(uninitialized, name)`: throws for an assignment to a
+    /// `const` or an import.
+    pub const_write: String,
+}
+
+/// How a binding in a lazy module's temporal dead zone may be written.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum TdzKind {
+    Let,
+    Const,
+    /// An import of one: never writable.
+    Import,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct TdzBinding {
+    pub kind: TdzKind,
+    /// Where its module's own top-level declaration of it ends: code at the
+    /// top level after it, outside any function or class, always finds it
+    /// initialized, and reads it unchecked.
+    pub declared_at: Option<u32>,
 }
 
 impl SharedRewriteState {
@@ -77,6 +118,56 @@ impl SharedRewriteState {
             }
             suffix += 1;
         }
+    }
+
+    /// The helpers checking lazy modules' lexical bindings, declared once.
+    pub(crate) fn tdz_helpers(&mut self) -> TdzHelpers {
+        if let Some(found) = &self.tdz {
+            return found.clone();
+        }
+        let helpers = TdzHelpers {
+            sentinel: self.alloc_fn_name("__eldur_tdz"),
+            error: self.alloc_fn_name("__eldur_tdz_error"),
+            set: self.alloc_fn_name("__eldur_tdz_set"),
+            const_write: self.alloc_fn_name("__eldur_const_write"),
+        };
+        let TdzHelpers {
+            sentinel,
+            error,
+            set,
+            const_write,
+        } = &helpers;
+        self.generated_decls
+            .push(format!("function {sentinel}() {{}}"));
+        self.generated_decls.push(format!(
+            "function {error}(name) {{\n    throw new ReferenceError(\"Cannot access '\" + name + \"' before initialization\");\n}}"
+        ));
+        self.generated_decls.push(format!(
+            "function {set}(value, current, name) {{\n    if (current === {sentinel}) {error}(name);\n    return value;\n}}"
+        ));
+        self.generated_decls.push(format!(
+            "function {const_write}(uninitialized, name) {{\n    if (uninitialized) {error}(name);\n    throw new TypeError(\"Assignment to constant variable.\");\n}}"
+        ));
+        self.tdz = Some(helpers.clone());
+        helpers
+    }
+
+    /// `emitted` names a lazy module's lexical binding, or a placeholder for one.
+    pub(crate) fn add_tdz_name(&mut self, emitted: &str) {
+        self.tdz_helpers();
+        self.tdz_names.insert(emitted.to_string());
+    }
+
+    /// `emitted`, the page name of a binding that may be uninitialized, read
+    /// as `name` is in the source.
+    pub(crate) fn tdz_read(&self, emitted: &str, name: &str) -> Option<String> {
+        let helpers = self.tdz.as_ref()?;
+        self.tdz_names.contains(emitted).then(|| {
+            format!(
+                "({emitted} === {} ? {}({name:?}) : {emitted})",
+                helpers.sentinel, helpers.error
+            )
+        })
     }
 
     pub(crate) fn ensure_prop_handler_slot(&mut self, target: &QmlTarget, event: &str) -> String {
@@ -232,6 +323,10 @@ pub(crate) struct AstLowerer<'a, 'b> {
     /// `DOMContentLoaded` listener it adds goes to the runtime, which never
     /// fires either again, instead of running as soon as it is added.
     pub after_load: bool,
+    /// The bindings of a lazy module this script reads that can be read
+    /// before they are initialized: its own lexical bindings and its imports
+    /// of other lazy modules' ones.
+    pub tdz: HashMap<SymbolId, TdzBinding>,
 }
 
 impl<'a, 'b> AstLowerer<'a, 'b> {
@@ -263,6 +358,7 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
             symbol_renames: HashMap::new(),
             dynamic_imports: HashMap::new(),
             after_load: false,
+            tdz: HashMap::new(),
         }
     }
 
@@ -280,6 +376,126 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
         lowerer.is_handler_attr = true;
         lowerer.handler_final_stmt_span = handler_final_stmt_span;
         lowerer
+    }
+
+    fn tdz_binding(&self, id: &IdentifierReference<'_>) -> Option<TdzBinding> {
+        let rid = id.reference_id.get()?;
+        let sym_id = self.scoping.get_reference(rid).symbol_id()?;
+        self.tdz.get(&sym_id).copied()
+    }
+
+    fn tdz_emitted_name(&self, id: &IdentifierReference<'_>) -> String {
+        id.reference_id
+            .get()
+            .and_then(|rid| self.scoping.get_reference(rid).symbol_id())
+            .and_then(|sym_id| self.symbol_renames.get(&sym_id))
+            .map_or_else(|| id.name.to_string(), Clone::clone)
+    }
+
+    /// Whether `id` can find its binding uninitialized: anywhere but the top
+    /// level of its own module after its declaration.
+    fn tdz_check(&self, id: &IdentifierReference<'_>) -> bool {
+        let Some(binding) = self.tdz_binding(id) else {
+            return false;
+        };
+        !(self.fn_depth == 0
+            && self.class_depth == 0
+            && binding.declared_at.is_some_and(|end| id.span.start >= end))
+    }
+
+    /// `id op rhs`, `rhs` already lowered, for a binding that may be
+    /// uninitialized: as a browser's, an uninitialized binding throws a
+    /// `ReferenceError` (once `rhs` is evaluated, for `=`), and a `const` or
+    /// an import a `TypeError`.
+    fn tdz_assignment(
+        &self,
+        id: &IdentifierReference<'_>,
+        binding: TdzBinding,
+        op: AssignmentOperator,
+        rhs: &str,
+    ) -> String {
+        let name = self.tdz_emitted_name(id);
+        let source = id.name.as_str();
+        let check = self.tdz_check(id);
+        let read = if check {
+            self.shared.tdz_read(&name, source)
+        } else {
+            None
+        }
+        .unwrap_or_else(|| name.clone());
+        let Some(helpers) = self.shared.tdz.as_ref() else {
+            return format_assignment(&name, op, rhs);
+        };
+        let TdzHelpers {
+            sentinel,
+            error,
+            set,
+            const_write,
+        } = helpers;
+        if binding.kind == TdzKind::Let {
+            if !check {
+                return format_assignment(&name, op, rhs);
+            }
+            return if op == AssignmentOperator::Assign {
+                format!("{name} = {set}({rhs}, {name}, {source:?})")
+            } else {
+                format!(
+                    "({name} === {sentinel} ? {error}({source:?}) : {})",
+                    format_assignment(&name, op, rhs)
+                )
+            };
+        }
+        let uninitialized = if binding.kind == TdzKind::Const && check {
+            format!("{name} === {sentinel}")
+        } else {
+            "false".to_string()
+        };
+        if op == AssignmentOperator::Assign {
+            return format!("({rhs}, {const_write}({uninitialized}, {source:?}))");
+        }
+        let fail = format!("{const_write}(false, {source:?})");
+        if let Some(logic) = logical_binary_op(op) {
+            format!("({read} {logic} ({rhs}, {fail}))")
+        } else {
+            format!("({read}, {rhs}, {fail})")
+        }
+    }
+
+    fn tdz_update(
+        &self,
+        id: &IdentifierReference<'_>,
+        binding: TdzBinding,
+        it: &UpdateExpression<'_>,
+    ) -> String {
+        let name = self.tdz_emitted_name(id);
+        let source = id.name.as_str();
+        let check = self.tdz_check(id);
+        let op = it.operator.as_str();
+        let plain = if it.prefix {
+            format!("{op}{name}")
+        } else {
+            format!("{name}{op}")
+        };
+        let read = if check {
+            self.shared.tdz_read(&name, source)
+        } else {
+            None
+        };
+        let Some(helpers) = self.shared.tdz.as_ref() else {
+            return plain;
+        };
+        match (binding.kind, read) {
+            (TdzKind::Let, None) => plain,
+            (TdzKind::Let, Some(_)) => format!(
+                "({name} === {} ? {}({source:?}) : {plain})",
+                helpers.sentinel, helpers.error
+            ),
+            (_, read) => format!(
+                "(+{}, {}(false, {source:?}))",
+                read.unwrap_or(name),
+                helpers.const_write
+            ),
+        }
     }
 
     pub(crate) fn bound_name<'c>(&'c self, id: &'c BindingIdentifier<'_>) -> &'c str {
@@ -790,6 +1006,28 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
 
         if let Some(rid) = it.reference_id.get()
             && let Some(sym_id) = self.scoping.get_reference(rid).symbol_id()
+            && self.tdz.contains_key(&sym_id)
+        {
+            // A write is checked as a whole assignment or update.
+            let read = !self.scoping.get_reference(rid).is_write();
+            let name = self.tdz_emitted_name(it);
+            let checked = read
+                .then(|| {
+                    self.tdz_check(it)
+                        .then(|| self.shared.tdz_read(&name, &it.name))
+                })
+                .flatten()
+                .flatten();
+            if let Some(text) = checked {
+                self.editor.replace(it.span, text);
+            } else if name != it.name.as_str() {
+                self.editor.replace(it.span, name);
+            }
+            return;
+        }
+
+        if let Some(rid) = it.reference_id.get()
+            && let Some(sym_id) = self.scoping.get_reference(rid).symbol_id()
             && let Some(new_name) = self.symbol_renames.get(&sym_id)
         {
             self.editor.replace(it.span, new_name.clone());
@@ -997,6 +1235,15 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
     }
 
     fn visit_assignment_expression(&mut self, it: &AssignmentExpression<'a>) {
+        if let AssignmentTarget::AssignmentTargetIdentifier(id) = &it.left
+            && let Some(binding) = self.tdz_binding(id)
+        {
+            self.visit_expression(&it.right);
+            let rhs = self.editor.extract_and_consume(it.right.span());
+            let rep = self.tdz_assignment(id, binding, it.operator, &rhs);
+            self.editor.replace(it.span, rep);
+            return;
+        }
         match &it.left {
             AssignmentTarget::StaticMemberExpression(member) => {
                 if self.try_rewrite_member_assignment(
@@ -1040,6 +1287,13 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
     }
 
     fn visit_update_expression(&mut self, it: &UpdateExpression<'a>) {
+        if let SimpleAssignmentTarget::AssignmentTargetIdentifier(id) = &it.argument
+            && let Some(binding) = self.tdz_binding(id)
+        {
+            let rep = self.tdz_update(id, binding, it);
+            self.editor.replace(it.span, rep);
+            return;
+        }
         if let SimpleAssignmentTarget::StaticMemberExpression(member) = &it.argument
             && let Some(target) = self.resolve_single_target(&member.object)
         {

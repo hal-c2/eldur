@@ -3206,3 +3206,55 @@ fn a_name_set_on_the_window_is_not_the_element_with_that_id() {
         "console.log(panel.open, document.getElementById(\"card\").id);\n"
     );
 }
+
+/// A lazily imported module's `let`, `const` and `class` bindings hold a
+/// sentinel until their declarations run: a read of one checks it and throws
+/// a `ReferenceError`, a write to a `const` throws a `TypeError`. Code at the
+/// module's top level after a declaration reads it unchecked, as it always
+/// finds it initialized.
+#[test]
+fn a_lazy_modules_lexical_bindings_are_checked_until_initialized() {
+    let resolver = FakeResolver::default();
+    let main = module_script("main.js", "import(\"./lazy.js\");\n");
+    let lazy = module_script(
+        "lazy.js",
+        "export const K = 1;\nexport let n = 2;\nexport class Box {}\n\
+         export function read() { return K + n; }\n\
+         export function write() { K = 3; n = 4; }\n\
+         export const after = K;\n",
+    );
+    let out = run_rewrite(&[main, lazy], &resolver);
+    let js = &out.page_js;
+    for decl in [
+        "var K = __eldur_tdz;",
+        "var n = __eldur_tdz;",
+        "var Box = __eldur_tdz;",
+        "var after = __eldur_tdz;",
+        "function __eldur_tdz() {}",
+    ] {
+        assert!(js.contains(decl), "{decl}\n{js}");
+    }
+    for checked in [
+        r#"return (K === __eldur_tdz ? __eldur_tdz_error("K") : K) + (n === __eldur_tdz ? __eldur_tdz_error("n") : n);"#,
+        r#"(3, __eldur_const_write(K === __eldur_tdz, "K"));"#,
+        r#"n = __eldur_tdz_set(4, n, "n");"#,
+        "after = K;",
+    ] {
+        assert!(js.contains(checked), "{checked}\n{js}");
+    }
+}
+
+/// A module run as the page loads keeps its `let` and `const` bindings as
+/// they are: no sentinel, no check.
+#[test]
+fn an_eager_modules_lexical_bindings_are_not_checked() {
+    let resolver = FakeResolver::default();
+    let main = module_script(
+        "main.js",
+        "import { n } from \"./dep.js\";\nexport const K = n + 1;\nexport function read() { return K + n; }\n",
+    );
+    let dep = module_script("dep.js", "export let n = 1;\nexport class Box {}\n");
+    let out = run_rewrite(&[main, dep], &resolver);
+    assert!(!out.page_js.contains("__eldur_tdz"), "{}", out.page_js);
+    assert!(out.page_js.contains("return K + n;"), "{}", out.page_js);
+}
