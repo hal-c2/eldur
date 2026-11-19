@@ -312,9 +312,14 @@ img, svg { display: block }
 <svg id=jd xmlns="http://www.w3.org/2000/svg" width="80" height="40" viewBox="0 0 20 20" style="width:200px;height:auto"><rect width="20" height="10" fill="#c60"/></svg>
 <svg id=je xmlns="http://www.w3.org/2000/svg" width="80" height="0" style="width:200px;height:auto"><rect width="20" height="10" fill="#c60"/></svg>
 <svg id=jf xmlns="http://www.w3.org/2000/svg" width="-80" height="40" style="width:200px;height:auto"><rect width="20" height="10" fill="#c60"/></svg>
+<svg id=jg xmlns="http://www.w3.org/2000/svg" width="100%"><rect width="20" height="10" fill="#c60"/></svg>
+<svg id=jh xmlns="http://www.w3.org/2000/svg" width="100%" height="40"><rect width="20" height="10" fill="#c60"/></svg>
+<svg id=ji xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 20 10"><rect width="20" height="10" fill="#c60"/></svg>
+<svg id=jj xmlns="http://www.w3.org/2000/svg" width="50%" height="100%"><rect width="20" height="10" fill="#c60"/></svg>
+<svg id=jk xmlns="http://www.w3.org/2000/svg" width="80" height="100%"><rect width="20" height="10" fill="#c60"/></svg>
 <script>
 // Named so that they get an objectName the test can find.
-var named = "n o p q r s t za zb zc zd ze zf zg zh zi zj zk zl zm zn zo zp zq zr zs zt zu zv zw ia ib ic ie ig ih ij ik ja jb jc jd je jf".split(" ").map(function (id) { return document.getElementById(id) });
+var named = "n o p q r s t za zb zc zd ze zf zg zh zi zj zk zl zm zn zo zp zq zr zs zt zu zv zw ia ib ic ie ig ih ij ik ja jb jc jd je jf jg jh ji jj jk".split(" ").map(function (id) { return document.getElementById(id) });
 </script></body></html>"##;
 
 /// Chromium, `getBoundingClientRect()` at 1280×800.
@@ -423,6 +428,17 @@ TestCase {
         compareBox("jd", [0, 2810.5, 200, 100])
         compareBox("je", [0, 2910.5, 200, 0])
         compareBox("jf", [0, 2910.5, 200, 40])
+    }
+
+    // Percentage attributes are CSS through the presentation hints: the
+    // width fills the column, a percentage height of an auto-height block
+    // is auto, and only a viewBox gives the filled width a height.
+    function test_inline_svg_percentage_attributes() {
+        compareBox("jg", [0, 2950.5, 1280, 150])
+        compareBox("jh", [0, 3100.5, 1280, 40])
+        compareBox("ji", [0, 3140.5, 1280, 640])
+        compareBox("jj", [0, 3780.5, 640, 150])
+        compareBox("jk", [0, 3930.5, 80, 150])
     }
 }
 }
