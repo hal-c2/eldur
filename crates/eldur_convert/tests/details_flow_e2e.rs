@@ -514,6 +514,91 @@ SUPPORT
 }
 "##;
 
+// Margins an open `<details>` passes on as it opens and closes, where they
+// meet a row of floats, a bordered box's bottom past a block a rule hides,
+// and the end of a `<details>` around it.
+const PASSED_PAGE: &str = r##"<!doctype html>
+<style>
+body { font: 16px/18px sans-serif; }
+:root[data-theme='dim'] .fold { display: none; }
+.f { float: left; }
+.box { border-bottom: 1px solid black; }
+</style>
+<details><summary>Float summary</summary><p>Float para</p></details>
+<div class="f">Float one</div><div class="f">Float two</div>
+<div style="clear: both"></div>
+<div class="box"><details open><summary>Box summary</summary><p>Box para</p></details><p class="fold">Box tail</p></div>
+<div>Box next</div>
+<details open><summary>Outer summary</summary><details open><summary>Nested summary</summary><p>Nested para</p></details></details>
+<div>Nested next</div>
+<button id="t">Dim</button>
+<script>
+document.getElementById('t').addEventListener('click', () => {
+  const r = document.documentElement;
+  r.dataset.theme = r.dataset.theme === 'dim' ? '' : 'dim';
+});
+</script>
+"##;
+
+const PASSED_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 800
+    height: 600
+
+TestCase {
+    name: "DetailsPassed"
+    when: windowShown
+SUPPORT
+
+    function click(page, words) {
+        const line = textOf(page, words)
+        mouseClick(line, 60, line.height / 2)
+        wait(100)
+    }
+
+    function test_passed_margins() {
+        const page = load(Qt.createComponent("Main.qml"))
+        const floatSummary = textOf(page, "Float summary")
+        const floatPara = textOf(page, "Float para")
+        const floatOne = textOf(page, "Float one")
+        verify(floatSummary && floatPara && floatOne, "float lines")
+        // Chromium: closed, the floats are right under the summary; open,
+        // past the paragraph's 16 px.
+        below(page, floatSummary, floatOne, 0, "floats, closed")
+        click(page, "Float summary")
+        below(page, floatPara, floatOne, 16, "floats, open")
+        click(page, "Float summary")
+        below(page, floatSummary, floatOne, 0, "floats, closed again")
+
+        // Chromium: with the tail hidden and the details closed, the border
+        // (1 px) is all between the summary and the next block.
+        const boxSummary = textOf(page, "Box summary")
+        const boxNext = textOf(page, "Box next")
+        const button = find(page, i => i.eldurTag === "button" && i.text === "Dim")
+        mouseClick(button)
+        wait(100)
+        verify(!textOf(page, "Box tail").visible, "Box tail shows under dim")
+        below(page, textOf(page, "Box para"), boxNext, 17, "box, open, dim")
+        click(page, "Box summary")
+        below(page, boxSummary, boxNext, 1, "box, closed, dim")
+
+        // Chromium: the nested one closed, the next block is right under
+        // its summary; open, past the paragraph's 16 px.
+        const nestedSummary = textOf(page, "Nested summary")
+        const nestedPara = textOf(page, "Nested para")
+        const nestedNext = textOf(page, "Nested next")
+        below(page, nestedPara, nestedNext, 16, "nested, open")
+        click(page, "Nested summary")
+        below(page, nestedSummary, nestedNext, 0, "nested, closed")
+    }
+}
+}
+"##;
+
 // A page whose created elements the runtime lays out (`eldurOpenElements`):
 // its layout passes keep a closed `<details>`' content folded.
 const LAID_PAGE: &str = r##"<!doctype html>
@@ -612,6 +697,11 @@ fn a_details_children_a_script_moves_show_as_they_and_their_fold_say() {
 #[test]
 fn a_hidden_child_stays_hidden_when_a_block_moves_into_its_open_details() {
     run(KEPT_PAGE, KEPT_TEST, "eldur-details-kept");
+}
+
+#[test]
+fn margins_a_details_passes_on_meet_floats_borders_and_an_outer_details() {
+    run(PASSED_PAGE, PASSED_TEST, "eldur-details-passed");
 }
 
 #[test]

@@ -36,6 +36,9 @@ struct HiddenRun {
     /// an item, keeping its top margin.
     given: f32,
     boxes: Vec<(String, MarginSet)>,
+    /// What a box's bottom margin is in each case, for boxes whose last
+    /// blocks may hide too (an open `<details>` folded in another).
+    box_cases: Vec<(String, Escape)>,
     /// The run starts the column and the margins at its top escape through
     /// the parent's: while every box before an item is hidden, the item's
     /// own margin escapes too and the item has none.
@@ -101,6 +104,9 @@ impl HiddenRun {
         self.before_cases = self.before_cases.take().map(|c| c.joined(m));
         for (_, bottom) in &mut self.boxes {
             bottom.join(m);
+        }
+        for (_, cases) in &mut self.box_cases {
+            *cases = cases.clone().joined(m);
         }
         if let Some(bottom) = &mut self.shown_bottom {
             bottom.join(m);
@@ -228,13 +234,21 @@ impl Escape {
     /// boxes are hidden ones a script can show: the bottom margin of the
     /// last one shown, or with all of them hidden what came before them.
     fn after_run(run: &HiddenRun) -> Option<Escape> {
+        let mut cases = Vec::new();
+        for (id, bottom) in run.boxes.iter().rev() {
+            match run.box_cases.iter().find(|(b, _)| b == id) {
+                // Shown, it passes on what its own last blocks do.
+                Some((_, inner)) => {
+                    let room = HiddenRun::NEAREST.saturating_sub(cases.len() + 1);
+                    let (each, otherwise) = nested(Some(id), inner, MarginSet::default(), room);
+                    cases.extend(each);
+                    cases.push((id.clone(), otherwise));
+                }
+                None => cases.push((id.clone(), *bottom)),
+            }
+        }
         let mut escape = Escape {
-            cases: run
-                .boxes
-                .iter()
-                .rev()
-                .map(|(id, bottom)| (id.clone(), *bottom))
-                .collect(),
+            cases,
             otherwise: run.before,
         };
         if let Some(before) = &run.before_cases {
@@ -289,13 +303,17 @@ impl Gap {
 }
 
 fn set_top(obj: &mut Object, gap: Gap) {
+    set_gap(obj, "Layout.topMargin", gap);
+}
+
+fn set_gap(obj: &mut Object, prop: &str, gap: Gap) {
     match gap {
         Gap::Number(n) if n > 0.0 => {
-            obj.set("Layout.topMargin", Value::Number(n));
+            obj.set(prop, Value::Number(n));
         }
         Gap::Number(_) => {}
         Gap::Expr(e) => {
-            obj.set("Layout.topMargin", Value::expr(e));
+            obj.set(prop, Value::expr(e));
         }
     }
 }
@@ -600,6 +618,8 @@ impl Emitter<'_, '_> {
                 // Margins do not collapse with a float's.
                 if last.is_none() && top_open && pending == MarginSet::default() {
                     escaped_top = Some(pending);
+                } else if let Some(cases) = &pending_cases {
+                    cases.set_on(&mut obj);
                 } else {
                     self.set_margin(&mut obj, "Layout.topMargin", pending.value());
                 }
@@ -774,12 +794,17 @@ impl Emitter<'_, '_> {
                 self.set_margin(&mut obj, "Layout.bottomMargin", below);
             }
             if hides && let Some(id) = &obj.id {
-                hidden.push(format!("{id}.visible"), emitted.bottom);
+                let shown = format!("{id}.visible");
+                if let Some(cases) = &emitted.bottom_cases {
+                    hidden.box_cases.push((shown.clone(), cases.clone()));
+                }
+                hidden.push(shown, emitted.bottom);
                 if !collapsed {
                     hidden.shown_bottom = Some(emitted.bottom);
                 }
             } else {
                 hidden.boxes.clear();
+                hidden.box_cases.clear();
                 hidden.shown_bottom = None;
                 hidden.holder = None;
                 if let Some(shown) = holds {
@@ -890,22 +915,20 @@ impl Emitter<'_, '_> {
         } else {
             if let Some(Member::Child(obj)) = layout.members.get_mut(last) {
                 match pending_cases.as_ref().filter(|_| hidden.boxes.is_empty()) {
-                    Some(cases) => match cases.gap(0.0) {
-                        Gap::Number(n) if n > 0.0 => {
-                            obj.set("Layout.bottomMargin", Value::Number(n));
-                        }
-                        Gap::Number(_) => {}
-                        Gap::Expr(e) => {
-                            obj.set("Layout.bottomMargin", Value::expr(e));
-                        }
-                    },
+                    Some(cases) => set_gap(obj, "Layout.bottomMargin", cases.gap(0.0)),
                     None => self.set_margin(obj, "Layout.bottomMargin", pending.value()),
                 }
             }
+            // With all of the run hidden, the margins before it: in each case,
+            // when the boxes before it end with blocks that may hide too.
+            let all_hidden = match &hidden.before_cases {
+                Some(cases) => cases.gap(0.0),
+                None => Gap::Number(round(hidden.before.value().max(0.0))),
+            };
             if !hidden.boxes.is_empty()
                 && let Some(i) = before_hidden
                 && let Some(Member::Child(obj)) = layout.members.get_mut(i)
-                && hidden.before.value() > 0.0
+                && !matches!(all_hidden, Gap::Number(n) if n <= 0.0)
             {
                 let shown = hidden
                     .boxes
@@ -915,10 +938,7 @@ impl Emitter<'_, '_> {
                     .join(" || ");
                 obj.set(
                     "Layout.bottomMargin",
-                    Value::expr(format!(
-                        "{shown} ? 0 : {}",
-                        fmt_number(round(hidden.before.value()))
-                    )),
+                    Value::expr(format!("{shown} ? 0 : {}", all_hidden.branch())),
                 );
             }
             MarginSet::default()
@@ -1706,7 +1726,7 @@ mod tests {
                 // the farthest, so these margins are exact.
                 let first = |s: &[String], e: &Escape| {
                     s.first().map_or(e.otherwise, |id| {
-                        e.cases.iter().find(|(c, _)| c == id).unwrap().1
+                        e.cases.iter().find(|(c, _)| c == id).expect("a case for each kept id").1
                     })
                 };
                 let mut want = first(&a, &above);
