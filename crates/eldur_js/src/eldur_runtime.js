@@ -994,19 +994,11 @@ function _detailsHold(nodes) {
 // After `held` went into `parent`: each `<details>` among them is set up, and
 // what went into a set-up one is folded with the rest while it is closed.
 function _detailsInserted(parent, held) {
+    // The whole of it again: a summary put first makes the one before it
+    // content, folded while closed and no longer the toggle.
     var open = _nodeTag(parent) === "details" ? _meta(parent).detailsOpen : undefined;
     if (open !== undefined) {
-        var first = _detailsSummary(parent);
-        for (var k = 0; k < held.length; ++k) {
-            var kid = _ceNow(held[k]);
-            if (kid === first) {
-                _detailsTurnMarker(kid, open);
-                _detailsWire(kid);
-            } else if (!open && _isQObject(kid) && !kid.__eldurInline && _nodeTag(kid) !== "summary") {
-                kid.visible = false;
-            }
-        }
-        _layoutChanged(parent);
+        _detailsShow(parent, open);
     }
     for (var i = 0; i < held.length; ++i) {
         _detailsSetUpUnder(_ceNow(held[i]), true);
@@ -1050,11 +1042,12 @@ function _detailsShow(raw, open) {
     if (_gHasCascade()) {
         _gTouch(raw);
     }
+    // Only its first summary stays out of the fold (HTML §4.11.1).
     var seenSummary = false;
     _rawElementChildren(raw).forEach(function(kid) {
-        if (_nodeTag(kid) !== "summary") {
+        if (_nodeTag(kid) !== "summary" || seenSummary) {
             kid.visible = open && _gStyleAllowsShow(kid);
-        } else if (!seenSummary) {
+        } else {
             seenSummary = true;
             _detailsTurnMarker(kid, open);
             _detailsWire(kid);
@@ -27791,14 +27784,15 @@ function _gVariantSupports(raw, name) {
 
 // Shows or hides an item as the rules now say. The converter's binding answers
 // for all it knows; only where it disagrees does something hold over it.
-// A closed disclosure folds every child but its summary away, whatever the
-// cascade says; `_detailsShow` reads the cascade when it opens. Only one the
-// runtime closed has folded anything: a `<details>` a script makes never went
-// through `_detailsShow`, so its children are on screen and follow the rules.
+// A closed disclosure folds every child but its first summary away, whatever
+// the cascade says; `_detailsShow` reads the cascade when it opens. Only one
+// the runtime closed has folded anything: a `<details>` a script makes is set
+// up by `_detailsShow` once it is in the document, and until then its
+// children are on screen and follow the rules.
 function _gFoldedAway(raw) {
     var up = _elementParent(raw);
     return Boolean(up) && _nodeTag(up) === "details" && _meta(up).detailsOpen === false
-        && _nodeTag(raw) !== "summary";
+        && _detailsSummary(up) !== raw;
 }
 
 // An out-of-flow box a layer above the page paints: a slot stands for it

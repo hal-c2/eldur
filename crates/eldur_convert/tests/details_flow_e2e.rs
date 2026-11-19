@@ -158,9 +158,15 @@ const MADE_PAGE: &str = r##"<!doctype html>
 <div id="made-host"></div>
 <div id="built-host"></div>
 <div id="log">-</div>
+<div id="toggles">toggles 0</div>
 <button id="make">Make</button>
 <button id="ask">Ask</button>
+<button id="unshut">Unshut</button>
+<button id="shut">Shut</button>
+<button id="lead">Lead</button>
 <script>
+let built = null;
+let toggles = 0;
 document.getElementById('make').addEventListener('click', () => {
   document.getElementById('made-host').innerHTML =
     '<details open><summary>Made summary</summary><p><em>Made inside</em></p></details>';
@@ -171,7 +177,21 @@ document.getElementById('make').addEventListener('click', () => {
   const p = document.createElement('p');
   p.textContent = 'Built inside';
   d.append(s, p);
+  d.addEventListener('toggle', () => {
+    toggles += 1;
+    document.getElementById('toggles').textContent = 'toggles ' + toggles;
+  });
   document.getElementById('built-host').append(d);
+  built = d;
+});
+// On a <details> in the document, the attribute is its state.
+document.getElementById('unshut').addEventListener('click', () => built.setAttribute('open', ''));
+document.getElementById('shut').addEventListener('click', () => built.removeAttribute('open'));
+// A summary put first takes over; the one before it is folded content.
+document.getElementById('lead').addEventListener('click', () => {
+  const l = document.createElement('summary');
+  l.textContent = 'Lead';
+  built.prepend(l);
 });
 document.getElementById('ask').addEventListener('click', () => {
   document.getElementById('log').textContent = [...document.querySelectorAll('details')]
@@ -235,6 +255,36 @@ SUPPORT
         wait(100)
         verify(madeInside.visible, "Made inside is hidden once open again")
         below(page, madeInside, builtSummary, 16, "made open again")
+
+        // Chromium: written and removed, the attribute opens and closes it,
+        // each a toggle (one as it was made open, one for the click).
+        compare(textOf(page, "toggles 2").text, "toggles 2")
+        press(page, "Unshut")
+        verify(builtInside.visible, "Built inside is hidden once the attribute is written")
+        verify(disclosure(builtSummary).open, "Built summary keeps the closed marker")
+        press(page, "Ask")
+        compare(textOf(page, "true/true true/true").text, "true/true true/true")
+        compare(textOf(page, "toggles 3").text, "toggles 3")
+        press(page, "Shut")
+        verify(!builtInside.visible, "Built inside shows once the attribute is removed")
+        verify(!disclosure(builtSummary).open, "Built summary keeps the open marker")
+        press(page, "Ask")
+        compare(textOf(page, "true/true false/false").text, "true/true false/false")
+        compare(textOf(page, "toggles 4").text, "toggles 4")
+
+        // Chromium folds the old summary once another is first, and the new
+        // one toggles it.
+        press(page, "Lead")
+        const lead = textOf(page, "Lead")
+        verify(lead && lead.visible, "Lead is not shown")
+        verify(!builtSummary.visible, "the old summary shows in a closed details")
+        mouseClick(lead, 20, lead.height / 2)
+        wait(100)
+        verify(builtSummary.visible && builtInside.visible, "Lead does not open it")
+        compare(textOf(page, "toggles 5").text, "toggles 5")
+        mouseClick(builtSummary, 60, builtSummary.height / 2)
+        wait(100)
+        verify(builtInside.visible, "the old summary still toggles it")
     }
 }
 }
