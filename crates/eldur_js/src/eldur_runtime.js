@@ -7362,11 +7362,11 @@ function _inFocusWhileHeard(raw) {
     }
     _in.focused = raw;
     _in.focusMoves++;
+    var moves = _in.focusMoves;
     _in.focusPending = raw;
     _activeElement = raw;
-    if (raw.__eldurInline) {
-        _in.inlineFocus = raw;
-    }
+    // What holds a link's focus for it, focused itself, is no longer the link's.
+    _in.inlineFocus = raw.__eldurInline ? raw : null;
     if (_inIsField(raw)) {
         _meta(raw).changeBase = String(raw.text);
     }
@@ -7390,9 +7390,13 @@ function _inFocusWhileHeard(raw) {
         _in.shiftTo = null;
         _inFocusEvents(told, raw, "blur", "focusout");
     }
-    // Its own listeners find it focused.
+    // Its own listeners find it focused, and one that moves the focus on, or
+    // lets it go, leaves it no focusin.
     _in.shiftTo = raw;
-    _inFocusEvents(raw, told, "focus", "focusin");
+    _inFocusEvents(raw, told, "focus");
+    if (_in && _in.focused === raw && _in.focusMoves === moves) {
+        _inFocusEvents(raw, told, "focusin");
+    }
 }
 
 function blur(item) {
