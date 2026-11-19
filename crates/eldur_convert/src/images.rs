@@ -120,7 +120,7 @@ pub(crate) fn collect_backgrounds(
             add(style);
         }
     }
-    for variant in &styles.variants {
+    for variant in styles.variants.iter() {
         for (_, style) in &variant.changed {
             add(style);
         }

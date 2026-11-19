@@ -286,7 +286,7 @@ fn conditions(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Vec<Cond> {
                 .collect()
         })
         .unwrap_or_default();
-    for v in &cx.styles.variants {
+    for v in cx.styles.variants.iter() {
         let control = classify(doc, v.node);
         let element = doc.element(v.node);
         let has = |name: &str| element.is_some_and(|e| e.has_attr(name));
