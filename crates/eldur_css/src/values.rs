@@ -973,8 +973,9 @@ pub struct ComputedStyle {
     pub counter_set: Vec<CounterChange>,
 
     /// Custom properties (`--name` → token text after `var()` substitution
-    /// in their own values). Inherited.
-    pub custom_properties: BTreeMap<String, String>,
+    /// in their own values). Inherited: an element that declares none shares
+    /// its parent's.
+    pub custom_properties: std::sync::Arc<BTreeMap<String, String>>,
 }
 
 impl Default for ComputedStyle {
@@ -1096,7 +1097,7 @@ impl Default for ComputedStyle {
             counter_reset: Vec::new(),
             counter_increment: Vec::new(),
             counter_set: Vec::new(),
-            custom_properties: BTreeMap::new(),
+            custom_properties: std::sync::Arc::default(),
         }
     }
 }
