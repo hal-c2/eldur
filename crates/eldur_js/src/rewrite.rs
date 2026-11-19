@@ -841,13 +841,8 @@ impl<'a> PageBuilder<'a> {
             &mut self.shared,
         );
         if is_lazy && !is_classic {
-            lowerer.tdz = lazy_module_tdz_bindings(
-                v,
-                &bindings,
-                resolver,
-                &symbol_renames,
-                lowerer.shared,
-            );
+            lowerer.tdz =
+                lazy_module_tdz_bindings(v, &bindings, resolver, &symbol_renames, lowerer.shared);
         }
         lowerer.symbol_renames = symbol_renames;
         lowerer.dynamic_imports = dynamic_imports;
@@ -2648,7 +2643,9 @@ fn is_bare_binding_name(name: &str) -> bool {
     chars
         .next()
         .is_some_and(|c| c == '_' || c == '$' || c.is_alphabetic())
-        && chars.all(|c| c == '_' || c == '$' || c == '\u{200c}' || c == '\u{200d}' || c.is_alphanumeric())
+        && chars.all(|c| {
+            c == '_' || c == '$' || c == '\u{200c}' || c == '\u{200d}' || c.is_alphanumeric()
+        })
 }
 
 /// What a lazy module reads that can be uninitialized: its own `let`,
