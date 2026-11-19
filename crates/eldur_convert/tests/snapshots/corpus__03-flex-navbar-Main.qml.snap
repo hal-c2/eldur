@@ -286,6 +286,7 @@ ApplicationWindow {
                                             implicitHeight: btnText.implicitHeight + 18
                                             border.width: 1
                                             border.color: btnHover.hovered ? "#094a8a" : "#0b5cad"
+                                            activeFocusOnTab: true
                                             Accessible.role: Accessible.Link
                                             Accessible.name: "Sign up"
                                             width: Math.min(implicitWidth, liFlow.width)
@@ -298,6 +299,9 @@ ApplicationWindow {
                                                     easing.bezierCurve: [0, 0, 0.58, 1, 1, 1]
                                                 }
                                             }
+
+                                            Keys.onReturnPressed: root.scrollToFragment("#")
+                                            Keys.onEnterPressed: root.scrollToFragment("#")
 
                                             Text {
                                                 id: btnText
@@ -552,6 +556,7 @@ ApplicationWindow {
                                     implicitHeight: btnText2.implicitHeight + 30
                                     border.width: 1
                                     border.color: btn2Hover.hovered ? "#094a8a" : "#0b5cad"
+                                    activeFocusOnTab: true
                                     Accessible.role: Accessible.Link
                                     Accessible.name: "Start free trial"
                                     Layout.fillWidth: true
@@ -566,6 +571,9 @@ ApplicationWindow {
                                             easing.bezierCurve: [0, 0, 0.58, 1, 1, 1]
                                         }
                                     }
+
+                                    Keys.onReturnPressed: root.scrollToFragment("#")
+                                    Keys.onEnterPressed: root.scrollToFragment("#")
 
                                     Text {
                                         id: btnText2
@@ -614,6 +622,7 @@ ApplicationWindow {
                                     implicitHeight: btnText3.implicitHeight + 30
                                     border.width: 1
                                     border.color: "#0b5cad"
+                                    activeFocusOnTab: true
                                     Accessible.role: Accessible.Link
                                     Accessible.name: "Watch the demo"
                                     Layout.fillWidth: true
@@ -621,6 +630,9 @@ ApplicationWindow {
                                     Layout.alignment: Qt.AlignVCenter
                                     Layout.leftMargin: 12
                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                    Keys.onReturnPressed: root.scrollToFragment("#")
+                                    Keys.onEnterPressed: root.scrollToFragment("#")
 
                                     Text {
                                         id: btnText3

@@ -169,11 +169,15 @@ ApplicationWindow {
                                                 radius: 6
                                                 implicitWidth: menuItemText.implicitWidth + 24
                                                 implicitHeight: menuItemText.implicitHeight + 20
+                                                activeFocusOnTab: true
                                                 Accessible.role: Accessible.Link
                                                 Accessible.name: "Dashboard"
                                                 Layout.fillWidth: true
                                                 Layout.preferredHeight: implicitHeight
                                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                                Keys.onReturnPressed: root.scrollToFragment("#")
+                                                Keys.onEnterPressed: root.scrollToFragment("#")
 
                                                 Shape {
                                                     id: menuItemInset
@@ -241,12 +245,16 @@ ApplicationWindow {
                                                 radius: 6
                                                 implicitWidth: menuItemText2.implicitWidth + 24
                                                 implicitHeight: menuItemText2.implicitHeight + 20
+                                                activeFocusOnTab: true
                                                 Accessible.role: Accessible.Link
                                                 Accessible.name: "Projects"
                                                 Layout.fillWidth: true
                                                 Layout.topMargin: 4 - menuItem.eldurCarry
                                                 Layout.preferredHeight: implicitHeight
                                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                                Keys.onReturnPressed: root.scrollToFragment("#")
+                                                Keys.onEnterPressed: root.scrollToFragment("#")
 
                                                 Text {
                                                     id: menuItemText2
@@ -294,12 +302,16 @@ ApplicationWindow {
                                                 radius: 6
                                                 implicitWidth: menuItemText3.implicitWidth + 24
                                                 implicitHeight: menuItemText3.implicitHeight + 20
+                                                activeFocusOnTab: true
                                                 Accessible.role: Accessible.Link
                                                 Accessible.name: "Tasks"
                                                 Layout.fillWidth: true
                                                 Layout.topMargin: 4 - menuItem2.eldurCarry
                                                 Layout.preferredHeight: implicitHeight
                                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                                Keys.onReturnPressed: root.scrollToFragment("#")
+                                                Keys.onEnterPressed: root.scrollToFragment("#")
 
                                                 Text {
                                                     id: menuItemText3
@@ -347,12 +359,16 @@ ApplicationWindow {
                                                 radius: 6
                                                 implicitWidth: menuItemText4.implicitWidth + 24
                                                 implicitHeight: menuItemText4.implicitHeight + 20
+                                                activeFocusOnTab: true
                                                 Accessible.role: Accessible.Link
                                                 Accessible.name: "Calendar"
                                                 Layout.fillWidth: true
                                                 Layout.topMargin: 4 - menuItem3.eldurCarry
                                                 Layout.preferredHeight: implicitHeight
                                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                                Keys.onReturnPressed: root.scrollToFragment("#")
+                                                Keys.onEnterPressed: root.scrollToFragment("#")
 
                                                 Text {
                                                     id: menuItemText4
@@ -400,12 +416,16 @@ ApplicationWindow {
                                                 radius: 6
                                                 implicitWidth: menuItemText5.implicitWidth + 24
                                                 implicitHeight: menuItemText5.implicitHeight + 20
+                                                activeFocusOnTab: true
                                                 Accessible.role: Accessible.Link
                                                 Accessible.name: "Messages"
                                                 Layout.fillWidth: true
                                                 Layout.topMargin: 4 - menuItem4.eldurCarry
                                                 Layout.preferredHeight: implicitHeight
                                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                                Keys.onReturnPressed: root.scrollToFragment("#")
+                                                Keys.onEnterPressed: root.scrollToFragment("#")
 
                                                 Text {
                                                     id: menuItemText5
@@ -493,11 +513,15 @@ ApplicationWindow {
                                                 radius: 6
                                                 implicitWidth: menuItemText6.implicitWidth + 24
                                                 implicitHeight: menuItemText6.implicitHeight + 20
+                                                activeFocusOnTab: true
                                                 Accessible.role: Accessible.Link
                                                 Accessible.name: "Members"
                                                 Layout.fillWidth: true
                                                 Layout.preferredHeight: implicitHeight
                                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                                Keys.onReturnPressed: root.scrollToFragment("#")
+                                                Keys.onEnterPressed: root.scrollToFragment("#")
 
                                                 Text {
                                                     id: menuItemText6
@@ -545,12 +569,16 @@ ApplicationWindow {
                                                 radius: 6
                                                 implicitWidth: menuItemText7.implicitWidth + 24
                                                 implicitHeight: menuItemText7.implicitHeight + 20
+                                                activeFocusOnTab: true
                                                 Accessible.role: Accessible.Link
                                                 Accessible.name: "Billing"
                                                 Layout.fillWidth: true
                                                 Layout.topMargin: 4 - menuItem5.eldurCarry
                                                 Layout.preferredHeight: implicitHeight
                                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                                Keys.onReturnPressed: root.scrollToFragment("#")
+                                                Keys.onEnterPressed: root.scrollToFragment("#")
 
                                                 Text {
                                                     id: menuItemText7
@@ -598,12 +626,16 @@ ApplicationWindow {
                                                 radius: 6
                                                 implicitWidth: menuItemText8.implicitWidth + 24
                                                 implicitHeight: menuItemText8.implicitHeight + 20
+                                                activeFocusOnTab: true
                                                 Accessible.role: Accessible.Link
                                                 Accessible.name: "Settings"
                                                 Layout.fillWidth: true
                                                 Layout.topMargin: 4 - menuItem6.eldurCarry
                                                 Layout.preferredHeight: implicitHeight
                                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                                Keys.onReturnPressed: root.scrollToFragment("#")
+                                                Keys.onEnterPressed: root.scrollToFragment("#")
 
                                                 Text {
                                                     id: menuItemText8

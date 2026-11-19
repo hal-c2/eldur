@@ -1072,10 +1072,14 @@ ApplicationWindow {
                                     radius: 6
                                     implicitWidth: buttonText.implicitWidth + 35.2
                                     implicitHeight: buttonText.implicitHeight + 16
+                                    activeFocusOnTab: true
                                     Accessible.role: Accessible.Link
                                     Accessible.name: "Read the docs"
                                     width: Math.min(implicitWidth, blockFlow3.width)
                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                    Keys.onReturnPressed: root.scrollToFragment("#docs")
+                                    Keys.onEnterPressed: root.scrollToFragment("#docs")
 
                                     Text {
                                         id: buttonText

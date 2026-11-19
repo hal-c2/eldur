@@ -157,11 +157,15 @@ ApplicationWindow {
                                 implicitHeight: 16
                                 width: 16
                                 height: 16
+                                activeFocusOnTab: true
                                 Accessible.role: Accessible.Link
                                 Accessible.name: "Source code"
 
+                                Keys.onReturnPressed: Qt.openUrlExternally("https://example.com/repo")
+                                Keys.onEnterPressed: Qt.openUrlExternally("https://example.com/repo")
+
                                 Image {
-                                    source: aHover.hovered ? "assets/svg-b5486e2271a50591.svg" : "assets/svg-0264ce491e4d77a3.svg"
+                                    source: aHover.hovered ? "assets/svg-372089b2eb9646cb.svg" : "assets/svg-c09902a21d4e95c1.svg"
                                     sourceSize.width: width
                                     sourceSize.height: height
                                     Accessible.ignored: true
@@ -208,11 +212,15 @@ ApplicationWindow {
                                 implicitHeight: 16
                                 width: 16
                                 height: 16
+                                activeFocusOnTab: true
                                 Accessible.role: Accessible.Link
                                 Accessible.name: "What is this?"
 
+                                Keys.onReturnPressed: root.scrollToFragment("#more")
+                                Keys.onEnterPressed: root.scrollToFragment("#more")
+
                                 Image {
-                                    source: a2Hover.hovered ? "assets/svg-ce7a7d67d9e96444.svg" : "assets/svg-7971e5f4a743c7d2.svg"
+                                    source: a2Hover.hovered ? "assets/svg-810cf9f572cf20a6.svg" : "assets/svg-3145d7bd637d6d20.svg"
                                     sourceSize.width: width
                                     sourceSize.height: height
                                     Accessible.ignored: true
@@ -240,11 +248,15 @@ ApplicationWindow {
                         property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
                         spacing: 0
+                        activeFocusOnTab: true
                         Accessible.role: Accessible.Link
                         Accessible.name: "Read more"
                         Layout.fillWidth: true
                         Layout.maximumWidth: Number.POSITIVE_INFINITY
                         Layout.topMargin: 16 - (0.12 + blockFlow.eldurCarry)
+
+                        Keys.onReturnPressed: root.scrollToFragment("#more")
+                        Keys.onEnterPressed: root.scrollToFragment("#more")
 
                         Text {
                             text: "Read more"
@@ -278,7 +290,7 @@ ApplicationWindow {
                             Layout.leftMargin: 8
 
                             Image {
-                                source: cardHover.hovered ? "assets/svg-ca6f6627adf4ad9a.svg" : "assets/svg-0eda57d105a60ff4.svg"
+                                source: cardHover.hovered ? "assets/svg-3e5d89ef81c3564c.svg" : "assets/svg-28f51ff6973b3a6a.svg"
                                 sourceSize.width: width
                                 sourceSize.height: height
                                 Accessible.ignored: true
@@ -323,7 +335,7 @@ ApplicationWindow {
                             height: 32
 
                             Image {
-                                source: "assets/svg-73f6f77585154202.svg"
+                                source: "assets/svg-dfb5398129d0e314.svg"
                                 sourceSize.width: width
                                 sourceSize.height: height
                                 Accessible.role: Accessible.Graphic
@@ -347,7 +359,7 @@ ApplicationWindow {
                             height: 32
 
                             Image {
-                                source: "assets/svg-e3bf96ac6e4316a8.svg"
+                                source: "assets/svg-d0f8de61e78dd8fe.svg"
                                 sourceSize.width: width
                                 sourceSize.height: height
                                 Accessible.role: Accessible.Graphic

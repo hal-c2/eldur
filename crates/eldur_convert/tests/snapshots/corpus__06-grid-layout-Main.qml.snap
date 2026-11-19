@@ -298,11 +298,15 @@ ApplicationWindow {
                                                     radius: 8
                                                     implicitWidth: isActiveText.implicitWidth + 24
                                                     implicitHeight: isActiveText.implicitHeight + 16
+                                                    activeFocusOnTab: true
                                                     Accessible.role: Accessible.Link
                                                     Accessible.name: "Overview"
                                                     Layout.fillWidth: true
                                                     Layout.preferredHeight: implicitHeight
                                                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                                    Keys.onReturnPressed: root.scrollToFragment("#")
+                                                    Keys.onEnterPressed: root.scrollToFragment("#")
 
                                                     Text {
                                                         id: isActiveText
@@ -355,10 +359,14 @@ ApplicationWindow {
 
                                                     implicitWidth: aText.implicitWidth + 24
                                                     implicitHeight: aText.implicitHeight + 16
+                                                    activeFocusOnTab: true
                                                     Accessible.role: Accessible.Link
                                                     Accessible.name: "Projects"
                                                     Layout.fillWidth: true
                                                     Layout.preferredHeight: implicitHeight
+
+                                                    Keys.onReturnPressed: root.scrollToFragment("#")
+                                                    Keys.onEnterPressed: root.scrollToFragment("#")
 
                                                     Text {
                                                         id: aText
@@ -410,10 +418,14 @@ ApplicationWindow {
 
                                                     implicitWidth: aText2.implicitWidth + 24
                                                     implicitHeight: aText2.implicitHeight + 16
+                                                    activeFocusOnTab: true
                                                     Accessible.role: Accessible.Link
                                                     Accessible.name: "Deployments"
                                                     Layout.fillWidth: true
                                                     Layout.preferredHeight: implicitHeight
+
+                                                    Keys.onReturnPressed: root.scrollToFragment("#")
+                                                    Keys.onEnterPressed: root.scrollToFragment("#")
 
                                                     Text {
                                                         id: aText2
@@ -465,10 +477,14 @@ ApplicationWindow {
 
                                                     implicitWidth: aText3.implicitWidth + 24
                                                     implicitHeight: aText3.implicitHeight + 16
+                                                    activeFocusOnTab: true
                                                     Accessible.role: Accessible.Link
                                                     Accessible.name: "Incidents"
                                                     Layout.fillWidth: true
                                                     Layout.preferredHeight: implicitHeight
+
+                                                    Keys.onReturnPressed: root.scrollToFragment("#")
+                                                    Keys.onEnterPressed: root.scrollToFragment("#")
 
                                                     Text {
                                                         id: aText3
@@ -520,10 +536,14 @@ ApplicationWindow {
 
                                                     implicitWidth: aText4.implicitWidth + 24
                                                     implicitHeight: aText4.implicitHeight + 16
+                                                    activeFocusOnTab: true
                                                     Accessible.role: Accessible.Link
                                                     Accessible.name: "Reports"
                                                     Layout.fillWidth: true
                                                     Layout.preferredHeight: implicitHeight
+
+                                                    Keys.onReturnPressed: root.scrollToFragment("#")
+                                                    Keys.onEnterPressed: root.scrollToFragment("#")
 
                                                     Text {
                                                         id: aText4
@@ -575,10 +595,14 @@ ApplicationWindow {
 
                                                     implicitWidth: aText5.implicitWidth + 24
                                                     implicitHeight: aText5.implicitHeight + 16
+                                                    activeFocusOnTab: true
                                                     Accessible.role: Accessible.Link
                                                     Accessible.name: "Settings"
                                                     Layout.fillWidth: true
                                                     Layout.preferredHeight: implicitHeight
+
+                                                    Keys.onReturnPressed: root.scrollToFragment("#")
+                                                    Keys.onEnterPressed: root.scrollToFragment("#")
 
                                                     Text {
                                                         id: aText5

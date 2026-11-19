@@ -452,11 +452,15 @@ ApplicationWindow {
                                         radius: 8
                                         implicitWidth: text_.implicitWidth + 24
                                         implicitHeight: text_.implicitHeight + 18
+                                        activeFocusOnTab: true
                                         Accessible.role: Accessible.Link
                                         Accessible.name: "Dashboard"
                                         Layout.fillWidth: true
                                         Layout.topMargin: 8
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                        Keys.onReturnPressed: root.scrollToFragment("#")
+                                        Keys.onEnterPressed: root.scrollToFragment("#")
 
                                         Shape {
                                             id: navItemInset
@@ -524,10 +528,14 @@ ApplicationWindow {
                                         radius: 8
                                         implicitWidth: text2.implicitWidth + 24
                                         implicitHeight: text2.implicitHeight + 18
+                                        activeFocusOnTab: true
                                         Accessible.role: Accessible.Link
                                         Accessible.name: "Analytics"
                                         Layout.fillWidth: true
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                        Keys.onReturnPressed: root.scrollToFragment("#")
+                                        Keys.onEnterPressed: root.scrollToFragment("#")
 
                                         Text {
                                             id: text2
@@ -575,10 +583,14 @@ ApplicationWindow {
                                         radius: 8
                                         implicitWidth: text3.implicitWidth + 24
                                         implicitHeight: text3.implicitHeight + 18
+                                        activeFocusOnTab: true
                                         Accessible.role: Accessible.Link
                                         Accessible.name: "Reports"
                                         Layout.fillWidth: true
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                        Keys.onReturnPressed: root.scrollToFragment("#")
+                                        Keys.onEnterPressed: root.scrollToFragment("#")
 
                                         Text {
                                             id: text3
@@ -650,11 +662,15 @@ ApplicationWindow {
                                         radius: 8
                                         implicitWidth: navItemContent.implicitWidth + 24
                                         implicitHeight: navItemContent.implicitHeight + 18
+                                        activeFocusOnTab: true
                                         Accessible.role: Accessible.Link
                                         Accessible.name: "Orders 12"
                                         Layout.fillWidth: true
                                         Layout.topMargin: 8
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                        Keys.onReturnPressed: root.scrollToFragment("#")
+                                        Keys.onEnterPressed: root.scrollToFragment("#")
 
                                         RowLayout {
                                             id: navItemContent
@@ -749,10 +765,14 @@ ApplicationWindow {
                                         radius: 8
                                         implicitWidth: text4.implicitWidth + 24
                                         implicitHeight: text4.implicitHeight + 18
+                                        activeFocusOnTab: true
                                         Accessible.role: Accessible.Link
                                         Accessible.name: "Customers"
                                         Layout.fillWidth: true
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                        Keys.onReturnPressed: root.scrollToFragment("#")
+                                        Keys.onEnterPressed: root.scrollToFragment("#")
 
                                         Text {
                                             id: text4
@@ -800,10 +820,14 @@ ApplicationWindow {
                                         radius: 8
                                         implicitWidth: text5.implicitWidth + 24
                                         implicitHeight: text5.implicitHeight + 18
+                                        activeFocusOnTab: true
                                         Accessible.role: Accessible.Link
                                         Accessible.name: "Products"
                                         Layout.fillWidth: true
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                        Keys.onReturnPressed: root.scrollToFragment("#")
+                                        Keys.onEnterPressed: root.scrollToFragment("#")
 
                                         Text {
                                             id: text5
@@ -875,11 +899,15 @@ ApplicationWindow {
                                         radius: 8
                                         implicitWidth: text6.implicitWidth + 24
                                         implicitHeight: text6.implicitHeight + 18
+                                        activeFocusOnTab: true
                                         Accessible.role: Accessible.Link
                                         Accessible.name: "Team"
                                         Layout.fillWidth: true
                                         Layout.topMargin: 8
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                        Keys.onReturnPressed: root.scrollToFragment("#")
+                                        Keys.onEnterPressed: root.scrollToFragment("#")
 
                                         Text {
                                             id: text6
@@ -927,10 +955,14 @@ ApplicationWindow {
                                         radius: 8
                                         implicitWidth: text7.implicitWidth + 24
                                         implicitHeight: text7.implicitHeight + 18
+                                        activeFocusOnTab: true
                                         Accessible.role: Accessible.Link
                                         Accessible.name: "Billing"
                                         Layout.fillWidth: true
                                         antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+
+                                        Keys.onReturnPressed: root.scrollToFragment("#")
+                                        Keys.onEnterPressed: root.scrollToFragment("#")
 
                                         Text {
                                             id: text7
