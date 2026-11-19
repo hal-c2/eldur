@@ -18,12 +18,20 @@ body { margin: 8px; font: 16px sans-serif; }
 <p>Hidden: <a id="gone" href="#end">gone</a> <span class="unseen"><a id="unseen" href="#end">unseen</a></span> and <a id="first" tabindex="1" href="#end">first by number</a>.</p>
 <button id="after">after</button>
 <button id="toout">focus out</button>
+<p><span id="crossed"><a id="ca" href="#end">A</a> <button id="mid">middle</button> <a id="cb" href="#end">B</a></span></p>
+<button id="strip">strip the icon</button>
+<p><a id="pre" href="#end">pre</a> <a id="ic2" tabindex="-1" href="#end"><svg id="ic2svg" aria-hidden="true" width="16" height="16"><rect width="16" height="16"/></svg> icon, then words</a> <a id="post" href="#end">post</a></p>
 <div id="tall"></div>
 <div id="end">end</div>
 <script>
 document.getElementById("faq").addEventListener("click", function (ev) {
   console.log("click", ev.target.id, ev.currentTarget.id, ev.detail, location.hash);
   ev.preventDefault();
+});
+document.getElementById("strip").addEventListener("click", function () {
+  var icon = document.getElementById("ic2svg");
+  if (icon) icon.remove();
+  document.getElementById("ic2").focus();
 });
 document.getElementById("toout").addEventListener("click", function () { document.getElementById("out").focus(); });
 document.addEventListener("click", function (ev) { console.log("doc click", ev.target.id, ev.defaultPrevented, location.hash); });
