@@ -17129,10 +17129,31 @@ function _inCanFocus(raw) {
 function _inTabStops() {
     var positive = [];
     var natural = [];
-    // A link in a line is a stop where the first icon it carries stands.
+    // A link in a line is a stop where the first icon it carries stands, or
+    // its first words do, whichever comes first.
     var carried = [];
+    function take(node, index) {
+        if (_inIsRadio(node) && !node.checked && _inRadioGroup(node).some(function(r) { return r.checked; })) {
+            return;
+        }
+        if (index > 0) {
+            positive.push({ node: node, index: index, at: positive.length });
+        } else {
+            natural.push(node);
+        }
+    }
     _elementsUnder(_root, function(item) { return !item.__eldurInline; }, false).forEach(function(item) {
         var node = item;
+        _inLinksInRun(item).forEach(function(link) {
+            if (carried.indexOf(link) >= 0) {
+                return;
+            }
+            carried.push(link);
+            var index = parseInt(getAttribute(link, "tabindex") === null ? "0" : getAttribute(link, "tabindex"), 10);
+            if (!isNaN(index) && index >= 0 && _inCanFocus(item) && _inInlineShown(link)) {
+                take(link, index);
+            }
+        });
         var link = _inCarriedLink(item);
         if (link && carried.indexOf(link) < 0) {
             carried.push(link);
@@ -17151,17 +17172,55 @@ function _inTabStops() {
         if (isNaN(index) || index < 0 || (node === item && !_inCanFocus(node))) {
             return;
         }
-        if (_inIsRadio(node) && !node.checked && _inRadioGroup(node).some(function(r) { return r.checked; })) {
-            return;
-        }
-        if (index > 0) {
-            positive.push({ node: node, index: index, at: positive.length });
-        } else {
-            natural.push(node);
-        }
+        take(node, index);
     });
     positive.sort(function(a, b) { return a.index - b.index || a.at - b.at; });
     return positive.map(function(p) { return p.node; }).concat(natural);
+}
+
+// The links whose words are in the run `item` draws, in their order there. A
+// run's text holds no item for them, so the run is where they stand.
+function _inLinksInRun(item) {
+    var model = _vModelOf(item);
+    var links = [];
+    if (model && !model.select) {
+        _vEachElement(model.kids, function(v) {
+            if (_inIsLink(v)) {
+                links.push(v);
+            }
+        });
+    }
+    return links;
+}
+
+// `display: none` on a link in a line or what holds it leaves it no box to
+// focus, and so does its `visibility: hidden`.
+function _inInlineShown(v) {
+    if (_vStyle(v).visible === false) {
+        return false;
+    }
+    for (var at = v; at; at = at.vparent) {
+        if (_vStyle(at).display === "none") {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Where `node` stands in `order` (the page's items in tree order), as
+// [item, place in it]: a link in a line stands where its icon does
+// (`_inTabStops`), else at its run, after the run's own element and in the
+// run's order among the run's other links.
+function _inTabPlace(order, node) {
+    if (!node || !node.__eldurInline) {
+        return [order.indexOf(node), -1];
+    }
+    var holder = _meta(node).carrier || _inInlineHolder(node);
+    return [order.indexOf(holder), _inLinksInRun(holder).indexOf(node)];
+}
+
+function _inPlaceBefore(a, b) {
+    return a[0] < b[0] || (a[0] === b[0] && a[1] < b[1]);
 }
 
 function _inWindowActive() {
@@ -17175,15 +17234,15 @@ function _inTabFrom(stops, from, back) {
     var order = _elementsUnder(_root, function(node) { return !node.__eldurInline; }, false);
     // A focused link in a line that is no stop (tabindex -1, focused by a
     // script) still stands where its icon does, which `_inTabStops` has just
-    // noted; a text link stands at its line's text. The holder alone would
-    // put an icon link in a line at that line's text too.
-    var here = order.indexOf(from && from.__eldurInline ? _meta(from).carrier || _inInlineHolder(from) : from);
+    // noted, or among its run's links. The holder alone would put an icon
+    // link in a line at that line's text too.
+    var here = _inTabPlace(order, from);
     var best = -1;
-    var bestAt = back ? -1 : order.length;
+    var bestAt = back ? [-1, -1] : [order.length, -1];
     for (var i = 0; i < stops.length; ++i) {
-        // A link in a line stands where its icon does (`_inTabStops`).
-        var at = order.indexOf(stops[i].__eldurInline ? _meta(stops[i]).carrier : stops[i]);
-        if (back ? at < here && at > bestAt : at > here && at < bestAt) {
+        var at = _inTabPlace(order, stops[i]);
+        if (back ? _inPlaceBefore(at, here) && _inPlaceBefore(bestAt, at)
+            : _inPlaceBefore(here, at) && _inPlaceBefore(at, bestAt)) {
             best = i;
             bestAt = at;
         }
