@@ -1,0 +1,46 @@
+{
+  "repro": {
+    "lines": [],
+    "text": {
+      "a": "n=2",
+      "b": "chunk"
+    },
+    "errors": []
+  },
+  "order": {
+    "lines": [
+      "shared",
+      "a",
+      "b",
+      "cycle2 function",
+      "cycle1",
+      "main A1 B1 pingpong",
+      "after import call",
+      "microtask",
+      "lazydep",
+      "lazy dep",
+      "lazy namespace chunk 1",
+      "same namespace true",
+      "throws",
+      "throws rejected boom",
+      "throws again boom",
+      "missing TypeError true",
+      "template dep",
+      "bare TypeError",
+      "done",
+      "click clicked"
+    ],
+    "text": {
+      "out": "done"
+    },
+    "errors": []
+  },
+  "rooted": {
+    "lines": [],
+    "text": {
+      "a": "rooted n=3",
+      "b": "rooted chunk"
+    },
+    "errors": []
+  }
+}

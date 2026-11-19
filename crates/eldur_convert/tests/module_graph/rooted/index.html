@@ -1,0 +1,7 @@
+<!DOCTYPE html><html><body><p id="a">static</p><p id="b">lazy</p>
+<script type="module">
+import { label } from "/rooted/js/helper.js";
+document.getElementById("a").textContent = label(3);
+import("/rooted/js/chunk.js").then((m) => { document.getElementById("b").textContent = m.word; },
+                                   () => { document.getElementById("b").textContent = "rejected"; });
+</script></body></html>

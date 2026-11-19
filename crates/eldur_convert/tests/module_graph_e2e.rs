@@ -1,0 +1,267 @@
+//! A page's module script and the modules it reaches, as a bundler splits a
+//! site: an entry module with static imports of shared chunks, and chunks
+//! loaded lazily with `import()`. The pages under `tests/module_graph/` are
+//! served from that directory, whose root is `/`, as `--site-root` makes it;
+//! `tests/module_graph/chromium.json` is what Chromium did with them, recorded
+//! by `node crates/eldur_convert/tests/module_graph/gen.mjs`.
+
+mod support;
+
+use std::path::{Component, Path, PathBuf};
+
+use eldur_convert::{Input, Options, Resource, Resources, RootKind, Severity};
+use serde_json::Value;
+
+const CHROMIUM: &str = include_str!("module_graph/chromium.json");
+
+/// The files of `tests/module_graph`, found as a web server rooted there finds
+/// them: `/x` from the root, anything else from the referencing file's
+/// directory. A resolved name is the URL path, `/order/a.js`.
+struct Site {
+    root: PathBuf,
+    read: Vec<String>,
+}
+
+impl Site {
+    fn new() -> Self {
+        Self {
+            root: Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/module_graph"),
+            read: Vec::new(),
+        }
+    }
+}
+
+impl Resources for Site {
+    fn read(&mut self, url: &str, base: &str) -> Option<Resource> {
+        let joined = if url.starts_with('/') {
+            PathBuf::from(url)
+        } else {
+            Path::new(base).parent()?.join(url)
+        };
+        let mut parts: Vec<String> = Vec::new();
+        for part in joined.components() {
+            match part {
+                Component::Normal(p) => parts.push(p.to_string_lossy().into_owned()),
+                Component::ParentDir => {
+                    parts.pop();
+                }
+                _ => {}
+            }
+        }
+        let resolved = format!("/{}", parts.join("/"));
+        self.read.push(resolved.clone());
+        let bytes = std::fs::read(self.root.join(parts.join("/"))).ok()?;
+        Some(Resource { resolved, bytes })
+    }
+}
+
+fn convert(page: &str, site: &mut Site) -> eldur_convert::Output {
+    let url = format!("/{page}/index.html");
+    let html = std::fs::read_to_string(site.root.join(&url[1..])).expect("page");
+    let options = Options {
+        root: RootKind::Item,
+        ..Options::default()
+    };
+    eldur_convert::convert(&Input { html, url }, &options, site)
+}
+
+fn chromium(page: &str) -> Value {
+    let all: Value = serde_json::from_str(CHROMIUM).expect("chromium.json");
+    all[page].clone()
+}
+
+fn warnings(out: &eldur_convert::Output) -> Vec<String> {
+    out.diagnostics
+        .iter()
+        .filter(|d| d.severity >= Severity::Warning)
+        .map(|d| d.message.clone())
+        .collect()
+}
+
+#[test]
+fn modules_a_module_script_reaches_are_read_beside_it_and_inlined() {
+    let mut site = Site::new();
+    let out = convert("repro", &mut site);
+    for file in ["/repro/js/main.js", "/repro/js/helper.js", "/repro/js/chunk.js"] {
+        assert!(site.read.iter().any(|r| r == file), "{file}: {:?}", site.read);
+    }
+    let warnings = warnings(&out);
+    assert!(
+        !warnings
+            .iter()
+            .any(|w| w.contains("module") || w.contains("import")),
+        "{warnings:#?}"
+    );
+}
+
+/// What cannot be loaded still says so: a bare specifier (no import map is
+/// read), a file that is not there. A module only ever named by a computed
+/// `import()` is not read at all.
+#[test]
+fn a_module_that_cannot_be_loaded_is_reported() {
+    let mut site = Site::new();
+    let out = convert("order", &mut site);
+    assert!(
+        !site.read.iter().any(|r| r.contains("bare-package")),
+        "{:?}",
+        site.read
+    );
+    let warnings = warnings(&out);
+    let about_imports: Vec<&String> = warnings
+        .iter()
+        .filter(|w| w.contains("import"))
+        .collect();
+    assert_eq!(
+        about_imports,
+        vec![
+            "dynamic import('./missing.js') cannot load a module in QML: the promise rejects as for a missing module",
+            "dynamic import('bare-package') cannot load a module in QML: the promise rejects as for a missing module",
+        ],
+        "{warnings:#?}"
+    );
+}
+
+const TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 800
+    height: 600
+
+TestCase {
+    name: "ModuleGraph"
+    when: windowShown
+
+    function test_page() {
+        const component = Qt.createComponent("Main.qml")
+        verify(component.status === Component.Ready, component.errorString())
+        const page = createTemporaryObject(component, host, { width: 800, height: 600 })
+        waitForRendering(page)
+        wait(500)
+        const go = findChild(page, "go")
+        if (go) {
+            mouseClick(go)
+            wait(300)
+        }
+        for (const id of READ) {
+            console.log("TEXT " + id + "=" + findChild(page, id).text)
+        }
+    }
+}
+}
+"##;
+
+/// Runs a converted page in qmltestrunner and gives what it logged (the `LC `
+/// lines) and the text of the `read` elements, or the problems it had.
+fn run(page: &str, read: &[&str]) -> (Vec<String>, Vec<(String, String)>) {
+    let mut site = Site::new();
+    let out = convert(page, &mut site);
+    let dir = std::env::temp_dir().join(format!("eldur-modules-{page}-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    for file in &out.files {
+        std::fs::write(dir.join(&file.path), &file.contents).expect("write output");
+    }
+    let ids: Vec<String> = read.iter().map(|id| format!("{id:?}")).collect();
+    let test = TEST.replace("READ", &format!("[{}]", ids.join(", ")));
+    std::fs::write(dir.join("tst_modules.qml"), test).expect("write test");
+    let output = support::qmltestrunner()
+        .args(["-platform", "offscreen", "-input"])
+        .arg(dir.join("tst_modules.qml"))
+        .env("QT_FORCE_STDERR_LOGGING", "1")
+        .output()
+        .expect("run qmltestrunner");
+    let text = format!(
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
+    let page_js = out
+        .files
+        .iter()
+        .find(|f| f.path == Path::new("page.js"))
+        .map(|f| String::from_utf8_lossy(&f.contents).into_owned())
+        .unwrap_or_default();
+    std::fs::remove_dir_all(&dir).expect("remove temp dir");
+    let mut problems = support::problem_lines(&text, |l| {
+        l.contains("FAIL!") || l.contains("Warning:") || l.contains("QWARN") || l.contains("Error:")
+    });
+    if !output.status.success() {
+        problems.push(format!("qmltestrunner exited with {}", output.status));
+    }
+    assert!(
+        problems.is_empty(),
+        "{}\npage.js:\n{page_js}",
+        problems.join("\n  ")
+    );
+    let logged = text
+        .lines()
+        .filter_map(|l| l.find("LC ").map(|at| l[at + 3..].to_owned()))
+        .collect();
+    let texts = text
+        .lines()
+        .filter_map(|l| {
+            let rest = &l[l.find("TEXT ")? + 5..];
+            let (id, value) = rest.split_once('=')?;
+            Some((id.to_owned(), value.to_owned()))
+        })
+        .collect();
+    (logged, texts)
+}
+
+fn wanted(page: &str, read: &[&str]) -> (Vec<String>, Vec<(String, String)>) {
+    let recorded = chromium(page);
+    assert_eq!(recorded["errors"], Value::Array(Vec::new()), "{recorded}");
+    let lines = recorded["lines"]
+        .as_array()
+        .expect("lines")
+        .iter()
+        .map(|l| l.as_str().expect("line").to_owned())
+        .collect();
+    let texts = read
+        .iter()
+        .map(|id| {
+            let text = recorded["text"][*id].as_str().expect("text");
+            ((*id).to_owned(), text.to_owned())
+        })
+        .collect();
+    (lines, texts)
+}
+
+/// The issue's page (hal-c2/eldur#22): `n=2` from the static import, `chunk`
+/// from the lazy one.
+#[test]
+fn a_static_import_and_an_import_call_load_as_in_chromium() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["a", "b"];
+    assert_eq!(run("repro", &read), wanted("repro", &read));
+}
+
+/// Chromium's evaluation order: dependencies first, a module shared by two
+/// importers once, a cycle's far side before its near side, the entry last. A
+/// lazily imported module runs after the code that imported it and its
+/// microtasks, once, with its own lazy dependency before it; a module that
+/// throws rejects every import of it with that error; a missing file and a
+/// bare specifier reject with a TypeError; a module nothing imports never
+/// runs; an inline handler's `import()` resolves against the page.
+#[test]
+fn modules_run_in_chromiums_order_and_import_calls_settle_as_there() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("order", &read), wanted("order", &read));
+}
+
+/// Root-relative specifiers in an inline module, resolved under the site root.
+#[test]
+fn root_relative_specifiers_resolve_under_the_site_root() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["a", "b"];
+    assert_eq!(run("rooted", &read), wanted("rooted", &read));
+}
