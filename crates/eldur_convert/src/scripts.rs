@@ -335,6 +335,14 @@ pub(crate) fn collect(
         wanted.extend(text_areas(doc));
     }
     let gains = Gains::of(doc, &analysis, &matches, &wanted);
+    // The margins around what a `<details>` folds follow its `visible` (#70),
+    // so each has an item of its own.
+    if has_details {
+        wanted.extend(
+            doc.descendants(doc.root())
+                .filter(|&n| details_fold(doc, n).is_some()),
+        );
+    }
     Scripts {
         inputs,
         analysis,
@@ -347,6 +355,28 @@ pub(crate) fn collect(
         attribute_displays: HashSet::new(),
         rules_hide: HashSet::new(),
     }
+}
+
+/// Whether `node` is one of the blocks a `<details>` folds away while it is
+/// closed, and if so whether that `<details>` is open as the page loads: every
+/// child element but its first `<summary>`, which the runtime shows and hides
+/// as it opens and closes.
+pub(crate) fn details_fold(doc: &Document, node: NodeId) -> Option<bool> {
+    let element = doc.element(node)?;
+    let parent = doc.parent(node)?;
+    let details = doc.element(parent)?;
+    if details.local_name() != "details" || !details.is_html() {
+        return None;
+    }
+    if element.local_name() == "summary"
+        && doc
+            .element_children(parent)
+            .find(|&k| doc.element(k).is_some_and(|e| e.local_name() == "summary"))
+            == Some(node)
+    {
+        return None;
+    }
+    Some(details.attr("open").is_some())
 }
 
 fn is_table_part(tag: &str) -> bool {
