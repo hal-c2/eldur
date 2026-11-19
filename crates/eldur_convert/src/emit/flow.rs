@@ -228,9 +228,13 @@ impl Gap {
 
 fn set_top(obj: &mut Object, gap: Gap) {
     match gap {
-        Gap::Number(n) if n > 0.0 => obj.set("Layout.topMargin", Value::Number(n)),
+        Gap::Number(n) if n > 0.0 => {
+            obj.set("Layout.topMargin", Value::Number(n));
+        }
         Gap::Number(_) => {}
-        Gap::Expr(e) => obj.set("Layout.topMargin", Value::expr(e)),
+        Gap::Expr(e) => {
+            obj.set("Layout.topMargin", Value::expr(e));
+        }
     }
 }
 
