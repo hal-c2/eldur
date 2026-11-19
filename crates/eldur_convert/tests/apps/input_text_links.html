@@ -3,6 +3,8 @@
 <head><style>
 body { margin: 8px; font: 16px sans-serif; }
 .card { display: block; width: 240px; height: 24px; margin: 4px 0; }
+#gone { display: none; }
+.unseen { visibility: hidden; }
 #tall { height: 1500px; }
 </style></head>
 <body>
@@ -11,8 +13,11 @@ body { margin: 8px; font: 16px sans-serif; }
 <a id="icon" href="#end"><svg aria-hidden="true" width="16" height="16"><rect width="16" height="16"/></svg></a>
 <em>guide</em>, then <a id="faq" href="https://example.org/faq">the <b>FAQ</b></a>.</p>
 <a id="card" class="card" href="#end">a block link</a>
-<p><a id="lone" href="#end">a lone text link</a> and <a id="out" tabindex="-1" href="#end">not a stop</a> and <a id="name">no href</a>.</p>
+<p><a id="lone" href="#end">a lone text link</a> and <a id="out" tabindex="-1" href="#end">not a stop</a> and <a id="next" href="#end">the next one</a> and <a id="name">no href</a>.</p>
+<p id="para" tabindex="0">A paragraph that is a stop, with <a id="inpara" href="#end">its own link</a>.</p>
+<p>Hidden: <a id="gone" href="#end">gone</a> <span class="unseen"><a id="unseen" href="#end">unseen</a></span> and <a id="first" tabindex="1" href="#end">first by number</a>.</p>
 <button id="after">after</button>
+<button id="toout">focus out</button>
 <div id="tall"></div>
 <div id="end">end</div>
 <script>
@@ -20,6 +25,7 @@ document.getElementById("faq").addEventListener("click", function (ev) {
   console.log("click", ev.target.id, ev.currentTarget.id, ev.detail, location.hash);
   ev.preventDefault();
 });
+document.getElementById("toout").addEventListener("click", function () { document.getElementById("out").focus(); });
 document.addEventListener("click", function (ev) { console.log("doc click", ev.target.id, ev.defaultPrevented, location.hash); });
 document.addEventListener("focusin", function (ev) { console.log("focus", ev.target.id); });
 </script>

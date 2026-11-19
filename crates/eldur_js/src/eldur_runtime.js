@@ -17447,18 +17447,9 @@ function _inTabStops() {
             natural.push(node);
         }
     }
-    _elementsUnder(_root, function(item) { return !item.__eldurInline; }, false).forEach(function(item) {
+    // The element first, then the links its words hold, as in tree order.
+    function own(item) {
         var node = item;
-        _inLinksInRun(item).forEach(function(link) {
-            if (carried.indexOf(link) >= 0) {
-                return;
-            }
-            carried.push(link);
-            var index = parseInt(getAttribute(link, "tabindex") === null ? "0" : getAttribute(link, "tabindex"), 10);
-            if (!isNaN(index) && index >= 0 && _inCanFocus(item) && _inInlineShown(link)) {
-                take(link, index);
-            }
-        });
         var link = _inCarriedLink(item);
         if (link && carried.indexOf(link) < 0) {
             carried.push(link);
@@ -17478,9 +17469,38 @@ function _inTabStops() {
             return;
         }
         take(node, index);
+    }
+    _inTabOrder().forEach(function(item) {
+        own(item);
+        _inLinksInRun(item).forEach(function(link) {
+            if (carried.indexOf(link) >= 0) {
+                return;
+            }
+            carried.push(link);
+            var written = getAttribute(link, "tabindex");
+            var index = written === null ? 0 : parseInt(written, 10);
+            if (!isNaN(index) && index >= 0 && _inCanFocus(item) && _inInlineShown(link)) {
+                take(link, index);
+            }
+        });
     });
     positive.sort(function(a, b) { return a.index - b.index || a.at - b.at; });
     return positive.map(function(p) { return p.node; }).concat(natural);
+}
+
+// The page's items in tree order, for the tab chain: its elements, and the
+// runs of a line too, which are no elements (`_isInternalHelperNode`) but are
+// where the links whose words they draw stand.
+function _inTabOrder() {
+    var order = [];
+    _walkItems(_root, function(node) {
+        if (node !== _root && !node.__eldurInline && !_isTextNode(node)
+            && (!_isInternalHelperNode(node) || _inLinksInRun(node).length > 0)) {
+            order.push(node);
+        }
+        return false;
+    });
+    return order;
 }
 
 // The links whose words are in the run `item` draws, in their order there. A
@@ -17536,7 +17556,7 @@ function _inWindowActive() {
 // the nearest stop in the tree, whatever its number. Forward with none left starts
 // over at the page's first stop of no number.
 function _inTabFrom(stops, from, back) {
-    var order = _elementsUnder(_root, function(node) { return !node.__eldurInline; }, false);
+    var order = _inTabOrder();
     // A focused link in a line that is no stop (tabindex -1, focused by a
     // script) still stands where its icon does, which `_inTabStops` has just
     // noted, or among its run's links. The holder alone would put an icon
