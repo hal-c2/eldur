@@ -545,6 +545,45 @@ pub fn element_matches(doc: &Document, node: NodeId, selector: &str) -> Option<b
     Some(matches_any(doc, node, &list))
 }
 
+/// A selector whose conditions on some attributes are taken as met, whatever
+/// those attributes' values: what it can match once a script sets them.
+#[derive(Debug, Clone)]
+pub struct AnyAttributeSelector(Vec<selectors::Selector>);
+
+impl AnyAttributeSelector {
+    /// `None` when `selector` does not parse, or has no condition on an
+    /// attribute `written` names (by its lower-case name).
+    #[must_use]
+    pub fn new(selector: &str, written: &dyn Fn(&str) -> bool) -> Option<Self> {
+        let list = selectors::parse_selector_list_str(selector);
+        if list.invalid {
+            return None;
+        }
+        let mut named = false;
+        let relaxed = list
+            .selectors
+            .iter()
+            .filter(|sel| sel.pseudo_element.is_none())
+            .map(|sel| {
+                let (sel, n) = selectors::relax_attributes(sel, written);
+                named |= n;
+                sel
+            })
+            .collect();
+        named.then_some(Self(relaxed))
+    }
+
+    /// Whether `node` matches under some value of those attributes, the page
+    /// otherwise as loaded.
+    #[must_use]
+    pub fn matches(&self, doc: &Document, node: NodeId) -> bool {
+        let ctx = selectors::MatchContext { doc, dynamic: None };
+        self.0
+            .iter()
+            .any(|sel| selectors::matches_selector(sel, node, &ctx))
+    }
+}
+
 fn matches_any(doc: &Document, node: NodeId, list: &selectors::ConvertedSelectorList) -> bool {
     let ctx = selectors::MatchContext { doc, dynamic: None };
     // A selector ending in a pseudo-element selects that pseudo-element,

@@ -1,4 +1,4 @@
-use eldur_css::{element_matches, query_selector_all};
+use eldur_css::{AnyAttributeSelector, element_matches, query_selector_all};
 use eldur_dom::{Document, NodeId};
 
 fn sample_doc() -> Document {
@@ -133,4 +133,65 @@ fn query_pseudo_element_selectors_match_no_elements() {
         eldur_css::query_selector_all(&doc, "p::before, span").map(|v| v.len()),
         Some(1)
     );
+}
+
+fn theme(name: &str) -> bool {
+    name == "data-theme"
+}
+
+fn any_theme(doc: &Document, selector: &str) -> Option<Vec<String>> {
+    let relaxed = AnyAttributeSelector::new(selector, &theme)?;
+    let all = query_selector_all(doc, "*").expect("valid");
+    let hits: Vec<NodeId> = all
+        .into_iter()
+        .filter(|&n| relaxed.matches(doc, n))
+        .collect();
+    Some(ids(doc, &hits))
+}
+
+#[test]
+fn a_written_attribute_is_met_by_some_value() {
+    let doc = Document::parse(
+        r#"<html data-theme="dark"><body>
+        <p id="shy" class="shy">a</p><p id="plain">b</p>
+        <ul id="menu"><li id="item">c</li></ul>
+        </body></html>"#,
+    );
+    let shy = |s| any_theme(&doc, s);
+    assert_eq!(
+        shy(":root[data-theme='light'] .shy"),
+        Some(vec!["shy".into()])
+    );
+    assert_eq!(shy("[data-theme=\"a]b\" i] .shy"), Some(vec!["shy".into()]));
+    // Some value of the attribute meets a `:not()` on it.
+    assert_eq!(
+        shy("html:not([data-theme]) #plain"),
+        Some(vec!["plain".into()])
+    );
+    assert_eq!(
+        shy(":is(html[data-theme~=x]) > body > .shy"),
+        Some(vec!["shy".into()])
+    );
+    assert_eq!(
+        shy("ul:has(> [data-theme]) > li"),
+        Some(vec!["item".into()])
+    );
+    assert_eq!(
+        shy("li:nth-child(1 of [data-theme])"),
+        Some(vec!["item".into()])
+    );
+    // Each branch of a list, and only what the rest of it allows.
+    assert_eq!(
+        shy("[data-theme] .shy, #menu"),
+        Some(vec!["shy".into(), "menu".into()])
+    );
+    assert_eq!(shy(":root[data-theme] .missing"), Some(vec![]));
+}
+
+#[test]
+fn a_selector_without_a_written_attribute_is_no_such_selector() {
+    let doc = Document::parse("<p class=shy lang=is>a</p>");
+    assert!(any_theme(&doc, ":root[lang='is'] .shy").is_none());
+    assert!(any_theme(&doc, ".shy:not(.x)").is_none());
+    assert!(any_theme(&doc, "[data-theme").is_none());
 }

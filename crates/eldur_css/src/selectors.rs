@@ -552,6 +552,89 @@ fn strip_selector_dynamic(s: &Selector) -> Selector {
     }
 }
 
+/// `s` with every condition on an attribute `written` names taken as met, and
+/// whether it had one. A `:not()` or an `of S` list that names one goes whole:
+/// some value of the attribute meets it.
+pub(crate) fn relax_attributes(s: &Selector, written: &dyn Fn(&str) -> bool) -> (Selector, bool) {
+    let mut changed = false;
+    let compounds: Vec<CompoundSelector> = s
+        .compounds
+        .iter()
+        .map(|c| {
+            let (c, named) = relax_compound_attributes(c, written);
+            changed |= named;
+            c
+        })
+        .collect();
+    let specificity = compute_selector_specificity(&compounds, s.pseudo_element);
+    let relaxed = Selector {
+        compounds,
+        combinators: s.combinators.clone(),
+        pseudo_element: s.pseudo_element,
+        specificity,
+    };
+    (relaxed, changed)
+}
+
+fn relax_compound_attributes(
+    c: &CompoundSelector,
+    written: &dyn Fn(&str) -> bool,
+) -> (CompoundSelector, bool) {
+    let mut changed = false;
+    let names = |list: &[Selector]| list.iter().any(|s| relax_attributes(s, written).1);
+    let mut relax_list = |list: &[Selector]| -> Vec<Selector> {
+        list.iter()
+            .map(|s| {
+                let (s, named) = relax_attributes(s, written);
+                changed |= named;
+                s
+            })
+            .collect()
+    };
+    let mut pseudos = Vec::with_capacity(c.pseudos.len());
+    let mut dropped = false;
+    for pc in &c.pseudos {
+        match pc {
+            PseudoClass::Is(list) => pseudos.push(PseudoClass::Is(relax_list(list))),
+            PseudoClass::Where(list) => pseudos.push(PseudoClass::Where(relax_list(list))),
+            PseudoClass::Has(rels) => pseudos.push(PseudoClass::Has(
+                rels.iter()
+                    .map(|rel| {
+                        let selector = relax_list(std::slice::from_ref(&rel.selector)).remove(0);
+                        RelativeSelector {
+                            leading: rel.leading,
+                            selector,
+                        }
+                    })
+                    .collect(),
+            )),
+            PseudoClass::Not(list)
+            | PseudoClass::NthChild(_, Some(list))
+            | PseudoClass::NthLastChild(_, Some(list))
+                if names(list) =>
+            {
+                dropped = true;
+            }
+            other => pseudos.push(other.clone()),
+        }
+    }
+    let attrs: Vec<AttrSelector> = c
+        .attrs
+        .iter()
+        .filter(|a| !written(&a.lower_name))
+        .cloned()
+        .collect();
+    let changed = changed || dropped || attrs.len() != c.attrs.len();
+    let relaxed = CompoundSelector {
+        type_matcher: c.type_matcher.clone(),
+        ids: c.ids.clone(),
+        classes: c.classes.clone(),
+        attrs,
+        pseudos,
+    };
+    (relaxed, changed)
+}
+
 fn selector_has_any_dynamic(s: &Selector) -> bool {
     s.compounds.iter().any(compound_has_any_dynamic)
 }
