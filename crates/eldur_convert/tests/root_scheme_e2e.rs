@@ -740,6 +740,120 @@ TestCase {
 }
 "##;
 
+// An absolutely placed block, which a layer above the page paints, and an
+// in-flow one, both in a block a script hides while the scheme changes. In
+// Chromium, once the block shows again, each is as the scheme now says:
+// hidden after `light`, shown after `dark`. `#kept` says when a scheme has
+// settled: it is painted in the scheme's colour.
+const SLOT_PAGE: &str = r##"<style>
+:root { --fg: #c1c3c8; }
+:root[data-theme='light'] { --fg: #23262f; }
+body { color: var(--fg); }
+.wrap { position: relative; height: 60px; }
+.pos { position: absolute; top: 24px; left: 0; margin: 0; }
+:root[data-theme='light'] .pos, :root[data-theme='light'] .flow { display: none; }
+</style>
+<script>document.documentElement.dataset.theme = 'dark';</script>
+<div class="wrap" id="wrap"><p class="flow"><em>Flowing</em></p><p class="pos"><em>Placed</em></p></div>
+<p id="kept"><em>Kept</em></p>
+<button id="fold">Fold</button>
+<button id="unfold">Unfold</button>
+<button id="light">Light</button>
+<button id="dark">Dark</button>
+<script>
+document.getElementById('fold').addEventListener('click', () => {
+  document.getElementById('wrap').style.display = 'none';
+});
+document.getElementById('unfold').addEventListener('click', () => {
+  document.getElementById('wrap').style.display = '';
+});
+for (const name of ['light', 'dark']) {
+  document.getElementById(name).addEventListener('click', () => {
+    document.documentElement.dataset.theme = name;
+  });
+}
+</script>
+"##;
+
+const SLOT_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 800
+    height: 600
+
+TestCase {
+    name: "RootSchemeUnderHiddenParent"
+    when: windowShown
+
+    function find(item, test) {
+        if (test(item))
+            return item
+        for (const child of item.children) {
+            const got = find(child, test)
+            if (got)
+                return got
+        }
+        return null
+    }
+
+    function textOf(page, words) {
+        return find(page, i => i.text !== undefined && i.font !== undefined && String(i.text).indexOf(words) >= 0)
+    }
+
+    function press(page, label) {
+        const b = find(page, i => i.eldurTag === "button" && i.text === label)
+        verify(b !== null, "no " + label + " button")
+        b.clicked()
+    }
+
+    // Bounded, as the scheme's settle can come late on a loaded machine.
+    function shown(page, want, step) {
+        const off = () => Object.keys(want).filter(k => {
+            const t = textOf(page, k)
+            return !t || t.visible !== want[k]
+        })
+        for (let waited = 0; waited < 40 && off().length > 0; ++waited)
+            wait(50)
+        const wrong = off()
+        verify(wrong.length === 0, step + ": " + wrong.map(k => k + (want[k] ? " is hidden" : " is on screen")).join(", "))
+    }
+
+    // The scheme settles after the click: unfolding before it would test
+    // nothing under a hidden block.
+    function settled(page, color, step) {
+        const kept = textOf(page, "Kept")
+        verify(kept !== null, "no #kept")
+        for (let waited = 0; waited < 40 && !Qt.colorEqual(kept.color, color); ++waited)
+            wait(50)
+        verify(Qt.colorEqual(kept.color, color), step + ": #kept is " + kept.color)
+    }
+
+    function test_a_scheme_change_under_a_hidden_block_holds_once_it_shows() {
+        const component = Qt.createComponent("Main.qml")
+        verify(component.status === Component.Ready, component.errorString())
+        const page = createTemporaryObject(component, host, { width: 800, height: 600 })
+        waitForRendering(page)
+        wait(50)
+        shown(page, { Flowing: true, Placed: true }, "load")
+        press(page, "Fold")
+        shown(page, { Flowing: false, Placed: false }, "folded")
+        press(page, "Light")
+        settled(page, "#23262f", "light")
+        press(page, "Unfold")
+        shown(page, { Flowing: false, Placed: false }, "light while folded, unfolded")
+        press(page, "Fold")
+        press(page, "Dark")
+        settled(page, "#c1c3c8", "dark")
+        press(page, "Unfold")
+        shown(page, { Flowing: true, Placed: true }, "dark while folded, unfolded")
+    }
+}
+}
+"##;
+
 #[test]
 fn a_root_attribute_repaints_inherited_text() {
     run(PAGE, TEST, "eldur-root-scheme");
@@ -758,6 +872,11 @@ fn a_root_attribute_hides_nested_and_folded_blocks() {
 #[test]
 fn a_script_made_open_details_is_not_folded() {
     run(MADE_PAGE, MADE_TEST, "eldur-root-scheme-made");
+}
+
+#[test]
+fn a_root_attribute_holds_under_a_hidden_block() {
+    run(SLOT_PAGE, SLOT_TEST, "eldur-root-scheme-slot");
 }
 
 fn run(page: &str, test: &str, name: &str) {
