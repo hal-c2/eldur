@@ -1383,10 +1383,11 @@ function runUnsupported() {
 "#,
     );
     let out = run_rewrite(&[unsupported_script], &resolver);
+    // The two observers are supported, so they make no diagnostic.
     assert_eq!(
         out.diagnostics.len(),
-        9,
-        "expected 9 unsupported diagnostics without duplicates, got: {:#?}",
+        7,
+        "expected 7 unsupported diagnostics without duplicates, got: {:#?}",
         out.diagnostics
     );
     assert!(
