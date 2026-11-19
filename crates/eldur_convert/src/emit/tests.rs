@@ -2468,3 +2468,16 @@ fn a_block_link_without_pointer_events_is_reached_by_keyboard_only() {
     assert!(qml.contains("activeFocusOnTab: true"), "{qml}");
     assert!(qml.contains("Accessible.Link"), "{qml}");
 }
+
+#[test]
+fn a_link_with_a_negative_tabindex_is_no_tab_stop() {
+    // Chromium: Tab passes over `tabindex="-1"` (a card's duplicate image
+    // link beside its titled twin); focused by script, Return follows it.
+    let (qml, _) = convert(&page(
+        "a{display:block}",
+        r##"<a href="#t" tabindex="-1"><div style="height:20px"></div></a><a href="#t" tabindex=" 0 "><div style="height:20px"></div></a><div id="t"></div>"##,
+    ));
+    assert_eq!(qml.matches("activeFocusOnTab: true").count(), 1, "{qml}");
+    assert_eq!(qml.matches("Keys.onReturnPressed").count(), 2, "{qml}");
+    assert_eq!(qml.matches("TapHandler").count(), 2, "{qml}");
+}

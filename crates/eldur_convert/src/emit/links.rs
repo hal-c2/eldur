@@ -46,7 +46,7 @@ impl Emitter<'_, '_> {
             return;
         }
         self.link_handlers(obj, &href, node);
-        self.link_keys(obj, &href);
+        self.link_keys(obj, &href, node);
         self.link_accessible(obj, node);
     }
 
@@ -82,7 +82,7 @@ impl Emitter<'_, '_> {
         self.link_handlers(obj, &href, item.unwrap_or(link));
         // One stop in the focus chain per link, as a browser has.
         if first {
-            self.link_keys(obj, &href);
+            self.link_keys(obj, &href, link);
             self.link_accessible(obj, link);
         }
     }
@@ -134,9 +134,17 @@ impl Emitter<'_, '_> {
     /// A link is a stop in the tab chain, and Return or Enter there follows
     /// it (HTML §6.6.3, "activation behavior"). The plain follow, in a page
     /// with a runtime too: a key press dispatches no click there to wait on.
-    fn link_keys(&mut self, obj: &mut Object, href: &str) {
+    /// A negative `tabindex` takes the link out of the tab chain but not its
+    /// keys, as a script or a tap can still focus it (HTML §6.6.3).
+    fn link_keys(&mut self, obj: &mut Object, href: &str, link: NodeId) {
         let follow = self.follow(href);
-        if obj.get("activeFocusOnTab").is_none() {
+        let skipped = self
+            .doc
+            .element(link)
+            .and_then(|e| e.attr("tabindex"))
+            .and_then(|t| t.trim().parse::<i32>().ok())
+            .is_some_and(|i| i < 0);
+        if !skipped && obj.get("activeFocusOnTab").is_none() {
             obj.set("activeFocusOnTab", true);
         }
         for name in ["Keys.onReturnPressed", "Keys.onEnterPressed"] {

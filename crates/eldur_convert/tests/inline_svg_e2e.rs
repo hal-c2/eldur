@@ -38,8 +38,8 @@ const HOVER: &str = r##"<!DOCTYPE html><html><body style="margin:0;font:16px san
 /// An icon sprite: a `<use>` of a `<symbol>` kept in a hidden svg, an icon
 /// filled with a gradient kept in a 0×0 svg, and an editor's prefixed
 /// attributes, which HTML leaves unbound.
-const SPRITE: &str = r##"<!DOCTYPE html><html><body style="margin:0;color:#c00">
-<svg style="display:none"><symbol id="square" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" fill="currentColor"/></symbol></svg><svg width="0" height="0" style="position:absolute"><linearGradient id="blue"><stop offset="0" stop-color="#00c"/><stop offset="1" stop-color="#00c"/></linearGradient></svg><svg width="48" height="48" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" inkscape:label="sprite" sodipodi:docname="x"><use href="#square"/></svg><svg width="48" height="48" viewBox="0 0 24 24"><rect width="24" height="24" fill="url(#blue)"/></svg>
+const SPRITE: &str = r##"<!DOCTYPE html><html><head><style>.icon{width:48px;height:48px}</style></head><body style="margin:0;color:#c00">
+<svg style="display:none"><symbol id="square" viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" fill="currentColor"/></symbol></svg><svg width="0" height="0" style="position:absolute"><linearGradient id="blue"><stop offset="0" stop-color="#00c"/><stop offset="1" stop-color="#00c"/></linearGradient></svg><svg width="48" height="48" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" inkscape:label="sprite" sodipodi:docname="x"><use href="#square"/></svg><svg width="48" height="48" viewBox="0 0 24 24"><rect width="24" height="24" fill="url(#blue)"/></svg><svg class="icon"><use href="#square"/></svg>
 </body></html>"##;
 
 /// What every test file shares: the page, its svg `Image`s in document
@@ -133,15 +133,23 @@ HELPERS
     function test_a_sprite_and_an_outside_gradient_draw() {
         // The 0×0 svg that only holds the gradient draws nothing.
         const shown = icons().filter(i => i.width > 0)
-        compare(shown.length, 2)
+        compare(shown.length, 3)
         compare(box(shown[0]), [0, 0, 48, 48])
         compare(box(shown[1]), [48, 0, 48, 48])
-        // Chromium: the symbol's square in the body's #cc0000, the
-        // gradient's #0000cc, and white around the square and past both.
+        compare(box(shown[2]), [96, 0, 48, 48])
+        // Chromium: the symbol's square in the body's #cc0000, scaled to
+        // the svg, the gradient's #0000cc, and white around the square and
+        // past them all. The third icon is sized by CSS alone and draws the
+        // symbol as the first does.
         compare(colourAt(page, 24, 24), [204, 0, 0])
+        compare(colourAt(page, 42, 42), [204, 0, 0])
         compare(colourAt(page, 2, 2), [255, 255, 255])
+        compare(colourAt(page, 46, 46), [255, 255, 255])
         compare(colourAt(page, 72, 24), [0, 0, 204])
-        compare(colourAt(page, 100, 24), [255, 255, 255])
+        compare(colourAt(page, 120, 24), [204, 0, 0])
+        compare(colourAt(page, 98, 2), [255, 255, 255])
+        compare(colourAt(page, 142, 46), [255, 255, 255])
+        compare(colourAt(page, 160, 24), [255, 255, 255])
     }
 }
 }
