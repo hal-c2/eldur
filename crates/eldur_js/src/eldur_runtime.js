@@ -1353,7 +1353,8 @@ function cancelAnimationFrame(id) {
             break;
         }
     }
-    if (_rafQueue.length === 0 && _live(_rafAnim)) {
+    // Observers measure in the same frames: one they wait for stays.
+    if (_rafQueue.length === 0 && !_obs.dirty && _live(_rafAnim)) {
         _rafAnim.running = false;
     }
 }
@@ -7824,7 +7825,10 @@ var _MO_ROUNDS = 1000;
 var _mo = _moFresh();
 
 function _moFresh() {
-    return { regs: new Map(), pending: [], queued: false, depth: 0, nextId: 0, rounds: 0, stopped: false };
+    return {
+        regs: new Map(), pending: [], queued: false, depth: 0, nextId: 0,
+        notifying: false, chained: false, rounds: 0, stopped: false
+    };
 }
 
 function MutationObserver(callback) {
@@ -7980,6 +7984,8 @@ function _moQueue(raw, type, name, oldValue, added, removed, prev, next) {
     }
     if (!_mo.queued) {
         _mo.queued = true;
+        // Whether this notification is one the last one's callbacks made.
+        _mo.chained = _mo.notifying;
         _microEnqueue(_moNotify);
     }
 }
@@ -7989,36 +7995,39 @@ function _moNotify() {
     var list = _mo.pending.sort(function(a, b) { return a._id - b._id; });
     _mo.pending = [];
     // A callback whose own change is always a new record is a loop a browser
-    // runs until the tab is killed. Here the rounds the event loop never comes
-    // back between are counted, and past a thousand, the records go.
-    if (_mo.rounds === 0) {
-        Qt.callLater(_moTurned);
+    // runs until the tab is killed. Only notifications the previous one's
+    // callbacks made count, so other code making records, however many times,
+    // never trips it; past a thousand in a row, the records go.
+    if (!_mo.chained) {
+        _mo.rounds = 0;
+        _mo.stopped = false;
     }
+    _mo.chained = false;
     if (++_mo.rounds > _MO_ROUNDS) {
         if (!_mo.stopped) {
             _mo.stopped = true;
-            console.error("eldur: MutationObserver callbacks made new records " + _MO_ROUNDS
-                + " times without the event loop turning; their records are dropped");
+            console.error("eldur: MutationObserver callbacks made new records for " + _MO_ROUNDS
+                + " notifications in a row; their records are dropped");
         }
         list.forEach(function(obs) { obs._records = []; });
         return;
     }
-    for (var i = 0; i < list.length; ++i) {
-        var records = list[i].takeRecords();
-        if (records.length === 0) {
-            continue;
+    _mo.notifying = true;
+    try {
+        for (var i = 0; i < list.length; ++i) {
+            var records = list[i].takeRecords();
+            if (records.length === 0) {
+                continue;
+            }
+            try {
+                list[i]._cb.call(list[i], records, list[i]);
+            } catch (err) {
+                console.error(err && err.stack ? err.stack : err);
+            }
         }
-        try {
-            list[i]._cb.call(list[i], records, list[i]);
-        } catch (err) {
-            console.error(err && err.stack ? err.stack : err);
-        }
+    } finally {
+        _mo.notifying = false;
     }
-}
-
-function _moTurned() {
-    _mo.rounds = 0;
-    _mo.stopped = false;
 }
 
 // An attribute write. `mode` says when it makes no record: "remove" when the
@@ -8071,9 +8080,19 @@ function _moTaken(args) {
 function _moChildOp(parent, taken, op) {
     var watched = parent && _moWants(parent, "childList");
     var moved = [];
+    // Measured before, queued after: an operation that throws moved nothing.
+    var removals = [];
+    var fragments = new Map();
     for (var t = 0; t < taken.length && _mo.regs.size > 0 && _mo.depth === 0; ++t) {
         var from = _logicalParent(taken[t]);
-        if (!from || !from.__eldurInline && _meta(from).isFragment) {
+        if (!from) {
+            continue;
+        }
+        if (!from.__eldurInline && _meta(from).isFragment) {
+            // A fragment gives up all its children in one record.
+            if (_moWants(from, "childList")) {
+                fragments.set(from, (fragments.get(from) || []).concat([taken[t]]));
+            }
             continue;
         }
         moved.push(taken[t]);
@@ -8081,20 +8100,31 @@ function _moChildOp(parent, taken, op) {
             var fromKids = _rawChildNodes(from);
             var at = fromKids.indexOf(taken[t]);
             if (at >= 0) {
-                _moQueue(from, "childList", null, null, [], [taken[t]], fromKids[at - 1] || null, fromKids[at + 1] || null);
+                removals.push([from, taken[t], fromKids[at - 1] || null, fromKids[at + 1] || null]);
             }
         }
     }
-    if (!watched) {
-        return op();
-    }
-    var before = _rawChildNodes(parent).filter(function(n) { return moved.indexOf(n) < 0; });
+    var before = watched ? _rawChildNodes(parent).filter(function(n) { return moved.indexOf(n) < 0; }) : null;
     var out;
-    _mo.depth++;
+    // Only a watched parent's operation is the record of what it does inside.
+    if (watched) {
+        _mo.depth++;
+    }
     try {
         out = op();
     } finally {
-        _mo.depth--;
+        if (watched) {
+            _mo.depth--;
+        }
+    }
+    fragments.forEach(function(kids, fragment) {
+        _moQueue(fragment, "childList", null, null, [], kids, null, null);
+    });
+    removals.forEach(function(r) {
+        _moQueue(r[0], "childList", null, null, [], [r[1]], r[2], r[3]);
+    });
+    if (!watched) {
+        return out;
     }
     var after = _rawChildNodes(parent);
     var was = new Set(before);
@@ -8132,6 +8162,10 @@ function _moHookTree(w) {
             var raw = w._item;
             var parent = sibling.indexOf(name) >= 0 && !(name === "remove" && typeof args[0] === "number")
                 ? _logicalParent(raw) : raw;
+            // `before`, `after` and kin on a node with no parent do nothing.
+            if (!parent) {
+                return op.apply(self, args);
+            }
             var taken = name === "removeChild" || name === "remove" ? [] : _moTaken(first[name] ? [args[0]] : args);
             return _moChildOp(parent, taken, function() { return op.apply(self, args); });
         };
@@ -8183,6 +8217,9 @@ function _obsPoke() {
 }
 
 function _obsMoved() {
+    if (_obs.ro.length === 0 && _obs.io.length === 0) {
+        return;
+    }
     _obs.rehook = true;
     _obsPoke();
 }
@@ -8195,20 +8232,31 @@ function _obsHook(raw) {
         item = _logicalParent(item);
     }
     for (; item && _isQObject(item); item = item.parent) {
-        var m = _meta(item);
-        if (m.obsHooked) {
-            continue;
+        _obsHookOne(item);
+        // A created overflow box scrolls its content by a transform its own
+        // scroll port drives, which no item on this chain reports.
+        if (_isQObject(item.eldurScrollPort)) {
+            _obsHookOne(item.eldurScrollPort);
         }
-        m.obsHooked = true;
-        ["xChanged", "yChanged", "widthChanged", "heightChanged", "visibleChanged", "contentXChanged", "contentYChanged"]
-            .forEach(function(sig) {
-                if (item[sig] && typeof item[sig].connect === "function") {
-                    item[sig].connect(_obsPoke);
-                }
-            });
-        if (item.parentChanged && typeof item.parentChanged.connect === "function") {
-            item.parentChanged.connect(_obsMoved);
-        }
+    }
+}
+
+function _obsHookOne(item) {
+    // The item, not a flag: a restyle hands the record to a new item, which
+    // has none of the old one's connections.
+    var m = _meta(item);
+    if (m.obsHookedItem === item) {
+        return;
+    }
+    m.obsHookedItem = item;
+    ["xChanged", "yChanged", "widthChanged", "heightChanged", "visibleChanged", "contentXChanged", "contentYChanged"]
+        .forEach(function(sig) {
+            if (item[sig] && typeof item[sig].connect === "function") {
+                item[sig].connect(_obsPoke);
+            }
+        });
+    if (item.parentChanged && typeof item.parentChanged.connect === "function") {
+        item.parentChanged.connect(_obsMoved);
     }
 }
 
@@ -8428,7 +8476,8 @@ function IntersectionObserver(callback, options) {
     self._cb = callback;
     self._id = ++_obs.nextId;
     self._root = root;
-    self._rootRaw = root ? _unwrap(root) : null;
+    // The root's record, which stays when a restyle replaces its item.
+    self._rootMeta = root ? _meta(_unwrap(root)) : null;
     self._margin = margin;
     self._targets = [];
     self._records = [];
@@ -8510,7 +8559,7 @@ function _ioClips(raw) {
 
 function _ioEntry(io, raw) {
     var root;
-    var rootRaw = io._rootRaw && _gCurrent(io._rootRaw);
+    var rootRaw = io._rootMeta ? io._rootMeta.raw : null;
     if (rootRaw) {
         root = _obsShown(rootRaw) ? _ioPadding(rootRaw) : null;
     } else {
@@ -10611,6 +10660,7 @@ function _swapRawItem(oldRaw, component, fallbackQmlSrc) {
     if (typeof m._setRaw === "function") {
         m._setRaw(next);
     }
+    _obsMoved();
     // The page's own items are read by id from bindings written beside them.
     if (m.gKeepReplaced) {
         oldRaw.visible = false;
@@ -10802,6 +10852,7 @@ function _materializeTextRun(raw) {
     if (typeof m._setRaw === "function") {
         m._setRaw(next);
     }
+    _obsMoved();
     raw.destroy();
     _layoutChanged(next);
     return next;
@@ -25524,6 +25575,7 @@ function _gMakeScroller(raw) {
     m.gScrollMove.x = Qt.binding(function() { return -port.contentX; });
     m.gScrollMove.y = Qt.binding(function() { return -port.contentY; });
     raw.eldurScrollPort = port;
+    _obsMoved();
     if (m.connected && m.connected.scroll) {
         _listenToScroll(raw, port);
     }
