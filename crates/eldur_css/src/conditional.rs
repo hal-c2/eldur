@@ -37,6 +37,7 @@ pub(crate) fn conditional_styles(
     viewport: &Viewport,
     conditions: &[Condition],
 ) -> ConditionalStyles {
+    let _memo = crate::properties::ParseMemo::enter();
     let mut diagnostics = Vec::new();
     let mut prepared = cascade::prepare(doc, sheets, viewport);
     let base = prepared.engine.base_pass();

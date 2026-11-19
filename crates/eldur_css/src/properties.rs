@@ -675,6 +675,12 @@ pub(crate) fn kind(name: &str) -> PropertyKind {
     }
 }
 
+/// [`expand`], once per cascade for each name and value text: a declaration
+/// with `var()` is expanded where it applies, for every element it styles.
+pub(crate) fn expand_shared(name: &str, value: &str) -> std::rc::Rc<cursor::Expansion> {
+    cursor::memo_expansion(name, value, || expand(name, value))
+}
+
 /// Expands a declaration (`name` is a shorthand or a longhand; `value` has no
 /// `var()` and is not a CSS-wide keyword) into `(Longhand, String)` pairs.
 pub(crate) fn expand(name: &str, value: &str) -> Result<Vec<(Longhand, String)>, String> {
@@ -765,6 +771,7 @@ pub(crate) fn is_inherited(l: Longhand) -> bool {
 /// * `5`: `background-image`, `transition-property`, `animation-name` (determine list lengths)
 /// * `6`: `translate`, `rotate`, `scale` (individual transforms in spec order before `transform`)
 /// * `7`: `transform` and all remaining longhands
+pub(crate) use cursor::ParseMemo;
 pub(crate) use font::settle_font_size;
 
 pub(crate) fn priority(l: Longhand) -> u8 {
