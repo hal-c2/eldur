@@ -6175,6 +6175,10 @@ function _setStyleAt(item, prop, value) {
             if (_gHasCascade()) {
                 ++_gGen;
                 _gShowAsRules(raw);
+            } else if (str === "" && _attrDeclares(raw, "display")) {
+                // The converter hid the box for its own `style` attribute:
+                // with that cleared, no rule of the page hides it.
+                _setShown(raw, true);
             } else if (str === "") {
                 _layoutChanged(raw.parent);
                 _inlineRelease(raw, raw, "visible");
@@ -6379,6 +6383,17 @@ function _styleDecls(raw, m) {
         }
     }
     return out;
+}
+
+// Whether the page's own `style` attribute declares `prop` (kebab-case).
+function _attrDeclares(raw, prop) {
+    if (!raw || typeof raw.eldurStyle !== "string") {
+        return false;
+    }
+    return raw.eldurStyle.split(";").some(function(d) {
+        var colon = d.indexOf(":");
+        return colon > 0 && d.slice(0, colon).trim().toLowerCase() === prop;
+    });
 }
 
 function getStyle(item, prop) {
