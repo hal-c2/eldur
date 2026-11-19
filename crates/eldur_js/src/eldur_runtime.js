@@ -645,6 +645,8 @@ function _resetPageState() {
     _timerTurnQueued = false;
     // A job the last page queued would run in this one's document.
     _micro.queue = [];
+    _mo = _moFresh();
+    _obs = _obsFresh();
     _pageGen += 1;
     _rafQueue = [];
     _scrollEvents = [];
@@ -1272,7 +1274,8 @@ function _ensureRafAnim() {
             batch[i].cb(timestamp);
             _microDrain();
         }
-        if (_rafQueue.length > 0) {
+        _obsStep();
+        if (_rafQueue.length > 0 || _obs.dirty) {
             _rafAnim.running = true;
         }
     });
@@ -2212,11 +2215,13 @@ function _sweepItemMeta() {
 
 // A boolean property is its attribute's presence, which `[hidden]` reads.
 function _reflectFlag(m, name, on) {
-    if (on) {
-        m.attrs[name] = "";
-    } else {
-        delete m.attrs[name];
-    }
+    _moAttr(m.raw, name, on ? "set" : "remove", function() {
+        if (on) {
+            m.attrs[name] = "";
+        } else {
+            delete m.attrs[name];
+        }
+    });
 }
 
 function _kebabToCamel(attrName) {
@@ -2944,7 +2949,7 @@ function classList(item) {
     var m = _meta(raw);
     // A class's variant may take the focus as it is set.
     _holdFocus();
-    return {
+    var list = {
         add: function() {
             var curRaw = m.raw || raw;
             for (var i = 0; i < arguments.length; ++i) {
@@ -3036,9 +3041,23 @@ function classList(item) {
             return m.classes.join(" ");
         }
     };
+    ["add", "remove", "toggle", "replace"].forEach(function(name) {
+        var change = list[name];
+        list[name] = function() {
+            var args = arguments;
+            return _moAttr(m.raw || raw, "class", name === "replace" ? "replace" : "token", function() {
+                return change.apply(list, args);
+            });
+        };
+    });
+    return list;
 }
 
 function setClassName(item, value) {
+    _moAttr(item, "class", "token", function() { _setClassNameAt(item, value); });
+}
+
+function _setClassNameAt(item, value) {
     var raw = _unwrap(item);
     var m = _meta(raw);
     var curRaw = m.raw || raw;
@@ -3065,20 +3084,23 @@ function getClassName(item) {
 
 function dataset(item) {
     var m = _meta(item);
-    if (!_gHasCascade()) {
-        return m.dataset;
-    }
-    // Plain writes, which the rules' `[data-*]` have to hear of.
+    // Plain writes, which the rules' `[data-*]` and mutation observers have to
+    // hear of.
     if (!m.datasetView) {
+        var attr = function(key) { return "data-" + _camelToKebab(String(key)); };
         m.datasetView = new Proxy(m.dataset, {
             set: function(target, key, value) {
-                target[key] = String(value);
-                _gTouch();
+                _moAttr(m.raw || item, attr(key), "set", function() {
+                    target[key] = String(value);
+                    _gTouch();
+                });
                 return true;
             },
             deleteProperty: function(target, key) {
-                delete target[key];
-                _gTouch();
+                _moAttr(m.raw || item, attr(key), "remove", function() {
+                    delete target[key];
+                    _gTouch();
+                });
                 return true;
             }
         });
@@ -5754,6 +5776,10 @@ function _vDomTextStale(c) {
 }
 
 function setText(item, value) {
+    _moText(_unwrap(item), function() { _setTextAt(item, value); });
+}
+
+function _setTextAt(item, value) {
     var raw = _unwrap(item);
     if (!raw) {
         return;
@@ -5831,6 +5857,14 @@ function _templateContent(raw) {
 var _G_BLOCK_MARKUP = /<(address|article|aside|blockquote|button|details|div|dl|fieldset|figure|footer|form|h[1-6]|header|hr|input|li|main|nav|ol|p|section|select|table|textarea|ul)\b/i;
 
 function setInnerHTML(item, html) {
+    var raw = _unwrap(item);
+    if (_mo.regs.size === 0 || !raw) {
+        return _setInnerHTMLAt(item, html);
+    }
+    _moChildOp(raw, [], function() { _setInnerHTMLAt(item, html); });
+}
+
+function _setInnerHTMLAt(item, html) {
     var raw = _unwrap(item);
     if (!raw) {
         return;
@@ -6067,6 +6101,10 @@ function _serializeElement(raw) {
 }
 
 function setStyle(item, prop, value) {
+    _moAttr(item, "style", "set", function() { _setStyleAt(item, prop, value); });
+}
+
+function _setStyleAt(item, prop, value) {
     var raw = _unwrap(item);
     if (!raw) {
         return;
@@ -6479,7 +6517,9 @@ function setAttribute(item, attrName, attrValue) {
     if (item && !_isDomTarget(item) && typeof item.setAttribute === "function") {
         return item.setAttribute(attrName, attrValue);
     }
-    _ceAttributeWrite(_unwrap(item), attrName, false, function() { _setAttributeAt(item, attrName, attrValue); });
+    _ceAttributeWrite(_unwrap(item), attrName, false, function() {
+        _moAttr(item, attrName, "set", function() { _setAttributeAt(item, attrName, attrValue); });
+    });
 }
 
 function _setAttributeAt(item, attrName, attrValue) {
@@ -6601,7 +6641,9 @@ function removeAttribute(item, attrName) {
     if (item && !_isDomTarget(item) && typeof item.removeAttribute === "function") {
         return item.removeAttribute(attrName);
     }
-    _ceAttributeWrite(_unwrap(item), attrName, true, function() { _removeAttributeAt(item, attrName); });
+    _ceAttributeWrite(_unwrap(item), attrName, true, function() {
+        _moAttr(item, attrName, "remove", function() { _removeAttributeAt(item, attrName); });
+    });
 }
 
 function _removeAttributeAt(item, attrName) {
@@ -7772,28 +7814,753 @@ var customElements = {
     }
 };
 
-function MutationObserver(_callback) {
+// DOM's mutation observers. A record is queued for every observer whose
+// registration on the target, or with `subtree` on an ancestor, asks for it;
+// one microtask, queued with the first record, notifies them all in the order
+// they were made. `depth` is how far inside an operation already recording we
+// are: what it does underneath (`setAttribute("class")` setting the class
+// name) is that operation's record, not one of its own.
+var _MO_ROUNDS = 1000;
+var _mo = _moFresh();
+
+function _moFresh() {
+    return { regs: new Map(), pending: [], queued: false, depth: 0, nextId: 0, rounds: 0, stopped: false };
+}
+
+function MutationObserver(callback) {
+    if (typeof callback !== "function") {
+        throw new TypeError("Failed to construct 'MutationObserver': parameter 1 is not of type 'Function'.");
+    }
+    var self = this instanceof MutationObserver ? this : Object.create(MutationObserver.prototype);
+    self._cb = callback;
+    self._id = ++_mo.nextId;
+    self._records = [];
+    self._nodes = [];
+    return self;
+}
+
+MutationObserver.prototype.observe = function(target, options) {
+    var raw = _unwrap(target);
+    if (!raw || !_isQObject(raw) && !raw.__eldurInline) {
+        throw new TypeError("Failed to execute 'observe' on 'MutationObserver': parameter 1 is not of type 'Node'.");
+    }
+    var o = options || {};
+    var opts = {
+        childList: Boolean(o.childList),
+        attributes: o.attributes !== undefined ? Boolean(o.attributes) : o.attributeOldValue !== undefined || o.attributeFilter !== undefined,
+        characterData: o.characterData !== undefined ? Boolean(o.characterData) : o.characterDataOldValue !== undefined,
+        subtree: Boolean(o.subtree),
+        attributeOldValue: Boolean(o.attributeOldValue),
+        characterDataOldValue: Boolean(o.characterDataOldValue),
+        attributeFilter: o.attributeFilter !== undefined ? Array.prototype.map.call(o.attributeFilter, String) : null
+    };
+    var fail = "Failed to execute 'observe' on 'MutationObserver': ";
+    if (!opts.childList && !opts.attributes && !opts.characterData) {
+        throw new TypeError(fail + "The options object must set at least one of 'attributes', 'characterData', or 'childList' to true.");
+    }
+    if (opts.attributeOldValue && !opts.attributes) {
+        throw new TypeError(fail + "The options object may only set 'attributeOldValue' to true when 'attributes' is true or not present.");
+    }
+    if (opts.attributeFilter && !opts.attributes) {
+        throw new TypeError(fail + "The options object may only set 'attributeFilter' when 'attributes' is true or not present.");
+    }
+    if (opts.characterDataOldValue && !opts.characterData) {
+        throw new TypeError(fail + "The options object may only set 'characterDataOldValue' to true when 'characterData' is true or not present.");
+    }
+    // Keyed by the node's record, which stays when a restyle replaces its item.
+    var key = _meta(raw);
+    var regs = _mo.regs.get(key);
+    if (!regs) {
+        regs = [];
+        _mo.regs.set(key, regs);
+    }
+    for (var i = 0; i < regs.length; ++i) {
+        if (regs[i].observer === this) {
+            regs[i].options = opts;
+            return;
+        }
+    }
+    regs.push({ observer: this, options: opts });
+    this._nodes.push(key);
+};
+
+MutationObserver.prototype.disconnect = function() {
+    for (var i = 0; i < this._nodes.length; ++i) {
+        var regs = _mo.regs.get(this._nodes[i]);
+        if (!regs) {
+            continue;
+        }
+        var self = this;
+        var left = regs.filter(function(r) { return r.observer !== self; });
+        if (left.length > 0) {
+            _mo.regs.set(this._nodes[i], left);
+        } else {
+            _mo.regs.delete(this._nodes[i]);
+        }
+    }
+    this._nodes = [];
+    this._records = [];
+};
+
+MutationObserver.prototype.takeRecords = function() {
+    var out = this._records;
+    this._records = [];
+    return out;
+};
+
+function _moRegsOf(node) {
+    var m = _itemMeta.get(node);
+    return m ? _mo.regs.get(m) : undefined;
+}
+
+// Whether some registration would take a record of `type` made on `raw`, so
+// that an operation measures what it changes only when someone listens.
+function _moWants(raw, type) {
+    if (_mo.regs.size === 0 || _mo.depth > 0) {
+        return false;
+    }
+    for (var node = raw, own = true; node; node = _logicalParent(node), own = false) {
+        var regs = _moRegsOf(node);
+        for (var i = 0; regs && i < regs.length; ++i) {
+            if ((own || regs[i].options.subtree) && regs[i].options[type]) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+function _moQueue(raw, type, name, oldValue, added, removed, prev, next) {
+    var hits = [];
+    for (var node = raw, own = true; node; node = _logicalParent(node), own = false) {
+        var regs = _moRegsOf(node);
+        for (var i = 0; regs && i < regs.length; ++i) {
+            var opts = regs[i].options;
+            if (!own && !opts.subtree || !opts[type]) {
+                continue;
+            }
+            if (type === "attributes" && opts.attributeFilter && opts.attributeFilter.indexOf(name) < 0) {
+                continue;
+            }
+            var wantsOld = type === "attributes" ? opts.attributeOldValue
+                : type === "characterData" ? opts.characterDataOldValue : false;
+            var hit = null;
+            for (var h = 0; h < hits.length; ++h) {
+                if (hits[h].observer === regs[i].observer) {
+                    hit = hits[h];
+                }
+            }
+            if (hit) {
+                hit.old = hit.old || wantsOld;
+            } else {
+                hits.push({ observer: regs[i].observer, old: wantsOld });
+            }
+        }
+    }
+    if (hits.length === 0) {
+        return;
+    }
+    var nodes = function(list) { return _asNodeList((list || []).map(wrap)); };
+    for (var k = 0; k < hits.length; ++k) {
+        var obs = hits[k].observer;
+        obs._records.push({
+            type: type,
+            target: wrap(raw),
+            addedNodes: nodes(added),
+            removedNodes: nodes(removed),
+            previousSibling: prev ? wrap(prev) : null,
+            nextSibling: next ? wrap(next) : null,
+            attributeName: name === undefined ? null : name,
+            attributeNamespace: null,
+            oldValue: hits[k].old && oldValue !== undefined ? oldValue : null
+        });
+        if (_mo.pending.indexOf(obs) < 0) {
+            _mo.pending.push(obs);
+        }
+    }
+    if (!_mo.queued) {
+        _mo.queued = true;
+        _microEnqueue(_moNotify);
+    }
+}
+
+function _moNotify() {
+    _mo.queued = false;
+    var list = _mo.pending.sort(function(a, b) { return a._id - b._id; });
+    _mo.pending = [];
+    // A callback whose own change is always a new record is a loop a browser
+    // runs until the tab is killed. Here the rounds the event loop never comes
+    // back between are counted, and past a thousand, the records go.
+    if (_mo.rounds === 0) {
+        Qt.callLater(_moTurned);
+    }
+    if (++_mo.rounds > _MO_ROUNDS) {
+        if (!_mo.stopped) {
+            _mo.stopped = true;
+            console.error("eldur: MutationObserver callbacks made new records " + _MO_ROUNDS
+                + " times without the event loop turning; their records are dropped");
+        }
+        list.forEach(function(obs) { obs._records = []; });
+        return;
+    }
+    for (var i = 0; i < list.length; ++i) {
+        var records = list[i].takeRecords();
+        if (records.length === 0) {
+            continue;
+        }
+        try {
+            list[i]._cb.call(list[i], records, list[i]);
+        } catch (err) {
+            console.error(err && err.stack ? err.stack : err);
+        }
+    }
+}
+
+function _moTurned() {
+    _mo.rounds = 0;
+    _mo.stopped = false;
+}
+
+// An attribute write. `mode` says when it makes no record: "remove" when the
+// attribute was not there, "token" (a class list) when it is neither before
+// nor after, "replace" also when the token was not there to replace.
+function _moAttr(item, name, mode, write) {
+    var raw = _mo.regs.size === 0 || _mo.depth > 0 ? null : _unwrap(item);
+    if (!raw || !_moWants(raw, "attributes")) {
+        return write();
+    }
+    var key = String(name).toLowerCase();
+    var old = getAttribute(raw, key);
+    var out;
+    _mo.depth++;
+    try {
+        out = write();
+    } finally {
+        _mo.depth--;
+    }
+    if (mode === "remove" && old === null
+        || (mode === "token" || mode === "replace") && old === null && getAttribute(raw, key) === null
+        || mode === "replace" && out === false) {
+        return out;
+    }
+    _moQueue(raw, "attributes", key, old);
+    return out;
+}
+
+// The nodes an insertion takes from where they are: a fragment gives its
+// children, a string is a new text node, and so comes from nowhere.
+function _moTaken(args) {
+    var out = [];
+    for (var i = 0; i < args.length; ++i) {
+        var raw = args[i] && typeof args[i] === "object" ? _unwrap(args[i]) : null;
+        if (!raw) {
+            continue;
+        }
+        if (!raw.__eldurInline && _meta(raw).isFragment) {
+            out = out.concat(_rawChildNodes(raw));
+        } else {
+            out.push(raw);
+        }
+    }
+    return out;
+}
+
+// A change to `parent`'s children, measured as what its child list lost and
+// gained. A node taken from elsewhere is first a removal there, as DOM's
+// insert removes it before it adopts it, even from the same parent.
+function _moChildOp(parent, taken, op) {
+    var watched = parent && _moWants(parent, "childList");
+    var moved = [];
+    for (var t = 0; t < taken.length && _mo.regs.size > 0 && _mo.depth === 0; ++t) {
+        var from = _logicalParent(taken[t]);
+        if (!from || !from.__eldurInline && _meta(from).isFragment) {
+            continue;
+        }
+        moved.push(taken[t]);
+        if (_moWants(from, "childList")) {
+            var fromKids = _rawChildNodes(from);
+            var at = fromKids.indexOf(taken[t]);
+            if (at >= 0) {
+                _moQueue(from, "childList", null, null, [], [taken[t]], fromKids[at - 1] || null, fromKids[at + 1] || null);
+            }
+        }
+    }
+    if (!watched) {
+        return op();
+    }
+    var before = _rawChildNodes(parent).filter(function(n) { return moved.indexOf(n) < 0; });
+    var out;
+    _mo.depth++;
+    try {
+        out = op();
+    } finally {
+        _mo.depth--;
+    }
+    var after = _rawChildNodes(parent);
+    var was = new Set(before);
+    var now = new Set(after);
+    var removed = before.filter(function(n) { return !now.has(n); });
+    var added = after.filter(function(n) { return !was.has(n); });
+    if (removed.length === 0 && added.length === 0) {
+        return out;
+    }
+    var prev, next;
+    if (added.length > 0) {
+        prev = after[after.indexOf(added[0]) - 1];
+        next = after[after.indexOf(added[added.length - 1]) + 1];
+    } else {
+        prev = before[before.indexOf(removed[0]) - 1];
+        next = before[before.indexOf(removed[removed.length - 1]) + 1];
+    }
+    _moQueue(parent, "childList", null, null, added, removed, prev || null, next || null);
+    return out;
+}
+
+// A wrapper's tree methods, each one record however it is built underneath.
+function _moHookTree(w) {
+    var own = ["appendChild", "insertBefore", "replaceChild", "append", "prepend", "replaceChildren", "removeChild"];
+    var sibling = ["before", "after", "replaceWith", "remove"];
+    var first = { appendChild: 1, insertBefore: 1, replaceChild: 1 };
+    own.concat(sibling).forEach(function(name) {
+        var op = w[name];
+        w[name] = function() {
+            if (_mo.regs.size === 0 || _mo.depth > 0) {
+                return op.apply(this, arguments);
+            }
+            var self = this;
+            var args = arguments;
+            var raw = w._item;
+            var parent = sibling.indexOf(name) >= 0 && !(name === "remove" && typeof args[0] === "number")
+                ? _logicalParent(raw) : raw;
+            var taken = name === "removeChild" || name === "remove" ? [] : _moTaken(first[name] ? [args[0]] : args);
+            return _moChildOp(parent, taken, function() { return op.apply(self, args); });
+        };
+    });
+}
+
+function _moIsText(raw) {
+    return !_isPlainJsObject(raw) && wrap(raw).nodeType === 3;
+}
+
+// `textContent` and its kin: a text node's data changes, an element's
+// children are replaced.
+function _moText(raw, write) {
+    if (_mo.regs.size === 0 || _mo.depth > 0 || !raw || _isPlainJsObject(raw)) {
+        return write();
+    }
+    if (!_moIsText(raw)) {
+        return _moChildOp(raw, [], write);
+    }
+    if (!_moWants(raw, "characterData")) {
+        return write();
+    }
+    var old = wrap(raw).data;
+    _mo.depth++;
+    try {
+        write();
+    } finally {
+        _mo.depth--;
+    }
+    _moQueue(raw, "characterData", null, old);
+}
+
+// Resize and intersection observers are measured in a frame (HTML's "update
+// the rendering"), after its animation frame callbacks, and only in a frame
+// something asked for: observing, a write that restyles, or a target or one of
+// its items moving, resizing, showing, hiding or scrolling.
+var _obs = _obsFresh();
+
+function _obsFresh() {
+    return { ro: [], io: [], ioPending: [], ioQueued: false, dirty: false, rehook: false, nextId: 0 };
+}
+
+function _obsPoke() {
+    if (_obs.dirty || _obs.ro.length === 0 && _obs.io.length === 0 || _pageGone()) {
+        return;
+    }
+    _obs.dirty = true;
+    _ensureRafAnim().running = true;
+}
+
+function _obsMoved() {
+    _obs.rehook = true;
+    _obsPoke();
+}
+
+// The items whose geometry places `raw` on the screen, each told once to say
+// when it changes.
+function _obsHook(raw) {
+    var item = raw;
+    while (item && item.__eldurInline) {
+        item = _logicalParent(item);
+    }
+    for (; item && _isQObject(item); item = item.parent) {
+        var m = _meta(item);
+        if (m.obsHooked) {
+            continue;
+        }
+        m.obsHooked = true;
+        ["xChanged", "yChanged", "widthChanged", "heightChanged", "visibleChanged", "contentXChanged", "contentYChanged"]
+            .forEach(function(sig) {
+                if (item[sig] && typeof item[sig].connect === "function") {
+                    item[sig].connect(_obsPoke);
+                }
+            });
+        if (item.parentChanged && typeof item.parentChanged.connect === "function") {
+            item.parentChanged.connect(_obsMoved);
+        }
+    }
+}
+
+function _obsStep() {
+    if (!_obs.dirty) {
+        return;
+    }
+    _obs.dirty = false;
+    if (_obs.rehook) {
+        _obs.rehook = false;
+        _obs.ro.concat(_obs.io).forEach(function(o) {
+            o._targets.forEach(function(t) { _obsHook(t.m.raw); });
+        });
+    }
+    var resized = _obs.ro.slice();
+    for (var r = 0; r < resized.length; ++r) {
+        var entries = [];
+        resized[r]._targets.forEach(function(t) {
+            var s = _roSizes(t.m.raw);
+            var box = t.box === "border-box" ? s.border : t.box === "device-pixel-content-box" ? s.device : s.content;
+            if (box.inlineSize !== t.lastW || box.blockSize !== t.lastH) {
+                t.lastW = box.inlineSize;
+                t.lastH = box.blockSize;
+                entries.push(_roEntry(t.m.raw, s));
+            }
+        });
+        if (entries.length > 0) {
+            try {
+                resized[r]._cb.call(resized[r], entries, resized[r]);
+            } catch (err) {
+                console.error(err && err.stack ? err.stack : err);
+            }
+            _microDrain();
+        }
+    }
+    var crossed = false;
+    var watching = _obs.io.slice();
+    for (var i = 0; i < watching.length; ++i) {
+        var io = watching[i];
+        io._targets.forEach(function(t) {
+            var e = _ioEntry(io, t.m.raw);
+            if (e.index !== t.index || e.entry.isIntersecting !== t.inside) {
+                t.index = e.index;
+                t.inside = e.entry.isIntersecting;
+                io._records.push(e.entry);
+                if (_obs.ioPending.indexOf(io) < 0) {
+                    _obs.ioPending.push(io);
+                }
+                crossed = true;
+            }
+        });
+    }
+    if (crossed && !_obs.ioQueued) {
+        _obs.ioQueued = true;
+        Qt.callLater(_ioDeliver);
+    }
+}
+
+// Intersection observers are told in a task of their own, after the frame.
+function _ioDeliver() {
+    _obs.ioQueued = false;
+    if (_pageGone()) {
+        return;
+    }
+    var list = _obs.ioPending.sort(function(a, b) { return a._id - b._id; });
+    _obs.ioPending = [];
+    for (var i = 0; i < list.length; ++i) {
+        var records = list[i].takeRecords();
+        if (records.length === 0) {
+            continue;
+        }
+        try {
+            list[i]._cb.call(list[i], records, list[i]);
+        } catch (err) {
+            console.error(err && err.stack ? err.stack : err);
+        }
+        _microDrain();
+    }
+}
+
+function _obsRect(x, y, w, h) {
+    return { x: x, y: y, width: w, height: h, top: y, left: x, right: x + w, bottom: y + h };
+}
+
+function _obsPx(raw, prop) {
+    if (!_gHasCascade()) {
+        return 0;
+    }
+    var v = parseFloat(_gComputed(raw, prop));
+    return isNaN(v) ? 0 : v;
+}
+
+function _obsShown(raw) {
+    return _live(raw) && _isConnected(raw) && (raw.__eldurInline || raw.visible !== false);
+}
+
+// The border and content boxes, CSS's own sizes: a transform does not change
+// them, and a box not rendered has none.
+function _roSizes(raw) {
+    var zero = { inlineSize: 0, blockSize: 0 };
+    var none = { rect: _obsRect(0, 0, 0, 0), content: zero, border: zero, device: zero };
+    if (!_obsShown(raw) || raw.__eldurInline || typeof raw.width !== "number") {
+        return none;
+    }
+    var w = raw.width;
+    var h = raw.height;
+    var pl = _obsPx(raw, "padding-left"), pt = _obsPx(raw, "padding-top");
+    var cw = Math.max(0, w - _borderOf(raw, "left") - _borderOf(raw, "right") - pl - _obsPx(raw, "padding-right"));
+    var ch = Math.max(0, h - _borderOf(raw, "top") - _borderOf(raw, "bottom") - pt - _obsPx(raw, "padding-bottom"));
+    var dpr = typeof Screen !== "undefined" && Screen.devicePixelRatio ? Screen.devicePixelRatio : 1;
     return {
-        observe: function() {},
-        disconnect: function() {},
-        takeRecords: function() { return []; }
+        rect: _obsRect(pl, pt, cw, ch),
+        content: { inlineSize: cw, blockSize: ch },
+        border: { inlineSize: w, blockSize: h },
+        device: { inlineSize: Math.round(cw * dpr), blockSize: Math.round(ch * dpr) }
     };
 }
 
-function ResizeObserver(_callback) {
+function _roEntry(raw, s) {
     return {
-        observe: function() {},
-        unobserve: function() {},
-        disconnect: function() {}
+        target: wrap(raw),
+        contentRect: s.rect,
+        contentBoxSize: [s.content],
+        borderBoxSize: [s.border],
+        devicePixelContentBoxSize: [s.device]
     };
 }
 
-function IntersectionObserver(_callback) {
+function ResizeObserver(callback) {
+    if (typeof callback !== "function") {
+        throw new TypeError("Failed to construct 'ResizeObserver': parameter 1 is not of type 'Function'.");
+    }
+    var self = this instanceof ResizeObserver ? this : Object.create(ResizeObserver.prototype);
+    self._cb = callback;
+    self._id = ++_obs.nextId;
+    self._targets = [];
+    return self;
+}
+
+ResizeObserver.prototype.observe = function(target, options) {
+    var raw = _unwrap(target);
+    if (!raw || !_isQObject(raw) && !raw.__eldurInline) {
+        throw new TypeError("Failed to execute 'observe' on 'ResizeObserver': parameter 1 is not of type 'Element'.");
+    }
+    var box = options && options.box !== undefined ? String(options.box) : "content-box";
+    if (["content-box", "border-box", "device-pixel-content-box"].indexOf(box) < 0) {
+        throw new TypeError("Failed to execute 'observe' on 'ResizeObserver': The provided value '" + box
+            + "' is not a valid enum value of type ResizeObserverBoxOptions.");
+    }
+    this.unobserve(target);
+    // Not yet measured: the first measure is always news, even of nothing.
+    this._targets.push({ m: _meta(raw), box: box, lastW: -1, lastH: -1 });
+    if (_obs.ro.indexOf(this) < 0) {
+        _obs.ro.push(this);
+        _obs.ro.sort(function(a, b) { return a._id - b._id; });
+    }
+    _obsHook(raw);
+    _obsPoke();
+};
+
+ResizeObserver.prototype.unobserve = function(target) {
+    var raw = _unwrap(target);
+    this._targets = this._targets.filter(function(t) { return t.m.raw !== raw; });
+    if (this._targets.length === 0) {
+        var at = _obs.ro.indexOf(this);
+        if (at >= 0) {
+            _obs.ro.splice(at, 1);
+        }
+    }
+};
+
+ResizeObserver.prototype.disconnect = function() {
+    this._targets = [];
+    var at = _obs.ro.indexOf(this);
+    if (at >= 0) {
+        _obs.ro.splice(at, 1);
+    }
+};
+
+// `rootMargin`: one to four lengths in px or %, as CSS's `margin` takes them.
+function _ioMargin(text) {
+    var parts = String(text).trim().split(/\s+/).filter(function(p) { return p !== ""; });
+    if (parts.length === 0 || parts.length > 4) {
+        throw _ceError("SyntaxError", "Failed to construct 'IntersectionObserver': Extra text found at the end of rootMargin.");
+    }
+    var sides = parts.map(function(p) {
+        var m = /^(-?(?:\d+\.?\d*|\.\d+))(px|%)?$/.exec(p);
+        if (!m || m[2] === undefined && Number(m[1]) !== 0) {
+            throw _ceError("SyntaxError", "Failed to construct 'IntersectionObserver': rootMargin must be specified in pixels or percent.");
+        }
+        return { value: Number(m[1]), percent: m[2] === "%" };
+    });
+    while (sides.length < 4) {
+        sides.push(sides[sides.length === 3 ? 1 : sides.length === 2 ? 0 : 0]);
+    }
+    return sides;
+}
+
+function IntersectionObserver(callback, options) {
+    if (typeof callback !== "function") {
+        throw new TypeError("Failed to construct 'IntersectionObserver': parameter 1 is not of type 'Function'.");
+    }
+    var self = this instanceof IntersectionObserver ? this : Object.create(IntersectionObserver.prototype);
+    var o = options || {};
+    var root = o.root === undefined || o.root === null || o.root === document ? null : o.root;
+    var thresholds = o.threshold === undefined ? [0] : Array.isArray(o.threshold) ? o.threshold.map(Number) : [Number(o.threshold)];
+    thresholds.forEach(function(t) {
+        if (isNaN(t) || t < 0 || t > 1) {
+            throw new RangeError("Failed to construct 'IntersectionObserver': Threshold values must be numbers between 0 and 1");
+        }
+    });
+    thresholds.sort(function(a, b) { return a - b; });
+    if (thresholds.length === 0) {
+        thresholds = [0];
+    }
+    var margin = _ioMargin(o.rootMargin === undefined ? "0px" : o.rootMargin);
+    self._cb = callback;
+    self._id = ++_obs.nextId;
+    self._root = root;
+    self._rootRaw = root ? _unwrap(root) : null;
+    self._margin = margin;
+    self._targets = [];
+    self._records = [];
+    Object.defineProperty(self, "root", { value: root, enumerable: true });
+    Object.defineProperty(self, "rootMargin", {
+        value: margin.map(function(s) { return s.value + (s.percent ? "%" : "px"); }).join(" "),
+        enumerable: true
+    });
+    Object.defineProperty(self, "thresholds", { value: Object.freeze(thresholds), enumerable: true });
+    return self;
+}
+
+IntersectionObserver.prototype.observe = function(target) {
+    var raw = _unwrap(target);
+    if (!raw || !_isQObject(raw) && !raw.__eldurInline) {
+        throw new TypeError("Failed to execute 'observe' on 'IntersectionObserver': parameter 1 is not of type 'Element'.");
+    }
+    for (var i = 0; i < this._targets.length; ++i) {
+        if (this._targets[i].m.raw === raw) {
+            return;
+        }
+    }
+    // Never measured: whatever the first measure finds is news.
+    this._targets.push({ m: _meta(raw), index: -1, inside: false });
+    if (_obs.io.indexOf(this) < 0) {
+        _obs.io.push(this);
+        _obs.io.sort(function(a, b) { return a._id - b._id; });
+    }
+    _obsHook(raw);
+    _obsPoke();
+};
+
+IntersectionObserver.prototype.unobserve = function(target) {
+    var raw = _unwrap(target);
+    this._targets = this._targets.filter(function(t) { return t.m.raw !== raw; });
+    if (this._targets.length === 0) {
+        var at = _obs.io.indexOf(this);
+        if (at >= 0) {
+            _obs.io.splice(at, 1);
+        }
+    }
+};
+
+IntersectionObserver.prototype.disconnect = function() {
+    this._targets = [];
+    this._records = [];
+    var at = _obs.io.indexOf(this);
+    if (at >= 0) {
+        _obs.io.splice(at, 1);
+    }
+};
+
+IntersectionObserver.prototype.takeRecords = function() {
+    var out = this._records;
+    this._records = [];
+    return out;
+};
+
+function _ioCut(a, b) {
+    var l = Math.max(a.l, b.l), t = Math.max(a.t, b.t), r = Math.min(a.r, b.r), btm = Math.min(a.b, b.b);
+    // Touching edges intersect: a zero-area overlap still counts.
+    return r >= l && btm >= t ? { l: l, t: t, r: r, b: btm } : null;
+}
+
+// A box's padding box, which is what its overflow clips to.
+function _ioPadding(raw) {
+    var b = getBoundingClientRect(raw);
     return {
-        observe: function() {},
-        unobserve: function() {},
-        disconnect: function() {},
-        takeRecords: function() { return []; }
+        l: b.left + _borderOf(raw, "left"),
+        t: b.top + _borderOf(raw, "top"),
+        r: b.right - _borderOf(raw, "right"),
+        b: b.bottom - _borderOf(raw, "bottom")
+    };
+}
+
+function _ioClips(raw) {
+    return !raw.__eldurInline && _isQObject(raw) && (raw.clip === true || Boolean(raw.eldurScroller));
+}
+
+function _ioEntry(io, raw) {
+    var root;
+    var rootRaw = io._rootRaw && _gCurrent(io._rootRaw);
+    if (rootRaw) {
+        root = _obsShown(rootRaw) ? _ioPadding(rootRaw) : null;
+    } else {
+        var at = _root && typeof _root.mapToItem === "function" ? _root.mapToItem(null, 0, 0) : { x: 0, y: 0 };
+        root = { l: at.x, t: at.y, r: at.x + window.innerWidth, b: at.y + window.innerHeight };
+    }
+    if (root) {
+        var w = root.r - root.l, h = root.b - root.t, m = io._margin;
+        var side = function(s, of) { return s.percent ? s.value * of / 100 : s.value; };
+        root = { t: root.t - side(m[0], h), r: root.r + side(m[1], w), b: root.b + side(m[2], h), l: root.l - side(m[3], w) };
+    }
+    var shown = _obsShown(raw);
+    var box = shown ? getBoundingClientRect(raw) : _obsRect(0, 0, 0, 0);
+    var cut = null;
+    if (root && shown) {
+        cut = { l: box.left, t: box.top, r: box.right, b: box.bottom };
+        var p = _logicalParent(raw);
+        for (; cut && p && p !== rootRaw; p = _logicalParent(p)) {
+            // The root's own scroll port is part of the root's box: its clip is
+            // the root rect, which rootMargin widens.
+            var rootsOwn = rootRaw && !_gIsElement(p) && _logicalParent(p) === rootRaw;
+            if (_ioClips(p) && !rootsOwn) {
+                cut = _ioCut(cut, _ioPadding(p));
+            }
+        }
+        // An explicit root is one the target is inside of.
+        if (rootRaw && p !== rootRaw) {
+            cut = null;
+        }
+        cut = cut && _ioCut(cut, root);
+    }
+    var inside = cut !== null;
+    var area = box.width * box.height;
+    var cutArea = cut ? (cut.r - cut.l) * (cut.b - cut.t) : 0;
+    var ratio = area > 0 ? cutArea / area : inside ? 1 : 0;
+    var index = 0;
+    while (index < io.thresholds.length && io.thresholds[index] <= ratio) {
+        ++index;
+    }
+    return {
+        index: index,
+        entry: {
+            time: Date.now() - _startTime,
+            rootBounds: root ? _obsRect(root.l, root.t, root.r - root.l, root.b - root.t) : null,
+            boundingClientRect: _obsRect(box.left, box.top, box.width, box.height),
+            intersectionRect: cut ? _obsRect(cut.l, cut.t, cut.r - cut.l, cut.b - cut.t) : _obsRect(0, 0, 0, 0),
+            isIntersecting: inside,
+            intersectionRatio: ratio,
+            target: wrap(raw)
+        }
     };
 }
 
@@ -10643,17 +11410,19 @@ function wrap(rawItem) {
         },
         set id(v) {
             var s = String(v);
-            if (rawItem.__eldurInline) {
-                _vSetAttr(rawItem, "id", s);
-                return;
-            }
-            var was = m.attrs.id || rawItem.objectName || "";
-            m.attrs.id = s;
-            if (typeof rawItem.objectName === "string") {
-                rawItem.objectName = s;
-            }
-            _gTouch();
-            _gNameChanged(rawItem, ["#" + was, "#" + s]);
+            _moAttr(rawItem, "id", "set", function() {
+                if (rawItem.__eldurInline) {
+                    _vSetAttr(rawItem, "id", s);
+                    return;
+                }
+                var was = m.attrs.id || rawItem.objectName || "";
+                m.attrs.id = s;
+                if (typeof rawItem.objectName === "string") {
+                    rawItem.objectName = s;
+                }
+                _gTouch();
+                _gNameChanged(rawItem, ["#" + was, "#" + s]);
+            });
         },
         get tagName() { return _inferTagName(rawItem); },
         get nodeName() {
@@ -11608,6 +12377,7 @@ function wrap(rawItem) {
         }
     };
 
+    _moHookTree(wrapper);
     m.wrapper = wrapper;
     return wrapper;
 }
@@ -19019,6 +19789,7 @@ function _gRules() {
 function _gTouch() {
     ++_gWrites;
     _holdFocus();
+    _obsPoke();
     if (!_gHasCascade()) {
         return;
     }
