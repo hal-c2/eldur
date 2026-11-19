@@ -13,11 +13,39 @@ import "eldur_fonts.js" as EldurFonts
 
 ApplicationWindow {
     id: root
+    property var eldurShifts: []
+
     visible: true
     color: "#f1f5f9"
     title: "Shadows and transforms"
     width: 1280
     height: 800
+
+    function staticX(item, block) {
+        let at = 0
+        for (; item && item !== block; item = item.parent) at += item.x
+        return at
+    }
+
+    function staticY(item, block) {
+        let at = 0
+        for (; item && item !== block; item = item.parent) at += item.y
+        return at
+    }
+
+    function shiftX(item, block) {
+        let at = 0
+        const added = root.eldurShifts
+        for (; item && item !== block; item = item.parent) { if (item.eldurShift) at += item.eldurShift.x; else for (let i = 0; i < added.length; ++i) if (added[i][0] === item) at += added[i][1].x }
+        return at
+    }
+
+    function shiftY(item, block) {
+        let at = 0
+        const added = root.eldurShifts
+        for (; item && item !== block; item = item.parent) { if (item.eldurShift) at += item.eldurShift.y; else for (let i = 0; i < added.length; ++i) if (added[i][0] === item) at += added[i][1].y }
+        return at
+    }
 
     Flickable {
         id: flickable
@@ -266,6 +294,7 @@ ApplicationWindow {
 
                 // <div class="stage">
                 Rectangle {
+                    id: stage
                     color: "#e2e8f0"
                     radius: 8
                     implicitWidth: 0
@@ -275,101 +304,183 @@ ApplicationWindow {
                     Layout.preferredHeight: 160
                     Layout.topMargin: 40
                     antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
+                }
 
-                    Rectangle {
-                        id: tiltBox
-                        color: "#f97316"
-                        implicitWidth: 0
-                        implicitHeight: 0
-                        transform: Rotation {
-                            angle: -8
-                            origin.x: tiltBox.width * 0.5
-                            origin.y: tiltBox.height * 0.5
+                Item {
+                    id: tiltHost
+                    property Item eldurSlot: null
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
+                    z: 1
+                    Layout.preferredHeight: implicitHeight
+
+                    Item {
+                        readonly property bool eldurHoisted: true
+
+                        x: root.staticX(stage, tiltHost.parent) + root.shiftX(stage, tiltHost.parent) - root.staticX(tiltHost, tiltHost.parent)
+                        y: root.staticY(stage, tiltHost.parent) + root.shiftY(stage, tiltHost.parent) - root.staticY(tiltHost, tiltHost.parent)
+                        width: stage.width
+                        height: stage.height
+                        visible: stage.visible
+
+                        Rectangle {
+                            id: tiltBox
+                            color: "#f97316"
+                            implicitWidth: 0
+                            implicitHeight: 0
+                            transform: Rotation {
+                                angle: -8
+                                origin.x: tiltBox.width * 0.5
+                                origin.y: tiltBox.height * 0.5
+                            }
+                            width: 120
+                            height: 60
+                            x: 40
+                            y: 40
+                            antialiasing: true
                         }
-                        width: 120
-                        height: 60
-                        x: 40
-                        y: 40
-                        antialiasing: true
                     }
+                }
 
-                    Rectangle {
-                        color: "#22c55e"
-                        implicitWidth: 0
-                        implicitHeight: 0
-                        transform: Scale {
-                            xScale: 1.25
-                            yScale: 1.25
+                Item {
+                    id: growHost
+                    property Item eldurSlot: null
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
+                    z: 1
+                    Layout.topMargin: -tiltHost.eldurCarry
+                    Layout.preferredHeight: implicitHeight
+
+                    Item {
+                        readonly property bool eldurHoisted: true
+
+                        x: root.staticX(stage, growHost.parent) + root.shiftX(stage, growHost.parent) - root.staticX(growHost, growHost.parent)
+                        y: root.staticY(stage, growHost.parent) + root.shiftY(stage, growHost.parent) - root.staticY(growHost, growHost.parent)
+                        width: stage.width
+                        height: stage.height
+                        visible: stage.visible
+
+                        Rectangle {
+                            color: "#22c55e"
+                            implicitWidth: 0
+                            implicitHeight: 0
+                            transform: Scale {
+                                xScale: 1.25
+                                yScale: 1.25
+                            }
+                            width: 100
+                            height: 60
+                            x: 240
+                            y: 40
+                            antialiasing: true
                         }
-                        width: 100
-                        height: 60
-                        x: 240
-                        y: 40
-                        antialiasing: true
                     }
+                }
 
-                    Rectangle {
-                        id: centreBox
-                        color: "#3b82f6"
-                        implicitWidth: centreText.implicitWidth
-                        implicitHeight: centreText.implicitHeight
-                        transform: Translate {
-                            x: centreBox.width * -0.5
-                        }
-                        width: 140
-                        height: 40
-                        x: parent.width * 0.5
-                        y: 20
+                Item {
+                    id: centreHost
+                    property Item eldurSlot: null
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
 
-                        Text {
-                            id: centreText
-                            text: "Centred"
-                            textFormat: Text.PlainText
-                            color: "#ffffff"
-                            font.family: EldurFonts.family("Liberation Sans, sans-serif")
-                            font.pixelSize: 16
-                            lineHeight: 40
-                            lineHeightMode: Text.FixedHeight
+                    z: 1
+                    Layout.topMargin: -growHost.eldurCarry
+                    Layout.preferredHeight: implicitHeight
+
+                    Item {
+                        readonly property bool eldurHoisted: true
+
+                        x: root.staticX(stage, centreHost.parent) + root.shiftX(stage, centreHost.parent) - root.staticX(centreHost, centreHost.parent)
+                        y: root.staticY(stage, centreHost.parent) + root.shiftY(stage, centreHost.parent) - root.staticY(centreHost, centreHost.parent)
+                        width: stage.width
+                        height: stage.height
+                        visible: stage.visible
+
+                        Rectangle {
+                            id: centreBox
+                            color: "#3b82f6"
+                            implicitWidth: centreText.implicitWidth
+                            implicitHeight: centreText.implicitHeight
                             transform: Translate {
-                                y: EldurFonts.shift("Liberation Sans, sans-serif", 16, 400, false, 40)
+                                x: centreBox.width * -0.5
                             }
-                            bottomPadding: EldurFonts.slack(font, lineHeight)
-                            horizontalAlignment: Text.AlignHCenter
-                            wrapMode: Text.WordWrap
-                            anchors.left: parent.left
-                            anchors.right: parent.right
-                            anchors.top: parent.top
-                            renderType: Text.NativeRendering
+                            width: 140
+                            height: 40
+                            x: parent.width * 0.5
+                            y: 20
+
+                            Text {
+                                id: centreText
+                                text: "Centred"
+                                textFormat: Text.PlainText
+                                color: "#ffffff"
+                                font.family: EldurFonts.family("Liberation Sans, sans-serif")
+                                font.pixelSize: 16
+                                lineHeight: 40
+                                lineHeightMode: Text.FixedHeight
+                                transform: Translate {
+                                    y: EldurFonts.shift("Liberation Sans, sans-serif", 16, 400, false, 40)
+                                }
+                                bottomPadding: EldurFonts.slack(font, lineHeight)
+                                horizontalAlignment: Text.AlignHCenter
+                                wrapMode: Text.WordWrap
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.top: parent.top
+                                renderType: Text.NativeRendering
+                            }
                         }
                     }
+                }
 
-                    Rectangle {
-                        id: diamondBox
-                        color: "#a855f7"
-                        implicitWidth: 0
-                        implicitHeight: 0
-                        transform: [
-                            Rotation {
-                                angle: 45
-                                origin.x: diamondBox.width * 0.5
-                                origin.y: diamondBox.height * 0.5
-                            },
-                            Translate {
-                                x: diamondBox.width * -0.5
-                                y: diamondBox.height * -0.5
-                            }
-                        ]
-                        width: 48
-                        height: 48
-                        anchors.right: parent.right
-                        anchors.rightMargin: 80
-                        y: parent.height * 0.5
-                        antialiasing: true
+                Item {
+                    id: diamondHost
+                    property Item eldurSlot: null
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
+                    z: 1
+                    Layout.topMargin: -centreHost.eldurCarry
+                    Layout.preferredHeight: implicitHeight
+
+                    Item {
+                        readonly property bool eldurHoisted: true
+
+                        x: root.staticX(stage, diamondHost.parent) + root.shiftX(stage, diamondHost.parent) - root.staticX(diamondHost, diamondHost.parent)
+                        y: root.staticY(stage, diamondHost.parent) + root.shiftY(stage, diamondHost.parent) - root.staticY(diamondHost, diamondHost.parent)
+                        width: stage.width
+                        height: stage.height
+                        visible: stage.visible
+
+                        Rectangle {
+                            id: diamondBox
+                            color: "#a855f7"
+                            implicitWidth: 0
+                            implicitHeight: 0
+                            transform: [
+                                Rotation {
+                                    angle: 45
+                                    origin.x: diamondBox.width * 0.5
+                                    origin.y: diamondBox.height * 0.5
+                                },
+                                Translate {
+                                    x: diamondBox.width * -0.5
+                                    y: diamondBox.height * -0.5
+                                }
+                            ]
+                            width: 48
+                            height: 48
+                            anchors.right: parent.right
+                            anchors.rightMargin: 80
+                            y: parent.height * 0.5
+                            antialiasing: true
+                        }
                     }
                 }
 
                 // <div class="nudge">
                 Rectangle {
+                    id: nudge
+                    property real eldurCarry: Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001
+
                     color: "#fde68a"
                     implicitWidth: nudgeText.implicitWidth + 16
                     implicitHeight: nudgeText.implicitHeight + 16
@@ -380,7 +491,7 @@ ApplicationWindow {
                     }
                     Layout.preferredWidth: 216
                     Layout.rightMargin: parent instanceof ColumnLayout ? -Layout.preferredWidth : 0
-                    Layout.topMargin: 40
+                    Layout.topMargin: 40 - diamondHost.eldurCarry
 
                     Text {
                         id: nudgeText
