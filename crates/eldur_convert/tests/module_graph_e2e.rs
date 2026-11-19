@@ -158,9 +158,14 @@ TestCase {
 }
 "##;
 
-/// Runs a converted page in qmltestrunner and gives what it logged (the `LC `
-/// lines) and the text of the `read` elements, or the problems it had.
-fn run(page: &str, read: &[&str]) -> (Vec<String>, Vec<(String, String)>) {
+/// What a page logged (the `LC ` lines), the text of the elements it read, and
+/// the uncaught errors it reported, each as `Name: message`.
+type Seen = (Vec<String>, Vec<(String, String)>, Vec<String>);
+
+/// Runs a converted page in qmltestrunner and gives what it showed, or the
+/// problems it had. An uncaught error is not a problem here: it is compared
+/// with Chromium's.
+fn run(page: &str, read: &[&str]) -> Seen {
     let mut site = Site::new();
     let out = convert(page, &mut site);
     let dir = std::env::temp_dir().join(format!(
@@ -193,8 +198,13 @@ fn run(page: &str, read: &[&str]) -> (Vec<String>, Vec<(String, String)>) {
         .map(|f| String::from_utf8_lossy(&f.contents).into_owned())
         .unwrap_or_default();
     std::fs::remove_dir_all(&dir).expect("remove temp dir");
+    let uncaught = |l: &str| l.find("Uncaught ").map(|at| l[at + 9..].trim_end().to_owned());
     let mut problems = support::problem_lines(&text, |l| {
-        l.contains("FAIL!") || l.contains("Warning:") || l.contains("QWARN") || l.contains("Error:")
+        uncaught(l).is_none()
+            && (l.contains("FAIL!")
+                || l.contains("Warning:")
+                || l.contains("QWARN")
+                || l.contains("Error:"))
     });
     if !output.status.success() {
         problems.push(format!("qmltestrunner exited with {}", output.status));
@@ -216,12 +226,18 @@ fn run(page: &str, read: &[&str]) -> (Vec<String>, Vec<(String, String)>) {
             Some((id.to_owned(), value.to_owned()))
         })
         .collect();
-    (logged, texts)
+    let errors = text.lines().filter_map(uncaught).collect();
+    (logged, texts, errors)
 }
 
-fn wanted(page: &str, read: &[&str]) -> (Vec<String>, Vec<(String, String)>) {
+fn wanted(page: &str, read: &[&str]) -> Seen {
     let recorded = chromium(page);
-    assert_eq!(recorded["errors"], Value::Array(Vec::new()), "{recorded}");
+    let errors = recorded["errors"]
+        .as_array()
+        .expect("errors")
+        .iter()
+        .map(|e| e.as_str().expect("error").to_owned())
+        .collect();
     let lines = recorded["lines"]
         .as_array()
         .expect("lines")
@@ -235,7 +251,7 @@ fn wanted(page: &str, read: &[&str]) -> (Vec<String>, Vec<(String, String)>) {
             ((*id).to_owned(), text.to_owned())
         })
         .collect();
-    (lines, texts)
+    (lines, texts, errors)
 }
 
 /// The issue's page (hal-c2/eldur#22): `n=2` from the static import, `chunk`
@@ -303,4 +319,29 @@ fn a_nested_pages_imports_resolve_from_its_own_directory() {
     }
     let read = ["a", "b"];
     assert_eq!(run("nested/page", &read), wanted("nested", &read));
+}
+
+/// Module scripts at load, one of which throws: the scripts after it still
+/// run, a script importing it does not, each of the two reports the error, and
+/// every `import()` of either rejects with it, one made before the module ran
+/// too, once every script has run.
+#[test]
+fn a_module_that_throws_at_load_fails_only_its_importers() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("eager", &read), wanted("eager", &read));
+}
+
+/// A lazily imported module's element constant is looked up when the module
+/// runs: read across a cycle before then it throws a `ReferenceError`, and
+/// what the page changed in the element before is there.
+#[test]
+fn a_lazy_modules_element_lookup_runs_with_the_module() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out", "label"];
+    assert_eq!(run("element", &read), wanted("element", &read));
 }

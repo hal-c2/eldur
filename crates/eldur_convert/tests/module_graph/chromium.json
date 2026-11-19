@@ -91,5 +91,35 @@
       "b": "TypeError"
     },
     "errors": []
+  },
+  "eager": {
+    "lines": [
+      "first",
+      "boom runs",
+      "last runs",
+      "early rejected boom",
+      "late rejected boom",
+      "after rejected boom",
+      "done"
+    ],
+    "text": {
+      "out": "done"
+    },
+    "errors": [
+      "Error: boom",
+      "Error: boom"
+    ]
+  },
+  "element": {
+    "lines": [
+      "eb reads ea's element ReferenceError",
+      "ea runs changed ReferenceError",
+      "ea set by ea"
+    ],
+    "text": {
+      "out": "done set by ea",
+      "label": "set by ea"
+    },
+    "errors": []
   }
 }

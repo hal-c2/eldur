@@ -3311,23 +3311,56 @@ fn a_lazy_modules_writes_and_imports_behave_as_a_browsers() {
     assert!(copy < first, "{js}");
 }
 
-/// A known divergence, pinned: a lazy module's `const` bound to an element
-/// the converter finds while converting is no binding on the page. Every use
-/// of it is the element itself, so a read before the declaration runs finds
-/// the element where a browser throws a `ReferenceError`.
+/// A lazy module's `const` bound to an element is looked up when the module
+/// runs, as in a browser: it is a variable, checked until its declaration
+/// runs, not the element wired in while converting.
 #[test]
-fn a_lazy_modules_element_const_is_the_element_even_before_it_runs() {
+fn a_lazy_modules_element_const_is_looked_up_when_it_runs() {
     let resolver = FakeResolver::default().with_id("save", 1, "save", TargetKind::Button);
     let main = module_script("main.js", "import(\"./lazy.js\");\n");
     let lazy = imported_module(
         "lazy.js",
         "function early() { return btn.disabled; }\n\
          early();\n\
-         const btn = document.getElementById(\"save\");\n",
+         const btn = document.getElementById(\"save\");\n\
+         function late() { const copy = btn; return copy.disabled; }\n",
     );
     let out = run_rewrite(&[main, lazy], &resolver);
     let js = &out.page_js;
-    assert!(!js.contains("__eldur_tdz_error(\"btn\")"), "{js}");
-    assert!(!js.contains("btn"), "{js}");
-    assert!(js.contains("save"), "{js}");
+    for expected in [
+        "var btn = __eldur_tdz",
+        r#"(btn === __eldur_tdz ? __eldur_tdz_error("btn") : btn).disabled"#,
+        r#"btn = document.getElementById("save")"#,
+        "copy.disabled",
+    ] {
+        assert!(js.contains(expected), "{expected}\n{js}");
+    }
+}
+
+/// A module that runs at load records whether it threw. The scripts after it
+/// go on; a module importing it throws the same error; a module script whose
+/// graph threw reports it; `import()` of it reads the record.
+#[test]
+fn an_eager_modules_error_stops_its_importers_only() {
+    let resolver = FakeResolver::default();
+    let first = module_script("first.js", "import(\"./boom.js\");\n");
+    let boom = module_script("boom.js", "export const x = 1;\nthrow new Error(\"boom\");\n");
+    let after = module_script("after.js", "import { x } from \"./boom.js\";\nconsole.log(x);\n");
+    let out = run_rewrite(&[first, boom, after], &resolver);
+    let js = &out.page_js;
+    let state = "__eldur_module_state_m1";
+    for expected in [
+        format!("var {state} = {{ state: 0, error: undefined }};"),
+        format!("Eldur.importEager({state}, "),
+        format!("{state}.state = 2;\n        {state}.error = err;"),
+        format!("if ({state}.state === 2) throw {state}.error;"),
+        format!("if ({state}.state === 2) Eldur.reportError({state}.error);"),
+        "if (__eldur_module_state_m2.state === 2) Eldur.reportError(__eldur_module_state_m2.error);".to_string(),
+    ] {
+        assert!(js.contains(&expected), "{expected}\n{js}");
+    }
+    let thrown = js.find("throw new Error(\"boom\")").expect("boom");
+    let logged = js.find("console.log(x)").expect("after");
+    let check = js.find(&format!("if ({state}.state === 2) throw")).expect("check");
+    assert!(thrown < check && check < logged, "{js}");
 }
