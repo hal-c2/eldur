@@ -1104,12 +1104,24 @@ pub(crate) fn add(
 
     // The registry, exact contexts first since the first entry of a key wins.
     let mut keys: BTreeMap<String, usize> = BTreeMap::new();
-    let mut order: Vec<String> = Vec::new();
+    let mut order: Vec<(usize, String)> = Vec::new();
     let mut counts: HashMap<usize, usize> = HashMap::new();
     let mut capped: BTreeSet<usize> = BTreeSet::new();
     let mut shadows: HashMap<usize, BTreeSet<usize>> = HashMap::new();
     let mut keyed: Vec<usize> = (0..insts.len()).collect();
     keyed.sort_by_key(|&i| matches!(insts[i].context, Context::Any));
+    let rank: HashMap<usize, usize> = keyed.iter().enumerate().map(|(r, &i)| (i, r)).collect();
+    // Where two probes share a key, one probed with elements inside wins it
+    // over one probed with text alone: the runtime makes the same template
+    // for both, and a text-only one has no lines for an element to sit on
+    // (#63: `<p><em>…</em></p>` made by `innerHTML` beside a `<p>` given
+    // `textContent`). The registry keeps the probes' order.
+    keyed.sort_by_key(|&i| {
+        (
+            matches!(insts[i].context, Context::Any),
+            doc.element_children(insts[i].node).next().is_none(),
+        )
+    });
     for i in keyed {
         let Some(k) = template_of[i] else {
             continue;
@@ -1186,9 +1198,11 @@ pub(crate) fn add(
                 *count += 1;
             }
             keys.insert(key.clone(), k);
-            order.push(key);
+            order.push((rank[&i], key));
         }
     }
+    order.sort_by_key(|(r, _)| *r);
+    let order: Vec<String> = order.into_iter().map(|(_, key)| key).collect();
     for e in capped {
         diags.warning(
             "css",
