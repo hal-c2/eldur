@@ -267,6 +267,25 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[50.0, 84.0],
         toggled: &[16.0, 50.0],
+    }, // A comment ends a token: `block/**/flow` is `block flow`.
+    Case {
+        name: "comment_between_keywords",
+        body: r#"<p id="shy" style="display:none;display:block/**/flow" hidden><em>Shy</em></p>
+<p id="after">After</p>
+<script>document.getElementById('shy').removeAttribute('hidden');</script>"#,
+        ids: &["after", "t"],
+        load: &[50.0, 84.0],
+        toggled: &[16.0, 50.0],
+    },
+    // A comment ends a token: `bl/**/ock` is two words and no display.
+    Case {
+        name: "comment_inside_keyword",
+        body: r#"<p id="shy" style="display:none;display:bl/**/ock" hidden><em>Shy</em></p>
+<p id="after">After</p>
+<script>document.getElementById('shy').removeAttribute('hidden');</script>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[50.0, 84.0],
     },
 ];
 
@@ -513,4 +532,14 @@ fn an_escaped_display_keyword_shows_the_block() {
 #[test]
 fn a_display_from_a_variable_shows_the_block() {
     run(case("display_from_a_variable"));
+}
+
+#[test]
+fn a_comment_between_display_keywords_separates_them() {
+    run(case("comment_between_keywords"));
+}
+
+#[test]
+fn a_comment_inside_a_display_keyword_splits_it() {
+    run(case("comment_inside_keyword"));
 }
