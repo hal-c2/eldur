@@ -50,7 +50,12 @@ const HINT: &str = "\u{1}eldur-hint:";
 /// names it after the element).
 const EXCESS: &str = "\u{1}eldur-excess:";
 
-/// What [`HINT`] and [`EXCESS`] start with.
+/// The comment the last item of a column with a pending excess carries,
+/// so that it is found when the excess is read: an index would miss once
+/// an item is inserted before it (an absolute element's slot).
+const LAST: &str = "\u{1}eldur-last:";
+
+/// What [`HINT`], [`EXCESS`] and [`LAST`] start with.
 const CARRY_COMMENT: &str = "\u{1}eldur-";
 
 pub(super) fn hint_comment(hint: &str) -> Member {
@@ -83,9 +88,8 @@ pub(super) enum Excess {
     Static(f64),
     Expr(String),
     /// The last item's carry, declared as its `eldurCarry` once a parent
-    /// reads it (`item` counts the column's children).
+    /// reads it. The item carries [`LAST`].
     Pending {
-        item: usize,
         binding: String,
     },
 }
@@ -315,7 +319,7 @@ impl Emitter<'_, '_> {
                 own => own,
             };
             let Some(next) = next else {
-                last_own = own.map(|c| (n, c));
+                last_own = own.map(|c| (i, c));
                 break;
             };
             carry = match own {
@@ -335,14 +339,19 @@ impl Emitter<'_, '_> {
         }
         // What the column's implicit height has over its CSS height, for
         // the item it is in (`Height::Excess`).
+        let key = self.excess.len();
         let excess = match last_own {
             Some((_, Carry::Static(v))) if round(v) == 0.0 => return,
             Some((_, Carry::Static(v))) => Excess::Static(v),
             Some((_, Carry::Expr(e))) => Excess::Expr(e),
-            Some((item, Carry::Binding(binding))) => Excess::Pending { item, binding },
+            Some((i, Carry::Binding(binding))) => {
+                child_mut(layout, i)
+                    .members
+                    .push(Member::Comment(format!("{LAST}{key}")));
+                Excess::Pending { binding }
+            }
             None => return,
         };
-        let key = self.excess.len();
         self.excess.insert(key, excess);
         layout
             .members
@@ -373,12 +382,16 @@ impl Emitter<'_, '_> {
         if !plain || !kids.iter().any(|k| holds_fractional_line(k)) {
             return;
         }
-        let item = kids.len() - 1;
         let key = self.excess.len();
+        if let Some(last) = row.members.iter_mut().rev().find_map(|m| match m {
+            Member::Child(c) => Some(c),
+            _ => None,
+        }) {
+            last.members.push(Member::Comment(format!("{LAST}{key}")));
+        }
         self.excess.insert(
             key,
             Excess::Pending {
-                item,
                 binding: format!(
                     "(h => Math.ceil(h) - h)(Math.max(0, ...Array.from(parent.children)\
                      .filter(k => k.visible).map(k => k.implicitHeight))) + {NUDGE}"
@@ -392,8 +405,9 @@ impl Emitter<'_, '_> {
     /// its `eldurCarry` when it is first read.
     fn read_excess(&mut self, obj: &mut Object, key: usize, extra: f64) -> Carry {
         let excess = match self.excess.get(&key).cloned() {
-            Some(Excess::Pending { item, binding }) => {
+            Some(Excess::Pending { binding }) => {
                 let layout = find_mut(obj, key).expect("the excess of a column inside");
+                let mark = format!("{LAST}{key}");
                 let last = layout
                     .members
                     .iter_mut()
@@ -401,7 +415,11 @@ impl Emitter<'_, '_> {
                         Member::Child(c) => Some(c),
                         _ => None,
                     })
-                    .nth(item)
+                    .find(|c| {
+                        c.members
+                            .iter()
+                            .any(|m| matches!(m, Member::Comment(c) if *c == mark))
+                    })
                     .expect("the column's last item");
                 let e = self.declare_carry(last, binding);
                 self.excess.insert(key, Excess::Expr(e.clone()));
@@ -653,10 +671,13 @@ fn expr_height(obj: &Object, expr: &str, excess: &HashMap<usize, Excess>) -> Hei
 /// A flex container's `Item { Layout.fillHeight: true }`.
 fn is_spacer(obj: &Object) -> bool {
     obj.type_name == "Item"
-        && obj.members.iter().all(|m| {
-            matches!(m, Member::Property { name, .. }
-                if obj.id.is_none()
-                    && (name == "Layout.fillHeight" || name == "Layout.verticalStretchFactor"))
+        && obj.members.iter().all(|m| match m {
+            Member::Property { name, .. } => {
+                obj.id.is_none()
+                    && (name == "Layout.fillHeight" || name == "Layout.verticalStretchFactor")
+            }
+            Member::Comment(c) => c.starts_with(LAST),
+            _ => false,
         })
 }
 
