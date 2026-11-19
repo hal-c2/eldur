@@ -26021,6 +26021,11 @@ function _gStaticChanges() {
         // What the root's attributes say reaches an element through what it
         // inherits as much as through its own rules, which may say the same.
         if (rootMoved) {
+            // What the attributes say an element displays as: shown before it
+            // is repainted, so one coming back takes the new scheme's colours.
+            if (!entry.hiddenBox) {
+                _gShowIfMoved(_gCurrent(entry.raw));
+            }
             _gRepaintStatic(entry.raw);
             entry.sig = sig;
             keep.push(entry);
@@ -26062,10 +26067,27 @@ function _gStaticChanges() {
     ++_gGen;
 }
 
-// The root's attributes change what a whole page says, usually its colours. The
-// page keeps the form it was converted to, children, text and all, and takes
-// the new values. A colour is written only when it changed: a write ends the
-// binding a state (`:hover`, `:focus`) holds on it.
+// An element the converter showed can be one the root's attributes now hide,
+// and the other way round. Only one whose `visible` disagrees with its rules
+// is visited: `_gShowAsRules` moves the layout around it. One whose parent is
+// hidden reads `visible: false` whatever it was told, so it is visited when
+// its rules hide it, for a hold that keeps it hidden once the parent shows.
+function _gShowIfMoved(raw) {
+    if (!raw || raw.__eldurInline || !raw.parent) {
+        return;
+    }
+    var none = _gStyle(raw).display === "none";
+    if (raw.parent.visible === false ? none : none === (raw.visible === true)) {
+        _gShowAsRules(raw);
+    }
+}
+
+// The root's attributes change what a whole page says, usually its colours,
+// and which of its blocks it shows (`_gShowIfMoved`). Otherwise the page keeps
+// the form it was converted to, children, text and all, and takes the new
+// values; a block it hides is not painted until it shows again. A colour is
+// written only when it changed: a write ends the binding a state (`:hover`,
+// `:focus`) holds on it.
 function _gRepaintStatic(raw) {
     var s = _gStyle(raw);
     if (raw.__eldurInline || s.display === "none") {
