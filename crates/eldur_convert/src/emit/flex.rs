@@ -17,7 +17,7 @@
 //! `layoutDirection`, so margins and spacers stay physical.
 
 use eldur_css::{
-    Align, BoxSizing, ComputedStyle, FlexDirection, FlexWrap, Length, LengthAuto, Size,
+    Align, BoxSizing, ComputedStyle, Display, FlexDirection, FlexWrap, Length, LengthAuto, Size,
     TextDecorationLine,
 };
 use eldur_qml::{Member, Object, Value};
@@ -172,6 +172,30 @@ fn definite_size(length: &Length, horizontal: bool, extra: f32) -> Option<Value>
 
 fn is_zero(length: &Length) -> bool {
     matches!(length, Length::Linear(l) if l.px == 0.0 && l.percent == 0.0 && l.vw == 0.0 && l.vh == 0.0)
+}
+
+/// `v + gap`, folded when both are numbers; `gap` is expression text.
+fn plus(v: &Value, gap: &str) -> Value {
+    match (v, gap.parse::<f32>().ok()) {
+        (_, Some(0.0)) => v.clone(),
+        (Value::Number(n), Some(g)) => Value::Number(n + f64::from(g)),
+        _ => Value::expr(format!("{} + {gap}", value_text(v))),
+    }
+}
+
+/// `v - gap`, as [`plus`]; `v` of `"0"` gives the negated gap alone.
+fn minus(v: &Value, gap: &str) -> Value {
+    let zero = matches!(v, Value::Expr(e) if e == "0");
+    match gap.parse::<f32>().ok() {
+        Some(g) if zero => number(-g),
+        Some(0.0) => v.clone(),
+        Some(g) => match v {
+            Value::Number(n) => Value::Number(n - f64::from(g)),
+            _ => Value::expr(format!("{} - {gap}", value_text(v))),
+        },
+        None if zero => Value::expr(format!("-({gap})")),
+        None => Value::expr(format!("{} - ({gap})", value_text(v))),
+    }
 }
 
 fn value_text(v: &Value) -> String {
@@ -796,18 +820,48 @@ impl Emitter<'_, '_> {
         }
 
         let mut flow = Object::new("Flow");
-        flow.set("spacing", column_gap.value("width"));
-        if row_gap != column_gap {
+        let rtl = style.flex_direction == FlexDirection::RowReverse;
+        // `Flow` has one spacing for both axes. When the gaps differ, the
+        // flow's spacing is 0 and each item sits in a cell one column gap
+        // wider and one row gap taller. The flow is one column gap wider
+        // than the box, so the last cell's trailing gap never wraps a line
+        // that fits. The box ends one row gap above the flow. Items and
+        // percentages are then of the box, which has an id, because an
+        // item's parent is its cell. An `inline-flex` box shrinks to its
+        // content, and the cells' box has no width of its own to shrink
+        // to, so it keeps the one spacing.
+        let shrinks = style.display == Display::InlineFlex;
+        let split = (row_gap != column_gap && !shrinks).then(|| self.ids.claim("wrapping flex"));
+        if row_gap != column_gap && shrinks {
             self.diags.info(
                 "qml",
                 line,
                 format!(
-                    "`Flow` has one spacing: the row gap of {} uses the column gap",
+                    "`Flow` has one spacing: the row gap of the inline {} uses the column gap",
                     self.what(b)
                 ),
             );
         }
-        if style.flex_direction == FlexDirection::RowReverse {
+        let base = split
+            .as_ref()
+            .map_or_else(|| "parent.width".to_owned(), |id| format!("{id}.width"));
+        let (cg, rg) = match &split {
+            Some(id) => (
+                column_gap.plus_text(0.0, 1.0, &format!("{id}.width")),
+                row_gap.plus_text(0.0, 1.0, &format!("{id}.height")),
+            ),
+            None => (String::new(), String::new()),
+        };
+        if split.is_some() {
+            flow.set("spacing", number(0.0));
+            flow.set("width", plus(&Value::expr("parent.width"), &cg));
+            if rtl {
+                flow.set("x", minus(&Value::expr("0"), &cg));
+            }
+        } else {
+            flow.set("spacing", column_gap.value("width"));
+        }
+        if rtl {
             flow.set("layoutDirection", Value::expr("Qt.RightToLeft"));
         }
         if style.flex_wrap == FlexWrap::WrapReverse {
@@ -853,17 +907,25 @@ impl Emitter<'_, '_> {
             // A shrinkable item alone on a line narrower than its basis
             // shrinks to the line (CSS Flexbox §9.7).
             let width = match basis {
-                Some(Value::Number(n)) if cs.flex_shrink > 0.0 => Value::expr(format!(
-                    "Math.min({}, parent.width)",
-                    super::units::fmt_number(n)
-                )),
+                Some(Value::Number(n)) if cs.flex_shrink > 0.0 => {
+                    Value::expr(format!("Math.min({}, {base})", super::units::fmt_number(n)))
+                }
+                Some(Value::Expr(e)) if split.is_some() => {
+                    Value::Expr(e.replace("parent.width", &base))
+                }
                 Some(v) => v,
                 None if holds_control_row(&obj) => {
-                    Value::expr(format!("Math.min({CONTROL_ROW_WIDTH}, parent.width)"))
+                    Value::expr(format!("Math.min({CONTROL_ROW_WIDTH}, {base})"))
                 }
-                None => Value::expr(format!("Math.min({}, parent.width)", natural_width(&obj))),
+                None => Value::expr(format!("Math.min({}, {base})", natural_width(&obj))),
             };
-            obj.set("width", width);
+            let cell_width = if split.is_some() {
+                obj.set("width", minus(&Value::expr("parent.width"), &cg));
+                Some(width)
+            } else {
+                obj.set("width", width);
+                None
+            };
             match &cs.height {
                 Size::Length(l) if l.as_px().is_some() || is_viewport_relative(l) => {
                     fixed_heights.push(l.as_px());
@@ -881,7 +943,18 @@ impl Emitter<'_, '_> {
             {
                 flow.members.push(Member::Comment(describe(self.doc, node)));
             }
-            flow.push_child(obj);
+            if let Some(width) = cell_width {
+                let mut cell = Object::new("Item");
+                cell.set("width", plus(&width, &cg));
+                cell.set("height", plus(&Value::expr("childrenRect.height"), &rg));
+                if rtl {
+                    obj.set("x", Value::expr(cg.clone()));
+                }
+                cell.push_child(obj);
+                flow.push_child(cell);
+            } else {
+                flow.push_child(obj);
+            }
         }
         if lossy_margins {
             self.diags.info(
@@ -916,7 +989,18 @@ impl Emitter<'_, '_> {
                 ),
             );
         }
-        flow
+        match split {
+            Some(id) => {
+                let mut boxed = Object::new("Item").with_id(id);
+                boxed.set(
+                    "implicitHeight",
+                    Value::expr(format!("Math.max(0, childrenRect.height - ({rg}))")),
+                );
+                boxed.push_child(flow);
+                boxed
+            }
+            None => flow,
+        }
     }
 
     /// The border-box basis every item grows from, when all items grow
