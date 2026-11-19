@@ -36,15 +36,6 @@ impl Natural {
     pub fn size(&self) -> Option<(f32, f32)> {
         self.width.zip(self.height)
     }
-
-    /// An inline `<svg>`'s size and ratio, as [`svg_size`] reads them.
-    pub fn of_svg_size((size, ratio): (Option<(f32, f32)>, Option<f32>)) -> Self {
-        Natural {
-            width: size.map(|s| s.0),
-            height: size.map(|s| s.1),
-            ratio: size.map(|(w, h)| h / w).or(ratio),
-        }
-    }
 }
 
 #[derive(Debug, Default)]
@@ -248,14 +239,16 @@ pub(crate) fn intrinsic_size(bytes: &[u8]) -> Natural {
     std::str::from_utf8(bytes).map_or_else(|_| Natural::default(), svg_natural)
 }
 
-/// An SVG file's natural dimensions, as Chromium gives them. With no
-/// `viewBox` the lengths are the dimensions, a zero included, and both
-/// positive give the ratio. With one, the `viewBox` gives the ratio and a
+/// An SVG's natural dimensions, as Chromium gives them, for a file and an
+/// inline `<svg>` alike (inline, its lengths are also its CSS `width` and
+/// `height`, as presentation attributes). A negative length is a zero one.
+/// With no `viewBox` the lengths are the dimensions, a zero included, and
+/// both positive give the ratio. With one, the `viewBox` gives the ratio and a
 /// `width` decides the size: the `height` stands only beside a positive
 /// width, else it is the width through the ratio (`width="80" height="0"`
 /// is 80×40, `width="0" height="40"` is 0×0); a `height` alone gives the
 /// width through the ratio.
-fn svg_natural(text: &str) -> Natural {
+pub(crate) fn svg_natural(text: &str) -> Natural {
     let Some((width, height, view_box)) = svg_root(text) else {
         return Natural::default();
     };
@@ -287,36 +280,6 @@ fn svg_natural(text: &str) -> Natural {
                 .map_or(r, |(w, h)| h / w),
         ),
     }
-}
-
-/// An inline `<svg>`'s size, as Chromium lays one out from its root
-/// `width`, `height` and `viewBox`. A length that is not negative is the
-/// side's size. A negative one leaves the side auto but is a zero natural
-/// length. An auto side follows the other through the `viewBox` ratio, else
-/// takes its natural length, else the default object size's (300×150, CSS
-/// 2.2 §10.3.2, §10.6.2). With both auto: the natural lengths, one of them
-/// through the ratio, or the ratio alone (the svg fills its width).
-pub(crate) fn svg_size(text: &str) -> (Option<(f32, f32)>, Option<f32>) {
-    let Some((width, height, view_box)) = svg_root(text) else {
-        return (None, None);
-    };
-    let ratio = view_box.map(|(vw, vh)| vh / vw);
-    let set = |v: Option<f32>| v.filter(|v| *v >= 0.0);
-    let natural = |v: Option<f32>| v.map(|v| v.max(0.0));
-    let (nw, nh) = (natural(width), natural(height));
-    let size = match (set(width), set(height)) {
-        (Some(w), Some(h)) => (w, h),
-        (Some(w), None) => (w, ratio.map(|r| w * r).or(nh).unwrap_or(150.0)),
-        (None, Some(h)) => (ratio.map(|r| h / r).or(nw).unwrap_or(300.0), h),
-        (None, None) => match (nw, nh, ratio) {
-            (Some(w), Some(h), _) => (w, h),
-            (Some(w), None, Some(r)) => (w, w * r),
-            (None, Some(h), Some(r)) => (h / r, h),
-            (None, None, Some(r)) => return (None, Some(r)),
-            (w, h, _) => (w.unwrap_or(300.0), h.unwrap_or(150.0)),
-        },
-    };
-    (Some(size), None)
 }
 
 /// The root `<svg>`'s absolute `width` and `height` as written (zero and
@@ -367,48 +330,35 @@ mod tests {
     use super::*;
 
     #[test]
-    fn svg_size_from_attributes_or_view_box() {
+    fn svg_natural_from_attributes_or_view_box() {
+        let n = |width, height, ratio| Natural {
+            width,
+            height,
+            ratio,
+        };
         assert_eq!(
-            svg_size(r#"<svg xmlns="x" width="320" height="220">"#),
-            (Some((320.0, 220.0)), None)
+            svg_natural(r#"<svg xmlns="x" width="320" height="200">"#),
+            n(Some(320.0), Some(200.0), Some(0.625))
         );
         assert_eq!(
-            svg_size(r#"<?xml version="1.0"?><svg viewBox="0 0 64 32" width='128px'>"#),
-            (Some((128.0, 64.0)), None)
+            svg_natural(r#"<?xml version="1.0"?><svg viewBox="0 0 64 32" width='128px'>"#),
+            n(Some(128.0), Some(64.0), Some(0.5))
         );
         // `stroke-width` is not `width`.
         assert_eq!(
-            svg_size(r#"<svg stroke-width="3" viewBox="0 0 10 20" height="40">"#),
-            (Some((20.0, 40.0)), None)
+            svg_natural(r#"<svg stroke-width="3" viewBox="0 0 10 20" height="40">"#),
+            n(Some(20.0), Some(40.0), Some(2.0))
         );
-        assert_eq!(svg_size(r#"<svg viewBox="0 0 64 32">"#), (None, Some(0.5)));
-        // Chromium's inline boxes (1280×800, `display: block`). A negative
-        // length is no size but a zero natural length; a missing one is the
-        // default object size's.
-        let vb = |attrs: &str| format!(r#"{attrs} viewBox="0 0 20 10""#);
-        for (attrs, size) in [
-            ("".to_owned(), (300.0, 150.0)),
-            (r#"width="-80""#.to_owned(), (0.0, 150.0)),
-            (r#"height="-40""#.to_owned(), (300.0, 0.0)),
-            (r#"width="-80" height="-40""#.to_owned(), (0.0, 0.0)),
-            (r#"width="0" height="0""#.to_owned(), (0.0, 0.0)),
-            (r#"width="0""#.to_owned(), (0.0, 150.0)),
-            (r#"height="0""#.to_owned(), (300.0, 0.0)),
-            (r#"width="-80" height="40""#.to_owned(), (0.0, 40.0)),
-            (r#"width="80" height="-40""#.to_owned(), (80.0, 0.0)),
-            (r#"width="80""#.to_owned(), (80.0, 150.0)),
-            (r#"height="40""#.to_owned(), (300.0, 40.0)),
-            (vb(r#"width="-80""#), (0.0, 0.0)),
-            (vb(r#"width="-80" height="-40""#), (0.0, 0.0)),
-            (vb(r#"width="-80" height="40""#), (80.0, 40.0)),
-            (vb(r#"width="80" height="-40""#), (80.0, 40.0)),
-        ] {
-            assert_eq!(
-                svg_size(&format!("<svg {attrs}>")),
-                (Some(size), None),
-                "{attrs}"
-            );
-        }
+        // Two positive lengths give their own ratio, a viewBox beside them
+        // or not (Chromium: 80×40 at `width:200px;height:auto` is 200×100).
+        assert_eq!(
+            svg_natural(r#"<svg width="80" height="40" viewBox="0 0 20 20">"#),
+            n(Some(80.0), Some(40.0), Some(0.5))
+        );
+        assert_eq!(
+            svg_natural(r#"<svg viewBox="0 0 64 32">"#),
+            n(None, None, Some(0.5))
+        );
     }
 
     #[test]
