@@ -523,10 +523,10 @@ impl Emitter<'_, '_> {
             // A block raised over what follows its own block, in a column
             // that makes no stacking context, goes to its stop's: in CSS
             // only it paints over those boxes, and the rest of its block
-            // under them. A script that walks the DOM reads it where it is.
+            // under them. A script that walks the DOM reads it where its
+            // slot is.
             let rise = stop.is_none()
                 && self.hoist_into.is_some()
-                && !self.runtime_dom
                 && !self.no_carry
                 && !collapsed
                 && !child.node.is_some_and(|n| self.script_hides.contains(&n))
