@@ -14,7 +14,7 @@ use super::flow::{Emitted, MarginSet};
 use super::units::{fmt_number, number, round};
 use super::{Emitter, hint};
 use crate::boxes::LayoutBox;
-use crate::images::{ImageAsset, svg_natural, without_invalid_root};
+use crate::images::{ImageAsset, Natural, svg_natural, without_invalid_root};
 
 impl Emitter<'_, '_> {
     pub(super) fn image(&mut self, b: &LayoutBox<'_>, node: NodeId, line: Option<u32>) -> Emitted {
@@ -41,10 +41,24 @@ impl Emitter<'_, '_> {
         };
         let width = css_px(&style.width, extra_w);
         let height = css_px(&style.height, extra_h);
-        // An inline svg's file is written at the size CSS gives it, when CSS
-        // gives both; a file has no box of its own to fill.
+        // An inline svg's file is written at the box CSS gives it, a side
+        // CSS leaves `auto` completed from its natural size as below: with no
+        // `viewBox` Chromium draws it unscaled in that box, where Qt scales
+        // a file to the Image. A file has no box of its own to fill.
         let asset = if inline_svg {
-            self.svg_asset(node, style.color, width.zip(height))
+            let used = width.zip(height).or_else(|| {
+                let natural = self.svg_natural_of(node)?;
+                let (nw, nh) = (natural.width, natural.height);
+                let ratio = natural.ratio.filter(|r| r.is_finite() && *r > 0.0);
+                one_side_box(
+                    width,
+                    height,
+                    ratio,
+                    nw.unwrap_or(300.0),
+                    nh.unwrap_or(150.0),
+                )
+            });
+            self.svg_asset(node, style.color, used)
         } else {
             self.images.get(&node).cloned()
         };
@@ -72,10 +86,9 @@ impl Emitter<'_, '_> {
         let default_h = nh.unwrap_or(if defaults { 150.0 } else { 0.0 });
         let content = match (width, height, ratio) {
             (Some(w), Some(h), _) => Some((w, h)),
-            (Some(w), None, Some(r)) => Some((w, w * r)),
-            (None, Some(h), Some(r)) => Some((h / r, h)),
-            (Some(w), None, None) => Some((w, default_h)),
-            (None, Some(h), None) => Some((default_w, h)),
+            (Some(_), None, _) | (None, Some(_), _) => {
+                one_side_box(width, height, ratio, default_w, default_h)
+            }
             (None, None, _) if size.is_some() => size,
             (None, None, Some(r)) => match (nw, nh) {
                 (Some(w), _) => Some((w, w * r)),
@@ -208,7 +221,36 @@ impl Emitter<'_, '_> {
     }
 }
 
+/// The box of a replaced element CSS gives one side of: the other through
+/// the ratio, else the natural (or default) one (CSS 2.2 §10.3.2, §10.6.2).
+/// `None` unless exactly one side is given.
+fn one_side_box(
+    width: Option<f32>,
+    height: Option<f32>,
+    ratio: Option<f32>,
+    default_w: f32,
+    default_h: f32,
+) -> Option<(f32, f32)> {
+    match (width, height, ratio) {
+        (Some(w), None, Some(r)) => Some((w, w * r)),
+        (None, Some(h), Some(r)) => Some((h / r, h)),
+        (Some(w), None, None) => Some((w, default_h)),
+        (None, Some(h), None) => Some((default_w, h)),
+        _ => None,
+    }
+}
+
 impl Emitter<'_, '_> {
+    /// An inline `<svg>`'s natural size, from its root's attributes.
+    fn svg_natural_of(&self, node: NodeId) -> Option<Natural> {
+        let markup =
+            self.doc
+                .svg_markup(node, None, &|_: &str, value: &str, _: Option<&str>| {
+                    value.to_owned()
+                })?;
+        Some(svg_natural(&markup))
+    }
+
     /// The file an inline `<svg>` is shown from: its markup as a document of
     /// its own, with `currentColor` resolved to `color`, the colour of the
     /// element that holds it (SVG 2 §13.2, CSS Color 4 §6.4). The name is a
