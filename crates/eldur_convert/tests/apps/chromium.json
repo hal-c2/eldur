@@ -88939,7 +88939,7 @@
      {
       "box": [
        8,
-       1676,
+       1744,
        1264,
        18
       ],
@@ -88961,7 +88961,7 @@
      {
       "box": [
        8,
-       1676,
+       1744,
        1264,
        18
       ],
@@ -88982,7 +88982,7 @@
      {
       "box": [
        8,
-       1676,
+       1744,
        1264,
        18
       ],
@@ -89003,7 +89003,7 @@
      {
       "box": [
        8,
-       1676,
+       1744,
        1264,
        18
       ],
@@ -89024,7 +89024,7 @@
      {
       "box": [
        8,
-       1676,
+       1744,
        1264,
        18
       ],
@@ -89046,7 +89046,7 @@
      {
       "box": [
        8,
-       1676,
+       1744,
        1264,
        18
       ],
@@ -89067,7 +89067,7 @@
      {
       "box": [
        8,
-       1676,
+       1744,
        1264,
        18
       ],
@@ -89088,7 +89088,7 @@
      {
       "box": [
        8,
-       1676,
+       1744,
        1264,
        18
       ],
@@ -89102,6 +89102,69 @@
   {
    "name": "tab past out",
    "log": [
+    "focus next"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1744,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "next"
+   }
+  },
+  {
+   "name": "tab to para",
+   "log": [
+    "focus para"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1744,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "para"
+   }
+  },
+  {
+   "name": "tab to inpara",
+   "log": [
+    "focus inpara"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1744,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "inpara"
+   }
+  },
+  {
+   "name": "tab past hidden",
+   "log": [
     "focus after"
    ],
    "state": {
@@ -89109,7 +89172,7 @@
      {
       "box": [
        8,
-       1676,
+       1744,
        1264,
        18
       ],
@@ -89118,6 +89181,69 @@
      }
     ],
     "(focus)": "after"
+   }
+  },
+  {
+   "name": "back to inpara",
+   "log": [
+    "focus inpara"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1744,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "inpara"
+   }
+  },
+  {
+   "name": "back to para",
+   "log": [
+    "focus para"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1744,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "para"
+   }
+  },
+  {
+   "name": "back to next",
+   "log": [
+    "focus next"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1744,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "next"
    }
   },
   {
@@ -89130,7 +89256,7 @@
      {
       "box": [
        8,
-       1676,
+       1744,
        1264,
        18
       ],
@@ -89151,7 +89277,7 @@
      {
       "box": [
        8,
-       1676,
+       1744,
        1264,
        18
       ],
@@ -89172,7 +89298,7 @@
      {
       "box": [
        8,
-       1676,
+       1744,
        1264,
        18
       ],
@@ -89193,7 +89319,7 @@
      {
       "box": [
        8,
-       1676,
+       1744,
        1264,
        18
       ],
@@ -89214,7 +89340,7 @@
      {
       "box": [
        8,
-       1676,
+       1744,
        1264,
        18
       ],
@@ -89226,9 +89352,160 @@
    }
   },
   {
-   "name": "enter on docs",
+   "name": "back to start",
    "log": [
-    "doc click docs false "
+    "focus start"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1744,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "start"
+   }
+  },
+  {
+   "name": "back to first",
+   "log": [
+    "focus first"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1744,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "first"
+   }
+  },
+  {
+   "name": "tab from first",
+   "log": [
+    "focus start"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1744,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "start"
+   }
+  },
+  {
+   "name": "script focuses out",
+   "log": [
+    "focus toout",
+    "focus out",
+    "doc click toout false "
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1744,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "out"
+   }
+  },
+  {
+   "name": "tab on from out",
+   "log": [
+    "focus next"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1744,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "next"
+   }
+  },
+  {
+   "name": "out again",
+   "log": [
+    "focus toout",
+    "focus out",
+    "doc click toout false "
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1744,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "out"
+   }
+  },
+  {
+   "name": "back from out",
+   "log": [
+    "focus lone"
+   ],
+   "state": {
+    "#end": [
+     {
+      "box": [
+       8,
+       1744,
+       1264,
+       18
+      ],
+      "shown": true,
+      "text": "end"
+     }
+    ],
+    "(focus)": "lone"
+   }
+  },
+  {
+   "name": "enter on lone",
+   "log": [
+    "doc click lone false "
    ],
    "state": {
     "#end": [
