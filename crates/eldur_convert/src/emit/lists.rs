@@ -258,9 +258,12 @@ impl Emitter<'_, '_> {
         );
         self.report_crossed_ancestors(b, node, fixed);
         self.report_place_in_line(b);
+        // One under its block, at a negative `z-index`, stays in it, under
+        // what the block holds: its stop's column would put it over that.
         let hoist = self.hoist_into.filter(|stop| {
             !fixed
                 && !self.no_carry
+                && style.z_index.is_none_or(|z| z >= 0)
                 && (node.is_none() || self.abs_block.hoist.as_ref().is_some_and(|h| h.0 == *stop))
         });
         let block_id = hoist.and(node).map(|_| self.containing_block_id());
@@ -469,6 +472,47 @@ impl Emitter<'_, '_> {
         item.set("z", Value::Number(f64::from(lift)));
         item.push_child(frame);
         item
+    }
+
+    /// A block of a column that makes no stacking context, raised over what
+    /// follows that column's block, in the item that takes it to its stop's
+    /// column (`hoisted_host`), and the slot it leaves in the flow: the slot
+    /// is laid out as the block was, and the block is placed and sized by it.
+    pub(super) fn risen_host(&mut self, b: &LayoutBox<'_>, mut obj: Object) -> (Object, Object) {
+        let id = match &obj.id {
+            Some(id) => id.clone(),
+            None => {
+                let id = self.ids.claim(&hint(self.doc, b));
+                obj.id = Some(id.clone());
+                id
+            }
+        };
+        let slot_id = self.ids.claim(&format!("{} slot", hint(self.doc, b)));
+        let mut slot = Object::new("Item").with_id(slot_id.clone());
+        let mut kept = Vec::with_capacity(obj.members.len());
+        for member in std::mem::take(&mut obj.members) {
+            match member {
+                Member::Property { name, value }
+                    if name.starts_with("Layout.") || name == "visible" =>
+                {
+                    slot.members.push(Member::Property { name, value });
+                }
+                other => kept.push(other),
+            }
+        }
+        obj.members = kept;
+        for (size, implicit) in [("width", "implicitWidth"), ("height", "implicitHeight")] {
+            slot.set(implicit, Value::expr(format!("{id}.{implicit}")));
+            if obj.get(size).is_none() {
+                obj.set(size, Value::expr(format!("parent.{size}")));
+            }
+        }
+        let lift = match obj.get("z") {
+            Some(Value::Number(z)) => *z as i32,
+            _ => 1,
+        };
+        let host = self.hoisted_host(b, obj, Some(&slot_id), lift);
+        (slot, host)
     }
 
     /// A slot goes before the line, whose start it knows and whose text it

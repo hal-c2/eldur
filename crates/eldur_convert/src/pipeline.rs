@@ -528,7 +528,7 @@ fn selectors_outrun_templates(
     rules.iter().filter(|r| !r.user_agent).any(|rule| {
         let selector = rule.selector.as_str();
         names_written_id(selector, analysis)
-            || names_written_attribute(selector, analysis)
+            || names_written_attribute(rule, analysis)
             || class_takes_out_of_flow(rule, analysis)
             || class_gives_pseudo_box(rule, analysis)
             || (changes_form(rule) && form_depends_on_page(doc, scripts, selector))
@@ -630,17 +630,21 @@ fn names_written_id(selector: &str, analysis: &eldur_js::Analysis) -> bool {
         .any(|name| analysis.writes_computed_id || analysis.written_ids.contains(name))
 }
 
-/// A static page has no variant for an attribute, on its own elements or a
-/// template's, so a rule naming one a script writes is the runtime's to answer:
-/// `setAttribute('data-up', '')` under `[data-up] { z-index: 3 }` gives the box
-/// its level, and the boxes around it theirs, only on an open page.
-fn names_written_attribute(selector: &str, analysis: &eldur_js::Analysis) -> bool {
-    names_after(selector, '[').any(|name| {
-        analysis.writes_computed_attribute
-            || analysis
-                .written_attributes
-                .contains(&name.to_ascii_lowercase())
-    })
+/// The converter's variants answer for an attribute on a page's own elements; a
+/// template is written before anyone has set one on it. A level is the
+/// exception: a variant gives the box its `z`, but the boxes the converter
+/// raised for what they hold are re-levelled only by the runtime's rules, so
+/// `setAttribute('data-up', '')` under `[data-up] { z-index: 3 }` opens the
+/// page. A toggle that sets no level, `[aria-expanded=true]` say, keeps it static.
+fn names_written_attribute(rule: &eldur_css::RuntimeRule, analysis: &eldur_js::Analysis) -> bool {
+    let sets_level = rule.declarations.iter().any(|(p, _, _)| p == "z-index");
+    (sets_level || !analysis.created.is_empty())
+        && names_after(&rule.selector, '[').any(|name| {
+            analysis.writes_computed_attribute
+                || analysis
+                    .written_attributes
+                    .contains(&name.to_ascii_lowercase())
+        })
 }
 
 /// Whether a selector could style an element a script creates, by more than the

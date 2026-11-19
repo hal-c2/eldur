@@ -7,7 +7,7 @@
 //! that collapse through are dropped.
 
 use eldur_css::{
-    BoxSizing, Clear, ComputedStyle, Display, Float, Length, LengthAuto, Size, TextAlign,
+    BoxSizing, Clear, ComputedStyle, Display, Float, Length, LengthAuto, Position, Size, TextAlign,
     TextDecorationLine, Visibility,
 };
 use eldur_qml::{Member, Object, Value};
@@ -518,6 +518,21 @@ impl Emitter<'_, '_> {
             }
             rest = &rest[1..];
             self.column_child = true;
+            let collapsed = child.style.visibility == Visibility::Collapse
+                || child.node.is_some_and(|n| self.collapsed.contains(&n));
+            // A block raised over what follows its own block, in a column
+            // that makes no stacking context, goes to its stop's: in CSS
+            // only it paints over those boxes, and the rest of its block
+            // under them. A script that walks the DOM reads it where it is.
+            let rise = stop.is_none()
+                && self.hoist_into.is_some()
+                && !self.runtime_dom
+                && !self.no_carry
+                && !collapsed
+                && !child.node.is_some_and(|n| self.script_hides.contains(&n))
+                && matches!(child.style.position, Position::Relative | Position::Sticky)
+                && child.style.z_index.is_some_and(|z| z > 0);
+            self.rise_out = rise;
             let emitted = self.block(child, decoration);
             if emitted.collapse_through {
                 self.place_hoisted(stop, &mut layout);
@@ -533,8 +548,6 @@ impl Emitter<'_, '_> {
                 }
                 continue;
             }
-            let collapsed = child.style.visibility == Visibility::Collapse
-                || child.node.is_some_and(|n| self.collapsed.contains(&n));
             let mut emitted = emitted;
             let mut obj = std::mem::replace(&mut emitted.obj, Object::new("Item"));
             self.flow_item(&mut obj, child);
@@ -671,7 +684,14 @@ impl Emitter<'_, '_> {
                     .members
                     .push(Member::Comment(describe(self.doc, node)));
             }
-            layout.push_child(obj);
+            match self.hoist_into.filter(|_| rise) {
+                Some(to) => {
+                    let (slot, host) = self.risen_host(child, obj);
+                    layout.push_child(slot);
+                    self.hoisted.push((to, host));
+                }
+                None => layout.push_child(obj),
+            }
             last = Some(layout.members.len() - 1);
             pending = emitted.bottom;
             pending_cases = emitted.bottom_cases.take();

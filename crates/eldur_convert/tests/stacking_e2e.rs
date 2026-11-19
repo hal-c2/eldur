@@ -249,7 +249,8 @@ div { height: 40px; width: 200px }
 .ab { position: absolute }
 .in { position: relative; background: red }
 .up { z-index: 3 }
-#h1, #h2 { position: relative }
+#h1, #h2, #h6 { position: relative }
+#n6 { top: 0; z-index: -1; background: green }
 #x5 { height: 80px }
 #k5 { z-index: 4 }
 #v5 { z-index: 3; height: 80px; transform: translate(20px, -60px) }
@@ -263,8 +264,10 @@ div { height: 40px; width: 200px }
 <div id=h4><div id=b4 class=ab><div id=k4 class="in up"></div></div></div><div id=v4 class=over></div>
 <div class=gap></div>
 <div id=x5><div id=k5 class=in></div><div id=m5 class=in></div></div><div id=v5 class=over></div>
+<div class=gap></div>
+<div id=h6><div id=k6 class=in></div><div id=n6 class=ab></div></div><div id=v6 class=over></div>
 <script>
-var named = ['h1','b1','k1','v1','h2','b2','k2','v2','h3','b3','k3','v3','h4','b4','k4','v4','x5','k5','m5','v5'].map(function (id) { return document.getElementById(id); });
+var named = ['h1','b1','k1','v1','h2','b2','k2','v2','h3','b3','k3','v3','h4','b4','k4','v4','x5','k5','m5','v5','h6','k6','n6','v6'].map(function (id) { return document.getElementById(id); });
 // An absolute box at `auto` lifted and dropped by what it holds, in a
 // positioned block and in the initial one; and a box raised beside one
 // that stays higher, which keeps their box at that one's level.
@@ -284,12 +287,14 @@ const OUT_OF_FLOW_TEST: &str = r##"
         compare(front(page, 100, 390), "v4", "dropped in the initial block")
         compare(front(page, 100, 510), "k5", "the higher kid keeps its box's level")
         compare(front(page, 100, 550), "v5", "raised under that level")
+        compare(front(page, 100, 690), "k6", "a box under its block stays under it")
+        compare(front(page, 100, 710), "v6", "and under what follows")
     }
 }
 }
 "##;
 
-/// With no script, Chromium's fronts are `v1 k2 v3 k4 k5 v5`.
+/// With no script, Chromium's fronts are `v1 k2 v3 k4 k5 v5 k6 v6`.
 const OUT_OF_FLOW_UNSCRIPTED: &str = r##"
     function test_levels_follow_what_the_boxes_hold() {
         compare(front(page, 100, 30), "v1")
@@ -298,6 +303,73 @@ const OUT_OF_FLOW_UNSCRIPTED: &str = r##"
         compare(front(page, 100, 390), "k4")
         compare(front(page, 100, 510), "k5")
         compare(front(page, 100, 550), "v5")
+        compare(front(page, 100, 690), "k6")
+        compare(front(page, 100, 710), "v6")
+    }
+}
+}
+"##;
+
+/// Out-of-flow boxes, and boxes in them, moved and removed: what leaves an
+/// absolute box at `auto` drops it, and an absolute box with a level that
+/// leaves a block that makes no stacking context takes its level with it.
+const OUT_OF_FLOW_MOVES: &str = r#"<!doctype html><html><head><style>
+body { margin: 0 }
+div { height: 40px; width: 200px }
+.gap { height: 40px }
+.over { position: relative; transform: translate(20px, -20px); z-index: 2; background: blue }
+.ab { position: absolute }
+.in { position: relative; background: red }
+.up { z-index: 3 }
+#h1, #h2 { position: relative }
+#b3, #b4 { background: green }
+</style></head><body>
+<div id=h1><div id=b1 class=ab><div id=k1 class="in up"></div></div></div><div id=v1 class=over></div>
+<div class=gap></div>
+<div id=h2><div id=b2 class=ab><div id=k2 class="in up"></div></div></div><div id=v2 class=over></div>
+<div class=gap></div>
+<div id=h3><div id=b3 class="ab up"></div></div><div id=v3 class=over></div>
+<div class=gap></div>
+<div id=h4><div id=b4 class="ab up"></div></div><div id=v4 class=over></div>
+<div class=gap></div>
+<div id=da></div>
+<div class=gap></div>
+<div id=db></div>
+<script>
+var named = ['h1','b1','k1','v1','h2','b2','k2','v2','h3','b3','v3','h4','b4','v4','da','db'].map(function (id) { return document.getElementById(id); });
+// A raised box taken out of an absolute box at `auto`, and one moved out of
+// another; an absolute box with a level taken out, and one moved.
+var k1 = document.getElementById('k1');
+k1.parentNode.removeChild(k1);
+document.getElementById('da').appendChild(document.getElementById('k2'));
+var b3 = document.getElementById('b3');
+b3.parentNode.removeChild(b3);
+document.getElementById('db').appendChild(document.getElementById('b4'));
+</script></body></html>"#;
+
+/// Chromium's fronts.
+const OUT_OF_FLOW_MOVES_TEST: &str = r##"
+    function test_levels_follow_what_the_boxes_hold() {
+        compare(front(page, 100, 30), "v1", "a raised box taken out of an absolute box")
+        compare(front(page, 100, 150), "v2", "one moved out of another")
+        compare(front(page, 100, 270), "v3", "an absolute box with a level taken out")
+        compare(front(page, 100, 390), "v4", "one moved")
+        compare(front(page, 100, 500), "k2", "the box moved, where it went")
+        compare(front(page, 100, 580), "b4", "the absolute box moved, where it went")
+    }
+}
+}
+"##;
+
+/// With no script, Chromium's fronts are `k1 k2 b3 b4 da db`.
+const OUT_OF_FLOW_MOVES_UNSCRIPTED: &str = r##"
+    function test_levels_follow_what_the_boxes_hold() {
+        compare(front(page, 100, 30), "k1")
+        compare(front(page, 100, 150), "k2")
+        compare(front(page, 100, 270), "b3")
+        compare(front(page, 100, 390), "b4")
+        compare(front(page, 100, 500), "da")
+        compare(front(page, 100, 580), "db")
     }
 }
 }
@@ -330,17 +402,26 @@ fn rules_a_script_brings_restack_the_boxes_around_them() {
     run(PATHS, &with_test(PATHS_TEST), "paths", false);
 }
 
-/// With no box made the page stays static: no rules go to the runtime, and
-/// the converter's own bindings give each level.
+/// With no box made and no attribute set the page stays static: no rules go
+/// to the runtime, and the converter's own bindings give each level. (An
+/// attribute a script sets under a rule with a level opens the page, as
+/// `rules_a_script_brings_restack_the_boxes_around_them` has it.)
 #[test]
 fn rules_a_script_brings_restack_them_on_a_static_page() {
-    let start = PATHS.find("var made").expect("the box made");
+    let start = PATHS
+        .find("document.getElementById('c6')")
+        .expect("the attribute set");
     let end = PATHS.find("</script>").expect("the script's end");
     let page = format!("{}{}", &PATHS[..start], &PATHS[end..]);
-    let test = PATHS_TEST.replace(
-        r#"compare(front(page, 100, 750), "c7", "a box put in with a level")"#,
-        r#"compare(front(page, 100, 750), "o7", "no box put in")"#,
-    );
+    let test = PATHS_TEST
+        .replace(
+            r#"compare(front(page, 100, 630), "c6", "attribute set")"#,
+            r#"compare(front(page, 100, 630), "o6", "no attribute set")"#,
+        )
+        .replace(
+            r#"compare(front(page, 100, 750), "c7", "a box put in with a level")"#,
+            r#"compare(front(page, 100, 750), "o7", "no box put in")"#,
+        );
     run(&page, &with_test(&test), "paths-static", false);
 }
 
@@ -380,6 +461,26 @@ fn the_out_of_flow_rules_levels_match_chromium() {
         &unscripted(OUT_OF_FLOW, "// An absolute"),
         &with_test(OUT_OF_FLOW_UNSCRIPTED),
         "out-of-flow-unscripted",
+        false,
+    );
+}
+
+#[test]
+fn out_of_flow_boxes_moved_and_removed_restack_what_they_leave() {
+    run(
+        OUT_OF_FLOW_MOVES,
+        &with_test(OUT_OF_FLOW_MOVES_TEST),
+        "out-of-flow-moves",
+        false,
+    );
+}
+
+#[test]
+fn the_moved_out_of_flow_rules_levels_match_chromium() {
+    run(
+        &unscripted(OUT_OF_FLOW_MOVES, "// A raised box"),
+        &with_test(OUT_OF_FLOW_MOVES_UNSCRIPTED),
+        "out-of-flow-moves-unscripted",
         false,
     );
 }
