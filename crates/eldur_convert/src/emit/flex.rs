@@ -919,13 +919,7 @@ impl Emitter<'_, '_> {
                 }
                 None => Value::expr(format!("Math.min({}, {base})", natural_width(&obj))),
             };
-            let cell_width = if split.is_some() {
-                obj.set("width", minus(&Value::expr("parent.width"), &cg));
-                Some(width)
-            } else {
-                obj.set("width", width);
-                None
-            };
+            obj.set("width", width);
             match &cs.height {
                 Size::Length(l) if l.as_px().is_some() || is_viewport_relative(l) => {
                     fixed_heights.push(l.as_px());
@@ -943,10 +937,27 @@ impl Emitter<'_, '_> {
             {
                 flow.members.push(Member::Comment(describe(self.doc, node)));
             }
-            if let Some(width) = cell_width {
+            if split.is_some() {
+                // The cell follows its item, so a natural width is the
+                // item's own. A hidden item's cell takes no room: `Flow`
+                // skips only its own hidden children. The cell stays
+                // visible, because an item's `visible` reads false under a
+                // hidden parent and would never show it again.
                 let mut cell = Object::new("Item");
-                cell.set("width", plus(&width, &cg));
-                cell.set("height", plus(&Value::expr("childrenRect.height"), &rg));
+                cell.set(
+                    "width",
+                    Value::expr(format!(
+                        "children[0].visible ? {} : 0",
+                        value_text(&plus(&Value::expr("children[0].width"), &cg))
+                    )),
+                );
+                cell.set(
+                    "height",
+                    Value::expr(format!(
+                        "children[0].visible ? {} : 0",
+                        value_text(&plus(&Value::expr("childrenRect.height"), &rg))
+                    )),
+                );
                 if rtl {
                     obj.set("x", Value::expr(cg.clone()));
                 }

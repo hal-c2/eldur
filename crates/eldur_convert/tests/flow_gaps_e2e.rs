@@ -27,9 +27,11 @@ div div { height: 20px }
 <div id=s5 style="height:10px"></div>
 <div style="display:flex;flex-wrap:wrap;row-gap:10px;column-gap:20px"><div id=f1 style="width:300px"></div><div id=f2 style="width:300px"></div><div id=f3 style="width:300px"></div></div>
 <div id=s6 style="height:10px"></div>
+<div style="display:flex;flex-wrap:wrap;width:300px;row-gap:10px;column-gap:40px"><span id=g1>Alpha</span><span id=g2>Beta</span></div>
+<div style="display:flex;flex-wrap:wrap;width:400px;row-gap:5px;column-gap:30px"><div id=h1 style="width:150px"></div><div id=h2 style="width:150px"></div><div id=h3 style="width:150px"></div></div>
 <script>
 // Named so that they get an objectName the test can find.
-var named = [document.getElementById('a1'), document.getElementById('a2'), document.getElementById('s1'), document.getElementById('b1'), document.getElementById('b2'), document.getElementById('b3'), document.getElementById('s2'), document.getElementById('c1'), document.getElementById('c2'), document.getElementById('c3'), document.getElementById('s3'), document.getElementById('d1'), document.getElementById('d2'), document.getElementById('d3'), document.getElementById('s4'), document.getElementById('e1'), document.getElementById('e2'), document.getElementById('s5'), document.getElementById('f1'), document.getElementById('f2'), document.getElementById('f3'), document.getElementById('s6')];
+var named = [document.getElementById('a1'), document.getElementById('a2'), document.getElementById('s1'), document.getElementById('b1'), document.getElementById('b2'), document.getElementById('b3'), document.getElementById('s2'), document.getElementById('c1'), document.getElementById('c2'), document.getElementById('c3'), document.getElementById('s3'), document.getElementById('d1'), document.getElementById('d2'), document.getElementById('d3'), document.getElementById('s4'), document.getElementById('e1'), document.getElementById('e2'), document.getElementById('s5'), document.getElementById('f1'), document.getElementById('f2'), document.getElementById('f3'), document.getElementById('s6'), document.getElementById('g1'), document.getElementById('g2'), document.getElementById('h1'), document.getElementById('h2'), document.getElementById('h3')];
 </script></body></html>"#;
 
 /// Chromium, `getBoundingClientRect()` at 900×800 and 450×800: `[x, y,
@@ -88,6 +90,50 @@ TestCase {
         check("f2", 320, 295, 300, 20)
         check("f3", 0, 325, 300, 20)
         check("s6", 0, 345, 900, 10)
+    }
+
+    function near(what, got, want) {
+        verify(Math.abs(got - want) <= 0.5, what + " " + got + ", want " + want)
+    }
+
+    // Text widths are the font's, so these are Chromium's relations, not
+    // its numbers: an auto-width item keeps its natural width, and the
+    // next one sits one column gap past it.
+    function test_auto_width_items_keep_their_width() {
+        const g1 = findChild(page, "g1")
+        const g2 = findChild(page, "g2")
+        verify(g1 && g2, "g1, g2")
+        verify(g1.width > 0, "g1 width " + g1.width)
+        near("g1 width", g1.width, Math.ceil(g1.implicitWidth))
+        near("g2 width", g2.width, Math.ceil(g2.implicitWidth))
+        const a = g1.mapToItem(page, 0, 0)
+        const b = g2.mapToItem(page, 0, 0)
+        near("g2 y", b.y, a.y)
+        near("g2 x", b.x, a.x + g1.width + 40)
+    }
+
+    // An item a script hides takes no slot: Chromium, with `#h1` at
+    // `display: none`, puts `#h2` at the line's start and `#h3` one column
+    // gap after it, on the same line. Shown again, `#h3` wraps.
+    function test_a_hidden_item_takes_no_slot() {
+        const h1 = findChild(page, "h1")
+        const h2 = findChild(page, "h2")
+        const h3 = findChild(page, "h3")
+        verify(h1 && h2 && h3, "h1, h2, h3")
+        const top = h1.mapToItem(page, 0, 0)
+        near("h2 x", h2.mapToItem(page, 0, 0).x, top.x + 180)
+        near("h3 y", h3.mapToItem(page, 0, 0).y, top.y + 25)
+        h1.visible = false
+        waitForRendering(page)
+        near("hidden: h2 x", h2.mapToItem(page, 0, 0).x, top.x)
+        near("hidden: h2 y", h2.mapToItem(page, 0, 0).y, top.y)
+        near("hidden: h3 x", h3.mapToItem(page, 0, 0).x, top.x + 180)
+        near("hidden: h3 y", h3.mapToItem(page, 0, 0).y, top.y)
+        h1.visible = true
+        waitForRendering(page)
+        near("shown: h2 x", h2.mapToItem(page, 0, 0).x, top.x + 180)
+        near("shown: h3 x", h3.mapToItem(page, 0, 0).x, top.x)
+        near("shown: h3 y", h3.mapToItem(page, 0, 0).y, top.y + 25)
     }
 
     function test_gaps_follow_the_width() {
