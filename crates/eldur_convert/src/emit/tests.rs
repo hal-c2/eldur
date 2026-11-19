@@ -2495,15 +2495,28 @@ fn a_link_through_a_display_contents_box_is_still_a_link() {
 }
 
 #[test]
-fn return_on_a_link_of_a_runtime_page_dispatches_its_click_first() {
-    // A click listener may cancel the follow, by key as by pointer.
+fn a_link_of_a_runtime_page_leaves_its_keys_to_the_runtime() {
+    // Its tab chain and its Return, which dispatches a click a listener can
+    // prevent, are the runtime's; QML tab stops would reorder Shift+Tab.
     let (qml, _) = convert(&page(
         "a{display:block}",
         r##"<details><summary>s</summary></details><a href="#t"><div style="height:20px"></div></a><div id="t"></div>"##,
     ));
-    let keys = qml
-        .lines()
-        .find(|l| l.contains("Keys.onReturnPressed"))
-        .unwrap_or_else(|| panic!("{qml}"));
-    assert!(keys.contains("Eldur.keyClick("), "{keys}");
+    assert!(!qml.contains("Keys.onReturnPressed"), "{qml}");
+    assert!(qml.contains("Accessible.role: Accessible.Link"), "{qml}");
+}
+
+#[test]
+fn a_block_link_keeps_its_focus_styles() {
+    // Tab reaches it (`link_keys`), so `:focus-visible` applies there.
+    let (qml, diags) = convert(&page(
+        "a{display:block;height:20px} a:focus-visible{background:red}",
+        r##"<a href="#t"></a><div id="t"></div>"##,
+    ));
+    assert!(qml.contains(".activeFocus"), "{qml}");
+    assert!(
+        !diags.iter().any(|d| d.contains("`:focus` styles")),
+        "{diags:?}"
+    );
+    assert_eq!(qml.matches("activeFocusOnTab: true").count(), 1, "{qml}");
 }

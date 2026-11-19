@@ -137,12 +137,15 @@ impl Emitter<'_, '_> {
     }
 
     /// A link is a stop in the tab chain, and Return or Enter there follows
-    /// it (HTML §6.6.3, "activation behavior"). In a page with a runtime the
-    /// key first dispatches a click at the link's box, as a browser does,
-    /// and a listener that prevents it keeps the link from being followed.
-    /// A negative `tabindex` takes the link out of the tab chain but not its
-    /// keys, as a script or a tap can still focus it (HTML §6.6.3).
+    /// it (HTML §6.6.3, "activation behavior"). A negative `tabindex` takes
+    /// the link out of the tab chain but not its keys, as a script or a tap
+    /// can still focus it (HTML §6.6.3). A page with a runtime has both
+    /// already: its tab chain holds the link, and its keys dispatch the
+    /// click a listener can prevent, so the box adds nothing there.
     fn link_keys(&mut self, obj: &mut Object, href: &str, link: NodeId) {
+        if self.runtime_dom {
+            return;
+        }
         let follow = self.follow(href);
         let skipped = self
             .doc
@@ -153,17 +156,11 @@ impl Emitter<'_, '_> {
         if !skipped && obj.get("activeFocusOnTab").is_none() {
             obj.set("activeFocusOnTab", true);
         }
-        let body = if self.runtime_dom {
-            let id = self.item_id(obj);
-            format!("Eldur.keyClick({id}, function () {{ {follow} }});")
-        } else {
-            follow
-        };
         for name in ["Keys.onReturnPressed", "Keys.onEnterPressed"] {
             obj.members.push(Member::Handler {
                 name: name.to_owned(),
                 params: Vec::new(),
-                body: vec![body.clone()],
+                body: vec![follow.clone()],
             });
         }
     }

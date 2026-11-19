@@ -293,7 +293,20 @@ fn conditions(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Vec<Cond> {
         let initial = match v.state {
             PseudoState::Hover | PseudoState::Active | PseudoState::Visited => false,
             PseudoState::Focus | PseudoState::FocusVisible => {
-                if control.is_none() && !has("tabindex") {
+                // A block link of a page with no runtime is a tab stop of its
+                // own (`link_keys`); an inline one is part of a text run.
+                let link_stop = !cx.runtime_dom
+                    && element.is_some_and(|e| e.local_name() == "a")
+                    && has("href")
+                    && cx.styles.computed(v.node).is_some_and(|c| {
+                        !matches!(
+                            c.style.display,
+                            eldur_css::Display::Inline
+                                | eldur_css::Display::Contents
+                                | eldur_css::Display::None
+                        )
+                    });
+                if control.is_none() && !has("tabindex") && !link_stop {
                     diags.info(
                         "css",
                         line,
