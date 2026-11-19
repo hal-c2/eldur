@@ -3069,11 +3069,16 @@ function verifyGlobalsAndEvents(done) {
     history.pushState({ p: 8 }, "", "/step8");
     history.back();
 
-    // Observer stubs
+    // Observers: as in a browser, observing for nothing is a TypeError.
     const mo = new MutationObserver(() => {});
     const ro = new ResizeObserver(() => {});
     const io = new IntersectionObserver(() => {});
-    mo.observe(btn);
+    try {
+        mo.observe(btn);
+    } catch (e) {
+        log.push("moOptions:" + (e instanceof TypeError));
+    }
+    mo.observe(btn, { attributes: true });
     ro.observe(btn);
     io.observe(btn);
     mo.disconnect();
@@ -3127,7 +3132,7 @@ function verifyGlobalsAndEvents(done) {
     );
     assert!(
         output.contains(
-            "ELDUR_OK_GLOBALS_EVENTS bus:42,key:Enter:13:true,click:12:34:true,clickRes:false,hash:#tab1,pop:7|1+2|hi|true|true|visible:false:1|copied-text|2"
+            "ELDUR_OK_GLOBALS_EVENTS bus:42,key:Enter:13:true,click:12:34:true,clickRes:false,moOptions:true,hash:#tab1,pop:7|1+2|hi|true|true|visible:false:1|copied-text|2"
         ),
         "{output}"
     );
