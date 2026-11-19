@@ -12,6 +12,10 @@
  {"name":"tab while arm5's blur focuses a link, then its paragraph","key":"Tab"},
  {"name":"enter on the paragraph","key":"Enter"},
  {"name":"click arm6","click":"#arm6"},
- {"name":"tab while arm6's blur focuses k, which blurs itself","key":"Tab"}
+ {"name":"tab while arm6's blur focuses k, which blurs itself","key":"Tab"},
+ {"name":"click arm7","click":"#arm7"},
+ {"name":"tab while arm7's blur starts moves within moves","key":"Tab"},
+ {"name":"click arm8","click":"#arm8"},
+ {"name":"tab while arm8's blur blurs where it goes","key":"Tab"}
 ],
 "watch":[{"sel":"#a"}]}

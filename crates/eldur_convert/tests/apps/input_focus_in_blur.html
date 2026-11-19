@@ -22,6 +22,13 @@ button, input { display: block; margin: 4px 0; }
 <button id="arm6">arm6</button>
 <button id="n">n</button>
 <button id="k">k</button>
+<button id="arm7">arm7</button>
+<button id="r">r</button>
+<button id="q">q</button>
+<button id="s">s</button>
+<button id="t">t</button>
+<button id="arm8">arm8</button>
+<button id="u">u</button>
 <script>
 // Listeners that move the focus while the page hears that it moved.
 function id(el) { return el && el.id ? el.id : el ? el.nodeName : "-"; }
@@ -59,6 +66,17 @@ on("arm5").addEventListener("click", function () {
 on("arm6").addEventListener("click", function () {
   on("k").addEventListener("focus", function () { on("k").blur(); }, { once: true });
   on("arm6").addEventListener("blur", function () { on("k").focus(); }, { once: true });
+});
+// Moves within moves: q's focus listener moves on to s, and q's blur listener
+// to t before s hears anything. s never does, and t has the focus.
+on("arm7").addEventListener("click", function () {
+  on("q").addEventListener("focus", function () { on("s").focus(); }, { once: true });
+  on("q").addEventListener("blur", function () { on("t").focus(); }, { once: true });
+  on("arm7").addEventListener("blur", function () { on("q").focus(); }, { once: true });
+});
+// Blurring where the Tab goes before it gets there does nothing.
+on("arm8").addEventListener("click", function () {
+  on("arm8").addEventListener("blur", function () { on("u").blur(); }, { once: true });
 });
 document.addEventListener("click", function (ev) {
   console.log("click", id(ev.target));
