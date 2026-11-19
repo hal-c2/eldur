@@ -1,0 +1,34 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>root restyle</title>
+<style>
+body { margin: 0; }
+#box { height: 200px; width: 300px; overflow: auto; }
+#box div { height: 100px; }
+</style></head><body>
+<div id="box"><div id="i0"></div><div id="i1"></div><div id="i2"></div><div id="i3"></div><div id="i4"></div><div id="i5"></div></div>
+<script>
+// The explicit root is restyled out of flow, which Eldur does by replacing its
+// item: the observer still measures against it afterwards.
+function L(k){console.log("OB "+k)}
+function r(n){return Math.round(n*100)/100}
+function E(e){ return e.target.id + ":" + e.isIntersecting + ":" + r(e.intersectionRatio); }
+function after(f){requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(f, 0)))}
+var box = document.getElementById("box");
+var io = new IntersectionObserver(function(es) {
+  var rb = es[0].rootBounds;
+  L("io " + es.map(E).join(" ") + " root:" + (rb ? r(rb.top) + "," + r(rb.height) : "null"));
+}, { root: box, rootMargin: "0px 0px 50px 0px" });
+for (var k = 0; k < 6; ++k) io.observe(document.getElementById("i" + k));
+after(function() {
+  L("step absolute");
+  box.style.position = "absolute";
+  after(function() {
+    L("step scrollTop 250");
+    box.scrollTop = 250;
+    after(function() {
+      L("scrolled " + box.scrollTop);
+      L("done");
+      var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+    });
+  });
+});
+</script></body></html>

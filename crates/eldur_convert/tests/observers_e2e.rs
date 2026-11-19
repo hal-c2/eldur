@@ -48,8 +48,8 @@ TestCase {
 }
 "##;
 
-/// Runs one page; `Err` has what went wrong.
-fn run(name: &str, html: &str, want: &[&str]) -> Result<(), String> {
+/// Runs one page; `Ok` has its log, `Err` what went wrong.
+fn run(name: &str, html: &str, want: &[&str]) -> Result<String, String> {
     let options = Options {
         root: RootKind::Item,
         ..Options::default()
@@ -80,6 +80,10 @@ fn run(name: &str, html: &str, want: &[&str]) -> Result<(), String> {
                 || l.contains("QWARN")
                 || l.contains("Error:"))
     });
+    // Every line matching and then a crash is still a failed run.
+    if !output.status.success() {
+        problems.push(format!("qmltestrunner exited with {}", output.status));
+    }
     let logged: Vec<_> = text
         .lines()
         .filter_map(|l| l.find("OB ").map(|at| &l[at..]))
@@ -95,7 +99,7 @@ fn run(name: &str, html: &str, want: &[&str]) -> Result<(), String> {
         }
     }
     if problems.is_empty() {
-        Ok(())
+        Ok(text)
     } else {
         Err(format!("{name}:\n  {}", problems.join("\n  ")))
     }
@@ -141,6 +145,29 @@ fn observers_match_chromium() {
         }
     }
     assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+/// A mutation callback whose every run makes a new record never ends in
+/// Chromium, so this page has no recording: Eldur stops the loop after a
+/// thousand notifications in a row, says so once, and the page goes on, with
+/// its observer still hearing later changes.
+#[test]
+fn a_runaway_mutation_loop_stops() {
+    if support::no_qt() {
+        return;
+    }
+    let page = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/observers/runaway/runaway.html");
+    let html = std::fs::read_to_string(page).expect("page");
+    let log = run(
+        "runaway",
+        &html,
+        &["OB calls 1000 1000", "OB later true", "OB done"],
+    )
+    .unwrap_or_else(|e| panic!("{e}"));
+    assert!(
+        log.contains("MutationObserver callbacks made new records for 1000 notifications in a row"),
+        "the stop is said:\n{log}"
+    );
 }
 
 /// The converter no longer calls the three unsupported: they run.

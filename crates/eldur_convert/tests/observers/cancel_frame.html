@@ -1,0 +1,19 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>cancel frame</title>
+<style>body { margin: 0; } #t { width: 120px; height: 30px; }</style></head><body>
+<div id="t"></div>
+<script>
+// Cancelling the only animation frame callback still leaves the frame the
+// observers asked for.
+function L(k){console.log("OB "+k)}
+var t = document.getElementById("t");
+var id = requestAnimationFrame(function() { L("raf ran"); });
+new ResizeObserver(function(es) { L("ro " + es[0].contentRect.width + "x" + es[0].contentRect.height); }).observe(t);
+new IntersectionObserver(function(es) { L("io " + es[0].isIntersecting); }).observe(t);
+cancelAnimationFrame(id);
+setTimeout(function() {
+  setTimeout(function() {
+    L("done");
+    var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+  }, 50);
+}, 50);
+</script></body></html>

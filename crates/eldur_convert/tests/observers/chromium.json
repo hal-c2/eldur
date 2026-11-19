@@ -1,4 +1,9 @@
 {
+ "cancel_frame": [
+  "OB ro 120x30",
+  "OB io true",
+  "OB done"
+ ],
  "intersection": [
   "OB thresholds 0,0.5,1 margin 0px 0px 0px 0px root null",
   "OB sync calls 0",
@@ -59,6 +64,13 @@
   "OB deep childList:kid:+made:-:null:null childList:tree:+B:-:kid:null",
   "OB done"
  ],
+ "mutation_edges": [
+  "OB sync 3",
+  "OB mo childList:list:+f1|f2:-:a:null",
+  "OB frag childList:frag:+:-f1|f2:null:null",
+  "OB many 1200 true 1199",
+  "OB done"
+ ],
  "mutation_text": [
   "OB text newest",
   "OB mo characterData:#text:old text:+:- characterData:#text:new text:+:- characterData:#text:newer:+:-",
@@ -85,6 +97,21 @@
   "OB ro none:0,0,0,0:0,0:0,0 self:true",
   "OB step disconnect",
   "OB calls 4",
+  "OB done"
+ ],
+ "root_restyle": [
+  "OB io i0:true:1 i1:true:1 i2:true:0.5 i3:false:0 i4:false:0 i5:false:0 root:0,250",
+  "OB step absolute",
+  "OB step scrollTop 250",
+  "OB io i0:false:0 i1:false:0 i3:true:1 i4:true:1 i5:true:0 root:0,250",
+  "OB scrolled 250",
+  "OB done"
+ ],
+ "scroll_created": [
+  "OB io t:false:0",
+  "OB step scrollTop 100",
+  "OB io t:true:0.5",
+  "OB scrolled 100",
   "OB done"
  ],
  "toc_lazy": [
