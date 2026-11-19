@@ -149,6 +149,10 @@ second" QMLLINT="$scratch/qt-pinned/qmllint"
 absent="note, a Qt" expect missing 0 "qmltestrunner (typo\nNOTE qml6: Qt 9.0 found) is not on PATH" \
   QMLTESTRUNNER="typo
 NOTE qml6: Qt 9.0 found" QMLLINT="$scratch/qt-pinned/qmllint"
+# The \n stays two characters where echo would turn it back into a newline.
+absent="note, a Qt" expect missing 0 "qmltestrunner (typo\nNOTE qml6: Qt 9.0 found) is not on PATH" \
+  BASHOPTS=xpg_echo QMLTESTRUNNER="typo
+NOTE qml6: Qt 9.0 found" QMLLINT="$scratch/qt-pinned/qmllint"
 # A path that names nothing is missing too, though a Qt answers beside it.
 stub gone qmake6 "$newer.1"
 ln -s "$scratch/qt-pinned/qml" "$scratch/gone/qml6"

@@ -193,7 +193,8 @@ qt_pin_report() {
     esac
     [ -n "$path" ] || continue
     # A record is one line: a newline in a value a variable gave is shown as
-    # \n, so it cannot start a record of its own.
+    # \n, so it cannot start a record of its own. Records go out through
+    # printf: echo under xpg_echo would turn that \n back into a newline.
     shown="${path//$'\n'/\\n}"
     # A tool that is not there has no Qt to ask, and the Qt beside where it
     # would be is not proof of it.
@@ -212,14 +213,14 @@ qt_pin_report() {
         qmllint) use="mise run qml:check and mise run test fail on it" ;;
         *) use="mise run qml:check fails on it" ;;
       esac
-      echo "SKIPPED $name ($shown) $why, and $var names it, so $use: point $var at Qt $qt_pinned's $name, or unset it"
+      printf '%s\n' "SKIPPED $name ($shown) $why, and $var names it, so $use: point $var at Qt $qt_pinned's $name, or unset it"
       continue
     fi
     version="$(qt_version_of "$path")"
     case "$version" in
       "$qt_pinned".*) continue ;;
-      "") echo "NOTE $name: no Qt 6 version answered ($shown), nor by a Qt tool beside it; $use it on a Qt that may be another than the pinned one" ;;
-      *) echo "NOTE $name: Qt $version found ($shown); $use it" ;;
+      "") printf '%s\n' "NOTE $name: no Qt 6 version answered ($shown), nor by a Qt tool beside it; $use it on a Qt that may be another than the pinned one" ;;
+      *) printf '%s\n' "NOTE $name: Qt $version found ($shown); $use it" ;;
     esac
     echo "pinned: Qt $qt_pinned (qt_pinned in mise-tasks/_lib/common.sh, the Qt the QML tests, qml:check and docs/spec/ measure)"
     echo "for the pinned Qt: install Qt $qt_pinned (Qt's online installer, or aqt install-qt) and $fix"
