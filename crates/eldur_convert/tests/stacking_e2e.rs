@@ -90,7 +90,7 @@ TestCase {
     readonly property var painted: ["b", "c", "d", "f", "i", "j", "l", "m", "o", "p", "t", "u", "w", "vd", "src", "mv", "vs", "rm", "gone", "vr",
         "c1", "o1", "c2", "o2", "c3", "o3", "hv", "o4", "fc", "o5", "c6", "o6", "c7", "o7", "e8", "o8",
         "k1", "v1", "k2", "v2", "k3", "v3", "k4", "v4", "k5", "m5", "v5",
-        "c1", "v1", "c2", "v2", "c3", "v3", "c4", "e4", "v4", "e5", "v5", "a6", "a7", "h8", "a8",
+        "c1", "v1", "c2", "v2", "c3", "v3", "c4", "e4", "v4", "e5", "v5", "a6", "a7", "h8", "a8", "h9", "h10",
         "b3", "b4", "da", "db", "k6", "n6", "v6"]
 
     // The painted box nearest the front at a point, in Qt Quick's paint
@@ -392,7 +392,10 @@ const OUT_OF_FLOW_MOVES_UNSCRIPTED: &str = r##"
 /// fixed box is painted over the window, not in its block. And an overlay
 /// taken out of its block keeps its place at its block, and at the
 /// positioned box its block is in, and at a block its `position: relative`
-/// offset moves (`#h8`, painted 30px under where the flow has it).
+/// offset moves (`#h8`, painted 30px under where the flow has it). In a
+/// right-to-left block, `right` wins over `left` (`#h9`, 60px to the left).
+/// An animated `left` wins over `right` and moves the box from there
+/// (`#h10`, halfway from 0 to 40px).
 const CONTEXTS: &str = r#"<!doctype html><html><head><style>
 body { margin: 0 }
 div { height: 40px; width: 200px }
@@ -409,6 +412,9 @@ div { height: 40px; width: 200px }
 #h6 { position: relative; margin-left: 40px }
 #o7 { position: relative; margin-left: 30px }
 #h8 { position: relative; top: 30px; margin-left: 40px }
+#h9 { position: relative; left: 20px; right: 60px }
+@keyframes nudge { from { left: 0 } to { left: 40px } }
+#h10 { position: relative; right: 20px; animation: nudge 10s linear -5s paused }
 </style></head><body>
 <div id=t1 class=tf><div id=c1 class=in></div></div><div id=v1 class=over></div>
 <div class=gap></div>
@@ -425,8 +431,12 @@ div { height: 40px; width: 200px }
 <div id=o7><div id=h7 class=rel><div id=a7 class=ab></div></div></div><div id=v7 class="over aside"></div>
 <div class=gap></div>
 <div id=h8><div id=a8 class=ab></div></div>
+<div class=gap></div>
+<div dir=rtl><div id=h9></div></div>
+<div class=gap></div>
+<div id=h10></div>
 <script>
-var named = ['t1','c1','v1','t2','c2','v2','t3','c3','v3','p4','c4','e4','v4','p5','e5','f5','v5','h6','a6','v6','o7','h7','a7','v7','h8','a8'].map(function (id) { return document.getElementById(id); });
+var named = ['t1','c1','v1','t2','c2','v2','t3','c3','v3','p4','c4','e4','v4','p5','e5','f5','v5','h6','a6','v6','o7','h7','a7','v7','h8','a8','h9','h10'].map(function (id) { return document.getElementById(id); });
 // A box raised inside a transformed box at `auto`, which keeps it in; a
 // box that lifted its block hidden.
 document.getElementById('c1').style.zIndex = '10';
@@ -448,6 +458,12 @@ const CONTEXTS_TEST: &str = r##"
         compare(front(page, 70, 890), "a8", "at its block, moved by its offset")
         compare(front(page, 150, 890), "h8", "the block, moved")
         compare(front(page, 70, 850), "", "not where the flow has the block")
+        compare(front(page, 10, 940), "h9", "moved by right in a right-to-left block")
+        compare(front(page, 210, 940), "", "not by left")
+        compare(front(page, 150, 940), "")
+        compare(front(page, 10, 1020), "", "an animated left wins over right")
+        compare(front(page, 30, 1020), "h10")
+        compare(front(page, 210, 1020), "h10")
     }
 }
 }
@@ -468,6 +484,12 @@ const CONTEXTS_UNSCRIPTED: &str = r##"
         compare(front(page, 70, 890), "a8")
         compare(front(page, 150, 890), "h8")
         compare(front(page, 70, 850), "")
+        compare(front(page, 10, 940), "h9")
+        compare(front(page, 210, 940), "")
+        compare(front(page, 150, 940), "")
+        compare(front(page, 10, 1020), "", "an animated left wins over right")
+        compare(front(page, 30, 1020), "h10")
+        compare(front(page, 210, 1020), "h10")
     }
 }
 }
