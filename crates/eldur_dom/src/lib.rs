@@ -778,7 +778,7 @@ fn svg_own_colour(element: &Element) -> Option<String> {
             .filter(|(name, v)| name.trim().eq_ignore_ascii_case("color") && !v.trim().is_empty())
             .map(|(_, v)| v)
             .collect();
-        let important = |v: &&str| v.trim_end().ends_with("!important");
+        let important = |v: &&&str| v.trim_end().ends_with("!important");
         colours
             .iter()
             .rev()
