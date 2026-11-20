@@ -733,38 +733,80 @@ pub(crate) fn sheet_custom_properties(
             (!rules.is_empty()).then_some((node, rules))
         })
         .collect();
+    // A node's own `style` attribute changes what a pass gives it only for a
+    // name both declare where the rule's value is computed here (a `var()`
+    // stays as written). Any other name reads the same with the attribute
+    // as without: `inherit` takes the parent's, which keeps its attribute.
+    let custom_names = |decls: Option<&Vec<ParsedDecl>>| -> BTreeSet<String> {
+        decls
+            .into_iter()
+            .flatten()
+            .filter_map(|d| match &d.value {
+                DeclValue::Custom { name, .. } => Some(name.clone()),
+                _ => None,
+            })
+            .collect()
+    };
+    let needs_pass: Vec<NodeId> = declared
+        .iter()
+        .filter(|(node, rules)| {
+            let own = custom_names(prepared.engine.inline_styles.get(node.index()));
+            rules.iter().any(|(name, written)| {
+                own.contains(name) && !written.as_deref().is_some_and(contains_var_function)
+            })
+        })
+        .map(|(&node, _)| node)
+        .collect();
+    // Stripping a node's attribute reaches only it and what is under it, so
+    // nodes neither of which is under the other share one pass. That makes
+    // the passes as many as such nodes nest, not as many as there are.
+    let related =
+        |a: NodeId, b: NodeId| doc.ancestors(a).any(|x| x == b) || doc.ancestors(b).any(|x| x == a);
+    let mut groups: Vec<Vec<NodeId>> = Vec::new();
+    for node in needs_pass {
+        match groups
+            .iter_mut()
+            .find(|g| g.iter().all(|&other| !related(node, other)))
+        {
+            Some(group) => group.push(node),
+            None => groups.push(vec![node]),
+        }
+    }
+    let mut stripped: BTreeMap<NodeId, BTreeMap<String, String>> = BTreeMap::new();
+    for group in groups {
+        let own: Vec<_> = group
+            .iter()
+            .map(|node| prepared.engine.inline_styles.get(node.index()).cloned())
+            .collect();
+        for node in &group {
+            if let Some(decls) = prepared.engine.inline_styles.get_mut(node.index()) {
+                decls.retain(|d| !matches!(d.value, DeclValue::Custom { .. }));
+            }
+        }
+        let base = prepared.engine.base_pass();
+        for (node, own) in group.into_iter().zip(own) {
+            let i = node.index();
+            if let (Some(decls), Some(own)) = (prepared.engine.inline_styles.get_mut(i), own) {
+                *decls = own;
+            }
+            let custom = base
+                .styles
+                .get(i)
+                .and_then(Option::as_ref)
+                .or_else(|| base.hidden.get(i).and_then(Option::as_ref))
+                .map(|s| s.style.custom_properties.clone())
+                .unwrap_or_default();
+            stripped.insert(node, custom);
+        }
+    }
     declared
         .into_iter()
         .map(|(node, rules)| {
-            let i = node.index();
-            // Only its own `style` attribute is taken away: an ancestor's
-            // still reaches what its rules' `var()`s resolve to.
-            let own = prepared.engine.inline_styles.get(i).cloned();
-            let strip = own.as_ref().is_some_and(|d| {
-                d.iter()
-                    .any(|d| matches!(d.value, DeclValue::Custom { .. }))
-            });
-            let base = strip.then(|| {
-                if let Some(decls) = prepared.engine.inline_styles.get_mut(i) {
-                    decls.retain(|d| !matches!(d.value, DeclValue::Custom { .. }));
-                }
-                let base = prepared.engine.base_pass();
-                if let (Some(decls), Some(own)) = (prepared.engine.inline_styles.get_mut(i), own) {
-                    *decls = own;
-                }
-                base
-            });
-            let custom = match &base {
-                Some(base) => base
-                    .styles
-                    .get(i)
-                    .and_then(Option::as_ref)
-                    .or_else(|| base.hidden.get(i).and_then(Option::as_ref))
-                    .map(|s| s.style.custom_properties.clone()),
-                None => computed
+            let custom = stripped.remove(&node).or_else(|| {
+                computed
                     .computed(node)
-                    .map(|s| s.style.custom_properties.clone()),
-            };
+                    .map(|s| s.style.custom_properties.clone())
+            });
             let values = rules
                 .into_iter()
                 .map(|(name, written)| {
@@ -788,7 +830,10 @@ pub(crate) fn sheet_custom_properties(
 /// `display: none; color: red;` reads `color: red;`). Values stay as
 /// written, so one CSSOM would normalize (`0` as `0px`) can still differ.
 fn without_display(style: &str) -> Option<String> {
-    let parts = declaration_parts(style);
+    // The tokenizer drops comments before a declaration is read, so
+    // `display/**/:none` declares `display`.
+    let style = without_comments(style);
+    let parts = declaration_parts(&style);
     fn named<'a>(p: &&'a str) -> Option<(&'a str, &'a str)> {
         p.split_once(':')
             .map(|(name, value)| (name.trim(), value.trim()))
@@ -818,6 +863,48 @@ fn without_display(style: &str) -> Option<String> {
     }
     normal.extend(important);
     Some(normal.join(" "))
+}
+
+/// `style` with each comment outside a string turned into a space, which
+/// keeps the tokens on either side apart as the tokenizer does.
+fn without_comments(style: &str) -> std::borrow::Cow<'_, str> {
+    if !style.contains("/*") {
+        return style.into();
+    }
+    let mut out = String::with_capacity(style.len());
+    let mut quote = None::<char>;
+    let mut chars = style.chars().peekable();
+    while let Some(c) = chars.next() {
+        match (quote, c) {
+            (_, '\\') => {
+                out.push(c);
+                if let Some(next) = chars.next() {
+                    out.push(next);
+                }
+            }
+            (Some(q), c) if c == q => {
+                quote = None;
+                out.push(c);
+            }
+            (None, '"' | '\'') => {
+                quote = Some(c);
+                out.push(c);
+            }
+            (None, '/') if chars.peek() == Some(&'*') => {
+                chars.next();
+                let mut last = ' ';
+                for c in chars.by_ref() {
+                    if last == '*' && c == '/' {
+                        break;
+                    }
+                    last = c;
+                }
+                out.push(' ');
+            }
+            _ => out.push(c),
+        }
+    }
+    out.into()
 }
 
 /// `value` without a trailing `!important`, when it has one.
@@ -1114,6 +1201,8 @@ impl CascadeEngine<'_> {
 
     /// The cascade of the document as loaded, in pre-order.
     pub(crate) fn base_pass(&self) -> BasePass {
+        #[cfg(test)]
+        crate::work::count_base_pass();
         let doc = self.doc;
         let mut styles: Vec<Option<ElementStyle>> = vec![None; doc.len()];
         let mut hidden: Vec<Option<ElementStyle>> = vec![None; doc.len()];
@@ -2433,6 +2522,8 @@ pub(crate) fn layer_ranks(sheets: &[Stylesheet], viewport: &Viewport) -> LayerRa
     LayerRanks { tree, keys }
 }
 
+#[cfg(test)]
+mod sheet_vars_work;
 #[cfg(test)]
 mod variant_work;
 
