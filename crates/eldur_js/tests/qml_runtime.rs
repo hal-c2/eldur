@@ -5364,3 +5364,56 @@ Item {
         "unexpected qml6 item record output:\n{output}"
     );
 }
+
+/// With no cascade, a custom property a script writes reaches only the boxes
+/// whose script-written display reads a `var()`, and only those under it: a
+/// write anywhere else checks nothing (#85).
+#[test]
+fn qml6_a_custom_property_write_rechecks_only_the_var_displays_under_it() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 var display test: qml6 not on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("var_displays");
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+    dir.write_file("eldur_runtime.js", RUNTIME_JS);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import "eldur_runtime.js" as R
+
+Item {
+    id: root
+    Item { id: box; Item { id: shy } Item { id: plain } }
+    Item { id: other; Item { id: far } }
+
+    Component.onCompleted: {
+        var seen = [];
+        // No display reads a variable: a write checks nothing.
+        R._setStyleAt(plain, "display", "block");
+        R._setStyleAt(box, "--d", "block");
+        seen.push(R._varDisplaysFollow(box));
+        R._setStyleAt(shy, "display", "var(--d, block)");
+        // Elsewhere in the tree: still nothing to check.
+        seen.push(R._varDisplaysFollow(other));
+        R._setStyleAt(box, "--d", "none");
+        seen.push(R._varDisplaysFollow(box), shy.visible, plain.visible, far.visible);
+        R._setStyleAt(box, "--d", "block");
+        seen.push(shy.visible);
+        // Its display cleared, it is no longer one to follow.
+        R._setStyleAt(shy, "display", "");
+        seen.push(R._varDisplaysFollow(root));
+        console.log("ELDUR_OK_VAR_DISPLAYS", seen.join("|"));
+        Qt.quit();
+    }
+}
+"#,
+    );
+
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
+    assert!(
+        output.contains("ELDUR_OK_VAR_DISPLAYS 0|0|1|false|true|true|true|0"),
+        "unexpected qml6 var display output:\n{output}"
+    );
+}
