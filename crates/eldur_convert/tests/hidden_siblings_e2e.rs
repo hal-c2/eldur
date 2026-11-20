@@ -3,8 +3,8 @@
 //! items without it (counting down too, when `reversed`) and renumbers them
 //! when it shows, a `counter()` counts it only while it shows, and the
 //! margins either side of it collapse with each other, also when it has no
-//! `id`. Two such siblings shown by different states number the items after
-//! both by how many show at once.
+//! `id` or no content. Two such siblings shown by different states number
+//! the items after both by how many show at once.
 //!
 //! The pages are in `tests/hidden_siblings/`, driven with real hover through
 //! qmltestrunner, in the steps `tests/hidden_siblings/steps.json` lists. The
@@ -159,6 +159,11 @@ fn a_hidden_list_item_is_not_numbered_until_it_shows() {
 #[test]
 fn a_hidden_block_without_an_id_lets_the_margins_either_side_collapse() {
     check("margin", include_str!("hidden_siblings/margin.html"));
+}
+
+#[test]
+fn an_empty_hidden_block_adds_no_margins_until_it_shows() {
+    check("empty", include_str!("hidden_siblings/empty.html"));
 }
 
 #[test]

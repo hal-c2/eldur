@@ -575,6 +575,11 @@ impl Emitter<'_, '_> {
             let emitted = self.block(child, decoration);
             if emitted.collapse_through {
                 self.place_hoisted(stop, &mut layout);
+                // Hidden in this combination, it has no margins; the ones
+                // that show it differ, so the next margin follows its state.
+                if child.node.is_some_and(|n| self.collapsed.contains(&n)) {
+                    continue;
+                }
                 pending.join(emitted.top);
                 pending.join(emitted.bottom);
                 pending_cases = pending_cases.map(|c| c.joined(emitted.top).joined(emitted.bottom));
