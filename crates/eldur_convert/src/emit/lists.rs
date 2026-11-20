@@ -876,6 +876,18 @@ pub(super) fn holds_level(b: &LayoutBox<'_>) -> bool {
     }
 }
 
+/// Whether a box holds an element a script could give a level: a block, a
+/// span or an atomic inline. Text alone holds none.
+pub(super) fn holds_element(b: &LayoutBox<'_>) -> bool {
+    match &b.content {
+        Content::Blocks(kids) => !kids.is_empty(),
+        Content::Inline(items) => items
+            .iter()
+            .any(|i| matches!(i, Inline::Span(_) | Inline::Atomic(_))),
+        Content::Empty => false,
+    }
+}
+
 /// Whether a box paints in its stop's positioned layer, or a column would
 /// send something it holds there: an overlay, or a block that rises in
 /// flow, through blocks that are no stop and clip nothing (`enter_stop`).

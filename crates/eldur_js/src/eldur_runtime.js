@@ -28165,9 +28165,19 @@ function _gAdopt(raw) {
     var place = _gConvertedPlace(raw);
     m.createdTag = tag;
     var name = raw.objectName;
+    // A block the converter raised into its stop's column for its level is
+    // painted at its slot. The runtime lays out and levels its box itself
+    // (`_gPaintBox`), so the box goes back to the slot's place in its block,
+    // where the pass sizes it and its level stacks it among its siblings.
+    var slot = raw.eldurSlot;
+    var risen = Boolean(slot) && slot.eldurRisen === true && Boolean(raw.parent) && raw.parent.eldurHoisted === true;
     m.gKeepReplaced = true;
     var next = _swapRawItem(raw, null, _gBoxSource(tag, false));
     delete m.gKeepReplaced;
+    if (risen && slot.parent) {
+        _insertInFlow(slot.parent, [next], slot);
+        slot.parent = null;
+    }
     // The element's record, which follows every later swap of its item.
     _gAdopted.set(raw, m);
     next.objectName = name;
