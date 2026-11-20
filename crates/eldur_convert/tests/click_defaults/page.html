@@ -1,8 +1,11 @@
 <!doctype html><html><head><meta charset="utf-8"><title>NAME</title>
 <style>
 body { margin: 0; font: 16px sans-serif }
-#wrap, label, #mv, #ov, #dn, #cap, #bt9 { display: block; width: 200px; height: 40px }
+#wrap, label, #mv, #ov, #dn, #cap, #capgo, #upgo, #bt9 { display: block; width: 200px; height: 40px }
 input { display: block; margin: 0 }
+#capgo, #upgo { position: absolute; left: 300px }
+#capgo { top: 0 }
+#upgo { top: 60px }
 </style>
 </head><body>
 <a id="wrap" href="#go"><label id="lab" for="box">once</label></a>
@@ -23,6 +26,8 @@ input { display: block; margin: 0 }
 <div id="ov">over</div>
 <div id="dn">down</div>
 <div id="cap">held</div>
+<a id="capgo" href="#capgo"><div id="cap2">held in a link</div></a>
+<a id="upgo" href="#upgo"><div id="up2">up in a link</div></a>
 <form id="f9"><button id="bt9"><div id="in9">send</div></button></form>
 <script>
 // The host makes page Next when this one's title says so.
@@ -87,6 +92,16 @@ var cap = document.getElementById("cap");
 cap.addEventListener("pointerdown", function(e) { cap.setPointerCapture(e.pointerId); });
 cap.addEventListener("lostpointercapture", function() {
   if (name === "A") { L("lost makes Next"); document.title = "Next"; }
+});
+// The same in a link, and a link whose mouseup makes Next: the release's
+// click is neither page's, so neither follows the link.
+var cap2 = document.getElementById("cap2");
+cap2.addEventListener("pointerdown", function(e) { cap2.setPointerCapture(e.pointerId); });
+cap2.addEventListener("lostpointercapture", function() {
+  if (name === "A") { L("lost makes Next"); document.title = "Next"; }
+});
+document.getElementById("up2").addEventListener("mouseup", function() {
+  if (name === "A") { L("up makes Next"); document.title = "Next"; }
 });
 </script>
 </body></html>

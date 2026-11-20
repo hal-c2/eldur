@@ -31,13 +31,22 @@ Item {
     width: 800
     height: 600
 
+    // A window of its own, for a page made in another window.
+    Window {
+        id: other
+        width: 800
+        height: 600
+        visible: true
+    }
+
 TestCase {
     name: "ClickDefaults"
     when: windowShown
 
     // Page A, Next made over it inside the listener that sets A's title to
-    // Next, and C over Next inside the one that sets Next's to C.
-    function pages() {
+    // Next, and C over Next inside the one that sets Next's to C. With
+    // `elsewhere`, Next is made in the other window.
+    function pages(elsewhere) {
         const component = Qt.createComponent("A.qml")
         verify(component.status === Component.Ready, component.errorString())
         const a = createTemporaryObject(component, host, { width: 800, height: 600 })
@@ -46,7 +55,7 @@ TestCase {
         const at = { a: a, next: null, c: null, layers: [Eldur._in] }
         a.titleChanged.connect(function() {
             if (a.title === "Next" && !at.next) {
-                at.next = createTemporaryObject(Qt.createComponent("Next.qml"), host, { width: 800, height: 600 })
+                at.next = createTemporaryObject(Qt.createComponent("Next.qml"), elsewhere ? other.contentItem : host, { width: 800, height: 600 })
                 at.layers.push(Eldur._in)
                 at.next.titleChanged.connect(function() {
                     if (at.next.title === "C" && !at.c) {
@@ -214,6 +223,37 @@ TestCase {
         mouseClick(host, p.x, p.y)
         finish(at)
     }
+
+    // The release's click is neither page's: A's link is not followed on
+    // Next, nor its click fired there.
+    function test_13_press_in_a_link_whose_lostpointercapture_swaps() {
+        rest()
+        const at = pages()
+        console.log("LC -- press in a link whose lostpointercapture swaps")
+        const p = middle(at.a, "cap2")
+        mouseClick(host, p.x, p.y)
+        finish(at)
+    }
+
+    function test_14_press_in_a_link_whose_mouseup_swaps() {
+        rest()
+        const at = pages()
+        console.log("LC -- press in a link whose mouseup swaps")
+        const p = middle(at.a, "up2")
+        mouseClick(host, p.x, p.y)
+        finish(at)
+    }
+
+    // As test_08 with Next in another window: the release is in A's window,
+    // where no page is the document, so it is no page's.
+    function test_15_press_whose_mousedown_swaps_to_another_window() {
+        rest()
+        const at = pages(true)
+        console.log("LC -- press whose mousedown swaps to another window")
+        const p = middle(at.a, "dn")
+        mouseClick(host, p.x, p.y)
+        finish(at)
+    }
 }
 }
 "##;
@@ -288,6 +328,10 @@ fn a_press_does_nothing_more_once_its_page_is_gone() {
             wanted.push(line.as_str().expect("line").to_owned());
         }
     }
+    // Chromium has no counterpart: a window there is a document of its own,
+    // so no press is ever handed across windows. Ljós's pages share one
+    // runtime, whose document can be in another window than the press.
+    wanted.push("LC -- press whose mousedown swaps to another window".to_owned());
     if logged != wanted {
         problems.push(format!(
             "logged\n    {}\n  wanted\n    {}",
