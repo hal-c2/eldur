@@ -121,6 +121,9 @@ struct PageBuilder<'a> {
     lazy_runs: HashMap<usize, String>,
     /// Per module that runs at load: whether it has run, or what it threw.
     eager_states: HashMap<usize, String>,
+    /// Modules run at load whose code can throw: the ones with any statement
+    /// to run, which their importers and module scripts check.
+    throwing_modules: HashSet<usize>,
     /// `(module, export)` -> the name a module in a cycle uses for an export of
     /// one still being emitted, replaced by the export's own name once known.
     cycle_placeholders: HashMap<(usize, String), String>,
@@ -320,6 +323,7 @@ pub(crate) fn rewrite(
         lazy_modules: lazy_modules(&valid_scripts, scripts),
         lazy_runs: HashMap::new(),
         eager_states: HashMap::new(),
+        throwing_modules: HashSet::new(),
         cycle_placeholders: HashMap::new(),
         diagnostics,
     };
@@ -469,16 +473,22 @@ impl<'a> PageBuilder<'a> {
             ));
         } else {
             // What it throws stops it and every module importing it, not the
-            // scripts after it; `import()` of it rejects with that error.
-            let state = self.eager_state(script_idx);
-            let outer = std::mem::take(&mut self.out.init_stmts);
+            // scripts after it; `import()` of it rejects with that error. The
+            // statements before it stay in place, so a binding still counts as
+            // run at load only when nothing runs ahead of it, and a module with
+            // nothing to run is emitted as before.
+            let start = self.out.init_stmts.len();
             self.process_classic_or_module(pos, Some(&mut exports));
-            let mut body = std::mem::replace(&mut self.out.init_stmts, outer);
-            body.push(format!("{state}.state = 1;"));
-            self.out.init_stmts.push(format!(
-                "try {{\n{}\n}} catch (err) {{\n    {state}.state = 2;\n    {state}.error = err;\n}}",
-                indent_block(&body.join("\n"), 4)
-            ));
+            if self.out.init_stmts.len() > start {
+                let mut body = self.out.init_stmts.split_off(start);
+                let state = self.eager_state(script_idx);
+                body.push(format!("{state}.state = 1;"));
+                self.out.init_stmts.push(format!(
+                    "try {{\n{}\n}} catch (err) {{\n    {state}.state = 2;\n    {state}.error = err;\n}}",
+                    indent_block(&body.join("\n"), 4)
+                ));
+                self.throwing_modules.insert(script_idx);
+            }
         }
         self.visiting_stack.pop();
         self.visiting_modules.remove(&script_idx);
@@ -563,7 +573,9 @@ impl<'a> PageBuilder<'a> {
     /// A module script whose graph threw reports it, as a browser does for
     /// each such script, and the page goes on.
     fn report_module_script_failure(&mut self, script_idx: usize) {
-        if let Some(state) = self.eager_states.get(&script_idx) {
+        if self.throwing_modules.contains(&script_idx)
+            && let Some(state) = self.eager_states.get(&script_idx)
+        {
             self.out.init_stmts.push(format!(
                 "if ({state}.state === 2) Eldur.reportError({state}.error);"
             ));
@@ -791,6 +803,8 @@ impl<'a> PageBuilder<'a> {
 
         let mut cycle_exports: HashMap<usize, ModuleExports> = HashMap::new();
         let mut unresolved_static = false;
+        // Each module it imports is checked once, however many imports name it.
+        let mut checked: HashSet<usize> = HashSet::new();
         // Pre-inline any imported local modules in source order before lowering statements.
         if !is_classic {
             for stmt in &v.parsed.program.body {
@@ -834,7 +848,10 @@ impl<'a> PageBuilder<'a> {
                         self.ensure_module_emitted(dep_idx);
                         if let Some(run) = self.lazy_runs.get(&dep_idx) {
                             self.out.init_stmts.push(format!("{run}();"));
-                        } else if let Some(state) = self.eager_states.get(&dep_idx) {
+                        } else if self.throwing_modules.contains(&dep_idx)
+                            && checked.insert(dep_idx)
+                            && let Some(state) = self.eager_states.get(&dep_idx)
+                        {
                             self.out
                                 .init_stmts
                                 .push(format!("if ({state}.state === 2) throw {state}.error;"));

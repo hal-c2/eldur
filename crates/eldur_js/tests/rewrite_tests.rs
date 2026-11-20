@@ -2841,10 +2841,11 @@ import("./missing.js");
         "{}",
         out.page_js
     );
-    // The page's own promise, which `instanceof Promise` on the page names.
+    // Through the module's record of whether it has run; the runtime makes
+    // the page's own promise, which `instanceof Promise` on the page names.
     assert!(
         out.page_js
-            .contains("Eldur.Promise.resolve(__eldur_module_namespace())"),
+            .contains("Eldur.importEager(__eldur_module_state_m0, __eldur_module_namespace)"),
         "{}",
         out.page_js
     );
@@ -2864,7 +2865,7 @@ import("./missing.js");
     );
     assert!(
         out.page_js
-            .contains("Eldur.Promise.resolve(__eldur_module_namespace_2())")
+            .contains("Eldur.importEager(__eldur_module_state_m3, __eldur_module_namespace_2)")
             && out.page_js.contains("get late() { return late; }"),
         "{}",
         out.page_js
@@ -2903,7 +2904,7 @@ fn dynamic_import_of_a_module_that_imports_this_one_resolves_to_its_namespace() 
     assert!(!out.page_js.contains("dynamicImport"), "{}", out.page_js);
     assert!(
         out.page_js
-            .contains("Eldur.Promise.resolve(__eldur_module_namespace())"),
+            .contains("Eldur.importEager(__eldur_module_state_m0, __eldur_module_namespace)"),
         "{}",
         out.page_js
     );
@@ -2943,7 +2944,7 @@ fn a_lazily_imported_module_runs_at_its_own_place_on_the_page() {
     );
     assert!(
         out.page_js
-            .contains("Eldur.Promise.resolve(__eldur_module_namespace())"),
+            .contains("Eldur.importEager(__eldur_module_state_m2, __eldur_module_namespace)"),
         "{}",
         out.page_js
     );
@@ -3327,14 +3328,23 @@ fn a_lazy_modules_element_const_is_looked_up_when_it_runs() {
     );
     let out = run_rewrite(&[main, lazy], &resolver);
     let js = &out.page_js;
+    let checked = r#"(__eldur_m1_btn === __eldur_tdz ? __eldur_tdz_error("btn") : __eldur_m1_btn)"#;
     for expected in [
-        "var btn = __eldur_tdz",
-        r#"(btn === __eldur_tdz ? __eldur_tdz_error("btn") : btn).disabled"#,
-        r#"btn = document.getElementById("save")"#,
-        "copy.disabled",
+        "var __eldur_m1_btn = __eldur_tdz;".to_string(),
+        format!("{checked}.disabled"),
+        format!("const copy = {checked};"),
     ] {
-        assert!(js.contains(expected), "{expected}\n{js}");
+        assert!(js.contains(&expected), "{expected}\n{js}");
     }
+    // The lookup itself runs inside the module, after the call that reads
+    // too early.
+    let run = js.find("function __eldur_run_m1()").expect("run function");
+    let early = js[run..].find("__eldur_m1_early();").expect("early call") + run;
+    let lookup = js[run..]
+        .find("__eldur_m1_btn = Eldur.wrap(save);")
+        .unwrap_or_else(|| panic!("lookup inside the run function\n{js}"))
+        + run;
+    assert!(early < lookup, "{js}");
 }
 
 /// A module that runs at load records whether it threw. The scripts after it
