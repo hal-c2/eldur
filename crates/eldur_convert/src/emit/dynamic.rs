@@ -631,6 +631,8 @@ struct Diffs {
     reshaped: BTreeSet<Option<NodeId>>,
     /// Properties only a world declares, such as the carry a margin there
     /// reads: its bindings come into the document's, so the declaration does.
+    /// What each world gives one is a change too, so where worlds give
+    /// different values the declaration takes the binding that picks them.
     decls: BTreeMap<(Path, String), Member>,
 }
 
@@ -668,15 +670,28 @@ impl Diffs {
                 .collect()
         }
         for m in &other.members {
-            if let Member::PropertyDecl { name, .. } = m
+            if let Member::PropertyDecl { name, value, .. } = m
                 && !base
                     .members
                     .iter()
                     .any(|b| matches!(b, Member::PropertyDecl { name: n, .. } if n == name))
             {
-                self.decls
-                    .entry((path.clone(), name.clone()))
-                    .or_insert_with(|| m.clone());
+                let key = (path.clone(), name.clone());
+                self.decls.entry(key.clone()).or_insert_with(|| m.clone());
+                if let Some(value) = value {
+                    // Where no world declares it nothing reads it: the first
+                    // world's value stands for those.
+                    self.changes
+                        .entry(key)
+                        .or_insert_with(|| Change {
+                            owner,
+                            ty: other.type_name.clone(),
+                            base: Some(value.clone()),
+                            worlds: BTreeMap::new(),
+                        })
+                        .worlds
+                        .insert(world, Some(value.clone()));
+                }
             }
         }
         let (bp, op) = (props(base), props(other));
@@ -1133,7 +1148,11 @@ impl Dynamic<'_, '_> {
         let mut bindings: BTreeMap<Path, Vec<(String, String, Option<Member>)>> = BTreeMap::new();
         let gate = self.cx.scripts.is_some();
         let mut gated = false;
-        let changes = std::mem::take(&mut diffs.changes);
+        let mut changes = std::mem::take(&mut diffs.changes);
+        // A declaration every world gives the same value needs no binding.
+        changes.retain(|key, c| {
+            !diffs.decls.contains_key(key) || c.worlds.values().any(|v| *v != c.base)
+        });
         let index: HashMap<&[u16], usize> = worlds
             .iter()
             .enumerate()
@@ -1179,13 +1198,25 @@ impl Dynamic<'_, '_> {
             let Some(obj) = object_at(&mut root, &path) else {
                 continue;
             };
-            if !obj
+            if obj
                 .members
                 .iter()
                 .any(|m| matches!(m, Member::PropertyDecl { name: n, .. } if *n == name))
             {
-                obj.members.push(decl);
+                continue;
             }
+            let mut decl = decl;
+            // The binding that picks each world's value is the declaration's.
+            if let Some(at) = obj
+                .members
+                .iter()
+                .position(|m| matches!(m, Member::Property { name: n, .. } if *n == name))
+                && let Member::Property { value: picked, .. } = obj.members.remove(at)
+                && let Member::PropertyDecl { value, .. } = &mut decl
+            {
+                *value = Some(picked);
+            }
+            obj.members.push(decl);
         }
         let locals = std::mem::take(&mut sources.locals);
         sources.apply(&mut root, self.cx.doc, &mut ids, &mut imports);
