@@ -6549,7 +6549,7 @@ function _replaceWithMarkup(raw, str) {
         _detachNode(old[i]);
     }
     _wsEnd(raw).length = 0;
-    var parsed = _parseHtmlFragmentNodes(str);
+    var parsed = _parseHtmlFragmentNodes(str, _svgContext(raw));
     var nodes = _expandInsertRawNodes(parsed);
     var held = _ceHold(nodes);
     var placed = _detailsHold(nodes);
@@ -12715,6 +12715,22 @@ function _applyAttrsFromHtml(el, attrStr, svg) {
 
 var _HTML_INLINE = /^(a|abbr|b|bdi|bdo|cite|code|data|dfn|em|i|kbd|mark|q|s|samp|small|span|strong|sub|sup|time|u|var)$/i;
 
+// Whether markup set into `raw` is SVG content, as the fragment parser takes
+// it from the context element: an `<svg>` or an element inside one, unless a
+// `<foreignObject>` between them makes its content HTML again.
+function _svgContext(raw) {
+    for (var node = raw, depth = 0; node && depth < 256; node = _logicalParent(node), ++depth) {
+        var tag = _nodeTag(node);
+        if (tag === "foreignobject") {
+            return false;
+        }
+        if (tag === "svg") {
+            return true;
+        }
+    }
+    return false;
+}
+
 // `inSvg`: the markup is the content of an `<svg>`, outside a `<foreignObject>`.
 function _parseHtmlFragmentNodes(html, inSvg) {
     var src = String(html === null || html === undefined ? "" : html);
@@ -13183,7 +13199,8 @@ function wrap(rawItem) {
         set innerText(v) { setText(rawItem, v); },
         get outerHTML() { return _serializeElement(rawItem); },
         set outerHTML(v) {
-            this.replaceWith.apply(this, _parseHtmlFragmentNodes(v));
+            var parent = _logicalParent(rawItem);
+            this.replaceWith.apply(this, _parseHtmlFragmentNodes(v, Boolean(parent) && _svgContext(parent)));
         },
         get content() { return _templateContent(rawItem); },
         get open() {
@@ -14123,7 +14140,8 @@ function wrap(rawItem) {
         },
         insertAdjacentHTML: function(position, html) {
             var pos = String(position).toLowerCase();
-            var parsed = _parseHtmlFragmentNodes(html);
+            var context = pos === "beforebegin" || pos === "afterend" ? _logicalParent(rawItem) : rawItem;
+            var parsed = _parseHtmlFragmentNodes(html, Boolean(context) && _svgContext(context));
             if (parsed.length === 0) {
                 return;
             }

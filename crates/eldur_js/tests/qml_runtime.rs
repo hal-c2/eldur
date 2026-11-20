@@ -2600,6 +2600,9 @@ function verify() {
 /// Markup a script inserts has attribute names without case, as the HTML
 /// parser reads them, except SVG's camel-cased ones inside an `<svg>`: they
 /// keep their case, so `getAttribute("viewBox")` finds what the markup wrote.
+/// Markup set into an element inside an `<svg>` is SVG content too, as the
+/// fragment parser takes it from the element it goes into, and a
+/// `<foreignObject>`'s content is HTML again.
 #[test]
 fn qml6_inserted_markup_lowers_attribute_names_but_keeps_svg_camel_case() {
     if !has_binary("qml6") {
@@ -2619,15 +2622,25 @@ function verify() {
     const p = box.children[0];
     const svg = box.children[1];
     const gradient = svg.children[0];
-    const div = svg.children[1].children[0];
-    return [
+    const foreign = svg.children[1];
+    const div = foreign.children[0];
+    const inserted = [
         p.getAttribute("title"),
         svg.getAttribute("viewBox"),
         svg.getAttribute("preserveAspectRatio"),
         svg.getAttribute("width"),
         gradient.getAttribute("gradientUnits"),
         div.getAttribute("viewbox"),
-    ].join("|");
+    ];
+    gradient.insertAdjacentHTML("afterend", '<radialGradient gradientTransform="t"></radialGradient>');
+    const radial = svg.children[1].getAttribute("gradientTransform");
+    foreign.innerHTML = '<div viewBox="fo"></div>';
+    const inForeign = foreign.children[0].getAttribute("viewbox");
+    gradient.outerHTML = '<clipPath clipPathUnits="objectBoundingBox"></clipPath>';
+    const clip = svg.children[0].getAttribute("clipPathUnits");
+    svg.innerHTML = '<rect pathLength="5"></rect>';
+    const rect = svg.children[0].getAttribute("pathLength");
+    return inserted.concat([radial, inForeign, clip, rect]).join("|");
 }
 "##,
         r#"Item {
@@ -2641,7 +2654,9 @@ function verify() {
 }"#,
     );
     assert!(
-        output.contains("ELDUR_OK_SVG_CASE Tip|0 0 10 10|none|10|userSpaceOnUse|html"),
+        output.contains(
+            "ELDUR_OK_SVG_CASE Tip|0 0 10 10|none|10|userSpaceOnUse|html|t|fo|objectBoundingBox|5"
+        ),
         "{output}"
     );
 }
