@@ -18184,8 +18184,6 @@ function _inPlaceBefore(a, b) {
     return a[0] < b[0] || (a[0] === b[0] && a[1] < b[1]);
 }
 
-// The window itself hears it lost or got the focus, once for each change:
-// after what had the focus heard its blur, and before it hears its focus again.
 // The windows any page has seen active, which outlive the page.
 var _inWindowsSeen = [];
 
@@ -18201,6 +18199,8 @@ function _inSawWindow(win) {
     _inWindowsSeen.push(win);
 }
 
+// The window itself hears it lost or got the focus, once for each change:
+// after what had the focus heard its blur, and before it hears its focus again.
 function _inWindowFocus(active) {
     if (!_in || _in.windowHas === active) {
         return;

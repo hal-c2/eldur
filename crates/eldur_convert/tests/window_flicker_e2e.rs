@@ -63,6 +63,8 @@ Item {
 
     // Another window of the app, which takes the activation from the test's.
     Component { id: elsewhere; Window { width: 40; height: 40 } }
+    // A window of the app's own whose pages the test makes, hides and shows.
+    Component { id: shell; Window { width: 200; height: 200 } }
 
 TestCase {
     name: "WindowFlicker"
@@ -381,6 +383,42 @@ TestCase {
         other.destroy()
         console.log("LC done")
     }
+
+    // A window a page has seen active, hidden, then shown again with another
+    // page made in it meanwhile: the show is the window's return, which the
+    // new page hears as one.
+    function test_page_made_while_its_window_is_hidden_hears_the_show() {
+        const w = shell.createObject(null)
+        w.visible = true
+        w.requestActivate()
+        tryVerify(() => w.active, 2000, "the shell window not active")
+        const component = Qt.createComponent("Main.qml")
+        verify(component.status === Component.Ready, component.errorString())
+        const first = createTemporaryObject(component, w.contentItem, { width: 200, height: 200 })
+        verify(first, "no first page")
+        wait(50)
+        console.log("LC the window hides")
+        w.visible = false
+        // Offscreen, a window hidden can stay the active one: the test's own
+        // window takes the activation, as the app's next window would.
+        host.Window.window.requestActivate()
+        tryVerify(() => !w.active, 2000, "the hidden window still active")
+        wait(50)
+        const next = Qt.createComponent("Next.qml")
+        verify(next.status === Component.Ready, next.errorString())
+        console.log("LC page Next is made while hidden")
+        verify(createTemporaryObject(next, w.contentItem, { width: 200, height: 200 }), "no page Next")
+        wait(50)
+        console.log("LC active " + active() + " has " + Eldur.document.hasFocus())
+        console.log("LC the window shows")
+        w.visible = true
+        w.requestActivate()
+        tryVerify(() => w.active, 2000, "the shown window not active")
+        wait(100)
+        console.log("LC active " + active() + " has " + Eldur.document.hasFocus())
+        w.destroy()
+        console.log("LC done")
+    }
 }
 }
 "##;
@@ -535,6 +573,14 @@ const WANT: &[&str] = &[
     "LC a listener's timer makes page Next",
     "LC active body has false",
     "LC the window comes back",
+    "LC next window focus",
+    "LC active body has true",
+    "LC done",
+    "LC the window hides",
+    "LC window blur",
+    "LC page Next is made while hidden",
+    "LC active body has false",
+    "LC the window shows",
     "LC next window focus",
     "LC active body has true",
     "LC done",
