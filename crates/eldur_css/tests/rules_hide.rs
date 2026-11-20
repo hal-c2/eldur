@@ -145,3 +145,61 @@ fn sheet_custom_properties_names_what_rules_declare_under_the_attribute() {
     // Only inheriting, it isn't named.
     assert!(!got.contains_key(&id("leaf")));
 }
+
+#[test]
+fn sheet_custom_properties_keep_an_ancestors_style_attribute() {
+    // Each node loses only its own attribute's custom properties: `#child`'s
+    // `inherit` still takes the `--d` its parent's attribute declares.
+    let page = r#"<!DOCTYPE html>
+<style>
+  #parent { --d: none; }
+  #child { --e: var(--d); --d: inherit; --f: x; }
+</style>
+<div id="parent" style="--d: block"><div id="child" style="--e: none; --d: none"><p>x</p></div></div>
+"#;
+    let doc = Document::parse(page);
+    let viewport = Viewport::default();
+    let (sheets, _) = collect_stylesheets(&doc, &mut NoSheets, &viewport);
+    let styles = eldur_css::compute_styles(&doc, &sheets, &viewport);
+    let id = |name: &str| doc.element_by_id(name).expect(name);
+    let nodes: BTreeSet<_> = ["parent", "child"].iter().map(|n| id(n)).collect();
+    let got = sheet_custom_properties(&doc, &sheets, &viewport, &styles, &nodes);
+    let some = |v: &str| Some(v.to_owned());
+    assert_eq!(
+        got[&id("parent")],
+        [("--d".to_owned(), some("none"))].into()
+    );
+    // A `var()` stays one, for the runtime to resolve after a later write;
+    // a plain value is the computed one.
+    assert_eq!(
+        got[&id("child")],
+        [
+            ("--d".to_owned(), some("block")),
+            ("--e".to_owned(), some("var(--d)")),
+            ("--f".to_owned(), some("x"))
+        ]
+        .into()
+    );
+}
+
+#[test]
+fn sheet_custom_properties_take_the_winning_rules_tokens() {
+    let page = r#"<!DOCTYPE html>
+<style>
+  #w.k { --e: var(--d, block); }
+  #w { --e: none; }
+  div { --e: var(--never); }
+</style>
+<div id="w" class="k"><p>x</p></div>
+"#;
+    let doc = Document::parse(page);
+    let viewport = Viewport::default();
+    let (sheets, _) = collect_stylesheets(&doc, &mut NoSheets, &viewport);
+    let styles = eldur_css::compute_styles(&doc, &sheets, &viewport);
+    let w = doc.element_by_id("w").expect("w");
+    let got = sheet_custom_properties(&doc, &sheets, &viewport, &styles, &[w].into());
+    assert_eq!(
+        got[&w],
+        [("--e".to_owned(), Some("var(--d, block)".to_owned()))].into()
+    );
+}
