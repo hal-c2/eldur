@@ -35,6 +35,8 @@ button { margin: 4px; }
 <button id="w9">w9</button>
 <button id="k10">k10</button>
 <p tabindex="0" id="p9">two <a href="#" id="c9">c9</a> <a href="#" id="d9">d9</a></p>
+<button id="f11">f11</button>
+<button id="g11">g11</button>
 <button id="r8">r8</button>
 <script>
 // The window loses focus and gets it back, by itself and right after a blur
@@ -116,6 +118,14 @@ var ready = false;
 on("k10").addEventListener("click", function () {
   Promise.resolve().then(function () { ready = true; console.log("k10 microtask"); });
   document.addEventListener("keydown", function (ev) { console.log("keydown", ev.key, "ready", ready); }, { once: true });
+}, { once: true });
+// The window's onfocus moves the focus from f11, which it comes back to, to g11.
+on("f11").addEventListener("click", function () {
+  var told = heard("handler"), moved = false;
+  window.onfocus = function (ev) {
+    told(ev);
+    if (!moved) { moved = true; on("g11").focus(); }
+  };
 }, { once: true });
 // The window's focus listener takes r8 out as the window comes back to it.
 on("r8").addEventListener("click", function () {

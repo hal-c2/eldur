@@ -26,6 +26,9 @@
  {"name":"click x9","click":"#x9"},
  {"name":"press p9, which x9's blur moves on to its link c9, and press w9, which focuses its link d9, in the same turn","click":"#p9","again":"#w9"},
  {"name":"click k10, whose click queues a promise, and Tab in the same turn","click":"#k10","key":"Tab"},
+ {"name":"click f11","click":"#f11"},
+ {"name":"the window goes away from f11","away":true},
+ {"name":"the window comes back to f11, whose onfocus moves the focus to g11","back":true},
  {"name":"click r8","click":"#r8"},
  {"name":"the window goes away from r8","away":true},
  {"name":"the window comes back to r8, whose focus listener takes r8 out","back":true}
