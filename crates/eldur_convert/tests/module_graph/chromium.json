@@ -228,10 +228,22 @@
   "listenthrow": {
     "lines": [
       "bad runs",
-      "good heard"
+      "good runs"
     ],
     "text": {
-      "out": "clicked"
+      "out": "ready"
+    },
+    "errors": [
+      "Error: bad"
+    ]
+  },
+  "onclickthrow": {
+    "lines": [
+      "bad runs",
+      "good runs"
+    ],
+    "text": {
+      "out": "ready"
     },
     "errors": [
       "Error: bad"

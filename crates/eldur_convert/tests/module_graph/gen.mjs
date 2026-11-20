@@ -66,6 +66,7 @@ const out = {
   cyclewait: await record("cyclewait", ["out"]),
   cycleentry: await record("cycleentry", ["out"]),
   listenthrow: await record("listenthrow", ["out"], "#go"),
+  onclickthrow: await record("onclickthrow", ["out"], "#go"),
   onloadthrow: await record("onloadthrow", ["out"]),
   onloadnull: await record("onloadnull", ["out"]),
   readlater: await record("readlater", ["out"]),
