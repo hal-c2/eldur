@@ -12668,7 +12668,25 @@ function _unescapeHtmlText(str) {
         .replace(/&amp;/g, "&");
 }
 
-function _applyAttrsFromHtml(el, attrStr) {
+// The HTML parser lowers every attribute name, then gives these back their
+// case on an element in the SVG namespace ("adjust SVG attributes").
+var _SVG_ATTR_CASE = (function() {
+    var names = "attributeName attributeType baseFrequency baseProfile calcMode clipPathUnits "
+        + "diffuseConstant edgeMode filterUnits glyphRef gradientTransform gradientUnits "
+        + "kernelMatrix kernelUnitLength keyPoints keySplines keyTimes lengthAdjust "
+        + "limitingConeAngle markerHeight markerUnits markerWidth maskContentUnits maskUnits "
+        + "numOctaves pathLength patternContentUnits patternTransform patternUnits pointsAtX "
+        + "pointsAtY pointsAtZ preserveAlpha preserveAspectRatio primitiveUnits refX refY "
+        + "repeatCount repeatDur requiredExtensions requiredFeatures specularConstant "
+        + "specularExponent spreadMethod startOffset stdDeviation stitchTiles surfaceScale "
+        + "systemLanguage tableValues targetX targetY textLength viewBox viewTarget "
+        + "xChannelSelector yChannelSelector zoomAndPan";
+    var map = {};
+    names.split(" ").forEach(function(n) { map[n.toLowerCase()] = n; });
+    return map;
+})();
+
+function _applyAttrsFromHtml(el, attrStr, svg) {
     if (!attrStr) {
         return;
     }
@@ -12689,14 +12707,16 @@ function _applyAttrsFromHtml(el, attrStr) {
             el.setAttribute("type", val);
         } else {
             // HTML attribute names have no case: `<DETAILS OPEN>` is open.
-            el.setAttribute(lower, val);
+            // An SVG one written in camel case keeps it: `viewBox`.
+            el.setAttribute(svg && _SVG_ATTR_CASE[lower] || lower, val);
         }
     }
 }
 
 var _HTML_INLINE = /^(a|abbr|b|bdi|bdo|cite|code|data|dfn|em|i|kbd|mark|q|s|samp|small|span|strong|sub|sup|time|u|var)$/i;
 
-function _parseHtmlFragmentNodes(html) {
+// `inSvg`: the markup is the content of an `<svg>`, outside a `<foreignObject>`.
+function _parseHtmlFragmentNodes(html, inSvg) {
     var src = String(html === null || html === undefined ? "" : html);
     var nodes = [];
     var gap = "";
@@ -12733,7 +12753,8 @@ function _parseHtmlFragmentNodes(html) {
         var attrStr = m[2] || "";
         var selfClosing = m[3] === "/" || Boolean(voidTags[tag]);
         var el = document.createElement(tag);
-        _applyAttrsFromHtml(el, attrStr);
+        var svg = Boolean(inSvg) || tag === "svg";
+        _applyAttrsFromHtml(el, attrStr, svg);
         _wsGiven(_unwrap(el), "ws", gap);
         gap = "";
 
@@ -12774,7 +12795,7 @@ function _parseHtmlFragmentNodes(html) {
         }
         var inner = src.slice(afterOpen, closeStart);
         if (/<[a-zA-Z]/.test(inner)) {
-            var childWrappers = _parseHtmlFragmentNodes(inner);
+            var childWrappers = _parseHtmlFragmentNodes(inner, svg && tag !== "foreignobject");
             _wsGiven(_unwrap(el), "wsEnd", childWrappers.wsEnd);
             for (var c = 0; c < childWrappers.length; ++c) {
                 el.appendChild(childWrappers[c]);

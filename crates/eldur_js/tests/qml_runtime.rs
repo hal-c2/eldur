@@ -2597,6 +2597,55 @@ function verify() {
     );
 }
 
+/// Markup a script inserts has attribute names without case, as the HTML
+/// parser reads them, except SVG's camel-cased ones inside an `<svg>`: they
+/// keep their case, so `getAttribute("viewBox")` finds what the markup wrote.
+#[test]
+fn qml6_inserted_markup_lowers_attribute_names_but_keeps_svg_camel_case() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("box", 1, "box", TargetKind::Box);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verify() {
+    const box = document.getElementById("box");
+    box.innerHTML = '<P TITLE="Tip">x</P>'
+        + '<svg VIEWBOX="0 0 10 10" preserveaspectratio="none" Width="10">'
+        + '<linearGradient gradientUnits="userSpaceOnUse"></linearGradient>'
+        + '<foreignObject><div viewBox="html"></div></foreignObject></svg>';
+    const p = box.children[0];
+    const svg = box.children[1];
+    const gradient = svg.children[0];
+    const div = svg.children[1].children[0];
+    return [
+        p.getAttribute("title"),
+        svg.getAttribute("viewBox"),
+        svg.getAttribute("preserveAspectRatio"),
+        svg.getAttribute("width"),
+        gradient.getAttribute("gradientUnits"),
+        div.getAttribute("viewbox"),
+    ].join("|");
+}
+"##,
+        r#"Item {
+    id: root
+    Column { id: box; objectName: "box" }
+    Component.onCompleted: {
+        (Page.__eldur_init || Eldur.init)(root);
+        console.log("ELDUR_OK_SVG_CASE", Page.verify());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains("ELDUR_OK_SVG_CASE Tip|0 0 10 10|none|10|userSpaceOnUse|html"),
+        "{output}"
+    );
+}
+
 #[test]
 fn qml6_anchor_href_resolves_against_document_base_and_preserves_raw_attribute() {
     if !has_binary("qml6") {
