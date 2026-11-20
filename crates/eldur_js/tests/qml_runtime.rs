@@ -2661,6 +2661,73 @@ function verify() {
     );
 }
 
+/// An HTML element in SVG markup a script inserts leaves the SVG as the HTML
+/// parser takes it out: in a page's own content a `<p>`, `<div>`, `<b>`, a
+/// `<font>` with a color, face or size, and the rest close the SVG elements
+/// open around them up to the nearest HTML element or `<foreignObject>`,
+/// `<desc>` or `<title>`, and what follows goes on in it. Markup set into an
+/// SVG element by `innerHTML`, `insertAdjacentHTML` or `outerHTML` has nothing
+/// of its own to close, so such an element is an HTML child of the SVG one.
+/// The expected string is Chromium's, for the same script: `svg:` marks an
+/// element that kept `viewBox` in its case, as only SVG ones do.
+#[test]
+fn qml6_html_elements_in_inserted_svg_markup_break_out_as_chromium_parses_them() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("box", 1, "box", TargetKind::Box);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verify() {
+    const box = document.getElementById("box");
+    const v = ' viewBox="v"';
+    const show = n => (n.getAttribute("viewbox") === null ? "svg:" : "")
+        + n.tagName.toLowerCase()
+        + (n.children.length ? "[" + Array.from(n.children).map(show).join(",") + "]" : "");
+    const made = markup => {
+        const d = document.createElement("div");
+        box.appendChild(d);
+        d.innerHTML = markup;
+        return d;
+    };
+    const a = made('<svg' + v + '><circle' + v + '></circle><g' + v + '><p' + v + '>para</p></g>'
+        + '<rect' + v + '></rect></svg>after');
+    const b = made('<svg' + v + '></svg>');
+    b.children[0].innerHTML = '<circle' + v + '></circle><p' + v + '>x</p><b' + v + '>y</b>';
+    const c = made('<svg' + v + '><g' + v + '></g></svg>');
+    c.children[0].children[0].insertAdjacentHTML("beforeend", '<div' + v + '>z</div>');
+    const d = made('<svg' + v + '><rect' + v + '></rect></svg>');
+    d.children[0].children[0].outerHTML = '<span' + v + '>w</span>';
+    const e = made('<svg' + v + '><foreignObject' + v + '><p' + v + '>f</p></foreignObject>'
+        + '<font color="red"' + v + '>c</font><font' + v + '>k</font></svg>');
+    const f = made('<svg' + v + '><desc' + v + '><p' + v + '>d</p></desc></svg><p' + v + '>q</p>');
+    const g = made('<svg' + v + '><font' + v + '>n</font></svg>');
+    return [a, b, c, d, e, f, g].map(x => Array.from(x.children).map(show).join(",")).join(" ")
+        + " " + a.children[1].textContent + "|" + a.textContent;
+}
+"##,
+        r#"Item {
+    id: root
+    Column { id: box; objectName: "box" }
+    Component.onCompleted: {
+        (Page.__eldur_init || Eldur.init)(root);
+        console.log("ELDUR_OK_BREAKOUT", Page.verify());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains(
+            "ELDUR_OK_BREAKOUT svg:svg[svg:circle,svg:g],p,rect svg:svg[svg:circle,p,b] \
+             svg:svg[svg:g[div]] svg:svg[span] svg:svg[svg:foreignobject[p]],font,font \
+             svg:svg[svg:desc[p]],p svg:svg[svg:font] para|paraafter"
+        ),
+        "{output}"
+    );
+}
+
 #[test]
 fn qml6_anchor_href_resolves_against_document_base_and_preserves_raw_attribute() {
     if !has_binary("qml6") {
