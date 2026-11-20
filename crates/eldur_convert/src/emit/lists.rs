@@ -104,13 +104,21 @@ pub(super) fn disclosure_in_line(obj: &mut Object, marker: &Marker<'_>, own_colo
         } else {
             ""
         };
-        obj.set(
-            "onLineLaidOut",
-            Value::expr(format!(
-                "(line) => {{ {row}if (line.number === 0) {{ line.x += {0}; line.width -= {0}; }} }}",
-                fmt_number(round(1.05859 * marker.style.font_size))
-            )),
+        let indent = format!(
+            "(line) => {{ {row}if (line.number === 0) {{ line.x += {0}; line.width -= {0}; }} }}",
+            fmt_number(round(1.05859 * marker.style.font_size))
         );
+        // Lines floats cut have a handler already: the marker's goes first in it.
+        let cut = obj.members.iter_mut().find_map(|m| match m {
+            Member::Handler { name, body, .. } if name == "onLineLaidOut" => Some(body),
+            _ => None,
+        });
+        match cut {
+            Some(body) => body.insert(0, format!("({indent})(line);")),
+            None => {
+                obj.set("onLineLaidOut", Value::expr(indent));
+            }
+        }
         obj.push_child(triangle);
     }
 }
