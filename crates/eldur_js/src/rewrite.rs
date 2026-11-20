@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::sync::LazyLock;
 
 use oxc_allocator::Allocator;
 use oxc_ast::ast::{
@@ -83,8 +84,12 @@ struct PageBuffers {
     init_stmts: Vec<String>,
     dcl_stmts: Vec<String>,
     load_entries: Vec<LoadEntry>,
-    window_onload_has_slot: bool,
-    window_onload_value: Option<String>,
+    /// The variable holding `window.onload`'s value, set where each
+    /// assignment to it runs and called once the page has loaded.
+    window_onload_slot: Option<String>,
+    /// Whether the slot has its place among the `load` listeners, which the
+    /// first assignment of a handler gives it, as a browser's does.
+    window_onload_has_place: bool,
     /// Emitting a lazy module: nothing it declares exists until it runs, so
     /// its bindings are assigned in its run function, never set at load.
     in_lazy_module: bool,
@@ -1234,8 +1239,10 @@ impl<'a> PageBuilder<'a> {
             match entry {
                 LoadEntry::Listener(code) => all_init_lines.push(code),
                 LoadEntry::WindowOnload => {
-                    if let Some(code) = &self.out.window_onload_value {
-                        all_init_lines.push(code.clone());
+                    if let Some(slot) = &self.out.window_onload_slot {
+                        all_init_lines.push(format!(
+                            "if (typeof {slot} === \"function\") {{\n    {slot}.call(Eldur.window, Eldur.event(\"load\", Eldur.window, null));\n}}"
+                        ));
                     }
                 }
             }
@@ -1387,6 +1394,18 @@ impl PageBuffers {
         !self.in_lazy_module && self.init_stmts.is_empty()
     }
 
+    /// The bindings an initializer worked out at load may read: none once a
+    /// statement has run ahead of it, as that statement may have reassigned
+    /// one or changed what it holds (`Object.defineProperty`, `push`).
+    fn hoistable_reads(&self) -> &HashMap<String, PureKind> {
+        static NONE: LazyLock<HashMap<String, PureKind>> = LazyLock::new(HashMap::new);
+        if self.at_load() {
+            &self.pure_top_vars
+        } else {
+            &NONE
+        }
+    }
+
     fn emit_top_function_decl(&mut self, is_classic: bool, name: &str, fn_code: String) {
         if is_classic && let Some(&(slot_idx, prev_init_len)) = self.var_func_slots.get(name) {
             if self.init_stmts.len() == prev_init_len {
@@ -1426,7 +1445,7 @@ impl PageBuffers {
                     is_pure_top_level_init(
                         val,
                         scoping,
-                        &self.pure_top_vars,
+                        self.hoistable_reads(),
                         &lowerer.symbol_renames,
                     )
                 })
@@ -1552,18 +1571,23 @@ impl PageBuffers {
             // A lazy module's bindings get their values when it runs. One whose
             // value could throw while it is worked out is worked out where the
             // module or script runs, so the throw stops that module only.
-            let init_kind =
-                pure_init_kind(init, scoping, &self.pure_top_vars, &lowerer.symbol_renames);
+            let init_kind = pure_init_kind(
+                init,
+                scoping,
+                self.hoistable_reads(),
+                &lowerer.symbol_renames,
+            );
             let is_pure = !self.in_lazy_module
                 && !has_obj_rest
                 && !is_destructured_var
                 && pattern_defaults_are_pure(
                     &decl.id,
                     scoping,
-                    &self.pure_top_vars,
+                    self.hoistable_reads(),
                     &lowerer.symbol_renames,
                 )
-                && init_kind.is_some_and(|k| pattern_cannot_throw(&decl.id, k));
+                && init_kind.is_some()
+                && pattern_cannot_throw(&decl.id, init);
 
             if is_pure {
                 let init_kind = init_kind.unwrap_or(PureKind::Unknown);
@@ -1756,7 +1780,7 @@ impl PageBuffers {
                             is_pure_top_level_init(
                                 val,
                                 scoping,
-                                &self.pure_top_vars,
+                                self.hoistable_reads(),
                                 &lowerer.symbol_renames,
                             )
                         })
@@ -1819,8 +1843,12 @@ impl PageBuffers {
             ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {}
             _ => {
                 if let Some(expr) = decl_kind.as_expression() {
-                    let kind =
-                        pure_init_kind(expr, scoping, &self.pure_top_vars, &lowerer.symbol_renames);
+                    let kind = pure_init_kind(
+                        expr,
+                        scoping,
+                        self.hoistable_reads(),
+                        &lowerer.symbol_renames,
+                    );
                     let is_pure = kind.is_some();
                     lowerer.visit_expression(expr);
                     let expr_str = lowerer.editor.extract_and_consume(expr.span());
@@ -1993,22 +2021,28 @@ impl PageBuffers {
                 && let Some(ev) = known_dom_event_from_on_prop(&prop)
             {
                 if is_global_window(obj, scoping) && ev == "load" {
-                    if is_null_or_undefined(&assign.right, scoping) {
-                        self.window_onload_value = None;
+                    // The assignment takes effect where it runs, so one its
+                    // script or module never reaches leaves the slot as it was;
+                    // the last that ran wins, `null` included.
+                    let slot = match &self.window_onload_slot {
+                        Some(slot) => slot.clone(),
+                        None => {
+                            let slot = lowerer.shared.alloc_fn_name("__eldur_window_onload");
+                            self.top_decls.push(format!("var {slot} = null;"));
+                            self.window_onload_slot = Some(slot.clone());
+                            slot
+                        }
+                    };
+                    let value = if is_null_or_undefined(&assign.right, scoping) {
+                        "null".to_string()
                     } else {
-                        let rhs_str = lowerer.rewrite_listener_callback_expr(&assign.right, None);
-                        let invoke = format_lifecycle_invocation(
-                            &assign.right,
-                            &rhs_str,
-                            "load",
-                            "Eldur.window",
-                        );
-                        if !self.window_onload_has_slot {
-                            self.window_onload_has_slot = true;
+                        if !self.window_onload_has_place {
+                            self.window_onload_has_place = true;
                             self.load_entries.push(LoadEntry::WindowOnload);
                         }
-                        self.window_onload_value = Some(invoke);
-                    }
+                        lowerer.rewrite_listener_callback_expr(&assign.right, None)
+                    };
+                    self.init_stmts.push(format!("{slot} = {value};"));
                     return true;
                 }
 
@@ -2055,7 +2089,7 @@ impl PageBuffers {
             format!("({cb_str})(event);")
         };
 
-        let body = if is_once {
+        let mut body = if is_once {
             let uid = shared.fresh_id();
             let flag = shared.alloc_fn_name(&format!("__eldur_once_{uid}"));
             shared.generated_decls.push(format!("var {flag} = false;"));
@@ -2066,6 +2100,14 @@ impl PageBuffers {
         } else {
             indent_block(&call_stmt, 4)
         };
+        if self.in_eager_module {
+            // The listener is wired in at conversion, but its module can throw
+            // before it adds it, or never run at all: then it is never heard.
+            let reached = shared.alloc_fn_name("__eldur_reached");
+            self.top_decls.push(format!("var {reached} = false;"));
+            self.init_stmts.push(format!("{reached} = true;"));
+            body = format!("    if (!{reached}) {{\n        return;\n    }}\n{body}");
+        }
 
         self.handler_fns
             .push(format!("function {fn_name}(event) {{\n{body}\n}}"));
@@ -3103,32 +3145,55 @@ fn is_pure_top_level_init(
     pure_init_kind(expr, scoping, pure_vars, symbol_renames).is_some()
 }
 
-/// Whether binding `kind`'s value to `pat` cannot throw: an object pattern
-/// needs a value whose properties are all data, a primitive that is not
-/// nullish, an array or an object literal, and an array pattern an array; each
-/// of their names is a plain name, so nothing nested is read.
-fn pattern_cannot_throw(pat: &BindingPattern<'_>, kind: PureKind) -> bool {
-    let plain = |p: &BindingPattern<'_>| match p {
-        BindingPattern::BindingIdentifier(_) => true,
-        BindingPattern::AssignmentPattern(a) => {
-            matches!(a.left, BindingPattern::BindingIdentifier(_))
-        }
-        _ => false,
-    };
+/// Whether binding `init`, already known to be worked out without effect,
+/// to `pat` runs no code of the page's and cannot throw.
+///
+/// An object pattern reads each name as a property, which runs a getter, a
+/// `Proxy` trap or an accessor on a prototype, any of which the page may have
+/// defined by then. Only an object literal's own data properties are known to
+/// be none of these, so the pattern must name only those, each a plain name.
+/// An array pattern runs `Array.prototype[Symbol.iterator]`, which the page
+/// can replace, so it is never worked out at load.
+fn pattern_cannot_throw(pat: &BindingPattern<'_>, init: &Expression<'_>) -> bool {
     match pat {
         BindingPattern::BindingIdentifier(_) => true,
-        BindingPattern::AssignmentPattern(_) => false,
+        BindingPattern::AssignmentPattern(_) | BindingPattern::ArrayPattern(_) => false,
         BindingPattern::ObjectPattern(obj) => {
-            !matches!(
-                kind,
-                PureKind::Nullish | PureKind::Function | PureKind::Unknown
-            ) && obj.rest.is_none()
-                && obj.properties.iter().all(|p| plain(&p.value))
-        }
-        BindingPattern::ArrayPattern(arr) => {
-            kind == PureKind::Array
-                && arr.elements.iter().flatten().all(plain)
-                && arr.rest.as_ref().is_none_or(|r| plain(&r.argument))
+            let Expression::ObjectExpression(lit) = unwrap_parens(init) else {
+                return false;
+            };
+            // A spread only adds own data properties, so each name written
+            // in the literal is one of them.
+            let own: HashSet<String> = lit
+                .properties
+                .iter()
+                .filter_map(|p| match p {
+                    ObjectPropertyKind::ObjectProperty(prop)
+                        if prop.kind == PropertyKind::Init
+                            && !prop.computed
+                            && (prop.shorthand
+                                || prop.key.static_name().as_deref() != Some("__proto__")) =>
+                    {
+                        prop.key.static_name().map(|n| n.into_owned())
+                    }
+                    _ => None,
+                })
+                .collect();
+            obj.rest.is_none()
+                && obj.properties.iter().all(|p| {
+                    let plain = match &p.value {
+                        BindingPattern::BindingIdentifier(_) => true,
+                        BindingPattern::AssignmentPattern(a) => {
+                            matches!(a.left, BindingPattern::BindingIdentifier(_))
+                        }
+                        _ => false,
+                    };
+                    plain
+                        && !p.computed
+                        && p.key
+                            .static_name()
+                            .is_some_and(|n| own.contains(n.as_ref()))
+                })
         }
     }
 }

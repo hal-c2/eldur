@@ -224,5 +224,58 @@
       "Error: y",
       "Error: y"
     ]
+  },
+  "listenthrow": {
+    "lines": [
+      "bad runs",
+      "good heard"
+    ],
+    "text": {
+      "out": "clicked"
+    },
+    "errors": [
+      "Error: bad"
+    ]
+  },
+  "onloadthrow": {
+    "lines": [
+      "handler runs",
+      "clear runs",
+      "first onload"
+    ],
+    "text": {
+      "out": "first"
+    },
+    "errors": [
+      "Error: handler",
+      "Error: clear"
+    ]
+  },
+  "onloadnull": {
+    "lines": [
+      "cleared",
+      "handler runs"
+    ],
+    "text": {
+      "out": "waiting"
+    },
+    "errors": [
+      "Error: handler"
+    ]
+  },
+  "readlater": {
+    "lines": [
+      "copy 2",
+      "after runs",
+      "inline runs",
+      "source rejected getter",
+      "done"
+    ],
+    "text": {
+      "out": "done"
+    },
+    "errors": [
+      "Error: getter"
+    ]
   }
 }

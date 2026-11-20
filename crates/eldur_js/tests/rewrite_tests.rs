@@ -385,6 +385,7 @@ const APP_NAME = "Demo";
 let counter = 0;
 let saved;
 let a, b;
+var __eldur_window_onload = null;
 function onReady() {
     counter += 10;
 }
@@ -393,13 +394,19 @@ function __eldur_init(rootItem) {
     Eldur.init(rootItem || (typeof root !== "undefined" ? root : null));
     saved = Eldur.localStorage.getItem("saved") ?? "none";
     ({ a, b } = parsePair(saved));
+    __eldur_window_onload = function() {
+        counter += 100;
+    };
+    __eldur_window_onload = function() {
+        outLabel.text = APP_NAME + ":" + counter;
+    };
     console.log("top-level tail", a, b);
     (() => {
         counter += 1;
     })(Eldur.event("DOMContentLoaded", Eldur.document, null));
-    (function() {
-        outLabel.text = APP_NAME + ":" + counter;
-    })(Eldur.event("load", Eldur.window, null));
+    if (typeof __eldur_window_onload === "function") {
+        __eldur_window_onload.call(Eldur.window, Eldur.event("load", Eldur.window, null));
+    }
     onReady(Eldur.event("load", Eldur.window, null));
 }
 "###);
@@ -3455,7 +3462,7 @@ fn a_throwing_module_fails_every_module_of_its_cycle() {
 /// The body of the function `name` declares in `js`.
 fn function_body<'s>(js: &'s str, name: &str) -> &'s str {
     let start = js
-        .find(&format!("function {name}()"))
+        .find(&format!("function {name}("))
         .unwrap_or_else(|| panic!("no {name}:\n{js}"));
     let end = start + js[start..].find("\n}").expect("closed");
     &js[start..end]
@@ -3604,6 +3611,22 @@ fn an_initializer_that_may_throw_runs_inside_its_module() {
             "class C { static get a() { throw new Error(\"g\"); } }\nconst o = { __proto__: C };\nexport const { a: q } = o;\n",
             "{ a: ",
         ),
+        // A statement that ran first may have changed what a binding holds.
+        (
+            "const source = {};\nObject.defineProperty(source, \"x\", { get() { throw new Error(\"g\"); } });\nexport const { x: q } = source;\n",
+            "{ x: ",
+        ),
+        (
+            "const list = [1];\nlist.push(2);\nexport const q = [...list];\n",
+            "[...",
+        ),
+        // A name that is not the literal's own is read from its prototype,
+        // whose accessors the page may define; an object bound earlier may be
+        // changed by then.
+        ("export const { b: q } = { a: 1 };\n", "{ b: "),
+        ("const o = { a: 1 };\nexport const { a: q } = o;\n", "{ a: "),
+        // An array pattern runs `Array.prototype[Symbol.iterator]`.
+        ("export const [q] = [1];\n", "] = [1]"),
     ];
     for (src, init) in cases {
         let m = module_script("m.js", &format!("{src}console.log(\"m\");\n"));
@@ -3634,6 +3657,80 @@ fn an_initializer_that_cannot_throw_stays_hoisted() {
         "{js}"
     );
     assert!(js.contains("const __eldur_m0_big = 2n * 3n;"), "{js}");
+
+    // Each name the pattern reads is one of the literal's own data properties.
+    let m = module_script(
+        "m.js",
+        "const b = 2;\nexport const { a: one, b: two = 3 } = { a: 1, ...{ b } };\n",
+    );
+    let js = run_rewrite(&[m], &resolver).page_js;
+    assert!(!js.contains("function __eldur_run_m0()"), "{js}");
+    assert!(js.contains("= { a: 1, ...{ b: __eldur_m0_b } };"), "{js}");
+}
+
+/// A listener a module wires to an element at conversion is heard only once
+/// its module reaches the call that adds it, so not after the module threw.
+#[test]
+fn an_element_listener_waits_for_its_module_to_reach_it() {
+    let resolver = FakeResolver::default().with_id("go", 1, "goBtn", TargetKind::Button);
+    let m = module_script(
+        "m.js",
+        "const btn = document.getElementById(\"go\");\nfail();\nbtn.addEventListener(\"click\", () => console.log(\"heard\"));\nbtn.onclick = () => console.log(\"onclick\");\nfunction fail() { throw new Error(\"bad\"); }\n",
+    );
+    let out = run_rewrite(&[m], &resolver);
+    let js = &out.page_js;
+    assert_eq!(out.bindings.len(), 2, "{js}");
+    for binding in &out.bindings {
+        let body = function_body(js, &binding.function);
+        let flag = body
+            .split_once("{\n")
+            .map(|(_, inner)| inner.trim_start())
+            .and_then(|inner| inner.strip_prefix("if (!"))
+            .and_then(|rest| rest.split_once(')'))
+            .map(|(flag, _)| flag)
+            .unwrap_or_else(|| panic!("{} has no guard:\n{js}", binding.function));
+        let run = function_body(js, "__eldur_run_m0");
+        let set = run
+            .find(&format!("{flag} = true;"))
+            .unwrap_or_else(|| panic!("{flag} never set:\n{js}"));
+        assert!(
+            set > run.find("fail()").expect("fail call"),
+            "{flag} set before the throw:\n{js}"
+        );
+    }
+}
+
+/// `window.onload` is a slot each assignment sets where it runs, `null`
+/// included, and the slot's value is called at load.
+#[test]
+fn window_onload_is_set_where_it_runs() {
+    let resolver = FakeResolver::default();
+    let first = classic(
+        "first.js",
+        "window.onload = function () { console.log(\"first\"); };\n",
+    );
+    let m = module_script(
+        "m.js",
+        "fail();\nwindow.onload = null;\nfunction fail() { throw new Error(\"bad\"); }\n",
+    );
+    let out = run_rewrite(&[first, m], &resolver);
+    let js = &out.page_js;
+    let run = function_body(js, "__eldur_run_m0");
+    assert!(
+        run.find("__eldur_window_onload = null;")
+            .expect("null set in its module")
+            > run.find("fail()").expect("fail call"),
+        "{js}"
+    );
+    let init = function_body(js, "__eldur_init");
+    assert!(
+        init.contains("__eldur_window_onload = function () {"),
+        "{js}"
+    );
+    assert!(
+        init.contains("if (typeof __eldur_window_onload === \"function\") {"),
+        "{js}"
+    );
 }
 
 /// Whatever runs at load, inside `__eldur_init` or a module's run function,
