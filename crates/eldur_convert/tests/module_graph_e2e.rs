@@ -424,10 +424,9 @@ fn a_cycle_entered_at_another_member_settles_with_it() {
     assert_eq!(run("cycleentry", &read), wanted("cycleentry", &read));
 }
 
-/// `bad.js` throws before it adds a click listener to `go` and sets its
-/// `onclick`; `good.js` adds one after it. A click is heard only by
-/// `good.js`'s, as in Chromium: a listener its module never reached is never
-/// added.
+/// `bad.js` throws before it adds a click listener to `go`, which is wired in
+/// at conversion as the button's only one. A click is not heard, as in
+/// Chromium: a listener its module never reached is never added.
 #[test]
 fn a_listener_after_its_modules_throw_is_never_heard() {
     if support::no_qt() {
@@ -435,6 +434,16 @@ fn a_listener_after_its_modules_throw_is_never_heard() {
     }
     let read = ["out"];
     assert_eq!(run("listenthrow", &read), wanted("listenthrow", &read));
+}
+
+/// The same with `go.onclick = …` after the throw: the click is not heard.
+#[test]
+fn an_onclick_after_its_modules_throw_is_never_heard() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("onclickthrow", &read), wanted("onclickthrow", &read));
 }
 
 /// A classic script sets `window.onload`; two modules throw before they set it

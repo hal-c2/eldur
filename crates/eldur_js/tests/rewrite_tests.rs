@@ -3673,22 +3673,28 @@ fn an_initializer_that_cannot_throw_stays_hoisted() {
 #[test]
 fn an_element_listener_waits_for_its_module_to_reach_it() {
     let resolver = FakeResolver::default().with_id("go", 1, "goBtn", TargetKind::Button);
-    let m = module_script(
-        "m.js",
-        "const btn = document.getElementById(\"go\");\nfail();\nbtn.addEventListener(\"click\", () => console.log(\"heard\"));\nbtn.onclick = () => console.log(\"onclick\");\nfunction fail() { throw new Error(\"bad\"); }\n",
-    );
-    let out = run_rewrite(&[m], &resolver);
-    let js = &out.page_js;
-    assert_eq!(out.bindings.len(), 2, "{js}");
-    for binding in &out.bindings {
-        let body = function_body(js, &binding.function);
+    for adds in [
+        "btn.addEventListener(\"click\", () => console.log(\"heard\"));",
+        "btn.addEventListener(\"click\", () => console.log(\"heard\"), { once: true });",
+        "btn.onclick = () => console.log(\"onclick\");",
+    ] {
+        let m = module_script(
+            "m.js",
+            &format!(
+                "const btn = document.getElementById(\"go\");\nfail();\n{adds}\nfunction fail() {{ throw new Error(\"bad\"); }}\n"
+            ),
+        );
+        let out = run_rewrite(&[m], &resolver);
+        let js = &out.page_js;
+        assert_eq!(out.bindings.len(), 1, "{adds}:\n{js}");
+        let body = function_body(js, &out.bindings[0].function);
         let flag = body
             .split_once("{\n")
             .map(|(_, inner)| inner.trim_start())
             .and_then(|inner| inner.strip_prefix("if (!"))
             .and_then(|rest| rest.split_once(')'))
             .map(|(flag, _)| flag)
-            .unwrap_or_else(|| panic!("{} has no guard:\n{js}", binding.function));
+            .unwrap_or_else(|| panic!("{adds}: no guard first:\n{js}"));
         let run = function_body(js, "__eldur_run_m0");
         let set = run
             .find(&format!("{flag} = true;"))
