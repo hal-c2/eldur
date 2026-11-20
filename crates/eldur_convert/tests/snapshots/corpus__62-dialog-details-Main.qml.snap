@@ -460,7 +460,7 @@ ApplicationWindow {
                 objectName: "note"
                 visible: (dialogSlot.parent ? dialogSlot.parent.visible : false) && (false)
                 width: 336
-                x: 0 + (parent.width - width + 0 - 0) / 2
+                x: parent ? (0 + (parent.width - width + 0 - 0) / 2) : 0
                 y: root.staticY(dialogSlot, flickable.contentItem)
                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
