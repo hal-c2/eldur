@@ -682,6 +682,7 @@ ApplicationWindow {
                 // <div id="done">
                 Rectangle {
                     id: done
+                    property bool eldurRulesHide: true
                     property string eldurTag: "div"
                     property string eldurWs: "\n"
                     property real eldurCarry: visible ? (Math.ceil(Layout.topMargin + implicitHeight) - Layout.topMargin - implicitHeight + 0.000001) : signup.eldurCarry
