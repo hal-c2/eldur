@@ -1379,7 +1379,7 @@ function _detailsShow(raw, open) {
         var own = _detailsOwnShown(kid);
         var shown = (open || summary) && own;
         _meta(kid).detailsFolded = own && !shown;
-        if (kid.visible !== shown || (!shown && kid.parent && kid.parent.visible === false)) {
+        if (kid.visible !== shown || (own && !shown && kid.parent && kid.parent.visible === false)) {
             kid.visible = shown;
         }
         if (summary) {
