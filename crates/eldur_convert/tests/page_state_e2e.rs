@@ -1053,8 +1053,8 @@ var over = document.getElementById("over");
 over.addEventListener("check", check);
 over.addEventListener("after", function(e) {
   check(e);
-  window.chained.then(function(v) { L("chained", v); });
-  window.settleChained("settled");
+  window.chained.then(function(v) { L("chained", v.v); });
+  window.settleChained({ v: "settled" });
 });
 window.addEventListener("hashchange", function() { L("hash heard by over"); });
 // The document hears what its elements do: every listener then goes through

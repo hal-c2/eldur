@@ -82,12 +82,32 @@ var Promise = (function() {
         waiting.forEach(function(w) { schedule(p, w); });
     }
 
+    // Whether taking on `value` runs no script: it has no `then` a getter
+    // gives, and none to call but this runtime's own on its own promise. Looked
+    // up by descriptor, so no getter runs to find out.
+    function takesNoScript(value) {
+        if (!value || typeof value !== "object" && typeof value !== "function") {
+            return true;
+        }
+        for (var at = value; at; at = Object.getPrototypeOf(at)) {
+            var d = Object.getOwnPropertyDescriptor(at, "then");
+            if (d) {
+                return !("get" in d) && !("set" in d)
+                    && (typeof d.value !== "function" || d.value === ownThen && value instanceof Promise);
+            }
+        }
+        return true;
+    }
+
     function schedule(p, w) {
         // A reaction is for the page that asked for it, whoever settles the
-        // promise. One with no handler runs no script: it only passes the
-        // value on to the promise `then` made, which a page still up may hold,
-        // so it runs even when the page that asked has gone.
-        var passes = typeof (p._state === FULFILLED ? w.onFulfilled : w.onRejected) !== "function";
+        // promise. One with no handler that passes on what runs no script, a
+        // reason or a value with no `then` of a script's, settles the promise
+        // `then` made, which a page still up may hold, so it runs even when the
+        // page that asked has gone. Taking on a value whose `then` is a
+        // script's runs it, so that stays the page's.
+        var passes = typeof (p._state === FULFILLED ? w.onFulfilled : w.onRejected) !== "function"
+            && (p._state === REJECTED || takesNoScript(p._value));
         _microEnqueue(function() {
             var handler = p._state === FULFILLED ? w.onFulfilled : w.onRejected;
             if (typeof handler !== "function") {
@@ -131,9 +151,10 @@ var Promise = (function() {
                     return;
                 }
                 if (typeof then === "function") {
-                    // Taking on one of these promises' outcome runs no script:
+                    // Taking on one of these promises' outcome through the
+                    // runtime's own `then` runs no script once `then` is read:
                     // the promise it settles may be held by a page still up.
-                    var own = value instanceof Promise && then === Promise.prototype.then;
+                    var own = value instanceof Promise && then === ownThen;
                     _microEnqueue(function() {
                         var inner = resolver(p);
                         if (own) {
@@ -186,6 +207,8 @@ var Promise = (function() {
             }
         });
     };
+    // What a script puts on the prototype later is a script's `then`.
+    var ownThen = Promise.prototype.then;
     Promise.prototype["catch"] = function(onRejected) {
         return this.then(undefined, onRejected);
     };
@@ -1279,7 +1302,7 @@ function _pageCacheSave() {
         entryIndex: _historyIndex, entryUrl: _historyEntries[_historyIndex].url,
         warnedMissingTemplates: _warnedMissingTemplates, componentProbeCache: _componentProbeCache,
         pseudoRules: _pseudoRules, pseudoShown: _pseudoShown, counterRules: _counterRules,
-        tableHosts: _tableHosts,
+        tableHosts: _tableHosts, pseudoBoxItems: _pseudoBoxItems, pseudoBoxKnown: _pseudoBoxKnown,
         vModels: _vModels, vRules: _vRules, vStateRules: _vStateRules,
         gCascadeRules: _gCascadeRules, gPaintTable: _gPaintTable, gWarned: _gWarned,
         gStateRules: _gStateRules, gLive: _gLive, gLiveTemplates: _gLiveTemplates,
@@ -1308,7 +1331,7 @@ function _pageCacheLoad(c, keepHistory) {
     }
     _warnedMissingTemplates = c.warnedMissingTemplates; _componentProbeCache = c.componentProbeCache;
     _pseudoRules = c.pseudoRules; _pseudoShown = c.pseudoShown; _counterRules = c.counterRules;
-    _tableHosts = c.tableHosts;
+    _tableHosts = c.tableHosts; _pseudoBoxItems = c.pseudoBoxItems; _pseudoBoxKnown = c.pseudoBoxKnown;
     _vModels = c.vModels; _vRules = c.vRules; _vStateRules = c.vStateRules;
     _gCascadeRules = c.gCascadeRules; _gPaintTable = c.gPaintTable; _gWarned = c.gWarned;
     _gStateRules = c.gStateRules; _gLive = c.gLive; _gLiveTemplates = c.gLiveTemplates;
@@ -1392,11 +1415,7 @@ function _asPage(page, fn, self, args) {
         // A page the callback made over this one is the document now, and
         // `init` kept this page's state.
         if (_root === page) {
-            try {
-                _gSettle();
-            } catch (err) {
-                console.error(err && err.stack ? err.stack : err);
-            }
+            _asPageSettle();
             var mine = _pageCacheSave();
             // The history stayed where the page on top has it: this page is
             // still on its own entry.
@@ -1421,6 +1440,18 @@ function _asPage(page, fn, self, args) {
             // Gone meanwhile, it gives the document to the page under it.
             _pageGone();
         }
+    }
+}
+
+// Settles a covered page's pending cascade work in that page, and an error in
+// it does not keep the page on top from coming back. Its own function: an
+// inline `try` in `_asPage`'s `finally`, after the `try` returned, ends that
+// `finally` there, skipping the swap back. Qt 6.11: QV4 does so.
+function _asPageSettle() {
+    try {
+        _gSettle();
+    } catch (err) {
+        console.error(err && err.stack ? err.stack : err);
     }
 }
 
