@@ -32,6 +32,7 @@
    "LC moved \"t\",INPUT BODY true",
    "LC hidden-removed \"u \" true false",
    "LC detached-append mr \"v\",INPUT",
+   "LC detached-back \"v\",INPUT mr true 185 21 true",
    "LC out-narrow 300"
   ],
   "clicks": []
