@@ -545,6 +545,28 @@ function importModule(namespace) {
     });
 }
 
+// `import()` of a module that runs at load: `state` says whether it has run or
+// what it threw. One that has run resolves to its namespace; otherwise the
+// promise settles once every script of the page has run, as a browser's
+// settles after the module's own script, rejecting with what it threw.
+function importEager(state, namespace) {
+    if (state.state === 1) {
+        return Promise.resolve(namespace());
+    }
+    return Promise.resolve().then(function() {
+        if (state.state === 2) {
+            throw state.error;
+        }
+        return namespace();
+    });
+}
+
+// What a script threw at its top level: reported as a browser reports it, and
+// the page goes on.
+function reportError(err) {
+    _ceReport(err);
+}
+
 // Helper for lowered object rest destructuring: `const { a, ...rest } = src`.
 function objectRest(source, excludedKeys) {
     var target = {};
