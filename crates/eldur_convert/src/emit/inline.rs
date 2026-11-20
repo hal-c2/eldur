@@ -293,8 +293,19 @@ enum Piece<'b, 'a> {
     /// A run of text between boxes, its spans kept.
     Run(Vec<Inline<'a>>),
     /// A box, with the innermost element around it that has its own node,
-    /// and whether an element around it makes a stacking context.
-    Atomic(&'b LayoutBox<'a>, Option<NodeId>, bool),
+    /// and the outermost one that makes a stacking context.
+    Atomic(&'b LayoutBox<'a>, Option<NodeId>, Option<&'b ComputedStyle>),
+}
+
+/// The level a span that makes a stacking context lifts its block by, for
+/// a box in it with a level, as `stack_above_flow` has a block's: its own
+/// `z-index` over the flow, or over the flow and no higher at `auto`. One
+/// under 0 stays in the flow, as a block's does.
+fn context_level(span: &ComputedStyle) -> Option<i32> {
+    match span.z_index {
+        Some(z) if crate::boxes::is_containing_block(span) => (z >= 0).then_some(z + 1),
+        _ => Some(1),
+    }
 }
 
 fn pieces<'b, 'a>(
@@ -309,7 +320,10 @@ fn pieces<'b, 'a>(
             Inline::Atomic(b) => {
                 end_run(run, out);
                 let owner = chain.iter().rev().find_map(|span| span.node);
-                let kept = chain.iter().any(|span| super::flow::is_context(span.style));
+                let kept = chain
+                    .iter()
+                    .find(|span| super::flow::is_context(span.style))
+                    .map(|span| span.style);
                 out.push(Piece::Atomic(b, owner, kept));
             }
             Inline::Span(span)
@@ -780,10 +794,12 @@ impl Emitter<'_, '_> {
                     let before = self.above_flow.take();
                     let part = self.atomic(a, decoration, &flow_id);
                     // A span that makes a stacking context keeps a level the
-                    // box has, or a class gives it, inside: to the block it
-                    // is over the flow and no higher, as a context at `auto`.
-                    if kept && self.above_flow.is_some() {
-                        self.above_flow = Some(1);
+                    // box has, or a class gives it, inside: the block takes
+                    // the span's own level in its place.
+                    if let Some(span) = kept
+                        && self.above_flow.is_some()
+                    {
+                        self.above_flow = context_level(span);
                     }
                     self.above_flow = match (before, self.above_flow) {
                         (Some(a), Some(b)) => Some(a.max(b)),
