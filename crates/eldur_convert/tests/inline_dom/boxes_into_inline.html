@@ -19,6 +19,11 @@ function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?
 <p><span id="md">t</span></p>
 <p><span id="mh">u </span></p>
 <p><span id="mr">v</span></p>
+<p><span id="mp">b </span></p>
+<p><span id="mq">c</span></p>
+<p><span id="mw">w</span></p>
+<div id="mwd" style="display:flex"><div>x</div></div>
+<p id="mvp">a <span id="mv">v</span></p>
 <script>
 // Boxes a script appends to an inline element go into that element: an atomic
 // box sits on its line after its text, a block splits the line around it.
@@ -98,6 +103,21 @@ L("detached-append",I(my.parentNode),N(mr));
 // Back on the page, it is drawn as one made there.
 mrp.append(mr);
 L("detached-back",N(mr),I(my.parentNode),I(mr.parentNode)===I(mrp),Math.round(R(my).r-R(my).l),Math.round(R(my).b-R(my).t),near(R(my).t,R(mr).t)||R(my).t<R(mr).b);
+// Back in a box that lays out its children as boxes, it is too.
+var mw=document.getElementById("mw"),mwd=document.getElementById("mwd");mw.remove();
+var mwi=document.createElement("input");mw.append(mwi);mwd.append(mw);
+L("detached-box",N(mw),I(mwi.parentNode),I(mw.parentNode),Math.round(R(mwi).r-R(mwi).l),Math.round(R(mwi).b-R(mwi).t),near(R(mwi).t,R(mw).t)||R(mwi).t<R(mw).b);
+// Put back beside a text, it is too.
+var mv=document.getElementById("mv"),mvp=document.getElementById("mvp");mv.remove();
+var mvi=document.createElement("input");mv.append(mvi);mvp.firstChild.after(mv);
+L("detached-after",N(mvp),N(mv),I(mvi.parentNode),Math.round(R(mvi).r-R(mvi).l),Math.round(R(mvi).b-R(mvi).t),near(R(mvi).t,R(mv).t)||R(mvi).t<R(mv).b);
+// One replaced while its element is hidden is no longer the element's.
+var mp=document.getElementById("mp"),mz=document.createElement("input");mp.append(mz);
+mp.style.display="none";mp.replaceChild(document.createTextNode("r"),mz);mp.style.display="";
+L("replaced",N(mp),mz.parentNode===null);
+// A box put before itself stays before the box after it.
+var mq=document.getElementById("mq"),qa=document.createElement("input"),qb=document.createElement("input");qa.id="qa";qb.id="qb";mq.append(qa,qb);
+mq.insertBefore(qa,qa);L("self-ref",N(mq));
 // It sizes as any block from then on.
 document.body.style.width="300px";
 L("out-narrow",Math.round(R(blk).r-R(blk).l));
