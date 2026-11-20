@@ -547,10 +547,12 @@ function importModule(namespace) {
 
 // `import()` of a module that runs at load. `run` runs it once and records on
 // itself whether it ran (1) or what it threw (2); it is null for a module with
-// no code to run. One that has run resolves to its namespace; otherwise the
-// promise settles once every script of the page has run, as a browser's settles
-// after the module's own script: `namespace` runs a module nothing has run yet
-// and throws what one threw.
+// no code to run. A module of a cycle that ran while the rest of its cycle
+// still runs (4) is not done: the cycle shares one result. One that has run
+// resolves to its namespace; otherwise the promise settles once every script of
+// the page has run, as a browser's settles after the module's own script and
+// its cycle: `namespace` runs a module nothing has run yet and throws what one
+// threw.
 function importEager(run, namespace) {
     if (run === null || run.state === 1) {
         return Promise.resolve(namespace());
