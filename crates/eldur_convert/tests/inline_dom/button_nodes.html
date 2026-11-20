@@ -1,0 +1,31 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif}</style><script>
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
+function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?JSON.stringify(n.data):I(n)}).join(",")}
+</script></head><body>
+<button id="b">Save</button>
+<button id="c">Save</button>
+<button id="d">Save</button>
+<button id="e">Save</button>
+<script>
+// A text-only button holds its text as a Text node, as every element does.
+var b=document.getElementById("b"),t=b.firstChild;
+L("kids",b.childNodes.length,t&&t.nodeType,t&&JSON.stringify(t.data),t&&t.parentNode===b,t===b.lastChild,I(t&&t.nextSibling));
+t.data="Saved";
+L("data",JSON.stringify(b.textContent),JSON.stringify(b.innerText),JSON.stringify(t.nodeValue));
+var c=document.getElementById("c"),h=document.createTextNode("Hi ");
+c.insertBefore(h,c.firstChild);
+L("before",c.childNodes.length,N(c),JSON.stringify(c.textContent),h.parentNode===c,h.nextSibling===c.lastChild);
+var d=document.getElementById("d"),dt=d.firstChild;
+d.removeChild(dt);
+L("removed",d.childNodes.length,I(d.firstChild),JSON.stringify(d.textContent),I(dt.parentNode),JSON.stringify(dt.data));
+dt.data="Back";
+d.appendChild(dt);
+L("back",N(d),JSON.stringify(d.innerText),dt.parentNode===d);
+var e=document.getElementById("e"),tail=document.createTextNode("!");
+e.appendChild(tail);
+L("append",N(e),tail.parentNode===e,e.firstChild.nextSibling===tail);
+tail.data="?";
+e.firstChild.data="Load";
+L("later",JSON.stringify(e.textContent),JSON.stringify(e.innerText));
+</script></body></html>

@@ -1,0 +1,33 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif}</style><script>
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
+function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?JSON.stringify(n.data):I(n)}).join(",")}
+</script></head><body>
+<p id="p">one</p>
+<p id="q">two</p>
+<div id="d"><div id="dd">block</div></div>
+<div id="h"></div>
+<script>
+// A created span's text is its own Text node, as a parsed span's is: in a
+// line, loose, at the end of the body, beside a block, or parsed from markup.
+function T(tag,s,host){
+  var t=s.childNodes[0];
+  L(tag,s.childNodes.length,t.nodeType,I(t),t.parentNode===s,t===s.firstChild,t.tagName===undefined,JSON.stringify(t.data));
+  t.data="yz";
+  L(tag+"-data",JSON.stringify(s.textContent),JSON.stringify(t.data),s.innerHTML,host?JSON.stringify(host.textContent):"-");
+}
+var p=document.getElementById("p"),s=document.createElement("span");
+s.textContent="x";p.append(s);T("line",s,p);
+L("line-p",JSON.stringify(p.innerText),p.innerHTML);
+var l=document.createElement("span");l.textContent="x";T("loose",l,null);
+var b=document.createElement("span");b.textContent="x";document.body.append(b);T("body",b,null);
+var d=document.getElementById("d"),ds=document.createElement("span");ds.textContent="x";d.append(ds);T("beside",ds,d);
+var h=document.getElementById("h");h.innerHTML="<span>x</span>";T("markup",h.firstChild,h);
+L("markup-h",h.innerHTML);
+var q=document.getElementById("q"),e=document.createElement("em");
+q.append(e);
+e.textContent="w";
+e.firstChild.data="v";
+e.append("u");
+L("em",N(e),JSON.stringify(q.textContent),q.innerHTML);
+</script></body></html>

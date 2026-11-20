@@ -1,0 +1,28 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif}</style><script>
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
+function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?JSON.stringify(n.data):I(n)}).join(",")}
+</script></head><body>
+<p id="p">before <span id="s">in<i id="m">n</i></span><b id="a"> after</b></p>
+<div id="blk">block</div>
+<input id="f" value="v" style="width:60px">
+<p id="q">one <span id="r">two<i id="rm">o</i></span><b id="ra"> three</b></p>
+<script>
+// Boxes a script appends to an inline element go into that element: an atomic
+// box sits on its line after its text, a block splits the line around it.
+function R(e){var r=e.getBoundingClientRect();return {l:Math.round(r.left),t:Math.round(r.top),r:Math.round(r.right),b:Math.round(r.bottom)}}
+function near(a,b){return Math.abs(a-b)<=3}
+var s=document.getElementById("s"),m=document.getElementById("m"),a=document.getElementById("a");
+var made=document.createElement("button");made.textContent="Go";made.id="made";
+s.append(made);
+var mr=R(m),br=R(made),ar=R(a);
+L("made",I(made.parentNode),N(s),near(br.l,mr.r)||br.l>mr.r,br.t<mr.b&&br.b>mr.t,ar.l>=br.r-3);
+var f=document.getElementById("f");
+s.append(f);
+var fr=R(f);br=R(made);
+L("input",I(f.parentNode),N(s),fr.l>=br.r-3,fr.t<br.b&&fr.b>br.t,f.value,[].filter.call(document.body.children,function(e){return e.tagName!=="SCRIPT"}).length);
+var r=document.getElementById("r"),rm=document.getElementById("rm"),ra=document.getElementById("ra"),blk=document.getElementById("blk");
+r.append(blk);
+var q=document.getElementById("q"),kr=R(blk),rr=R(rm),qr=R(q),tr=R(ra);
+L("block",I(blk.parentNode),N(r),kr.t>=rr.b-3,near(kr.l,qr.l),tr.t>=kr.b-3,JSON.stringify(q.textContent));
+</script></body></html>
