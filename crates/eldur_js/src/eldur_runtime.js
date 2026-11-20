@@ -18537,6 +18537,12 @@ function afterClick(follow) {
 // A label's control gets a click of its own, counted as the press that made it.
 function labelled(item) {
     var raw = _unwrap(item);
+    // Qt also gives a press to a covered page's label under the point, whose
+    // tap joins the document's press: that label is not in the document the
+    // press is on, so its control gets nothing.
+    if (_pageOf(raw) !== _root) {
+        return;
+    }
     var detail = _inDefaultsDetail || 1;
     if (typeof raw.click === "function") {
         _meta(raw).clickDetail = detail;
