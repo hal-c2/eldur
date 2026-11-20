@@ -1452,10 +1452,19 @@ fn float_run(boxes: &[LayoutBox<'_>]) -> usize {
 }
 
 impl Emitter<'_, '_> {
-    /// Whether a class or state restacks the box or one it holds.
+    /// Whether a class or state restacks the box or one it holds, short of
+    /// a stacking context: CSS keeps a level inside the context that holds
+    /// it, as `lists::holds_level` does. A class that makes or unmakes the
+    /// context restacks the context itself, so that one still counts.
     fn restacked(&self, b: &LayoutBox<'_>) -> bool {
         b.node.is_some_and(|n| self.restacks.contains(&n))
-            || matches!(&b.content, crate::boxes::Content::Blocks(kids) if kids.iter().any(|k| self.restacked(k)))
+            || matches!(&b.content, crate::boxes::Content::Blocks(kids) if kids.iter().any(|k| {
+                if is_context(&k.style) {
+                    k.node.is_some_and(|n| self.restacks.contains(&n))
+                } else {
+                    self.restacked(k)
+                }
+            }))
     }
 
     /// Whether a percentage height on a child of the current block means
@@ -1463,6 +1472,13 @@ impl Emitter<'_, '_> {
     pub(super) fn percent_resolves(&self) -> bool {
         self.percent_height_base.is_some() || self.percent_of_vh.is_some()
     }
+}
+
+/// Whether a box makes a stacking context: one at `auto` that still
+/// makes one, or a positioned box with a level.
+fn is_context(style: &ComputedStyle) -> bool {
+    crate::boxes::is_context_at_auto(style)
+        || (crate::boxes::is_containing_block(style) && style.z_index.is_some())
 }
 
 /// A stretched block fills after all if a child's percentage height needs that.
