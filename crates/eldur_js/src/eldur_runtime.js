@@ -1393,6 +1393,9 @@ function _detachDeadRoots() {
 // for it, and the page on top is again afterwards. The swap leaves `_docGen`
 // alone, as the page on top is the document again before anything under way
 // on it looks. A gone page's callback has no document left, and is dropped.
+// The pages `_asPage` swapped in, innermost last.
+var _asPageOn = [];
+
 function _asPage(page, fn, self, args) {
     if (!page || page === _root && _live(page)) {
         return fn.apply(self, args);
@@ -1421,9 +1424,11 @@ function _asPage(page, fn, self, args) {
     _in = _inLayers.get(page) || null;
     // The entry the history is on: whether the callback moved it.
     var entryWas = _historyEntries[_historyIndex];
+    _asPageOn.push(page);
     try {
         return fn.apply(self, args);
     } finally {
+        _asPageOn.pop();
         // A page the callback made over this one is the document now, and
         // `init` kept this page's state.
         if (_root === page) {
@@ -18167,26 +18172,30 @@ function _inUp(bit, scene, mods) {
     });
 }
 
-// `Qt.callLater` keeps one of each function, and closures of one count as one,
-// so one flush goes over each page that has work waiting, in that page: a
-// covered page's callback queues in its own input layer, which is swapped out
-// again by the time the flush runs.
-var _inLaterPages = [];
+// What a page queues while it is the document waits on its input layer,
+// which is flushed only while it is the document: a press's defaults on a page
+// another took over from do nothing. What a covered page's own callback queues
+// (a dialog's `close` after `close()`) is that callback's, and runs in that
+// page, as the callback did. `Qt.callLater` keeps one of each function, and
+// closures of one count as one, so one flush goes over them all.
+var _inLaterCovered = [];
 
 function _inLater(run) {
-    _in.later.push(run);
-    if (_inLaterPages.indexOf(_root) === -1) {
-        _inLaterPages.push(_root);
+    if (_asPageOn.length > 0 && _asPageOn[_asPageOn.length - 1] === _root) {
+        _inLaterCovered.push({ page: _root, run: run });
+        Qt.callLater(_inFlushLaterCovered);
+        return;
     }
-    Qt.callLater(_inFlushLaterPages);
+    _in.later.push(run);
+    Qt.callLater(_inFlushLater);
 }
 
-function _inFlushLaterPages() {
-    var pages = _inLaterPages;
-    _inLaterPages = [];
-    pages.forEach(function(page) {
+function _inFlushLaterCovered() {
+    var queued = _inLaterCovered;
+    _inLaterCovered = [];
+    queued.forEach(function(q) {
         try {
-            _asPage(page, _inFlushLater);
+            _asPage(q.page, q.run);
         } catch (err) {
             console.error(err && err.stack ? err.stack : err);
         }
