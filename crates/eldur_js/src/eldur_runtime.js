@@ -11331,7 +11331,10 @@ function _vNewRun(lines, before) {
 // The model of the run a line of `raw`'s ends with: what is appended to `raw`
 // joins it, as it would have joined the model the runs were cut from.
 function _vLinesTail(raw) {
-    var lines = _anonLinesOf(raw);
+    return _vTailOf(_anonLinesOf(raw));
+}
+
+function _vTailOf(lines) {
     var kids = lines ? lines.children : [];
     var last = kids.length > 0 ? kids[kids.length - 1] : null;
     var model = _vAnonText(last) ? _vModelOf(last) : null;
@@ -21083,7 +21086,7 @@ function _vTakeOver(raw, m, kids, fromPage) {
 // a node of a line: once in `into`, CSS makes it inline again.
 function _vPageInline(raw, into) {
     var tag = typeof raw.eldurTag === "string" ? raw.eldurTag : "";
-    if (tag === "" || tag === "#text" || tag === "br" || tag === "wbr" || !_vInlineTag(tag) || _isLines(raw)) {
+    if (tag === "" || tag === "#text" || tag === "br" || tag === "wbr" || !_vInlineTag(tag)) {
         return false;
     }
     return !_gHasCascade() || _gStyleInto(raw, into, null).display === "inline";
@@ -21098,23 +21101,69 @@ function _vFromPage(raw) {
     if (own && own.text !== "" && !_vModelOf(own)) {
         _vEnsureModel(own);
     }
-    var kids = _rawChildNodes(raw).map(function(n) {
-        if (n.__eldurInline) {
-            if (n.vparent || n.model) {
-                _vRemove(n);
-            }
-            return n;
-        }
-        if (_meta(n).createdTag && !_V_STAYS_BOX.test(_meta(n).createdTag)) {
-            return _vFromCreated(n);
-        }
-        if (_vPageInline(n, raw)) {
-            return _vFromPage(n);
-        }
-        return { stayBox: n };
+    var kids = [];
+    _rawChildNodes(raw).forEach(function(n) {
+        kids.push.apply(kids, _vFromPageKid(n, raw));
     });
     m.createdTag = raw.eldurTag;
     return _vTakeOver(raw, m, kids, true);
+}
+
+// What a child of `_vFromPage`'s element is from then on: nodes, or a box.
+function _vFromPageKid(n, raw) {
+    if (n.__eldurInline) {
+        if (n.vparent || n.model) {
+            _vRemove(n);
+        }
+        return [n];
+    }
+    // A run of its text, the converter's or a line's: its nodes.
+    if (_isDomText(n) && typeof n.text === "string" && !_meta(n).createdTag) {
+        return _vFromPageRun(n);
+    }
+    if (_meta(n).createdTag && !_V_STAYS_BOX.test(_meta(n).createdTag)) {
+        return [_vFromCreated(n)];
+    }
+    if (_vPageInline(n, raw)) {
+        return [_vFromPage(n)];
+    }
+    return [{ stayBox: n }];
+}
+
+// The nodes a run of the page's text holds, or one leaf of its text: the run,
+// the page's item, is drawn nowhere from then on.
+function _vFromPageRun(run) {
+    var model = _vModelOf(run);
+    var out = [];
+    if (model) {
+        model.kids.forEach(function(kid) {
+            _vSetModel(kid, null);
+            out.push(kid);
+        });
+        model.kids = [];
+        var at = _vModels.indexOf(model);
+        if (at !== -1) {
+            _vModels.splice(at, 1);
+        }
+        delete _meta(run).vModel;
+    } else if (run.text !== "") {
+        var leaf = _vLeaf(run.text, null, null);
+        var m = _itemMeta.get(run);
+        if (m && m.wrapper) {
+            _itemMeta.delete(run);
+            _itemMeta.set(leaf, m);
+            m.vCreated = true;
+            if (m._setRaw) {
+                m._setRaw(leaf);
+            }
+        }
+        out.push(leaf);
+    }
+    if (run.parent) {
+        run.parent = null;
+    }
+    run.visible = false;
+    return out;
 }
 
 // A node going where only real items are laid out.
@@ -21674,9 +21723,21 @@ function _vHostOf(raw, nodes, ref) {
         return null;
     }
     if (_holdsLines(raw)) {
-        return ref ? null : _vLinesTail(raw) || _vNewLinesTail(raw);
+        if (ref) {
+            return null;
+        }
+        if (_vBoxesAfter(_anonLinesOf(raw))) {
+            // Below them: on the line that ends the box, if one does.
+            var end = _vEndLines(raw);
+            return end ? _vTailOf(end) || (_gIsBox(raw) ? null : _vNewRun(end, null)) : null;
+        }
+        return _vLinesTail(raw) || _vNewLinesTail(raw);
     }
     var known = _vExisting(raw);
+    var knownText = known && typeof raw.spacing === "number" ? _findTextChild(raw) : null;
+    if (!ref && knownText && _vModelOf(knownText) === known && _vBoxesAfter(knownText)) {
+        return null;
+    }
     if (known) {
         return known;
     }
@@ -21694,6 +21755,38 @@ function _vHostOf(raw, nodes, ref) {
     // A template the converter wrote for an inline element in this box is its look
     // as an item; on the box's line it is a node, styled by the rules as its text is.
     return _vOwnModel(raw) || _vBoxModel(raw);
+}
+
+// A line of a box's own above boxes of its own is no line for what is appended
+// after them: that goes below them, on a line of its own (CSS's anonymous block
+// box).
+function _vBoxesAfter(item) {
+    var box = item ? item.parent : null;
+    if (!box || typeof box.spacing !== "number" || _isLines(box)) {
+        return false;
+    }
+    var after = false;
+    for (var i = 0; i < box.children.length; ++i) {
+        var kid = box.children[i];
+        if (kid === item) {
+            after = true;
+        } else if (after && kid.visible && !_isInternalHelperNode(kid)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// The line of the runtime's a box's laid-out children end with, if they do.
+function _vEndLines(raw) {
+    var container = _childContainer(raw);
+    var kids = container ? container.children : [];
+    for (var i = kids.length - 1; i >= 0; --i) {
+        if (kids[i].visible && !_isInternalHelperNode(kids[i])) {
+            return _isLines(kids[i]) && _isAnonLines(kids[i]) ? kids[i] : null;
+        }
+    }
+    return null;
 }
 
 // A model's nodes going to the item that replaces its element's: they stay one
