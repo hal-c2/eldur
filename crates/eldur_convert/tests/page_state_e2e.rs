@@ -1285,20 +1285,25 @@ fn a_covered_pages_own_callbacks_see_its_document() {
     assert!(problems.is_empty(), "{}", problems.join("\n  "));
 }
 
-// A covered page whose listener goes back onto the entry the page on top
-// opened on, and which is the document again once that page went.
+// A covered page whose own callback goes back onto the entry the page on top
+// opened on, and which is the document again once that page went. Its
+// `window` listener is registered at runtime, so the host's event at its root
+// runs it in its own document, covered or not (an element's lone listener is
+// bound statically, §7.3, and a host `dispatchEvent` does not reach it).
 const BACK_UNDER: &str = r##"<!doctype html><html><head><meta charset="utf-8"></head><body>
 <p id="under">under</p>
 <script>
 function L(){console.log("HB "+[].slice.call(arguments).join(" "))}
 function where() { return location.href.slice(location.href.lastIndexOf("/") + 1); }
 L("under at", where());
-var under = document.getElementById("under");
-under.addEventListener("back", function() {
-  history.back();
-  L("covered back", history.length, JSON.stringify(history.state), where());
-});
-under.addEventListener("again", function() {
+var steps = 0;
+window.addEventListener("hashchange", function() {
+  steps += 1;
+  if (steps === 1) {
+    history.back();
+    L("covered back", history.length, JSON.stringify(history.state), where());
+    return;
+  }
   L("up again", history.length, JSON.stringify(history.state), where());
   history.forward();
   L("forward", history.length, JSON.stringify(history.state), where());
@@ -1339,29 +1344,17 @@ TestCase {
         waitForRendering(page)
         return page
     }
-    function named(item, name) {
-        if (item.objectName === name) {
-            return item
-        }
-        for (let i = 0; i < item.children.length; ++i) {
-            const found = named(item.children[i], name)
-            if (found) {
-                return found
-            }
-        }
-        return null
-    }
-    function send(page, name, type) {
-        R.wrap(named(page, name)).dispatchEvent(new R.Event(type))
-    }
     function test_covered_back() {
         const under = make("Under.qml")
         const over = make("Over.qml")
-        send(under, "under", "back")
+        // Covered: its window's listener goes back.
+        R.dispatchEvent(under, new R.Event("hashchange"))
         wait(50)
         over.destroy()
         wait(100)
-        send(under, "under", "again")
+        // The document again: forward and back from there.
+        R.dispatchEvent(under, new R.Event("hashchange"))
+        wait(50)
     }
 }
 }
