@@ -205,5 +205,24 @@
     "errors": [
       "Error: wa"
     ]
+  },
+  "cycleentry": {
+    "lines": [
+      "bad runs",
+      "x runs",
+      "y runs x",
+      "inline runs",
+      "x rejected in y y",
+      "x rejected y",
+      "done"
+    ],
+    "text": {
+      "out": "done"
+    },
+    "errors": [
+      "Error: bad",
+      "Error: y",
+      "Error: y"
+    ]
   }
 }

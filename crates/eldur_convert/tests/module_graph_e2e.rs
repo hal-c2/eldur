@@ -410,3 +410,16 @@ fn an_import_of_a_cycle_member_waits_for_its_cycle() {
     let read = ["out"];
     assert_eq!(run("cyclewait", &read), wanted("cyclewait", &read));
 }
+
+/// `entry.js` imports `bad.js`, which throws, before `x.js`, so the x↔y cycle
+/// is first entered at `y.js`'s script, from the member the conversion did
+/// not see first. `y.js` calls `import("./x.js")` after `x.js` ran and then
+/// throws: that `import()` and a later one reject with `y`'s error.
+#[test]
+fn a_cycle_entered_at_another_member_settles_with_it() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("cycleentry", &read), wanted("cycleentry", &read));
+}
