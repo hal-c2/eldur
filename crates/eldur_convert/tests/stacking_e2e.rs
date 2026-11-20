@@ -1058,6 +1058,24 @@ fn a_span_that_makes_a_context_keeps_the_level_a_class_gives_in() {
     }
 }
 
+/// The same, with `#ix` in a span that makes a stacking context with a
+/// level of its own (5): over `#lx` (1), the context lifts `#ix` with it.
+#[test]
+fn a_span_with_a_level_of_its_own_lifts_the_level_it_keeps_in() {
+    let page = inline_level_page(
+        INLINE_BLOCK,
+        "<span id=wx style=\"position: relative; z-index: 5\"><span id=ix></span></span>",
+        RELATIVE,
+        LATER_AT_1,
+    );
+    run(
+        &page,
+        &with_test(INLINE_LEVEL_TEST),
+        "context-span-level",
+        false,
+    );
+}
+
 /// The inline-block in a static box (`#rx`) and a static box after (`#lx`):
 /// nothing after `#bx` paints later, so only the level a class gives `#ix`
 /// sends `#ox` to the stop, where Chromium has it, under `#ix` (5,50).
