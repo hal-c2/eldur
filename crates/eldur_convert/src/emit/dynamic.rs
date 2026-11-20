@@ -986,8 +986,11 @@ impl Dynamic<'_, '_> {
             .found
             .elements
             .iter()
-            .filter(|e| restacks(&e.by_mask))
-            .flat_map(|e| doc.descendants(e.node))
+            .flat_map(|e| match restacks(&e.by_mask) {
+                Restacks::Subtree => doc.descendants(e.node).collect(),
+                Restacks::Box => vec![e.node],
+                Restacks::No => Vec::new(),
+            })
             .collect();
         let across = Across {
             sticky,
@@ -1954,20 +1957,40 @@ fn border_strips(styles: &[Box<ComputedStyle>]) -> Option<[bool; 4]> {
     Some(union)
 }
 
-/// Whether a class or state changes a box's level, its positioning,
-/// whether it makes a stacking context at `auto`, or whether it has a box
-/// at all: a hidden one rises in no world, so it rises in none.
-fn restacks(styles: &[Box<ComputedStyle>]) -> bool {
+/// Which boxes a class or state would make rise out of their block in
+/// one combination and not in another, which a single shape can't hold.
+enum Restacks {
+    No,
+    /// The box rises in some combinations (`position: relative` at a
+    /// level over 0), and in the others not.
+    Box,
+    /// And the boxes in it: it is a stacking context in some combinations
+    /// and not in others, which decides whether what it holds may rise past
+    /// it, or it is out of flow in some, or it has no box in some, and a
+    /// hidden box's kids rise in no combination.
+    Subtree,
+}
+
+fn restacks(styles: &[Box<ComputedStyle>]) -> Restacks {
     let first = &styles[0];
     let gone = |s: &ComputedStyle| {
         s.display == Display::None || s.visibility == eldur_css::Visibility::Collapse
     };
-    styles.iter().any(|s| {
-        s.z_index != first.z_index
+    let rises = |s: &ComputedStyle| {
+        s.position == eldur_css::Position::Relative && s.z_index.is_some_and(|z| z > 0)
+    };
+    if styles.iter().any(|s| {
+        s.z_index.is_some() != first.z_index.is_some()
             || s.position != first.position
             || crate::boxes::is_context_at_auto(s) != crate::boxes::is_context_at_auto(first)
             || gone(s) != gone(first)
-    })
+    }) {
+        Restacks::Subtree
+    } else if styles.iter().any(|s| rises(s) != rises(first)) {
+        Restacks::Box
+    } else {
+        Restacks::No
+    }
 }
 
 /// Whether some combination paints the box, or they differ in what makes

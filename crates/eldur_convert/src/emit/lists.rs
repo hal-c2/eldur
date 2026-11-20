@@ -357,7 +357,8 @@ impl Emitter<'_, '_> {
             .filter(|_| self.options.source_comments)
             .map(|n| describe(self.doc, n));
         if let Some(stop) = hoist {
-            let host = self.hoisted_host(b, obj, block_id.as_deref(), lift);
+            let host =
+                self.hoisted_host(b, obj, block_id.as_deref(), Value::Number(f64::from(lift)));
             self.hoisted.push((stop, host));
         } else {
             match (fixed, self.fixed_block.as_mut()) {
@@ -420,7 +421,7 @@ impl Emitter<'_, '_> {
         b: &LayoutBox<'_>,
         mut obj: Object,
         block: Option<&str>,
-        lift: i32,
+        lift: Value,
     ) -> Object {
         self.static_places = true;
         self.hoisted_frames = true;
@@ -486,7 +487,7 @@ impl Emitter<'_, '_> {
             readonly: false,
             required: false,
         });
-        item.set("z", Value::Number(f64::from(lift)));
+        item.set("z", lift);
         item.push_child(frame);
         item
     }
@@ -556,9 +557,12 @@ impl Emitter<'_, '_> {
                 "{slot_id}.parent ? {slot_id}.parent.visible : false"
             )),
         );
+        // A level a class or state changes is over 0 in every combination
+        // (`restacks`), and the host follows it.
         let lift = match obj.get("z") {
-            Some(Value::Number(z)) => *z as i32,
-            _ => 1,
+            Some(Value::Number(z)) => Value::Number(*z),
+            Some(Value::Expr(_)) => Value::expr(format!("{id}.z")),
+            _ => Value::Number(1.0),
         };
         let host = self.hoisted_host(b, obj, Some(&slot_id), lift);
         (slot, host)

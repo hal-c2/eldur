@@ -88,7 +88,7 @@ TestCase {
 
     property var page
     readonly property var painted: ["b", "c", "d", "f", "i", "j", "l", "m", "o", "p", "t", "u", "w", "vd", "src", "mv", "vs", "rm", "gone", "vr",
-        "c1", "o1", "c2", "o2", "c3", "o3", "hv", "o4", "fc", "o5", "c6", "o6", "c7", "o7", "e8", "o8", "c9", "o9", "c10", "d10", "o10",
+        "c1", "o1", "c2", "o2", "c3", "o3", "hv", "o4", "fc", "o5", "c6", "o6", "c7", "o7", "e8", "o8", "c9", "o9", "c10", "d10", "o10", "n11",
         "k1", "v1", "k2", "v2", "k3", "v3", "k4", "v4", "k5", "m5", "v5",
         "c1", "v1", "c2", "v2", "c3", "v3", "c4", "e4", "v4", "e5", "v5", "a6", "a7", "h8", "a8", "h9", "h10", "c11", "v11", "c12", "v12", "c13", "v13",
         "p1", "p2", "r2", "a2",
@@ -182,6 +182,9 @@ div { height: 40px; width: 200px }
 [data-up] { z-index: 3 }
 .hide #c9 { display: none }
 .hi #d10 { z-index: 3 }
+.one { z-index: 1 }
+.two { z-index: 2 }
+#n11 { margin-top: -20px; background: blue }
 </style></head><body>
 <div id=a1><div id=c1 class=in></div></div><div id=o1 class=over></div>
 <div class=gap></div>
@@ -202,16 +205,22 @@ div { height: 40px; width: 200px }
 <div id=a9><div id=c9 class="in up"></div></div><div id=o9 class=over></div>
 <div class=gap></div>
 <div id=a10><div id=c10 class=in></div><div id=d10 class=in></div></div><div id=o10 class=over></div>
+<div class=gap></div>
+<div id=a11><div id=c11 class="in one"></div></div><div id=n11></div>
 <script>
-var named = ['a1','c1','o1','a2','c2','o2','a3','c3','o3','a4','hv','o4','a5','fc','o5','a6','c6','o6','a7','o7','a8','e8','o8','a9','c9','o9','a10','c10','d10','o10'].map(function (id) { return document.getElementById(id); });
-// A class added, set and taken away; focus; an attribute; a box made
-// with a level of its own; and a fixed one with a level, painted over the
-// window, which lifts nothing it is in; a raised box a class on its
-// block hides; and a block a script's level lifted, whose other kid a
-// class then raises. The hover is the test's.
+var named = ['a1','c1','o1','a2','c2','o2','a3','c3','o3','a4','hv','o4','a5','fc','o5','a6','c6','o6','a7','o7','a8','e8','o8','a9','c9','o9','a10','c10','d10','o10','a11','c11','n11'].map(function (id) { return document.getElementById(id); });
+// A class added, set and taken away; a raised box a class on its block
+// hides; a class that moves a raised box from one level over 0 to
+// another, over the flow of the block after its own; focus; an attribute; a box made with a level of its own; and a
+// fixed one with a level, painted over the window, which lifts nothing it
+// is in; and a block a script's level lifted, whose other kid a class then
+// raises. The hover is the test's. A static page keeps what is before the
+// attribute.
 document.getElementById('c1').classList.add('up');
 document.getElementById('c2').className = 'in up';
 document.getElementById('c3').classList.remove('up');
+document.getElementById('a9').classList.add('hide');
+document.getElementById('c11').className = 'in two';
 document.getElementById('fc').focus();
 document.getElementById('c6').setAttribute('data-up', '');
 var made = document.createElement('div');
@@ -222,7 +231,6 @@ var fixed = document.createElement('div');
 fixed.id = 'f8';
 fixed.style.cssText = 'position: fixed; top: 1150px; left: 600px; width: 50px; z-index: 10; background: green';
 document.getElementById('a8').appendChild(fixed);
-document.getElementById('a9').classList.add('hide');
 document.getElementById('c10').style.zIndex = '1';
 document.getElementById('a10').classList.add('hi');
 </script></body></html>"#;
@@ -243,12 +251,14 @@ const PATHS_TEST: &str = r##"
         compare(front(page, 100, 990), "o9", "a raised box a class hides")
         compare(front(page, 100, 1100), "o10")
         compare(front(page, 100, 1130), "d10", "a class raises a block's kid after a script did")
+        compare(front(page, 100, 1230), "c11", "a class moves a raised box to another level over 0")
+        compare(front(page, 100, 1250), "n11")
     }
 }
 }
 "##;
 
-/// With no script and no pointer, Chromium's fronts are `o1 o2 c3 o4 o5 o6 o7 o8 c9 o10`.
+/// With no script and no pointer, Chromium's fronts are `o1 o2 c3 o4 o5 o6 o7 o8 c9 o10 c11`.
 const PATHS_UNSCRIPTED: &str = r##"
     function test_levels_follow_what_the_boxes_hold() {
         compare(front(page, 100, 30), "o1")
@@ -262,6 +272,8 @@ const PATHS_UNSCRIPTED: &str = r##"
         compare(front(page, 100, 990), "c9")
         compare(front(page, 100, 1100), "o10")
         compare(front(page, 100, 1130), "o10")
+        compare(front(page, 100, 1230), "c11")
+        compare(front(page, 100, 1250), "n11")
     }
 }
 }
@@ -583,6 +595,10 @@ fn rules_a_script_brings_restack_them_on_a_static_page() {
         .replace(
             r#"compare(front(page, 100, 750), "c7", "a box put in with a level")"#,
             r#"compare(front(page, 100, 750), "o7", "no box put in")"#,
+        )
+        .replace(
+            r#"compare(front(page, 100, 1130), "d10", "a class raises a block's kid after a script did")"#,
+            r#"compare(front(page, 100, 1130), "o10", "no level set, no class added")"#,
         );
     run(&page, &with_test(&test), "paths-static", false);
 }
@@ -688,7 +704,14 @@ div { height: 40px; width: 200px }
 <div id=p1 class=ab></div><div id=p2 class=ab></div>
 <div class=gap></div>
 <div id=r2></div><div id=a2 class=ab></div>
-</body></html>"#;
+<script>
+// Named so that they get an objectName the test can find: by literal
+// lookups, which leave the page static, with no DOM at run time.
+var p1 = document.getElementById('p1');
+var p2 = document.getElementById('p2');
+var r2 = document.getElementById('r2');
+var a2 = document.getElementById('a2');
+</script></body></html>"#;
 
 /// Chromium's fronts.
 const INITIAL_BLOCK_TEST: &str = r##"
@@ -706,6 +729,17 @@ const INITIAL_BLOCK_TEST: &str = r##"
 
 #[test]
 fn the_initial_blocks_overlays_keep_one_layer_with_the_page() {
+    let out = convert_str(INITIAL_BLOCK, &Options::default());
+    let qml = out.main_qml().expect("Main.qml");
+    assert!(
+        qml.contains(r#"objectName: "p1""#),
+        "p1 is not named\n{qml}"
+    );
+    // A page with a DOM at run time gives each overlay a slot to move.
+    assert!(
+        !qml.contains("eldurSlot: p1Slot"),
+        "the page is not static\n{qml}"
+    );
     run(
         INITIAL_BLOCK,
         &with_test(INITIAL_BLOCK_TEST),
