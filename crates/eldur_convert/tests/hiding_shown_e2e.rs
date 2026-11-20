@@ -644,6 +644,105 @@ const CASES: &[Case] = &[
   w.style.setProperty('--d', w.style.getPropertyValue('--d') ? '' : 'none');",
         back: &[],
     },
+    // An element appended last, past the hiding host's other children,
+    // reads the custom property there and follows a later write (#85).
+    Case {
+        name: "appended_child_variable_display_follows",
+        body: r#"<style>p{margin:0;height:20px}#w{--d:block}</style>
+<div id="w"><p id="a">A</p></div><p id="c">C</p>
+<script>const made = document.createElement('p'); made.textContent = 'B'; made.style.display = 'var(--d)'; document.getElementById('w').appendChild(made);</script>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const w = document.getElementById('w');
+  w.style.setProperty('--d', w.style.getPropertyValue('--d') ? '' : 'none');",
+        back: &[],
+    },
+    // A button inside an inline span a script reaches reads the custom
+    // property the span declares over the block's, with the page's rules
+    // held at runtime (#85).
+    Case {
+        name: "virtual_span_reached_variable_display",
+        body: r#"<style>#w{--gate:block}</style><div id="w"><p id="a" style="margin:0">A</p><p style="margin:0">x<span id="s" style="--gate:none">y<button id="b" style="height:40px;margin:0;padding:0;border:0;vertical-align:top">B</button></span></p><p id="c" style="margin:0">C</p></div>
+<script>window.spanSeen = document.getElementById('s').textContent;</script>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 66.0],
+        toggled: &[8.0, 44.0],
+        toggle: "const b = document.getElementById('b');
+  b.style.display = b.style.display ? '' : 'var(--gate)';",
+        back: &[],
+    },
+    // The same with no stylesheet: the page's own rules still decide.
+    Case {
+        name: "virtual_span_reached_variable_display_no_sheet",
+        body: r#"<div id="w" style="--gate:block"><p id="a" style="margin:0">A</p><p style="margin:0">x<span id="s" style="--gate:none">y<button id="b" style="height:40px;margin:0;padding:0;border:0;vertical-align:top">B</button></span></p><p id="c" style="margin:0">C</p></div>
+<script>window.spanSeen = document.getElementById('s').textContent;</script>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 66.0],
+        toggled: &[8.0, 44.0],
+        toggle: "const b = document.getElementById('b');
+  b.style.display = b.style.display ? '' : 'var(--gate)';",
+        back: &[],
+    },
+    // And a custom property a script writes on the span, once the button's
+    // display reads it.
+    Case {
+        name: "virtual_span_written_variable_display",
+        body: r#"<style>#w{--gate:block}</style><div id="w"><p id="a" style="margin:0">A</p><p style="margin:0">x<span id="s">y<button id="b" style="height:40px;margin:0;padding:0;border:0;vertical-align:top">B</button></span></p><p id="c" style="margin:0">C</p></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 66.0],
+        toggled: &[8.0, 44.0],
+        toggle: "const b = document.getElementById('b'); const s = document.getElementById('s');
+  if (!b.style.display) { s.style.setProperty('--gate', 'none'); b.style.display = 'var(--gate)'; } else { b.style.display = ''; s.style.removeProperty('--gate'); }",
+        back: &[],
+    },
+    Case {
+        name: "virtual_span_written_variable_display_no_sheet",
+        body: r#"<div id="w" style="--gate:block"><p id="a" style="margin:0">A</p><p style="margin:0">x<span id="s">y<button id="b" style="height:40px;margin:0;padding:0;border:0;vertical-align:top">B</button></span></p><p id="c" style="margin:0">C</p></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 66.0],
+        toggled: &[8.0, 44.0],
+        toggle: "const b = document.getElementById('b'); const s = document.getElementById('s');
+  if (!b.style.display) { s.style.setProperty('--gate', 'none'); b.style.display = 'var(--gate)'; } else { b.style.display = ''; s.style.removeProperty('--gate'); }",
+        back: &[],
+    },
+    // A custom property only a class's rule declares is the inherited one
+    // where the class does not apply, and the rule's once a script adds the
+    // class (#85).
+    Case {
+        name: "class_only_variable_inherits_elsewhere",
+        body: r#"<style>p{margin:0;height:20px}#o{--d:block}#w.k{--d:none}</style>
+<div id="o"><div id="w"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 48.0],
+        toggle: "const s = document.getElementById('shy'); const w = document.getElementById('w');
+  if (!s.style.display) { s.style.display = 'var(--d)'; } else { w.classList.toggle('k'); }",
+        back: &[8.0, 28.0],
+    },
+    // The same, inheriting the host's `style` attribute.
+    Case {
+        name: "class_only_variable_inherits_inline_host",
+        body: r#"<style>p{margin:0;height:20px}#w.k{--d:none}</style>
+<div id="o" style="--d:block"><div id="w"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 48.0],
+        toggle: "const s = document.getElementById('shy'); const w = document.getElementById('w');
+  if (!s.style.display) { s.style.display = 'var(--d)'; } else { w.classList.toggle('k'); }",
+        back: &[8.0, 28.0],
+    },
+    // And for a display a rule reads it in.
+    Case {
+        name: "class_only_variable_written_display",
+        body: r#"<style>p{margin:0;height:20px}#o{--d:block}#w.k{--d:none}#shy{display:var(--d)}</style>
+<div id="o"><div id="w"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('w').classList.toggle('k');",
+        back: &[],
+    },
     // In the world a class makes, the custom property is what that class's
     // rule declares, not the value as loaded.
     Case {
@@ -1299,4 +1398,44 @@ fn a_block_whose_ancestors_hiding_class_is_gone_shows_once_its_display_is_cleare
 #[test]
 fn a_class_added_after_load_hides_the_block_once_its_display_is_cleared() {
     run(case("class_added_display_cleared"));
+}
+
+#[test]
+fn an_appended_last_childs_variable_display_follows_a_later_write() {
+    run(case("appended_child_variable_display_follows"));
+}
+
+#[test]
+fn a_button_in_a_reached_inline_span_reads_the_spans_custom_property() {
+    run(case("virtual_span_reached_variable_display"));
+}
+
+#[test]
+fn a_button_in_a_reached_inline_span_reads_it_with_no_stylesheet_too() {
+    run(case("virtual_span_reached_variable_display_no_sheet"));
+}
+
+#[test]
+fn a_button_in_an_inline_span_follows_a_custom_property_written_on_the_span() {
+    run(case("virtual_span_written_variable_display"));
+}
+
+#[test]
+fn a_button_in_an_inline_span_follows_it_with_no_stylesheet_too() {
+    run(case("virtual_span_written_variable_display_no_sheet"));
+}
+
+#[test]
+fn a_custom_property_only_a_class_declares_is_inherited_until_the_class_is_added() {
+    run(case("class_only_variable_inherits_elsewhere"));
+}
+
+#[test]
+fn a_custom_property_only_a_class_declares_is_the_hosts_attribute_until_then() {
+    run(case("class_only_variable_inherits_inline_host"));
+}
+
+#[test]
+fn a_rules_variable_display_follows_a_custom_property_only_a_class_declares() {
+    run(case("class_only_variable_written_display"));
 }
