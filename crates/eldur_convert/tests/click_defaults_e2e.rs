@@ -368,8 +368,11 @@ TestCase {
     }
 
     // As test_23, but the host destroys A while the press is held, after its
-    // mousedown: whatever that press queued on Next has run under its shield
-    // by then, its release reaches no one, and Next's own tap is a click.
+    // mousedown. A's destruction queues on Next what a lost press's release
+    // leaves there, A's link default; the focus leaving A's items is what tells
+    // the runtime A is gone, with that queued. It runs under the shield of the
+    // press it came with, which drops it. The release reaches no one, and
+    // Next's own tap is one click.
     function test_24_press_whose_page_goes_while_it_is_held() {
         rest()
         const at = pages()
@@ -377,6 +380,11 @@ TestCase {
         const p = middle(at.a, "dn2")
         mousePress(host, p.x, p.y)
         tryVerify(function() { return at.next !== null && settled(at) }, 1000, "A was never swapped out")
+        at.a.Component.destruction.connect(function() {
+            Eldur._inLater(function() {
+                Eldur.afterClick(function() { console.log("LC Next ran A's link default") })
+            })
+        })
         at.a.destroy()
         wait(50)
         mouseRelease(host, p.x, p.y)
