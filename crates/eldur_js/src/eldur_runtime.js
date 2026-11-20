@@ -971,17 +971,45 @@ function _detailsWire(summary) {
     wrap(summary).addEventListener("click", function(ev) {
         // A restyle may have made it another item, which took the listener.
         var now = m.raw || summary;
-        var at = _elementParent(now);
-        if (!at || _nodeTag(at) !== "details" || _detailsSummary(at) !== now) {
+        if (!_detailsToggles(now) || _detailsControlInside(ev.target, now)) {
             return;
         }
+        // A virtual one has no item of its own to focus.
+        if (typeof now.forceActiveFocus === "function") {
+            now.forceActiveFocus();
+        } else {
+            focus(now);
+        }
         // Last on its element, and the page's listeners further up have yet to
-        // run: the toggle waits for what they say.
-        now.forceActiveFocus();
+        // run: the toggle waits for what they say, and is for the summary
+        // the details has once they are done.
         _afterThisDispatch(ev, function() {
-            wrap(at).open = !_meta(at).detailsOpen;
+            var then = m.raw || summary;
+            if (_detailsToggles(then)) {
+                var at = _elementParent(then);
+                wrap(at).open = !_meta(at).detailsOpen;
+            }
         });
     });
+}
+
+function _detailsToggles(summary) {
+    var at = _elementParent(summary);
+    return Boolean(at) && _nodeTag(at) === "details" && _detailsSummary(at) === summary;
+}
+
+// A click on a control or link in the summary activates that, not the summary
+// too (HTML §4.11.1: the summary's activation is for a click on itself).
+function _detailsControlInside(target, summary) {
+    var n = target ? _unwrap(target) : null;
+    while (n && n !== summary) {
+        var tag = _nodeTag(n);
+        if (_isLink(n) || tag === "button" || tag === "input" || tag === "select" || tag === "textarea") {
+            return true;
+        }
+        n = _elementParent(n);
+    }
+    return false;
 }
 
 // What a script puts in the document, held by records as `_ceHold` holds
@@ -1071,8 +1099,11 @@ function _afterThisDispatch(ev, run) {
 
 function _detailsShow(raw, open) {
     _meta(raw).detailsOpen = open;
+    // Its presence is the state: a value a script gave it stays.
     if (open) {
-        setAttribute(raw, "open", "");
+        if (getAttribute(raw, "open") === null) {
+            setAttribute(raw, "open", "");
+        }
     } else {
         removeAttribute(raw, "open");
     }
@@ -1142,6 +1173,11 @@ function _detailsOwnShown(kid) {
 // by its width.
 function _detailsMark(summary, open) {
     if (_detailsTurnMarker(summary, open) || !_meta(summary).createdTag) {
+        return;
+    }
+    // The marker is a list item's: a rule making it a block takes it away.
+    var display = _gHasCascade() ? _gStyle(summary).display : _ownDisplay(summary, _meta(summary));
+    if (display && display !== "list-item") {
         return;
     }
     var text = _detailsFirstText(summary);
