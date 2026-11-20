@@ -1306,6 +1306,9 @@ function _pageForgetDead() {
                     _detachAborts(value.windowListeners);
                 }
                 byRoot.delete(root);
+                if (byRoot === _inLayers) {
+                    _inHolderGone(value);
+                }
             }
         });
     });
@@ -17427,6 +17430,19 @@ function _inFlushLater() {
     }
 }
 
+// A page Qt destroyed while its items held a press hears no release: the
+// shield that press put on the page that took over ends with it.
+function _inHolderGone(gone) {
+    _inLayers.forEach(function(layer) {
+        if (layer.shieldFor === gone) {
+            layer.shieldFor = null;
+            if (layer.shielded) {
+                _inUnshield(layer);
+            }
+        }
+    });
+}
+
 function _inUnshield(layer) {
     layer.shielded = false;
     if (layer.held === 0) {
@@ -18401,9 +18417,7 @@ function _labelControl(label) {
         var found = document.getElementById(named);
         return found && _labelable(_unwrap(found)) ? _unwrap(found) : null;
     }
-    return _elementsUnder(label, function(node) {
-        return /^(button|input|select|textarea|meter|output|progress)$/.test(_nodeTag(node));
-    }, true)[0] || null;
+    return _elementsUnder(label, _labelable, true)[0] || null;
 }
 
 function _inFollow(raw) {

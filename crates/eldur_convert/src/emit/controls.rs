@@ -147,13 +147,22 @@ pub(crate) fn labeled_control(doc: &Document, label: NodeId) -> Option<NodeId> {
         return None;
     }
     match element.attr("for") {
-        Some(id) => doc
-            .element_by_id(id)
-            .filter(|&n| classify(doc, n).is_some()),
+        Some(id) => doc.element_by_id(id).filter(|&n| labelable(doc, n)),
         None => doc
             .descendants(label)
-            .find(|&n| n != label && classify(doc, n).is_some()),
+            .find(|&n| n != label && labelable(doc, n)),
     }
+}
+
+/// A hidden input is a control here but no labelable element (HTML
+/// §4.10.2), so it is no label's control.
+fn labelable(doc: &Document, node: NodeId) -> bool {
+    classify(doc, node).is_some()
+        && !doc.element(node).is_some_and(|e| {
+            e.local_name() == "input"
+                && e.attr("type")
+                    .is_some_and(|t| t.eq_ignore_ascii_case("hidden"))
+        })
 }
 
 /// Text in `obj` drawn in the button's own colour follows the palette, which

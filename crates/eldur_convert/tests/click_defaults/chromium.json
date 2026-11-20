@@ -185,5 +185,15 @@
    "LC A down makes Next",
    "LC Next mouseup dn2 0"
   ]
+ },
+ {
+  "name": "label whose first input is hidden",
+  "log": [
+   "LC A mousedown lab11 1",
+   "LC A mouseup lab11 1",
+   "LC A lab11 control tf11",
+   "LC A click lab11 1",
+   "LC A tf11 own click 1"
+  ]
  }
 ]

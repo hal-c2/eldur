@@ -70,6 +70,7 @@ const STEPS = [
   { name: "double click whose second press comes before the first click ran, on a label for a div", dbl: "#lab10" },
   { name: "press in a paragraph of links whose mousedown swaps", click: "#tp" },
   { name: "press in a link whose mousedown swaps", click: "#dn2" },
+  { name: "label whose first input is hidden", click: "#lab11" },
 ];
 
 const { chromium } = await loadPlaywright();
