@@ -119,6 +119,8 @@ struct PageBuilder<'a> {
     lazy_modules: HashSet<usize>,
     /// Lazy module index -> the function that runs it once.
     lazy_runs: HashMap<usize, String>,
+    /// Per module that runs at load: whether it has run, or what it threw.
+    eager_states: HashMap<usize, String>,
     /// `(module, export)` -> the name a module in a cycle uses for an export of
     /// one still being emitted, replaced by the export's own name once known.
     cycle_placeholders: HashMap<(usize, String), String>,
@@ -317,6 +319,7 @@ pub(crate) fn rewrite(
         module_namespaces: HashMap::new(),
         lazy_modules: lazy_modules(&valid_scripts, scripts),
         lazy_runs: HashMap::new(),
+        eager_states: HashMap::new(),
         cycle_placeholders: HashMap::new(),
         diagnostics,
     };
@@ -324,7 +327,10 @@ pub(crate) fn rewrite(
     for (pos, v) in valid_scripts.iter().enumerate() {
         match &v.input.kind {
             ScriptKind::Classic => builder.process_classic_or_module(pos, None),
-            ScriptKind::Module => builder.ensure_module_emitted(v.idx),
+            ScriptKind::Module => {
+                builder.ensure_module_emitted(v.idx);
+                builder.report_module_script_failure(v.idx);
+            }
             // A module the converter read runs when a module imports it, not
             // at a place on the page.
             ScriptKind::ImportedModule => {}
@@ -462,7 +468,17 @@ impl<'a> PageBuilder<'a> {
                 indent_block(&lines.join("\n"), 4)
             ));
         } else {
+            // What it throws stops it and every module importing it, not the
+            // scripts after it; `import()` of it rejects with that error.
+            let state = self.eager_state(script_idx);
+            let outer = std::mem::take(&mut self.out.init_stmts);
             self.process_classic_or_module(pos, Some(&mut exports));
+            let mut body = std::mem::replace(&mut self.out.init_stmts, outer);
+            body.push(format!("{state}.state = 1;"));
+            self.out.init_stmts.push(format!(
+                "try {{\n{}\n}} catch (err) {{\n    {state}.state = 2;\n    {state}.error = err;\n}}",
+                indent_block(&body.join("\n"), 4)
+            ));
         }
         self.visiting_stack.pop();
         self.visiting_modules.remove(&script_idx);
@@ -525,6 +541,32 @@ impl<'a> PageBuilder<'a> {
                 .entry(dep)
                 .or_default()
                 .insert(name, placeholder, true, true);
+        }
+    }
+
+    /// The record of whether `script_idx`, a module run at load, has run or
+    /// what it threw. An `import()` before it runs reads it too.
+    fn eager_state(&mut self, script_idx: usize) -> String {
+        if let Some(state) = self.eager_states.get(&script_idx) {
+            return state.clone();
+        }
+        let state = self
+            .shared
+            .alloc_fn_name(&format!("__eldur_module_state_m{script_idx}"));
+        self.out
+            .top_decls
+            .push(format!("var {state} = {{ state: 0, error: undefined }};"));
+        self.eager_states.insert(script_idx, state.clone());
+        state
+    }
+
+    /// A module script whose graph threw reports it, as a browser does for
+    /// each such script, and the page goes on.
+    fn report_module_script_failure(&mut self, script_idx: usize) {
+        if let Some(state) = self.eager_states.get(&script_idx) {
+            self.out.init_stmts.push(format!(
+                "if ({state}.state === 2) Eldur.reportError({state}.error);"
+            ));
         }
     }
 
@@ -640,7 +682,8 @@ impl<'a> PageBuilder<'a> {
             let call = if self.lazy_modules.contains(&dep_idx) {
                 format!("Eldur.importModule({name})")
             } else {
-                format!("Eldur.Promise.resolve({name}())")
+                let state = self.eager_state(dep_idx);
+                format!("Eldur.importEager({state}, {name})")
             };
             namespaces.insert(spec, call);
         }
@@ -738,8 +781,13 @@ impl<'a> PageBuilder<'a> {
         let v = &self.valid_scripts[valid_pos];
         let is_classic = matches!(v.input.kind, ScriptKind::Classic);
         let scoping = &v.parsed.scoping;
-        let bindings =
+        let mut bindings =
             ScriptQueryBindings::build(v.input, &v.parsed.program, scoping, self.cross_script);
+        if !is_classic && self.lazy_modules.contains(&v.idx) {
+            // Its top-level element lookups run when it does, and a read
+            // before then throws: each is a variable, not the element.
+            bindings.forget(scoping.iter_bindings_in(scoping.root_scope_id()));
+        }
 
         let mut cycle_exports: HashMap<usize, ModuleExports> = HashMap::new();
         let mut unresolved_static = false;
@@ -786,6 +834,10 @@ impl<'a> PageBuilder<'a> {
                         self.ensure_module_emitted(dep_idx);
                         if let Some(run) = self.lazy_runs.get(&dep_idx) {
                             self.out.init_stmts.push(format!("{run}();"));
+                        } else if let Some(state) = self.eager_states.get(&dep_idx) {
+                            self.out
+                                .init_stmts
+                                .push(format!("if ({state}.state === 2) throw {state}.error;"));
                         }
                     }
                 }

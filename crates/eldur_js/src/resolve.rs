@@ -463,6 +463,8 @@ pub(crate) struct ScriptQueryBindings<'a> {
     /// statically cannot be DOM nodes (object literals, arrays, `new ...`, functions,
     /// classes, primitive literals).
     pub non_dom_symbols: HashSet<SymbolId>,
+    /// `(copy, original)` for each `const b = a;`, which shares `a`'s query.
+    aliases: Vec<(SymbolId, SymbolId)>,
     cross_script: &'a HashMap<String, DomQuery>,
 }
 
@@ -528,8 +530,27 @@ impl<'a> ScriptQueryBindings<'a> {
             symbol_queries: collector.direct,
             collection_item_queries: collection_items,
             non_dom_symbols: collector.non_dom_symbols,
+            aliases: collector.aliases,
             cross_script,
         }
+    }
+
+    /// Stops resolving `symbols`, and every copy of them, to their elements:
+    /// each is then a variable holding what its lookup returned when it ran.
+    pub(crate) fn forget(&mut self, symbols: impl IntoIterator<Item = SymbolId>) {
+        let mut gone: HashSet<SymbolId> = symbols.into_iter().collect();
+        loop {
+            let before = gone.len();
+            for &(copy, original) in &self.aliases {
+                if gone.contains(&original) {
+                    gone.insert(copy);
+                }
+            }
+            if gone.len() == before {
+                break;
+            }
+        }
+        self.symbol_queries.retain(|sym, _| !gone.contains(sym));
     }
 
     /// Resolves `expr` to a [`DomQuery`] when it is either a direct query call
