@@ -11,6 +11,7 @@ use eldur_css::{
     TextDecorationLine, Visibility,
 };
 use eldur_qml::{Member, Object, Value};
+use std::collections::HashSet;
 
 use super::Emitter;
 use super::units::{fmt_number, length_expr, number, px_part, round};
@@ -274,6 +275,17 @@ impl Escape {
             escape.otherwise = before.otherwise;
         }
         escape.varies().then_some(escape)
+    }
+
+    /// Whether one of its cases waits on a block a script's display write
+    /// reaches. Cases only of blocks nothing shows, such as a template, or
+    /// boxes only rules hide, keep the margins pages had before (#85).
+    pub(crate) fn reaches(&self, ids: &HashSet<String>) -> bool {
+        self.cases.iter().any(|(c, _)| {
+            c.split(|ch: char| !(ch.is_alphanumeric() || ch == '_' || ch == '.'))
+                .filter_map(|t| t.strip_suffix(".visible"))
+                .any(|id| ids.contains(id))
+        })
     }
 
     /// Compared unrounded and with negative margins kept: cases that look
@@ -788,7 +800,9 @@ impl Emitter<'_, '_> {
                 let before = pending;
                 if hides {
                     hidden.before = pending;
-                    hidden.before_cases = pending_cases.clone();
+                    hidden.before_cases = pending_cases
+                        .clone()
+                        .filter(|c| c.reaches(&self.hideable_ids));
                     hidden.given = 0.0;
                     hidden.shown_bottom = None;
                     before_hidden = last;
@@ -810,7 +824,8 @@ impl Emitter<'_, '_> {
                         escaped_cases = emitted.top_cases.clone().map(|e| e.joined(before));
                     }
                 } else if let Some(cases) = emitted.top_cases.clone() {
-                    match &pending_cases {
+                    let reach = &self.hideable_ids;
+                    match pending_cases.as_ref().filter(|c| c.reaches(reach)) {
                         Some(above) => above.meet(&cases).set_on(&mut obj),
                         None => cases.joined(before).set_on(&mut obj),
                     }
@@ -988,7 +1003,13 @@ impl Emitter<'_, '_> {
             }
         } else {
             if let Some(Member::Child(obj)) = layout.members.get_mut(last) {
-                match pending_cases.as_ref().filter(|_| hidden.boxes.is_empty()) {
+                // The last item's own last blocks may hide: what stays inside
+                // the edge is the bottom margin of the last one shown.
+                let reach = &self.hideable_ids;
+                match pending_cases
+                    .as_ref()
+                    .filter(|c| hidden.boxes.is_empty() && c.reaches(reach))
+                {
                     Some(cases) => set_gap(obj, "Layout.bottomMargin", cases.gap(0.0)),
                     None => self.set_margin(obj, "Layout.bottomMargin", pending.value()),
                 }
