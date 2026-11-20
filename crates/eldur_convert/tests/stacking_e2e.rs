@@ -90,10 +90,10 @@ TestCase {
     readonly property var painted: ["b", "c", "d", "f", "i", "j", "l", "m", "o", "p", "t", "u", "w", "vd", "src", "mv", "vs", "rm", "gone", "vr",
         "c1", "o1", "c2", "o2", "c3", "o3", "hv", "o4", "fc", "o5", "c6", "o6", "c7", "o7", "e8", "o8", "c9", "o9", "c10", "d10", "o10", "n11",
         "k1", "v1", "k2", "v2", "k3", "v3", "k4", "v4", "k5", "m5", "v5",
-        "c1", "v1", "c2", "v2", "c3", "v3", "c4", "e4", "v4", "e5", "v5", "a6", "a7", "h8", "a8", "h9", "h10", "c11", "v11", "c12", "v12", "c13", "v13",
+        "c1", "v1", "c2", "v2", "c3", "v3", "c4", "e4", "v4", "e5", "v5", "a6", "a7", "h8", "a8", "h9", "h10", "c11", "v11", "c12", "v12", "c13", "v13", "c14", "v14",
         "p1", "p2", "r2", "a2",
         "b3", "b4", "da", "db", "k6", "n6", "v6",
-        "g1", "g2", "mq", "oq", "pq"]
+        "g1", "g2", "mq", "oq", "pq", "ax", "ox", "bx", "rx"]
 
     // The painted box nearest the front at a point, in Qt Quick's paint
     // order: the children over an item from the last level down, then the
@@ -447,6 +447,7 @@ div { height: 40px; width: 200px }
 @keyframes nudge { from { left: 0 } to { left: 40px } }
 #h10 { position: relative; right: 20px; animation: nudge 10s linear -5s paused }
 .lv0 { z-index: 0 }
+.hide { display: none }
 </style></head><body>
 <div id=t1 class=tf><div id=c1 class=in></div></div><div id=v1 class=over></div>
 <div class=gap></div>
@@ -473,8 +474,10 @@ div { height: 40px; width: 200px }
 <div id=p12 class="rel lv0"><div id=c12 class="in up"></div></div><div id=v12 class=over></div>
 <div class=gap></div>
 <div id=a13><div id=c13 class="in up"></div></div><div id=v13 class=over></div>
+<div class=gap></div>
+<div id=p14 class=rel><div id=c14 class=in></div></div><div id=v14 class=over></div>
 <script>
-var named = ['t1','c1','v1','t2','c2','v2','t3','c3','v3','p4','c4','e4','v4','p5','e5','f5','v5','h6','a6','v6','o7','h7','a7','v7','h8','a8','h9','h10','p11','c11','v11','p12','c12','v12','a13','c13','v13'].map(function (id) { return document.getElementById(id); });
+var named = ['t1','c1','v1','t2','c2','v2','t3','c3','v3','p4','c4','e4','v4','p5','e5','f5','v5','h6','a6','v6','o7','h7','a7','v7','h8','a8','h9','h10','p11','c11','v11','p12','c12','v12','a13','c13','v13','p14','c14','v14'].map(function (id) { return document.getElementById(id); });
 // A box raised inside a transformed box at `auto`, which keeps it in; a
 // box that lifted its block hidden.
 document.getElementById('c1').style.zIndex = '10';
@@ -488,6 +491,10 @@ document.getElementById('p11').style.display = '';
 document.getElementById('p12').classList.remove('lv0');
 document.getElementById('c13').style.display = 'none';
 document.getElementById('c13').style.display = '';
+// Row 11 again, hidden and shown by a class: a binding, not a style.
+document.getElementById('p14').classList.add('hide');
+document.getElementById('c14').style.zIndex = '10';
+document.getElementById('p14').classList.remove('hide');
 </script></body></html>"#;
 
 /// Chromium's fronts.
@@ -514,13 +521,14 @@ const CONTEXTS_TEST: &str = r##"
         compare(front(page, 100, 1110), "c11", "a level set under a hidden block")
         compare(front(page, 100, 1230), "c12", "its block's level taken away")
         compare(front(page, 100, 1350), "c13", "a raised block hidden and shown")
+        compare(front(page, 100, 1470), "c14", "a level set under a block a class hides")
     }
 }
 }
 "##;
 
-/// With no script, Chromium's fronts are the same but `c4`, `v11` and
-/// `v12` on rows four, eleven and twelve.
+/// With no script, Chromium's fronts are the same but `c4`, `v11`, `v12`
+/// and `v14` on rows four, eleven, twelve and fourteen.
 const CONTEXTS_UNSCRIPTED: &str = r##"
     function test_levels_follow_what_the_boxes_hold() {
         compare(front(page, 100, 30), "v1")
@@ -544,6 +552,7 @@ const CONTEXTS_UNSCRIPTED: &str = r##"
         compare(front(page, 100, 1110), "v11")
         compare(front(page, 100, 1230), "v12")
         compare(front(page, 100, 1350), "c13")
+        compare(front(page, 100, 1470), "v14")
     }
 }
 }
@@ -746,6 +755,45 @@ fn the_initial_blocks_overlays_keep_one_layer_with_the_page() {
         "initial-block",
         false,
     );
+}
+
+/// A static block's overlay and a later static block's relative box:
+/// Chromium paints both in the page's positioned layer, in tree order, so
+/// `#ox` is over `#bx`'s flow and `#rx` is over `#ox`. Neither block
+/// rises, so a lift for `#ax` alone would put `#ox` over `#rx` too.
+const HELD: &str = r#"<!doctype html><html><head><style>
+body { margin: 0 }
+div { height: 40px; width: 200px }
+#ax { background: yellow }
+#ox { position: absolute; margin-top: 20px; width: 100px; background: green }
+#bx { background: blue }
+#rx { position: relative; width: 50px; background: red }
+</style></head><body>
+<div id=ax><div id=ox></div></div><div id=bx><div id=rx></div></div>
+<script>
+var ax = document.getElementById('ax');
+var ox = document.getElementById('ox');
+var bx = document.getElementById('bx');
+var rx = document.getElementById('rx');
+</script></body></html>"#;
+
+/// Chromium's fronts (`elementFromPoint`).
+const HELD_TEST: &str = r##"
+    function test_a_later_blocks_relative_box_is_over_an_earlier_overlay() {
+        compare(front(page, 25, 50), "rx", "over the earlier block's overlay")
+        compare(front(page, 75, 50), "ox", "over the later block's flow")
+        compare(front(page, 150, 50), "bx")
+        compare(front(page, 75, 30), "ox")
+        compare(front(page, 150, 30), "ax")
+        compare(front(page, 25, 70), "rx")
+    }
+}
+}
+"##;
+
+#[test]
+fn a_later_blocks_relative_box_paints_over_an_earlier_blocks_overlay() {
+    run(HELD, &with_test(HELD_TEST), "held", false);
 }
 
 /// Boxes a script makes out of flow are painted in gates over the page,
