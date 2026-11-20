@@ -1024,8 +1024,13 @@ under.addEventListener("go", function() {
     });
   }, 0);
   setInterval(function() {}, 50);
+  // A promise this page chains on with no handler of its own: the page on
+  // top holds what that `then` made, and settles it after this page is gone.
+  window.chained = new Promise(function(settle) { window.settleChained = settle; }).then();
 });
 under.addEventListener("ping", function() { look("listener"); });
+// Its window's own event, sent at its root while it is covered.
+window.addEventListener("hashchange", function() { look("hash"); });
 under.addEventListener("arm", function() { setTimeout(function() { look("late"); }, 300); });
 </script>
 </body></html>"##;
@@ -1046,7 +1051,12 @@ function check(e) {
 }
 var over = document.getElementById("over");
 over.addEventListener("check", check);
-over.addEventListener("after", check);
+over.addEventListener("after", function(e) {
+  check(e);
+  window.chained.then(function(v) { L("chained", v); });
+  window.settleChained("settled");
+});
+window.addEventListener("hashchange", function() { L("hash heard by over"); });
 // The document hears what its elements do: every listener then goes through
 // the runtime's dispatch, which the host's events reach, as the covered page's do.
 document.addEventListener("click", function() {});
@@ -1097,12 +1107,14 @@ TestCase {
         wait(800)
         send(over, "over", "check")
         send(under, "under", "ping")
+        R.dispatchEvent(under, new R.Event("hashchange"))
         wait(100)
         // Its late timer is still queued when it goes, and its interval with it.
         send(under, "under", "arm")
         under.destroy()
         wait(600)
         send(over, "over", "after")
+        wait(100)
         console.log("CD intervals " + R._timers.filter(t => t.repeat).length)
     }
 }
@@ -1194,10 +1206,15 @@ fn a_covered_pages_own_callbacks_see_its_document() {
     // The host's events order the rest: the check, the listener, and what is
     // left once the covered page went.
     let listener = format!("CD listener {mine}");
+    // Its window's own event, and the promise it chained on, which the page
+    // on top settles once it is gone.
+    let hash = format!("CD hash {mine}");
     let after = [
         "CD check own no-under own-body none-made",
         listener.as_str(),
+        hash.as_str(),
         "CD after own no-under own-body none-made",
+        "CD chained settled",
         "CD intervals 0",
     ];
     let in_order = logged.len() == 1 + between.len() + after.len()
