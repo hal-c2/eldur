@@ -69,7 +69,10 @@ var twice = 0;
 document.getElementById("box2").addEventListener("click", function() { if (name === "A" && ++twice === 2) document.title = "Next"; });
 // Its label's own listeners go with the page: a document's are gone already.
 document.getElementById("lab2").addEventListener("dblclick", function(e) { L("lab2 own dblclick", e.detail); });
-// And on its first: the second press is the new page's.
+// And on its first: the second press is the new page's. Qt gives it to A's
+// label under Next's too, whose `for` names an id Next has as well: neither
+// A's box nor Next's is clicked by it, so Next's box hears one click, its own
+// label's.
 document.getElementById("box3").addEventListener("click", function() { if (name === "A") document.title = "Next"; });
 // A swap that waits for the microtasks after the box's listener is still in
 // the press: the dblclick after it is neither page's.
