@@ -7362,10 +7362,6 @@ function focus(item) {
     }
 }
 
-// The window is away: the page's focus moves now, and what it moved to hears
-// of it when the window is back, as the window's return reads what Qt holds
-// then. What had the focus heard of its blur when the window went, and hears
-// its `change` now, as the focus leaves it.
 // What the page's focus leaves while the window is away hears its `change`
 // then, as on any move: its blur it heard when the window went.
 function _inLeftWhileAway(was) {
@@ -7377,6 +7373,10 @@ function _inLeftWhileAway(was) {
     }
 }
 
+// The window is away: the page's focus moves now, and what it moved to hears
+// of it when the window is back, as the window's return reads what Qt holds
+// then. What had the focus heard of its blur when the window went, and hears
+// its `change` now, as the focus leaves it.
 function _inFocusWhileAway(raw) {
     var was = _in.focused;
     // Qt hears of this move after the page, as of a listener's: its report
@@ -18266,6 +18266,22 @@ function _inTabStep(back) {
     }
 }
 
+// An element of another page that is still there: what its script focused
+// while the window was away, before a listener made this page. Qt holds it,
+// and this page has nothing focused. A popup's item, under the window's
+// overlay, reaches no page's root and is the page's own.
+function _inOnAnotherPage(item) {
+    for (var at = item; at; at = at.parent) {
+        if (at === _root) {
+            return false;
+        }
+        if (_roots.indexOf(at) >= 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function _inFocusElement() {
     var item = _in.focusProbe.held;
     // The window went away: a link in a line keeps what holds its focus for
@@ -18286,7 +18302,7 @@ function _inFocusElement() {
             return null;
         }
         if (_vIsTagged(at) || Boolean(_meta(at).createdTag)) {
-            return at;
+            return _inOnAnotherPage(at) ? null : at;
         }
     }
     // The window's own root holds the focus nothing else does.
