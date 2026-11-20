@@ -222,6 +222,9 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
             }
             extra_imports.extend(added.imports);
         }
+        if runtime_dom {
+            metadata::guard_parent_reads(&mut root);
+        }
         let mut decls = vec![
             metadata::base_url_decl(&doc, &input.url),
             metadata::document_url_decl(&input.url),
