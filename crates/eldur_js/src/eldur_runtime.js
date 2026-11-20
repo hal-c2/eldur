@@ -1306,8 +1306,10 @@ function _pageCacheSave() {
     return {
         explicitBaseUrl: _explicitBaseUrl, explicitDocumentUrl: _explicitDocumentUrl, loc: loc,
         // The history is shared, but the entry the page is on holds its
-        // address, which the next page's `init` writes over.
-        entryIndex: _historyIndex, entryUrl: _historyEntries[_historyIndex].url, entryPage: _root,
+        // address, which the next page's `init` writes over. It is the page's
+        // that made it: a covered callback may have moved onto another's.
+        entryIndex: _historyIndex, entryUrl: _historyEntries[_historyIndex].url,
+        entryPage: _historyEntries[_historyIndex].page,
         warnedMissingTemplates: _warnedMissingTemplates, componentProbeCache: _componentProbeCache,
         pseudoRules: _pseudoRules, pseudoShown: _pseudoShown, counterRules: _counterRules,
         tableHosts: _tableHosts, pseudoBoxItems: _pseudoBoxItems, pseudoBoxKnown: _pseudoBoxKnown,
@@ -2403,9 +2405,9 @@ var location = {
 var _historyEntries = [{ state: null, url: "" }];
 var _historyIndex = 0;
 
-// Each entry is the page's that made it, as a frame's in a browser's one
-// history: the address a page is at is that of its latest entry up to the
-// one the history is on, never another page's.
+// Each entry keeps the page that made it. Going back or forward leaves a page
+// at the address of its own latest entry up to the one the history is on,
+// never another page's; `state` is the current entry's, whoever made it.
 function _historyUrlFor(page, upTo) {
     for (var i = upTo; i >= 0; i--) {
         var e = _historyEntries[i];
