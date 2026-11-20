@@ -77,6 +77,20 @@ impl Document {
         Ok(())
     }
 
+    /// Removes the attribute named `local` in no namespace, if there is one.
+    ///
+    /// # Errors
+    /// [`DomError::InvalidNodeType`] when `node` is not an element.
+    pub fn remove_attribute(&mut self, node: NodeId, local: &str) -> Result<(), DomError> {
+        let Some(NodeData::Element(el)) = self.nodes.get_mut(node.index()).map(|n| &mut n.data)
+        else {
+            return Err(DomError::InvalidNodeType(node));
+        };
+        el.attrs
+            .retain(|a| !(a.name.ns.is_empty() && &*a.name.local == local));
+        Ok(())
+    }
+
     /// Appends `child` as the last child of `parent`, moving it first if it
     /// already has a parent. A document fragment is replaced by its children.
     ///
