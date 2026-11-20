@@ -67,6 +67,40 @@ fn cards_showing(items: usize) -> String {
     format!("<!DOCTYPE html><style>.h{{display:none}} {rules}</style>{cards}")
 }
 
+/// `lists` lists of the given tag, each with an item its own `:hover`
+/// shows.
+fn lists_showing(tag: &str, lists: usize) -> String {
+    let body: String = (0..lists)
+        .map(|i| format!("<{tag} class=u{i}><li>a</li><li class=h>x</li><li>b</li></{tag}>"))
+        .collect();
+    let rules: String = (0..lists)
+        .map(|i| format!(".u{i}:hover .h{{display:list-item}} "))
+        .collect();
+    format!("<!DOCTYPE html><style>.h{{display:none}} {rules}</style>{body}")
+}
+
+#[test]
+fn hidden_items_of_separate_lists_are_not_combined() {
+    // Items of different lists cannot change each other's numbers, and a
+    // `ul`'s discs number nothing: one world per list, not 2^9.
+    for tag in ["ul", "ol"] {
+        let n = emissions(&lists_showing(tag, 9));
+        assert!(
+            n <= 10,
+            "{n} emissions of nine {tag}s with a hidden item each"
+        );
+    }
+    // Two hidden items of one `ol` number the items after them together.
+    let page = "<!DOCTYPE html><style>.x,.y{display:none} ol:hover .x{display:list-item} \
+                .a:hover + .y{display:list-item}</style><ol><li class=a>a</li><li class=y>y</li>\
+                <li>b</li><li class=x>x</li><li>c</li></ol>";
+    let n = emissions(page);
+    assert!(
+        n >= 4,
+        "{n} emissions: the document's, each item's, and both"
+    );
+}
+
 /// A table of `cells` cells, four to a row, each recoloured by its own
 /// `:hover`, with borders `collapse` or `separate`.
 fn table_hovers(cells: usize, borders: &str) -> String {

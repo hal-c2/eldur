@@ -175,3 +175,8 @@ fn a_hidden_sibling_s_counter_changes_count_only_while_it_shows() {
 fn items_after_two_hidden_siblings_count_both_when_both_show() {
     check("joint", include_str!("hidden_siblings/joint.html"));
 }
+
+#[test]
+fn a_counter_inside_a_hidden_block_counts_with_the_block() {
+    check("nested", include_str!("hidden_siblings/nested.html"));
+}
