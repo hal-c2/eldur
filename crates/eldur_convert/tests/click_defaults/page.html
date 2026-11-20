@@ -1,11 +1,22 @@
 <!doctype html><html><head><meta charset="utf-8"><title>NAME</title>
 <style>
 body { margin: 0; font: 16px sans-serif }
-#wrap, label, #mv, #ov, #dn, #cap, #capgo, #upgo, #bt9 { display: block; width: 200px; height: 40px }
+#wrap, label, #mv, #ov, #dn, #cap, #capgo, #upgo, #dngo, #bt9 { display: block; width: 200px; height: 40px }
 input { display: block; margin: 0 }
 #capgo, #upgo { position: absolute; left: 300px }
 #capgo { top: 0 }
 #upgo { top: 60px }
+#dngo { position: absolute; left: 550px; top: 0 }
+#pp, #xc, #yc, #lab8, #tf8, #lab10, #pd10, #tp { position: absolute; left: 300px; margin: 0; width: 200px; height: 40px }
+#pp { top: 120px }
+#xc { top: 170px }
+#yc { top: 220px }
+#lab8 { top: 270px }
+#tf8 { top: 320px; height: 30px }
+#lab10 { top: 370px }
+#pd10 { top: 420px }
+#tp { top: 470px; width: auto; height: auto }
+#pop { inset: auto; right: 0; bottom: 0; margin: 0; width: 100px; height: 30px }
 </style>
 </head><body>
 <a id="wrap" href="#go"><label id="lab" for="box">once</label></a>
@@ -28,6 +39,16 @@ input { display: block; margin: 0 }
 <div id="cap">held</div>
 <a id="capgo" href="#capgo"><div id="cap2">held in a link</div></a>
 <a id="upgo" href="#upgo"><div id="up2">up in a link</div></a>
+<a id="dngo" href="#dngo"><div id="dn2">down in a link</div></a>
+<div id="pp">pops</div>
+<div id="pop" popover>popped</div>
+<div id="xc">grab</div>
+<div id="yc">then</div>
+<label id="lab8" for="tf8">field</label>
+<input id="tf8">
+<label id="lab10" for="pd10">panel</label>
+<div id="pd10">panel</div>
+<p id="tp"><a href="#tl1">a link in a paragraph</a> <a href="#tl2">b</a></p>
 <form id="f9"><button id="bt9"><div id="in9">send</div></button></form>
 <script>
 // The host makes page Next when this one's title says so.
@@ -100,8 +121,48 @@ cap2.addEventListener("pointerdown", function(e) { cap2.setPointerCapture(e.poin
 cap2.addEventListener("lostpointercapture", function() {
   if (name === "A") { L("lost makes Next"); document.title = "Next"; }
 });
+// A link whose mousedown makes Next: its release still comes to A's link,
+// and neither page follows it.
+document.getElementById("dn2").addEventListener("mousedown", function() {
+  if (name === "A") { L("down makes Next"); document.title = "Next"; }
+});
 document.getElementById("up2").addEventListener("mouseup", function() {
   if (name === "A") { L("up makes Next"); document.title = "Next"; }
 });
+// A popover a press opens, which its own release light-dismisses: the
+// dismissal's beforetoggle makes Next, and the click is neither page's.
+var pop = document.getElementById("pop");
+document.getElementById("pp").addEventListener("click", function(e) { e.stopPropagation(); L("pp own click", e.detail); });
+document.getElementById("pp").addEventListener("pointerdown", function() { if (name === "A") pop.showPopover(); });
+pop.addEventListener("beforetoggle", function(e) {
+  if (name === "A" && e.newState === "closed") { L("dismiss makes Next"); document.title = "Next"; }
+});
+// A capture passed from one element to another: the first one's
+// lostpointercapture makes Next, and the second is told nothing.
+var xc = document.getElementById("xc");
+var yc = document.getElementById("yc");
+xc.addEventListener("pointerdown", function(e) { xc.setPointerCapture(e.pointerId); });
+xc.addEventListener("gotpointercapture", function(e) { if (name === "A") yc.setPointerCapture(e.pointerId); });
+xc.addEventListener("lostpointercapture", function() {
+  if (name === "A") { L("lost xc makes Next"); document.title = "Next"; }
+});
+yc.addEventListener("gotpointercapture", function() { L("got yc"); });
+// A label's field, whose focus makes Next: the field's click is neither page's.
+document.getElementById("tf8").addEventListener("focus", function() {
+  if (name === "A") { L("focus makes Next"); document.title = "Next"; }
+});
+document.getElementById("tf8").addEventListener("click", function(e) { e.stopPropagation(); L("tf8 own click", e.detail); });
+// As box5 on a label for a div, which is no control: the second press is
+// handed to Next, whose label's click activates nothing.
+document.getElementById("lab10").addEventListener("click", function() { if (name === "A") document.title = "Next"; });
+document.getElementById("pd10").addEventListener("click", function(e) { e.stopPropagation(); L("pd10 own click", e.detail); });
+// A paragraph of links, whose mousedown makes Next: its release still comes
+// to A's text, and neither page follows the link.
+var tp = document.getElementById("tp");
+tp.addEventListener("mousedown", function(e) {
+  e.stopPropagation();
+  if (name === "A") { L("text down makes Next"); document.title = "Next"; }
+});
+tp.addEventListener("mouseup", function(e) { e.stopPropagation(); });
 </script>
 </body></html>

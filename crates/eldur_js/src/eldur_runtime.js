@@ -17327,7 +17327,7 @@ function _inInstallFor(raw, type) {
 function _inInstall() {
     _in = {
         page: _root, overlay: null, held: 0, last: null, pressed: false, hoverP: null, hoverM: null,
-        downTarget: {}, noMouse: false, count: 0, handed: false, shielded: false, handedTo: null, qtHeld: 0,
+        downTarget: {}, noMouse: false, count: 0, handed: false, shielded: false, shieldFor: null, handedTo: null, qtHeld: 0, upTurn: false,
         capture: null, captureNext: null, defaults: [], scrolled: null, restoreFocus: null,
         restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusMoves: 0, focusShift: false, focusPending: null, untold: [], shiftTo: null, change: null, overridden: null, away: false, seenActive: false, windowHas: false, backLater: false, backGen: 0, windowTelling: false,
         spaceDown: null, typing: null, popovers: [], radioLast: {}, focusProbe: null
@@ -17435,6 +17435,17 @@ function _inPointedOn(page) {
             if (scene.x === -1e9 && mine.last) {
                 scene = mine.last;
             }
+            if (buttons === 0) {
+                // The old page's items hear this release too, before or after
+                // this handler: their taps run by the next turn.
+                mine.upTurn = true;
+                Qt.callLater(function() {
+                    mine.upTurn = false;
+                    if (!_pageGone() && _in) {
+                        _inFlushLater();
+                    }
+                });
+            }
             // The click of the release before runs first here too, and may
             // hand the document on once more.
             var still = _inStillOwn();
@@ -17452,6 +17463,11 @@ function _inPointedOn(page) {
         var layer = _in;
         if (buttons !== -1) {
             layer.handedTo = null;
+        }
+        // A press on this page's own items: Qt holds none on the old page's,
+        // whose release, if it never came, has nothing left to shield.
+        if (buttons !== -1 && (buttons & ~qtBefore)) {
+            layer.shieldFor = null;
         }
         var own = _inStillOwn();
         _inFlushLater();
@@ -17546,19 +17562,25 @@ function _inHandedEnd(layer) {
 // its layer lets it go without a word. What Qt still sends its items goes on
 // to the page that took over.
 function _inLose(layer) {
+    // The layer whose items Qt still gives a press to, which may be one this
+    // page had been handed already.
+    var holder = layer.qtHeld !== 0 ? layer : layer.shieldFor;
     _inForgetPress(layer);
     if (!_pageGone() && _in && _in !== layer && _inSameWindow(layer, _in)) {
         layer.handedTo = _in;
         // A press of its own already there is that press's to finish.
         if (_in.held === 0) {
             _inShield(_in);
+            _in.shieldFor = holder;
         }
     }
 }
 
 // Qt still gives the rest of a lost event to the old page's items, and their
 // taps and links run after it: on the page that took over, which never had
-// that press, they do nothing until its own events start again.
+// that press, they do nothing until its own events start again. A press the
+// old page's items still hold is theirs until its release has run, however
+// many turns of the event loop that is; `shieldFor` is that page's layer.
 function _inShield(layer) {
     if (layer.handed) {
         return;
@@ -17584,6 +17606,7 @@ function _inForgetPress(layer) {
     layer.pressed = false;
     layer.handed = false;
     layer.shielded = false;
+    layer.shieldFor = null;
     layer.defaults = [];
     layer.noMouse = false;
     layer.capture = null;
@@ -17916,7 +17939,12 @@ function _inUp(bit, scene, mods) {
     // After the release is delivered: what is under the point has had its say
     // on the press (a box toggled, a link followed), and listeners read that.
     _inLater(function() {
-        _popoverDismiss(hitNow);
+        // A dismissed popover's `beforetoggle` may make another page the
+        // document: the click is then neither page's.
+        _popoverDismiss(hitNow, own);
+        if (!own()) {
+            return;
+        }
         _inClickOn(_inCommon(from, hitNow), bit, button, count, scene, mods, moved);
     });
 }
@@ -17928,15 +17956,30 @@ function _inLater(run) {
 }
 
 function _inFlushLater() {
-    if (_in.shielded) {
-        _in.shielded = false;
-        if (_in.held === 0) {
-            _in.handed = false;
-        }
+    var layer = _in;
+    var holder = layer.shieldFor;
+    if (holder && holder.qtHeld === 0 && !holder.upTurn) {
+        layer.shieldFor = null;
     }
-    var runs = _in.later;
-    _in.later = [];
+    var lift = layer.shielded && !layer.shieldFor;
+    if (lift && !holder) {
+        _inUnshield(layer);
+    }
+    var runs = layer.later;
+    layer.later = [];
     runs.forEach(function(run) { run(); });
+    // The click of the release that ended a held press's shield is still
+    // that handed press's.
+    if (lift && holder) {
+        _inUnshield(layer);
+    }
+}
+
+function _inUnshield(layer) {
+    layer.shielded = false;
+    if (layer.held === 0) {
+        layer.handed = false;
+    }
 }
 
 function _inCommon(a, b) {
@@ -18204,10 +18247,13 @@ function _inCaptureTurn(scene, mods) {
     }
     var old = _in.capture;
     _in.capture = next;
+    var own = _inStillOwn();
     if (old) {
         _inFire("lostpointercapture", old, scene, mods, {});
     }
-    if (next) {
+    // Its listener may have made another page the document, which has no
+    // capture of this press's to give.
+    if (next && own()) {
         _inFire("gotpointercapture", next, scene, mods, {});
     }
 }
@@ -18240,8 +18286,11 @@ function labelled(item) {
         delete _meta(raw).clickDetail;
         return;
     }
+    // A focus listener may make another page the document: the field's
+    // click is then neither page's.
+    var own = _inStillOwn();
     raw.forceActiveFocus();
-    if (_in) {
+    if (_in && own()) {
         var ev = event("click", wrap(raw), { detail: detail });
         ev.target = wrap(raw);
         ev.bubbles = true;
@@ -18884,11 +18933,21 @@ function _selectEvent(raw) {
     });
 }
 
+function _labelable(raw) {
+    var tag = _nodeTag(raw);
+    if (tag === "input") {
+        return String(getAttribute(raw, "type") || "").toLowerCase() !== "hidden";
+    }
+    return /^(button|select|textarea|meter|output|progress)$/.test(tag);
+}
+
 function _labelControl(label) {
     var named = getAttribute(label, "for");
+    // Only a labelable element is a label's control: `for` naming anything
+    // else names none.
     if (named !== null) {
         var found = document.getElementById(named);
-        return found ? _unwrap(found) : null;
+        return found && _labelable(_unwrap(found)) ? _unwrap(found) : null;
     }
     return _elementsUnder(label, function(node) {
         return /^(button|input|select|textarea|meter|output|progress)$/.test(_nodeTag(node));
@@ -19995,11 +20054,14 @@ function _popoverShow(raw, shown) {
     _later(function() { _toggleEvent(raw, "toggle", from, to); });
 }
 
-function _popoverDismiss(hit) {
+function _popoverDismiss(hit, own) {
     if (!_in || !_in.popovers) {
         return;
     }
     _in.popovers.slice().forEach(function(pop) {
+        if (own && !own()) {
+            return;
+        }
         for (var at = hit; at; at = _gParent(at)) {
             if (at === pop || getAttribute(at, "popovertarget") === wrap(pop).id) {
                 return;

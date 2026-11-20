@@ -145,5 +145,45 @@
    "LC A mousedown up2 1",
    "LC A up makes Next"
   ]
+ },
+ {
+  "name": "capture passed on whose lostpointercapture swaps",
+  "log": [
+   "LC A mousedown xc 1",
+   "LC A lost xc makes Next"
+  ]
+ },
+ {
+  "name": "label whose field's focus swaps",
+  "log": [
+   "LC A mousedown lab8 1",
+   "LC A mouseup lab8 1",
+   "LC A click lab8 1",
+   "LC A focus makes Next"
+  ]
+ },
+ {
+  "name": "double click whose second press comes before the first click ran, on a label for a div",
+  "log": [
+   "LC A mousedown lab10 1",
+   "LC A mouseup lab10 1",
+   "LC Next mousedown lab10 2",
+   "LC Next mouseup lab10 2",
+   "LC Next click lab10 2",
+   "LC Next dblclick lab10 2"
+  ]
+ },
+ {
+  "name": "press in a paragraph of links whose mousedown swaps",
+  "log": [
+   "LC A text down makes Next"
+  ]
+ },
+ {
+  "name": "press in a link whose mousedown swaps",
+  "log": [
+   "LC A down makes Next",
+   "LC Next mouseup dn2 0"
+  ]
  }
 ]
