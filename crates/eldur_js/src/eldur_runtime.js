@@ -534,9 +534,28 @@ function setOnload(listeners, call, value) {
     return handler ? value : null;
 }
 
-// The page's `load` listeners, in the order they were added. One that throws
-// is reported and the next is still called, as a browser dispatches.
-function fireLoad(listeners) {
+// A top-level `DOMContentLoaded` or `load` listener, added where the
+// `addEventListener` call runs. The callback is the value it had there, as a
+// browser takes it: a function is called on `target`, an object has its
+// `handleEvent` called, and `null` adds nothing.
+function queueListener(listeners, target, type, callback) {
+    if (callback === null || callback === undefined) {
+        return;
+    }
+    listeners.push(function() {
+        var e = event(type, target, null);
+        if (typeof callback === "function") {
+            callback.call(target, e);
+        } else {
+            callback.handleEvent(e);
+        }
+    });
+}
+
+// The page's `DOMContentLoaded` or `load` listeners, in the order they were
+// added. One that throws is reported and the next is still called, as a
+// browser dispatches.
+function fireListeners(listeners) {
     for (var i = 0; i < listeners.length; ++i) {
         try {
             listeners[i]();
