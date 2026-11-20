@@ -7368,6 +7368,10 @@ function focus(item) {
 // its `change` now, as the focus leaves it.
 function _inFocusWhileAway(raw) {
     var was = _in.focused;
+    // Qt hears of this move after the page, as of a listener's: its report
+    // of it, while away or on return, finds it the page's own.
+    _in.focusPending = raw;
+    _in.overridden = null;
     _activeElement = raw;
     _in.inlineFocus = raw.__eldurInline ? raw : null;
     if (was !== raw) {
@@ -18314,6 +18318,10 @@ function _inFocusChanged() {
             ++_in.backGen;
         }
         return;
+    }
+    if (_in.focusPending && now === _in.focusPending) {
+        _in.focusPending = null;
+        _in.overridden = null;
     }
     if (back) {
         _in.away = false;
