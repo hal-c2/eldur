@@ -6061,3 +6061,60 @@ Item {
         "unexpected qml6 var display output:\n{output}"
     );
 }
+
+/// A closed `<details>` keeps a child folded whose script-written display
+/// reads a `var()`, when it is written and when the property changes; open,
+/// the child follows it. A page reset forgets the elements it followed (#85).
+#[test]
+fn qml6_a_var_display_under_a_closed_details_stays_folded() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 folded var display test: qml6 not on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("folded_var_display");
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+    dir.write_file("eldur_runtime.js", RUNTIME_JS);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import "eldur_runtime.js" as R
+
+Item {
+    id: root
+    Item {
+        id: det
+        property string eldurTag: "details"
+        Item { property string eldurTag: "summary" }
+        Item { id: kid }
+    }
+
+    Component.onCompleted: {
+        var seen = [];
+        R._detailsShow(det, false);
+        seen.push(kid.visible);
+        R._setStyleAt(kid, "display", "var(--gate, block)");
+        seen.push(kid.visible);
+        R._setStyleAt(root, "--gate", "block");
+        seen.push(kid.visible);
+        R._detailsShow(det, true);
+        seen.push(kid.visible);
+        R._setStyleAt(root, "--gate", "none");
+        seen.push(kid.visible);
+        R._setStyleAt(kid, "display", "var(--gate)");
+        var followed = R._gVarDisplays.size;
+        R._resetPageState();
+        seen.push(followed, R._gVarDisplays.size);
+        console.log("ELDUR_OK_FOLDED", seen.join("|"));
+        Qt.quit();
+    }
+}
+"#,
+    );
+
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
+    assert!(
+        output.contains("ELDUR_OK_FOLDED false|false|false|true|false|1|0"),
+        "unexpected qml6 folded var display output:\n{output}"
+    );
+}
