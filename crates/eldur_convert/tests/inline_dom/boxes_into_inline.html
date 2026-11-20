@@ -15,6 +15,10 @@ function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?
 <div id="fx" style="width:120px">fixed</div>
 <p id="fp">in <span id="fy">here</span></p>
 <p id="gp"><span id="g1">a</span><img id="gi" src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" width="30" height="10"><span id="g2">b</span></p>
+<p><span id="mf">t</span></p>
+<p><span id="md">t</span></p>
+<p><span id="mh">u </span></p>
+<p><span id="mr">v</span></p>
 <script>
 // Boxes a script appends to an inline element go into that element: an atomic
 // box sits on its line after its text, a block splits the line around it.
@@ -73,6 +77,24 @@ var fx=document.getElementById("fx");document.getElementById("fy").append(fx);
 L("fixed-in",Math.round(R(fx).r-R(fx).l),I(fx.parentNode));
 document.body.append(fx);
 L("fixed-out",Math.round(R(fx).r-R(fx).l),I(fx.parentNode));
+// A box the page put in an inline element goes where the element goes: into a
+// fragment and out of it, or straight into another parent.
+var mf=document.getElementById("mf"),mi=document.createElement("input");mf.append(mi);
+var mfr=document.createDocumentFragment();mfr.append(mf);
+L("frag",N(mf),I(mi.parentNode),mfr.childNodes.length);
+document.body.append(mfr);
+L("frag-back",N(mf),I(mi.parentNode),I(mf.parentNode),W(mi));
+var md=document.getElementById("md");md.append(document.createElement("input"));
+document.body.append(md);
+L("moved",N(md),I(md.parentNode),document.getElementById("md")===md);
+// One taken out is no longer the element's, hidden or not.
+var mh=document.getElementById("mh"),mx=document.createElement("input");mh.append(mx);
+mh.style.display="none";mx.remove();mh.style.display="";
+L("hidden-removed",N(mh),mx.parentNode===null,W(mx));
+// An element off the page takes one as any element does.
+var mr=document.getElementById("mr");mr.remove();
+var my=document.createElement("input");mr.append(my);
+L("detached-append",I(my.parentNode),N(mr));
 // It sizes as any block from then on.
 document.body.style.width="300px";
 L("out-narrow",Math.round(R(blk).r-R(blk).l));
