@@ -21012,12 +21012,13 @@ function _vFromCreated(raw) {
     for (var i = 0; i < kidSource.length; ++i) {
         var ch = kidSource[i];
         var chTag = _meta(ch).createdTag;
-        // A control or an image stays a box, as `_vAsNode` keeps one: the
-        // same item, its value and state with it.
-        if (chTag && _V_STAYS_BOX.test(chTag)) {
-            kids.push({ stayBox: ch });
-        } else if (chTag) {
+        // What `_vInsert` would slot stays a box (`_vAsNode`): a control or
+        // an image, or an element of the page's own: the same item, its value
+        // and state with it.
+        if (chTag && !_V_STAYS_BOX.test(chTag)) {
             kids.push(_vFromCreated(ch));
+        } else if (chTag || !_isInternalHelperNode(ch)) {
+            kids.push({ stayBox: ch });
         }
     }
     var v = _vElement(tag, [], null, null);
