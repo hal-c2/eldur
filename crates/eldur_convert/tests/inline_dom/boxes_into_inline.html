@@ -27,6 +27,10 @@ function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?
 <p id="mcp"><span id="mc">x</span></p>
 <p id="mep"><span id="me">x</span></p>
 <p id="mgp">g <b id="mgb">bold</b><input id="mgi" value="k" style="width:40px"></p>
+<p id="mlp">h <b id="mlb">a long bold run that wraps</b><input id="mli" value="k" style="width:40px"></p>
+<p id="ml" style="width:120px"><span id="mlx">x</span></p>
+<div id="mod" style="display:flex"><b id="mob">a long bold run that wraps</b><input id="moi" value="k" style="width:40px"></div>
+<p id="mo" style="width:120px"><span id="mox">x</span></p>
 <script>
 // Boxes a script appends to an inline element go into that element: an atomic
 // box sits on its line after its text, a block splits the line around it.
@@ -126,6 +130,14 @@ L("created-back",N(mcs),N(mc),I(mck.parentNode)===I(mcs),mck.checked,Math.round(
 var me=document.getElementById("me"),mes=document.createElement("span"),mgb=document.getElementById("mgb"),mgi=document.getElementById("mgi");
 mes.append("e",mgb,mgi);me.append(mes);
 L("page-into-made",N(mes),N(document.getElementById("mgp")),I(mgb.parentNode)===I(mes),I(mgi.parentNode)===I(mes),mgb.textContent,mgi.value,Math.round(R(mgi).r-R(mgi).l));
+// A long one wraps with the line it went into, as its text does: one from a
+// paragraph's line, and one that is an item of its own (a flex item).
+var ml=document.getElementById("ml"),mls=document.createElement("span"),mlb=document.getElementById("mlb"),mli=document.getElementById("mli");
+mls.append("f ",mlb,mli);ml.append(mls);
+L("page-wraps-in-made",N(mls),I(mlb.parentNode)===I(mls),R(mlb).b-R(mlb).t,R(mlb).l-R(ml).l,R(ml).r-R(mlb).r,mlb.getClientRects().length);
+var mo=document.getElementById("mo"),mos=document.createElement("span"),mob=document.getElementById("mob"),moi=document.getElementById("moi");
+mos.append("f ",mob,moi);mo.append(mos);
+L("own-item-wraps-in-made",N(mos),I(mob.parentNode)===I(mos),R(mob).b-R(mob).t,R(mob).l-R(mo).l,R(mo).r-R(mob).r,mob.getClientRects().length);
 // One replaced while its element is hidden is no longer the element's.
 var mp=document.getElementById("mp"),mz=document.createElement("input");mp.append(mz);
 mp.style.display="none";mp.replaceChild(document.createTextNode("r"),mz);mp.style.display="";
