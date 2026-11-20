@@ -1381,7 +1381,8 @@ impl Dynamic<'_, '_> {
     /// sibling's marker or `counter()` depends on how many of them show at
     /// once, which no single element's own combinations cover. Each
     /// numbered list is a group, and the page's counters one more. A group
-    /// is added only when all its worlds fit beside the elements' own.
+    /// is added only when all its worlds fit beside the elements' own, the
+    /// smallest groups first.
     fn worlds(
         &mut self,
         excluded: &BTreeSet<u16>,
@@ -1477,9 +1478,16 @@ impl Dynamic<'_, '_> {
             );
         }
         // A group goes in whole or not at all: a part of its worlds would
-        // number some combinations and not others.
-        for group in groups.into_values().filter(|g| g.len() > 1) {
-            let group: Vec<u16> = group.into_iter().collect();
+        // number some combinations and not others. The smallest go first,
+        // so one large list cannot leave out several small ones; groups of
+        // one size keep page order.
+        let mut groups: Vec<Vec<u16>> = groups
+            .into_values()
+            .filter(|g| g.len() > 1)
+            .map(|g| g.into_iter().collect())
+            .collect();
+        groups.sort_by_key(Vec::len);
+        for group in groups {
             // 2^10 is past MAX_WORLDS on its own.
             let fits = group.len() <= 9 && {
                 let new: Vec<_> = subsets(&group).filter(|w| !set.contains(w)).collect();
