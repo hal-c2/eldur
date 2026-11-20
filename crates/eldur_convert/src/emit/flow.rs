@@ -425,18 +425,27 @@ impl Emitter<'_, '_> {
         // in it paints over that, as it follows it in the positioned layer.
         let mut after_sent = later_rises.clone();
         if stop.is_some() && !self.writes_z_index {
+            // A box a class or state restacks may paint later in one
+            // combination only, which would give the blocks before it one
+            // shape in some and another in the rest: it counts in all of
+            // them, and sending an overlay to the stop orders it right
+            // whatever follows.
+            let later: Vec<bool> = children
+                .iter()
+                .map(|c| super::lists::paints_later(c) || self.restacked(c))
+                .collect();
             let mut any = false;
-            for (i, c) in children.iter().enumerate().rev() {
+            for (i, &l) in later.iter().enumerate().rev() {
                 later_rises[i] = any;
-                any = any || super::lists::paints_later(c);
+                any = any || l;
             }
             let mut any = false;
             let mut sent = false;
-            for (i, c) in children.iter().enumerate() {
+            for (i, &l) in later.iter().enumerate() {
                 others_rise[i] = any || later_rises[i];
                 after_sent[i] = sent;
-                any = any || super::lists::paints_later(c);
-                sent = sent || (later_rises[i] && super::lists::paints_later(c));
+                any = any || l;
+                sent = sent || (later_rises[i] && l);
             }
         }
         let mut rest = children;
@@ -1433,6 +1442,12 @@ fn float_run(boxes: &[LayoutBox<'_>]) -> usize {
 }
 
 impl Emitter<'_, '_> {
+    /// Whether a class or state restacks the box or one it holds.
+    fn restacked(&self, b: &LayoutBox<'_>) -> bool {
+        b.node.is_some_and(|n| self.restacks.contains(&n))
+            || matches!(&b.content, crate::boxes::Content::Blocks(kids) if kids.iter().any(|k| self.restacked(k)))
+    }
+
     /// Whether a percentage height on a child of the current block means
     /// anything.
     pub(super) fn percent_resolves(&self) -> bool {
