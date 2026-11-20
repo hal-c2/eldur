@@ -271,6 +271,30 @@ mod mutation {
         assert_eq!(got, [("a", "3"), ("b", "2")]);
     }
 
+    // Chromium: removeAttribute("a") on a=1 b=2 gives `b="2"`; removing a
+    // name that isn't there changes nothing.
+    #[test]
+    fn remove_attribute_keeps_the_others() {
+        let mut doc = Document::parse("<div></div>");
+        let div = doc.create_html_element("div");
+        doc.set_attribute(div, attr("a"), "1").expect("ok");
+        doc.set_attribute(div, attr("b"), "2").expect("ok");
+        doc.remove_attribute(div, "a").expect("ok");
+        doc.remove_attribute(div, "zz").expect("ok");
+        let e = doc.element(div).expect("ok");
+        let got: Vec<_> = e
+            .attrs
+            .iter()
+            .map(|a| (&*a.name.local, a.value.as_str()))
+            .collect();
+        assert_eq!(got, [("b", "2")]);
+        let text = doc.create_text("t");
+        assert_eq!(
+            doc.remove_attribute(text, "b"),
+            Err(DomError::InvalidNodeType(text))
+        );
+    }
+
     #[test]
     fn set_attribute_on_a_non_element_is_an_error() {
         let mut doc = Document::parse("<p>x</p>");
