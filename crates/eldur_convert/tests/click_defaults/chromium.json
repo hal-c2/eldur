@@ -43,5 +43,42 @@
    "LC A mouseup lab4 2",
    "LC A click lab4 2"
   ]
+ },
+ {
+  "name": "double click whose second press comes before the first click ran",
+  "log": [
+   "LC A mousedown lab5 1",
+   "LC A mouseup lab5 1",
+   "LC A click lab5 1",
+   "LC Next mousedown lab5 2",
+   "LC Next mouseup lab5 2",
+   "LC Next click lab5 2",
+   "LC Next click box5 2",
+   "LC Next dblclick lab5 2"
+  ]
+ },
+ {
+  "name": "press whose move swaps",
+  "log": [
+   "LC A move swaps",
+   "LC Next mousedown mv 1",
+   "LC Next mouseup mv 1",
+   "LC Next click mv 1"
+  ]
+ },
+ {
+  "name": "move whose pointerover swaps",
+  "log": [
+   "LC A pointerover ov",
+   "LC A over swaps",
+   "LC Next pointerover ov",
+   "LC Next pointerenter ov",
+   "LC Next mouseover ov",
+   "LC Next mouseenter ov",
+   "LC Next pointerout ov",
+   "LC Next pointerleave ov",
+   "LC Next mouseout ov",
+   "LC Next mouseleave ov"
+  ]
  }
 ]

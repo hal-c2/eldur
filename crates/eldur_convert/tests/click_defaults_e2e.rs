@@ -8,11 +8,11 @@
 //! `node crates/eldur_convert/tests/click_defaults/gen.mjs`, its host swapping
 //! the pages inside the press as the Qt host here does.
 //!
-//! Some presses have no Chromium record. Chromium fires no `mousemove` inside
-//! a press where the pointer was not, while Ljós catches the pointer up with
-//! one first. When that move makes another page the document, Qt has already
-//! given the press to the old page's items, so the press is dropped. These
-//! cases are listed in `QT_ONLY`.
+//! An event that comes once another page is the document is that page's, as
+//! each event in a browser goes to the document it lands on. Qt has already
+//! given it to the old page's items: a second press that comes before the
+//! first click ran, or a press that a move of Ljós's own catches the pointer
+//! up to. Chromium has no such move, so its record of that press moves first.
 
 mod support;
 
@@ -20,9 +20,6 @@ use eldur_convert::{Input, NoResources, Options, RootKind};
 
 const PAGE: &str = include_str!("click_defaults/page.html");
 const CHROMIUM: &str = include_str!("click_defaults/chromium.json");
-
-/// What each press with no Chromium record logs, after those that have one.
-const QT_ONLY: &[(&str, &[&str])] = &[("press whose move swaps", &["LC A move swaps"])];
 
 const TEST: &str = r##"
 import QtQuick
@@ -126,11 +123,40 @@ TestCase {
         finish(at)
     }
 
-    function test_5_press_whose_move_swaps() {
+    // Where no element is, so a page made under the pointer hears no move.
+    function rest() {
+        mouseMove(host, 790, 590)
+    }
+
+    // Both presses before the event loop turns: the first press's click runs
+    // when the second comes, and makes Next under it.
+    function test_5_double_click_whose_second_press_comes_before_the_first_click_ran() {
+        const at = pages()
+        console.log("LC -- double click whose second press comes before the first click ran")
+        const p = middle(at.a, "lab5")
+        mouseDoubleClickSequence(host, p.x, p.y)
+        finish(at)
+    }
+
+    // No move first: the one Ljós catches the pointer up with makes Next.
+    function test_6_press_whose_move_swaps() {
+        rest()
         const at = pages()
         console.log("LC -- press whose move swaps")
         const p = middle(at.a, "mv")
         mouseClick(host, p.x, p.y)
+        finish(at)
+    }
+
+    function test_7_move_whose_pointerover_swaps() {
+        rest()
+        const at = pages()
+        console.log("LC -- move whose pointerover swaps")
+        const p = middle(at.a, "ov")
+        mouseMove(host, p.x, p.y)
+        tryVerify(function() { return at.next !== null }, 1000, "A was never swapped out")
+        mouseMove(host, p.x + 5, p.y)
+        mouseMove(host, 400, p.y)
         finish(at)
     }
 }
@@ -206,10 +232,6 @@ fn a_press_does_nothing_more_once_its_page_is_gone() {
         for line in step["log"].as_array().expect("log") {
             wanted.push(line.as_str().expect("line").to_owned());
         }
-    }
-    for (name, log) in QT_ONLY {
-        wanted.push(format!("LC -- {name}"));
-        wanted.extend(log.iter().map(|line| (*line).to_owned()));
     }
     if logged != wanted {
         problems.push(format!(

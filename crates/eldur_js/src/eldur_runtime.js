@@ -17327,7 +17327,7 @@ function _inInstallFor(raw, type) {
 function _inInstall() {
     _in = {
         page: _root, overlay: null, held: 0, last: null, pressed: false, hoverP: null, hoverM: null,
-        downTarget: {}, noMouse: false, count: 0,
+        downTarget: {}, noMouse: false, count: 0, handed: false, handedTo: null,
         capture: null, captureNext: null, defaults: [], scrolled: null, restoreFocus: null,
         restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusMoves: 0, focusShift: false, focusPending: null, untold: [], shiftTo: null, change: null, overridden: null, away: false, seenActive: false, windowHas: false, backLater: false, backGen: 0, windowTelling: false,
         spaceDown: null, typing: null, popovers: [], radioLast: {}, focusProbe: null
@@ -17411,18 +17411,68 @@ function _inNoCount() {
 // is the new page's from the start.
 function _inPointedOn(page) {
     return function(scene, buttons, modifiers) {
-        if (_pageGone() || _root !== page || !_in) {
+        if (_pageGone() || !_in) {
+            return;
+        }
+        if (_root !== page) {
+            // Qt keeps a press it gave to this page's items, and the rest of
+            // it with them, while another page holds it: that page's to hear.
+            var mine = _inLayers.get(page);
+            if (buttons !== -1 && mine && mine.handedTo && mine.handedTo === _in) {
+                _inPointed(scene, buttons, modifiers);
+                if (_in && _in.held === 0) {
+                    mine.handedTo = null;
+                }
+            }
             return;
         }
         // Nothing the mouse does overtakes the click of the release before it.
         // That click may make another page the document, even one that hands
-        // it back to this page before it ends: the event is none of either's.
+        // it back to this page before it ends: this event lands on that one.
+        var layer = _in;
+        var before = layer.held;
         var own = _inStillOwn();
         _inFlushLater();
         if (own()) {
             _inPointed(scene, buttons, modifiers);
+        } else {
+            _inHandOver(layer, before, scene, buttons, modifiers);
         }
     };
+}
+
+// Another page became the document between the events of the mouse, while
+// Qt had this one's already on its way to the old page's items. In a browser
+// it lands on the document it finds: a press there is the new page's, and
+// so is the rest of it. A press the old page had begun is none of the new
+// page's: it never had its start.
+function _inHandOver(layer, heldBefore, scene, buttons, modifiers) {
+    _inForgetPress(layer);
+    if (heldBefore !== 0 || _pageGone() || !_in) {
+        return;
+    }
+    var to = _in;
+    _inPointed(scene, buttons, modifiers);
+    if (_in === to && to.held !== 0) {
+        to.handed = true;
+        layer.handedTo = to;
+    }
+}
+
+// A press whose page stopped being the document: its events are over, and
+// its layer lets it go without a word.
+function _inForgetPress(layer) {
+    layer.held = 0;
+    layer.downTarget = {};
+    layer.pressed = false;
+    layer.handed = false;
+    layer.defaults = [];
+    layer.noMouse = false;
+    layer.capture = null;
+    layer.captureNext = null;
+    layer.restoreScroll.forEach(function(s) { s.interactive = true; });
+    layer.restoreScroll = [];
+    layer.scrolled = null;
 }
 
 // One call for each thing the mouse does; `buttons` is -1 for "as it was", from
@@ -17446,13 +17496,20 @@ function _inPointed(scene, buttons, modifiers) {
     var mods = modifiers || 0;
     var was = _in.held;
     _in.last = Qt.point(scene.x, scene.y);
+    var layer = _in;
+    var own = _inStillOwn();
     if (changed) {
         _in.held = was;
-        // The move's listeners may make another page the document: Qt gave
-        // the buttons to this page's items, so they are none of that page's.
-        var own = _inStillOwn();
         _inMoved(_in.last, mods);
+        // The move's listeners made another page the document. The rest of
+        // the move is neither's; a press or release that came with it is an
+        // event of its own in a browser, which lands on the new page.
         if (!own()) {
+            if (held !== was) {
+                _inHandOver(layer, was, scene, buttons, modifiers);
+            } else {
+                _inForgetPress(layer);
+            }
             return;
         }
     }
@@ -17463,6 +17520,12 @@ function _inPointed(scene, buttons, modifiers) {
         } else if (!(held & bit) && (_in.held & bit)) {
             _in.held &= ~bit;
             _inUp(bit, _in.last, mods);
+        }
+        // A listener made another page the document: what else this event
+        // holds for the old one's elements is none of either's.
+        if (!own()) {
+            _inForgetPress(layer);
+            return;
         }
     }
 }
@@ -17583,24 +17646,26 @@ function _inPathOf(raw) {
 
 // Out of one element and over another; enter and leave go to each ancestor that
 // changed sides, the deepest first when leaving and last when entering.
-function _inBoundary(prefix, from, to, scene, mods) {
+function _inBoundary(prefix, from, to, scene, mods, own) {
     if (from === to) {
         return;
     }
     var button = prefix === "pointer" ? -1 : 0;
     var fromPath = _inPathOf(from);
     var toPath = _inPathOf(to);
+    // Each one's listeners may make another page the document; the rest are
+    // none of its.
     if (from) {
         _inFire(prefix + "out", from, scene, mods, { related: to, button: button });
-        for (var i = 0; i < fromPath.length; ++i) {
+        for (var i = 0; i < fromPath.length && own(); ++i) {
             if (toPath.indexOf(fromPath[i]) === -1) {
                 _inFire(prefix + "leave", fromPath[i], scene, mods, { related: to, button: button });
             }
         }
     }
-    if (to) {
+    if (to && own()) {
         _inFire(prefix + "over", to, scene, mods, { related: from, button: button });
-        for (var j = toPath.length - 1; j >= 0; --j) {
+        for (var j = toPath.length - 1; j >= 0 && own(); --j) {
             if (fromPath.indexOf(toPath[j]) === -1) {
                 _inFire(prefix + "enter", toPath[j], scene, mods, { related: from, button: button });
             }
@@ -17608,30 +17673,44 @@ function _inBoundary(prefix, from, to, scene, mods) {
     }
 }
 
-function _inRetarget(scene, mods) {
+// Where the pointer is now, and what it went out of and over to get there.
+// Any listener on the way may make another page the document, whose layer
+// keeps a hover of its own: the caller asks `own` before going on.
+function _inRetarget(scene, mods, own) {
     _inCaptureTurn(scene, mods);
+    if (!own()) {
+        return null;
+    }
     var target = _in.capture || _inHit(scene);
     var overP = _in.hoverP;
     _in.hoverP = target;
-    _inBoundary("pointer", overP, target, scene, mods);
-    if (!_in.noMouse) {
+    _inBoundary("pointer", overP, target, scene, mods, own);
+    if (own() && !_in.noMouse) {
         var overM = _in.hoverM;
         _in.hoverM = target;
-        _inBoundary("mouse", overM, target, scene, mods);
+        _inBoundary("mouse", overM, target, scene, mods, own);
     }
     return target;
 }
 
 function _inMoved(scene, mods) {
-    var target = _inRetarget(scene, mods);
+    var own = _inStillOwn();
+    var target = _inRetarget(scene, mods, own);
+    if (!own()) {
+        return;
+    }
     _inFire("pointermove", target, scene, mods, { button: -1 });
-    if (!_in.noMouse) {
+    if (own() && !_in.noMouse) {
         _inFire("mousemove", target, scene, mods, { button: 0 });
     }
 }
 
 function _inDown(bit, scene, mods, heldBefore) {
-    var target = _inRetarget(scene, mods);
+    var own = _inStillOwn();
+    var target = _inRetarget(scene, mods, own);
+    if (!own()) {
+        return;
+    }
     var button = _IN_BUTTON(bit);
     var now = Date.now();
     var counting = _inCounting;
@@ -17649,22 +17728,30 @@ function _inDown(bit, scene, mods, heldBefore) {
     _in.pressed = true;
     _in.downTarget[bit] = target;
     if (heldBefore === 0) {
-        _in.noMouse = !_inFire("pointerdown", target, scene, mods, { button: button }).defaultPrevented ? false : true;
+        var prevented = _inFire("pointerdown", target, scene, mods, { button: button }).defaultPrevented;
+        if (!own()) {
+            return;
+        }
+        _in.noMouse = prevented;
         _inHoldScrollers(target);
     } else {
         _inFire("pointermove", target, scene, mods, { button: button });
     }
-    if (_in.noMouse) {
+    if (!own() || _in.noMouse) {
         return;
     }
     // Under a disabled control no mouse event starts, and focus moves as ever.
     var barred = _inMouseBarred(target);
-    if (!barred && _inFire("mousedown", target, scene, mods, { button: button, detail: _in.count }).defaultPrevented) {
+    var kept = !barred && _inFire("mousedown", target, scene, mods, { button: button, detail: _in.count }).defaultPrevented;
+    if (!own()) {
+        return;
+    }
+    if (kept) {
         _inKeepFocus(target);
     } else {
         _inFocusOnPress(target);
     }
-    if (bit === Qt.RightButton) {
+    if (bit === Qt.RightButton && own()) {
         _inFire("contextmenu", target, scene, mods, { button: button });
     }
 }
@@ -17676,13 +17763,18 @@ function _inUp(bit, scene, mods) {
     var from = _in.downTarget[bit];
     delete _in.downTarget[bit];
     var heldBy = _in.capture;
+    var own = _inStillOwn();
     if (_in.held === 0) {
         _inFire("pointerup", target, scene, mods, { button: button });
     } else {
         _inFire("pointermove", target, scene, mods, { button: button });
     }
-    if (!_in.noMouse && !_inMouseBarred(target)) {
+    if (own() && !_in.noMouse && !_inMouseBarred(target)) {
         _inFire("mouseup", target, scene, mods, { button: button, detail: count });
+    }
+    // The page that took the document over has a press of its own, if any.
+    if (!own()) {
+        return;
     }
     if (_in.held === 0) {
         _inEndCapture(scene, mods);
@@ -17727,9 +17819,11 @@ function _inCommon(a, b) {
 
 function _inClickOn(target, bit, button, count, scene, mods, moved) {
     var defaults = _in.defaults;
+    var handed = _in.handed;
     _in.defaults = [];
     if (_in.held === 0) {
         _in.pressed = false;
+        _in.handed = false;
     }
     // A touch-like drag moved the scroller: the press was that, not a click.
     if (!target || moved) {
@@ -17741,6 +17835,9 @@ function _inClickOn(target, bit, button, count, scene, mods, moved) {
     }
     if (_inMouseBarred(target)) {
         return;
+    }
+    if (handed) {
+        defaults = _inHandedDefaults(target);
     }
     var ev = _inClickEvent(target, scene, mods, count);
     // A user's click: its promises run after each listener, as a press's do,
@@ -17942,7 +18039,11 @@ function _inWheel(qtEv) {
     if (qtEv.x !== undefined && !qtEv.scenePosition) {
         scene = _in.overlay.mapToItem(null, qtEv.x, qtEv.y);
     }
-    var target = _inRetarget(scene, qtEv.modifiers);
+    var own = _inStillOwn();
+    var target = _inRetarget(scene, qtEv.modifiers, own);
+    if (!own()) {
+        return;
+    }
     // A scroller moves half the angle's units: the same as `delta` says.
     var delta = {
         x: qtEv.pixelDelta.x ? -qtEv.pixelDelta.x : -qtEv.angleDelta.x / 2 + 0,
@@ -17982,6 +18083,9 @@ function _inEndCapture(scene, mods) {
 
 // What the converter emitted for a link: followed unless the click is prevented.
 function afterClick(follow) {
+    if (_in && _in.handed) {
+        return;
+    }
     if (_in && _in.pressed) {
         _in.defaults.push(follow);
     } else if (!linkPrevented()) {
@@ -18010,6 +18114,11 @@ function labelled(item) {
 }
 
 function afterTap(eventPoint, run) {
+    // A press handed to this page came to the old page's items, whose taps
+    // these are: this page's defaults come from its elements.
+    if (_in && _in.handed) {
+        return;
+    }
     if (_in && _in.pressed) {
         _in.defaults.push(run);
     } else if (!tapPrevented(eventPoint)) {
@@ -18018,6 +18127,37 @@ function afterTap(eventPoint, run) {
 }
 
 // Whether the page and layer an input began on are still the document's.
+// What a press handed over from another page does after its listeners: the
+// nearest element on its way up that does anything, as its items would have
+// had Qt given them the press. A control is pressed as by a key.
+function _inHandedDefaults(target) {
+    var path = _inPathOf(target);
+    for (var i = 0; i < path.length; ++i) {
+        var node = path[i];
+        if (typeof node.clicked === "function") {
+            if (i === 0 && _inIsCheck(node) && !(_inIsRadio(node) && node.checked)) {
+                var m = _meta(node);
+                var was = m.pressing;
+                m.pressing = true;
+                node.toggle();
+                m.pressing = was;
+                m.toggledNow = true;
+            }
+            return [];
+        }
+        if (_nodeTag(node) === "label") {
+            var control = _labelControl(node);
+            if (control && control.enabled !== false && path.indexOf(control) === -1) {
+                return [function() { labelled(control); }];
+            }
+        }
+        if (_inIsLink(node)) {
+            return [function() { _inFollow(node); }];
+        }
+    }
+    return [];
+}
+
 function _inStillOwn() {
     var gen = _docGen;
     var layer = _in;
