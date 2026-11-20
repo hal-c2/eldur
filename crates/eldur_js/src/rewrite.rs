@@ -117,6 +117,10 @@ struct PageBuilder<'a> {
     /// replaced, once the cycles are known, by marking the rest of its cycle
     /// failed too.
     cycle_failure_markers: HashMap<usize, String>,
+    /// Per module of a cycle run at load, in the order their run functions end:
+    /// the line where its run marks it done, which `finish` makes the cycle's
+    /// once every group is known.
+    cycle_done_markers: Vec<(usize, String)>,
     module_exports: HashMap<usize, ModuleExports>,
     /// Module index -> the top-level function returning its namespace, for
     /// `import()` of a module the page inlines.
@@ -324,6 +328,7 @@ pub(crate) fn rewrite(
         visiting_stack: Vec::new(),
         cycle_groups: HashMap::new(),
         cycle_failure_markers: HashMap::new(),
+        cycle_done_markers: Vec::new(),
         module_exports: HashMap::new(),
         module_namespaces: HashMap::new(),
         lazy_modules: lazy_modules(&valid_scripts, scripts),
@@ -510,7 +515,14 @@ impl<'a> PageBuilder<'a> {
                         indent_block(&body.join("\n"), 4)
                     ));
                 }
-                lines.push(format!("{run}.state = 1;"));
+                if self.cycle_groups.contains_key(&script_idx) {
+                    let marker =
+                        self.unique_page_name(&format!("__eldur_cycle_done_m{script_idx}_"));
+                    self.cycle_done_markers.push((script_idx, marker.clone()));
+                    lines.push(marker);
+                } else {
+                    lines.push(format!("{run}.state = 1;"));
+                }
                 self.out.module_fns.push(format!(
                     "function {run}() {{\n{}\n}}",
                     indent_block(&lines.join("\n"), 4)
@@ -754,12 +766,13 @@ impl<'a> PageBuilder<'a> {
         let run = self
             .module_runs
             .get(&script_idx)
-            .map(|run| format!("{run}(), "))
+            .map(|run| format!("{run}(); "))
             .unwrap_or_default();
         self.out.top_decls.push(format!(
-            "function {name}() {{ return {name}.value || ({run}{name}.value = {}); }}",
+            "function {name}() {{ {run}return {name}.value || ({name}.value = {}); }}",
             // Made once the module has run to its end: every binding is
-            // initialized.
+            // initialized. Its run comes first each time, so a module that
+            // failed, even after this was made, throws what it threw.
             format_live_namespace_object(exports, None)
         ));
     }
@@ -1264,6 +1277,33 @@ impl<'a> PageBuilder<'a> {
             page_js = page_js.replace(placeholder.as_str(), &ident);
         }
 
+        // A cycle shares one result, settled when its root, the module whose
+        // run ends last, ends: each other module that ran to its end waits in
+        // state 4, which runs nothing more but settles no `import()` yet.
+        for (i, (idx, marker)) in self.cycle_done_markers.iter().enumerate() {
+            let group = self.cycle_groups.get(idx);
+            let run = &self.module_runs[idx];
+            let ends_later = |m: &usize| self.cycle_groups.get(m) == group;
+            let line = if self.cycle_done_markers[i + 1..]
+                .iter()
+                .any(|(m, _)| ends_later(m))
+            {
+                format!("{run}.state = 4;")
+            } else {
+                std::iter::once(run)
+                    .chain(
+                        self.cycle_done_markers[..i]
+                            .iter()
+                            .filter(|(m, _)| ends_later(m))
+                            .map(|(m, _)| &self.module_runs[m]),
+                    )
+                    .map(|r| format!("{r}.state = 1;"))
+                    .collect::<Vec<_>>()
+                    .join(" ")
+            };
+            page_js = page_js.replace(marker.as_str(), &line);
+        }
+
         for (idx, marker) in &self.cycle_failure_markers {
             let others: Vec<String> = match self.cycle_groups.get(idx) {
                 Some(group) => {
@@ -1347,7 +1387,7 @@ impl PageBuffers {
         let slot_idx = self.top_decls.len();
         self.top_decls.push(fn_code);
         self.pure_top_vars
-            .insert(name.to_string(), PureKind::Object);
+            .insert(name.to_string(), PureKind::Function);
         if is_classic {
             self.var_func_slots
                 .insert(name.to_string(), (slot_idx, self.init_stmts.len()));
@@ -1406,7 +1446,7 @@ impl PageBuffers {
             let emitted_name = lowerer.bound_name(id).to_string();
             if all_static_pure && self.at_load() {
                 self.pure_top_vars
-                    .insert(emitted_name.clone(), PureKind::Object);
+                    .insert(emitted_name.clone(), PureKind::Function);
             }
             if is_exported && let Some(me) = mod_exports {
                 let orig_name = id.name.to_string();
@@ -1684,7 +1724,7 @@ impl PageBuffers {
                         .alloc_fn_name(&format!("__eldur_default_{script_idx}"));
                     self.top_decls.push(format!("const {def_name} = {fn_str};"));
                     self.pure_top_vars
-                        .insert(def_name.clone(), PureKind::Object);
+                        .insert(def_name.clone(), PureKind::Function);
                     (def_name, false)
                 };
                 if let Some(me) = mod_exports {
@@ -1742,7 +1782,7 @@ impl PageBuffers {
                     (def_name, false)
                 };
                 if all_static_pure && self.at_load() {
-                    self.pure_top_vars.insert(name.clone(), PureKind::Object);
+                    self.pure_top_vars.insert(name.clone(), PureKind::Function);
                 }
                 if let Some(static_stmts) = lowerer
                     .post_class_static_inits
@@ -3003,9 +3043,12 @@ enum PureKind {
     /// `null` or `undefined`.
     Nullish,
     Array,
-    /// A function, class, regular expression or object literal: converting it
-    /// to a primitive runs its own code, which may throw.
+    /// A regular expression or an object literal with only data properties:
+    /// converting it to a primitive runs its own code, which may throw.
     Object,
+    /// A function or class: as an object, and its own properties may be
+    /// getters, a static one or `caller` of a strict function, which may throw.
+    Function,
     /// Read without converting it, as another binding holds it.
     Unknown,
 }
@@ -3043,7 +3086,8 @@ fn is_pure_top_level_init(
 }
 
 /// Whether binding `kind`'s value to `pat` cannot throw: an object pattern
-/// needs a value that is not nullish and an array pattern an array, and each
+/// needs a value whose properties are all data, a primitive that is not
+/// nullish, an array or an object literal, and an array pattern an array; each
 /// of their names is a plain name, so nothing nested is read.
 fn pattern_cannot_throw(pat: &BindingPattern<'_>, kind: PureKind) -> bool {
     let plain = |p: &BindingPattern<'_>| match p {
@@ -3057,8 +3101,10 @@ fn pattern_cannot_throw(pat: &BindingPattern<'_>, kind: PureKind) -> bool {
         BindingPattern::BindingIdentifier(_) => true,
         BindingPattern::AssignmentPattern(_) => false,
         BindingPattern::ObjectPattern(obj) => {
-            !matches!(kind, PureKind::Nullish | PureKind::Unknown)
-                && obj.rest.is_none()
+            !matches!(
+                kind,
+                PureKind::Nullish | PureKind::Function | PureKind::Unknown
+            ) && obj.rest.is_none()
                 && obj.properties.iter().all(|p| plain(&p.value))
         }
         BindingPattern::ArrayPattern(arr) => {
@@ -3085,9 +3131,10 @@ fn pure_init_kind(
         Expression::NumericLiteral(_) => Some(PureKind::Number),
         Expression::StringLiteral(_) => Some(PureKind::String),
         Expression::BigIntLiteral(_) => Some(PureKind::BigInt),
-        Expression::RegExpLiteral(_)
-        | Expression::FunctionExpression(_)
-        | Expression::ArrowFunctionExpression(_) => Some(PureKind::Object),
+        Expression::RegExpLiteral(_) => Some(PureKind::Object),
+        Expression::FunctionExpression(_) | Expression::ArrowFunctionExpression(_) => {
+            Some(PureKind::Function)
+        }
 
         // Each value is converted to a string.
         Expression::TemplateLiteral(tpl) => {
@@ -3214,7 +3261,13 @@ fn pure_init_kind(
             for p in &obj.properties {
                 match p {
                     ObjectPropertyKind::ObjectProperty(prop) => {
-                        if prop.kind != PropertyKind::Init || prop.computed {
+                        // `__proto__: v` sets the prototype, whose getters a
+                        // destructuring would run.
+                        if prop.kind != PropertyKind::Init
+                            || prop.computed
+                            || (!prop.shorthand
+                                && prop.key.static_name().as_deref() == Some("__proto__"))
+                        {
                             return None;
                         }
                         kind(&prop.value)?;
@@ -3250,15 +3303,20 @@ fn top_declaration_keyword(stmt: &str) -> Option<&'static str> {
     ];
     let stmt = stmt.trim_start();
     KEYWORDS.into_iter().find(|k| {
-        stmt.strip_prefix(k).is_some_and(|rest| {
-            let rest = rest.trim_start();
-            // `function*` and a name, `let x`, `const {` or `[`; not `let = 1`
-            // or `var_x = 1`.
-            rest.len() < stmt.len() - k.len()
+        stmt.strip_prefix(k).is_some_and(|after| {
+            let rest = after.trim_start();
+            let spaced = rest.len() < after.len();
+            // `function*` or `function *g`; not `using *= 3`.
+            if k.ends_with("function") && rest.starts_with('*') {
+                return true;
+            }
+            // `let x`, `const {` or `let [`; not `let = 1`, `var_x = 1` or
+            // `using [0] = 1`.
+            let pattern = matches!(*k, "var" | "let" | "const");
+            spaced
                 && rest.chars().next().is_some_and(|c| {
-                    c == '*' || c == '{' || c == '[' || c == '$' || c == '_' || c.is_alphabetic()
+                    c == '$' || c == '_' || c.is_alphabetic() || (pattern && (c == '{' || c == '['))
                 })
-                || rest.starts_with('*')
         })
     })
 }
@@ -3334,6 +3392,10 @@ mod top_declaration_tests {
             "for (let i = 0; i < 2; i++) {}",
             "if (a) { const b = 1; }",
             "__eldur_run_m0();",
+            "using *= 3;",
+            "using [0] = 1;",
+            "class *= 2;",
+            "let *x;",
         ] {
             assert_eq!(top_declaration_keyword(stmt), None, "{stmt}");
         }

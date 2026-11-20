@@ -3452,6 +3452,59 @@ fn a_throwing_module_fails_every_module_of_its_cycle() {
     assert!(js.contains("function __eldur_run_m1()"), "{js}");
 }
 
+/// The body of the function `name` declares in `js`.
+fn function_body<'s>(js: &'s str, name: &str) -> &'s str {
+    let start = js
+        .find(&format!("function {name}()"))
+        .unwrap_or_else(|| panic!("no {name}:\n{js}"));
+    let end = start + js[start..].find("\n}").expect("closed");
+    &js[start..end]
+}
+
+/// A module of a cycle that ran to its end is done only once its cycle is: an
+/// `import()` of it before then waits, and rejects if the cycle fails.
+#[test]
+fn a_cycle_member_is_done_only_with_its_cycle() {
+    let resolver = FakeResolver::default();
+    let wa = module_script(
+        "wa.js",
+        "import { b } from \"./wb.js\";\nimport(\"./wb.js\");\nthrow new Error(\"wa\");\n",
+    );
+    let wb = module_script(
+        "wb.js",
+        "import \"./wa.js\";\nexport const b = \"b\";\nconsole.log(\"wb\");\n",
+    );
+    let out = run_rewrite(&[wa, wb], &resolver);
+    let js = &out.page_js;
+    let wb_run = function_body(js, "__eldur_run_m1");
+    assert!(!wb_run.contains("__eldur_run_m1.state = 1;"), "{js}");
+    let wa_run = function_body(js, "__eldur_run_m0");
+    let root_done = wa_run.find("__eldur_run_m0.state = 1;").expect("wa done");
+    let member_done = wa_run
+        .find("__eldur_run_m1.state = 1;")
+        .unwrap_or_else(|| panic!("wb done with wa:\n{js}"));
+    assert!(root_done < member_done, "{js}");
+}
+
+/// The namespace an `import()` resolves to is handed out only after the
+/// module's run, so a module that failed rejects each time.
+#[test]
+fn a_namespace_runs_its_module_first() {
+    let resolver = FakeResolver::default();
+    let first = module_script(
+        "first.js",
+        "import(\"./late.js\").then(() => {}, () => {});\n",
+    );
+    let late = module_script("late.js", "export const x = 1;\nconsole.log(x);\n");
+    let out = run_rewrite(&[first, late], &resolver);
+    let js = &out.page_js;
+    let ns = js
+        .find("function __eldur_module_namespace")
+        .unwrap_or_else(|| panic!("no namespace:\n{js}"));
+    let line = js[ns..].lines().next().unwrap();
+    assert!(line.contains("() { __eldur_run_m1(); return "), "{line}");
+}
+
 #[test]
 fn a_module_reaching_a_running_cycle_joins_it() {
     // xa → xb → xa is a cycle; xc imports xb after xb ran, while xa still runs.
@@ -3524,6 +3577,25 @@ fn an_initializer_that_may_throw_runs_inside_its_module() {
         (
             "const f = function () {};\nexport const q = f < 1;\n",
             "f < 1",
+        ),
+        // Destructuring a class or a function reads its own properties, and a
+        // static getter, or `caller` of a strict function, may throw.
+        (
+            "class C { static get a() { throw new Error(\"g\"); } }\nexport const { a: q } = C;\n",
+            "{ a: ",
+        ),
+        (
+            "function f() {}\nexport const { caller: q } = f;\n",
+            "{ caller: ",
+        ),
+        (
+            "const g = () => 1;\nexport const { caller: q } = g;\n",
+            "{ caller: ",
+        ),
+        // `__proto__:` makes the class the literal's prototype.
+        (
+            "class C { static get a() { throw new Error(\"g\"); } }\nconst o = { __proto__: C };\nexport const { a: q } = o;\n",
+            "{ a: ",
         ),
     ];
     for (src, init) in cases {
