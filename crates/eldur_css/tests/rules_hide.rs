@@ -96,6 +96,32 @@ fn a_display_name_with_a_comment_in_it_is_cleared_too() {
 }
 
 #[test]
+fn a_comment_opener_inside_an_unquoted_url_is_part_of_the_url() {
+    // `url(/*)` names `/*`, so the `display:none` after it is a declaration
+    // and clearing it leaves no `display` for the selector to find; in
+    // `myurl(/*)` and `url("/*")` the comment opener is no URL's (Chromium 158).
+    let page = r#"<!DOCTYPE html>
+<style>
+  [style*="display"] { display: none; }
+</style>
+<div id="url" style="background-image:url(/*);display:none">a</div>
+<div id="upper" style="background-image:URL( /*);display:none">b</div>
+<div id="fn" style="--a:myurl(/*);display:none */;color:red">c</div>
+"#;
+    let doc = Document::parse(page);
+    let viewport = Viewport::default();
+    let (sheets, _) = collect_stylesheets(&doc, &mut NoSheets, &viewport);
+    let id = |name: &str| doc.element_by_id(name).expect(name);
+    let nodes: BTreeSet<_> = [id("url"), id("upper"), id("fn")].into();
+    // `#fn`'s comment runs to `*/`, so it declares no display and keeps
+    // `display` in its attribute.
+    assert_eq!(
+        rules_hide(&doc, &sheets, &viewport, &nodes),
+        [id("fn")].into()
+    );
+}
+
+#[test]
 fn a_variable_display_hides_when_it_resolves_to_none() {
     let none: BTreeMap<String, String> = [("--d".to_owned(), "none".to_owned())].into();
     let block: BTreeMap<String, String> = [("--d".to_owned(), "block".to_owned())].into();
