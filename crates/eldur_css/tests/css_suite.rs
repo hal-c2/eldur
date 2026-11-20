@@ -2043,6 +2043,9 @@ fn a_hidden_element_keeps_its_pseudo_elements_for_when_it_shows() {
     assert!(map.get(x).is_none(), "x has no box");
     let hidden = map.computed(x).expect("x's computed style");
     assert_eq!(hidden.style.display, Display::None);
-    assert!(hidden.before.is_some(), "a state that shows x draws its ::before");
+    assert!(
+        hidden.before.is_some(),
+        "a state that shows x draws its ::before"
+    );
     assert!(hidden.after.is_none(), "no ::after rule matches x");
 }
