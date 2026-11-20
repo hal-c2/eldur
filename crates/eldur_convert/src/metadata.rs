@@ -685,6 +685,77 @@ pub(crate) fn document_url_decl(page_url: &str) -> Member {
     decl("string", "documentUrl", document_url(page_url))
 }
 
+/// Guards an element's own reads of `parent.` (`Math.min(150, parent.width)`,
+/// `parent.width * 0.5`): the runtime moves an element by setting its parent
+/// to null first, and a created element has none until it is appended, so an
+/// unguarded read throws `Cannot read property 'width' of null`.
+/// The fallback holds only while there is no parent; the binding comes back
+/// with the next one.
+pub(crate) fn guard_parent_reads(obj: &mut Object) {
+    let element = obj
+        .members
+        .iter()
+        .any(|m| matches!(m, Member::PropertyDecl { name, .. } if name == "eldurTag"));
+    for m in &mut obj.members {
+        match m {
+            Member::Property { name, value } if element => guard_value(name, value),
+            Member::PropertyDecl {
+                ty,
+                value: Some(value),
+                ..
+            } if element && matches!(ty.as_str(), "real" | "int" | "double") => {
+                guard_value("width", value);
+            }
+            Member::Child(child) => guard_parent_reads(child),
+            _ => {}
+        }
+    }
+}
+
+fn guard_value(name: &str, value: &mut Value) {
+    let Value::Expr(e) = value else { return };
+    // `parent && a ? b : c` is not guarded by its `parent &&`: with no parent
+    // it takes `c`, which may read `parent.` too.
+    if !reads_parent(e) || e.starts_with("parent ?") {
+        return;
+    }
+    let fallback = if is_number(name) {
+        "0"
+    } else if name.starts_with("anchors.") {
+        // An anchor line resets with `undefined`; the offsets and
+        // `anchors.margins` have no reset, so they take a number above.
+        "undefined"
+    } else {
+        return;
+    };
+    // With a parent, `parent && a` is `a` whatever follows, so the leading
+    // test goes into the guard.
+    let read = e.strip_prefix("parent && ").unwrap_or(e);
+    *e = format!("parent ? ({read}) : {fallback}");
+}
+
+/// Geometry the emitter binds to the parent; each takes a number.
+fn is_number(name: &str) -> bool {
+    matches!(name, "x" | "y" | "z" | "width" | "height")
+        || name
+            .strip_prefix("anchors.")
+            .is_some_and(|p| p.ends_with("Margin") || p == "margins" || p.ends_with("Offset"))
+        || name
+            .strip_prefix("Layout.")
+            .is_some_and(|p| p.ends_with("Width") || p.ends_with("Height") || p.ends_with("Margin"))
+}
+
+/// A `parent.` that starts a member read, not one inside `x.parent.`
+/// or `myparent.`.
+fn reads_parent(e: &str) -> bool {
+    e.match_indices("parent.").any(|(i, _)| {
+        e[..i]
+            .chars()
+            .next_back()
+            .is_none_or(|c| !(c.is_alphanumeric() || c == '_' || c == '.' || c == '$'))
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -746,65 +817,101 @@ mod tests {
             Value::Expr("Qt.resolvedUrl(\"Main.qml\")".to_owned())
         );
     }
-}
 
-/// Guards an element's own reads of `parent.` (`Math.min(150, parent.width)`,
-/// `parent.width * 0.5`): the runtime moves an element by setting its parent
-/// to null first, and a created element has none until it is appended, so an
-/// unguarded read throws `Cannot read property 'width' of null`.
-/// The fallback holds only while there is no parent; the binding comes back
-/// with the next one.
-pub(crate) fn guard_parent_reads(obj: &mut Object) {
-    let element = obj
-        .members
-        .iter()
-        .any(|m| matches!(m, Member::PropertyDecl { name, .. } if name == "eldurTag"));
-    for m in &mut obj.members {
-        match m {
-            Member::Property { name, value } if element => guard_value(name, value),
-            Member::PropertyDecl {
-                ty,
-                value: Some(value),
-                ..
-            } if element && matches!(ty.as_str(), "real" | "int" | "double") => {
-                guard_value("width", value);
-            }
-            Member::Child(child) => guard_parent_reads(child),
-            _ => {}
+    fn guarded(name: &str, e: &str) -> String {
+        let mut v = Value::expr(e);
+        guard_value(name, &mut v);
+        value_text(&v)
+    }
+
+    fn value_text(v: &Value) -> String {
+        match v {
+            Value::Expr(e) => e.clone(),
+            other => format!("{other:?}"),
         }
     }
-}
 
-fn guard_value(name: &str, value: &mut Value) {
-    let Value::Expr(e) = value else { return };
-    if !reads_parent(e) || e.starts_with("parent ?") || e.starts_with("parent &&") {
-        return;
+    #[test]
+    fn only_a_read_of_the_own_parent_counts() {
+        assert!(reads_parent("parent.width"));
+        assert!(reads_parent("Math.min(150, parent.width)"));
+        assert!(!reads_parent("x.parent.width"));
+        assert!(!reads_parent("myparent.width"));
+        assert!(!reads_parent("my_parent.width"));
+        assert!(!reads_parent("$parent.width"));
+        assert!(!reads_parent("parent"));
     }
-    let fallback = if name.starts_with("anchors.") {
-        "undefined"
-    } else if is_number(name) {
-        "0"
-    } else {
-        return;
-    };
-    *e = format!("parent ? ({e}) : {fallback}");
-}
 
-/// Geometry the emitter binds to the parent; each takes a number.
-fn is_number(name: &str) -> bool {
-    matches!(name, "x" | "y" | "z" | "width" | "height")
-        || name
-            .strip_prefix("Layout.")
-            .is_some_and(|p| p.ends_with("Width") || p.ends_with("Height") || p.ends_with("Margin"))
-}
+    #[test]
+    fn a_parent_read_falls_back_while_there_is_no_parent() {
+        assert_eq!(
+            guarded("width", "parent.width * 0.5"),
+            "parent ? (parent.width * 0.5) : 0"
+        );
+        assert_eq!(
+            guarded("Layout.preferredWidth", "parent.width"),
+            "parent ? (parent.width) : 0"
+        );
+        assert_eq!(
+            guarded("anchors.left", "parent.left"),
+            "parent ? (parent.left) : undefined"
+        );
+        // No reset: `undefined` would not assign.
+        for name in [
+            "anchors.margins",
+            "anchors.horizontalCenterOffset",
+            "anchors.topMargin",
+        ] {
+            assert_eq!(
+                guarded(name, "parent.width / 4"),
+                "parent ? (parent.width / 4) : 0"
+            );
+        }
+    }
 
-/// A `parent.` that starts a member read, not one inside `x.parent.`
-/// or `myparent.`.
-fn reads_parent(e: &str) -> bool {
-    e.match_indices("parent.").any(|(i, _)| {
-        e[..i]
-            .chars()
-            .next_back()
-            .is_none_or(|c| !(c.is_alphanumeric() || c == '_' || c == '.' || c == '$'))
-    })
+    #[test]
+    fn a_guarded_or_parentless_value_is_left_alone() {
+        assert_eq!(
+            guarded("width", "parent ? parent.width : 0"),
+            "parent ? parent.width : 0"
+        );
+        assert_eq!(guarded("width", "x.parent.width"), "x.parent.width");
+        assert_eq!(guarded("width", "150"), "150");
+        assert_eq!(guarded("color", "parent.color"), "parent.color");
+        // Its false branch reads the parent too.
+        assert_eq!(
+            guarded(
+                "Layout.leftMargin",
+                "parent && parent.eldurLeads ? 8 : 8 - parent.width"
+            ),
+            "parent ? (parent.eldurLeads ? 8 : 8 - parent.width) : 0"
+        );
+    }
+
+    #[test]
+    fn only_elements_are_guarded_but_all_children_are_walked() {
+        let mut element = Object::new("Item");
+        element
+            .members
+            .push(decl("string", "eldurTag", Value::string("div")));
+        element.set("width", Value::expr("parent.width"));
+        element
+            .members
+            .push(decl("real", "eldurGap", Value::expr("parent.width / 10")));
+        let mut wrapper = Object::new("Item");
+        wrapper.set("width", Value::expr("parent.width"));
+        let mut root = wrapper.child(element);
+        guard_parent_reads(&mut root);
+        assert_eq!(root.get("width"), Some(&Value::expr("parent.width")));
+        let inner = root.children().next().expect("the element child");
+        assert_eq!(
+            inner.get("width"),
+            Some(&Value::expr("parent ? (parent.width) : 0"))
+        );
+        assert!(inner.members.iter().any(|m| matches!(
+            m,
+            Member::PropertyDecl { name, value: Some(Value::Expr(e)), .. }
+                if name == "eldurGap" && e == "parent ? (parent.width / 10) : 0"
+        )));
+    }
 }
