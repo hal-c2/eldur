@@ -1463,13 +1463,26 @@ impl Dynamic<'_, '_> {
         // Each element's own worlds, as on a page with no groups: a group
         // never takes their place.
         let mut set: BTreeSet<(usize, Vec<u16>)> = BTreeSet::from([(0, Vec::new())]);
+        // A box whose level a condition changes lifts its block by what the
+        // stacking contexts around it allow, which other conditions change:
+        // each combination of the two is a world of its own.
+        let contexts: HashMap<NodeId, &[u16]> = self
+            .found
+            .elements
+            .iter()
+            .filter(|e| matches!(restacks(&e.by_mask), Restacks::Subtree))
+            .map(|e| (e.node, e.depends_on.as_slice()))
+            .collect();
         for e in &self.found.elements {
-            let deps: Vec<u16> = e
-                .depends_on
-                .iter()
-                .copied()
-                .filter(|c| !excluded.contains(c))
-                .collect();
+            let mut deps: Vec<u16> = e.depends_on.clone();
+            if !contexts.is_empty() && changes_level(&e.by_mask) {
+                for a in doc.ancestors(e.node) {
+                    deps.extend(contexts.get(&a).copied().unwrap_or_default());
+                }
+                deps.sort_unstable();
+                deps.dedup();
+            }
+            deps.retain(|c| !excluded.contains(c));
             set.extend(subsets(&deps));
         }
         if set.len() > MAX_WORLDS {
@@ -2126,6 +2139,13 @@ fn restacks(styles: &[Box<ComputedStyle>]) -> Restacks {
     } else {
         Restacks::No
     }
+}
+
+/// Whether the box's level differs between combinations, or whether it
+/// rises out of its block in some and not in others.
+fn changes_level(styles: &[Box<ComputedStyle>]) -> bool {
+    !matches!(restacks(styles), Restacks::No)
+        || styles.iter().any(|s| s.z_index != styles[0].z_index)
 }
 
 /// Whether some combination paints the box, or they differ in what makes
