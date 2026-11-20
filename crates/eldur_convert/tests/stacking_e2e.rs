@@ -423,7 +423,8 @@ const OUT_OF_FLOW_MOVES_UNSCRIPTED: &str = r##"
 /// fixed box is painted over the window, not in its block. And an overlay
 /// taken out of its block keeps its place at its block, and at the
 /// positioned box its block is in, and at a block its `position: relative`
-/// offset moves (`#h8`, painted 30px under where the flow has it). In a
+/// offset moves (`#h8`, painted 30px under and 20px right of where the
+/// flow has it). In a
 /// right-to-left block, `right` wins over `left` (`#h9`, 60px to the left).
 /// An animated `left` wins over `right` and moves the box from there
 /// (`#h10`, halfway from 0 to 40px).
@@ -442,7 +443,7 @@ div { height: 40px; width: 200px }
 #f5 { position: fixed; top: 1150px; left: 600px; z-index: 10; width: 50px; background: green }
 #h6 { position: relative; margin-left: 40px }
 #o7 { position: relative; margin-left: 30px }
-#h8 { position: relative; top: 30px; margin-left: 40px }
+#h8 { position: relative; top: 30px; left: 20px; margin-left: 20px }
 #h9 { position: relative; left: 20px; right: 60px }
 @keyframes nudge { from { left: 0 } to { left: 40px } }
 #h10 { position: relative; right: 20px; animation: nudge 10s linear -5s paused }
@@ -511,6 +512,7 @@ const CONTEXTS_TEST: &str = r##"
         compare(front(page, 10, 730), "", "not at that box's stop")
         compare(front(page, 70, 890), "a8", "at its block, moved by its offset")
         compare(front(page, 150, 890), "h8", "the block, moved")
+        compare(front(page, 30, 890), "", "by its left offset too")
         compare(front(page, 70, 850), "", "not where the flow has the block")
         compare(front(page, 10, 940), "h9", "moved by right in a right-to-left block")
         compare(front(page, 210, 940), "", "not by left")
@@ -542,6 +544,7 @@ const CONTEXTS_UNSCRIPTED: &str = r##"
         compare(front(page, 10, 730), "")
         compare(front(page, 70, 890), "a8")
         compare(front(page, 150, 890), "h8")
+        compare(front(page, 30, 890), "")
         compare(front(page, 70, 850), "")
         compare(front(page, 10, 940), "h9")
         compare(front(page, 210, 940), "")
