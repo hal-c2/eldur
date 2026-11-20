@@ -13317,7 +13317,9 @@ function _parseHtmlFragmentNodes(html) {
     var gap = "";
     var lastTag = "";
     var pos = 0;
-    var tagOpenRe = /<([a-zA-Z][a-zA-Z0-9-]*)(\s[^>]*)?\s*(\/?)>/g;
+    // A `/` not closing the tag separates its name from an attribute, as
+    // HTML's tokenizer reads `<i/aria-label="Now">`.
+    var tagOpenRe = /<([a-zA-Z][a-zA-Z0-9-]*)((?:\s|\/(?!>))[^>]*)?\s*(\/?)>/g;
     var voidTags = { area: true, base: true, br: true, col: true, embed: true, hr: true, img: true, input: true, link: true, meta: true, source: true, track: true, wbr: true };
 
     while (pos < src.length) {
