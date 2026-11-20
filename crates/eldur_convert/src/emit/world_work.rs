@@ -208,6 +208,70 @@ fn small_groups_fit_before_a_large_one() {
     );
 }
 
+#[test]
+fn a_mostly_covered_group_fits_before_costlier_small_ones() {
+    // Two lists of four hover-shown items each come first. In each, `t1`
+    // is recoloured by hovers 1–3 and `t2` by 0, 2 and 3, so the elements'
+    // own worlds already hold every combination of the four hovers except
+    // at most the 4 that have both 0 and 1. Then come 80 lists of three,
+    // each adding 4 worlds, far more than MAX_WORLDS holds. By condition
+    // count the threes go first and fill the budget, and a four is left
+    // out. By the worlds each adds, no three goes before a four.
+    let list = |prefix: &str, n: usize, covered: bool| -> (String, String) {
+        let mut items: String = (0..n)
+            .map(|i| format!("<li class={prefix}a{i}>a</li><li class={prefix}h{i}>h</li>"))
+            .collect();
+        let mut rules: String = (0..n)
+            .map(|i| {
+                format!(
+                    ".{prefix}h{i}{{display:none}} .{prefix}a{i}:hover + .{prefix}h{i}{{display:list-item}} "
+                )
+            })
+            .collect();
+        if covered {
+            items.push_str(&format!(
+                "<li class={prefix}t1>t</li><li class={prefix}t2>t</li>"
+            ));
+            for (t, hovers) in [("t1", [1, 2, 3]), ("t2", [0, 2, 3])] {
+                let selectors: Vec<String> = hovers
+                    .iter()
+                    .map(|i| format!(".{prefix}a{i}:hover ~ .{prefix}{t}"))
+                    .collect();
+                rules.push_str(&format!("{}{{color:red}} ", selectors.join(", ")));
+            }
+        }
+        (format!("<ol>{items}<li>c</li></ol>"), rules)
+    };
+    let (mut lists, mut rules) = (String::new(), String::new());
+    for k in 0..2 {
+        let (l, r) = list(&format!("w{k}"), 4, true);
+        lists.push_str(&l);
+        rules.push_str(&r);
+    }
+    for k in 0..80 {
+        let (l, r) = list(&format!("s{k}"), 3, false);
+        lists.push_str(&l);
+        rules.push_str(&r);
+    }
+    let page = format!("<!DOCTYPE html><style>{rules}</style>{lists}");
+    let out = convert_str(&page, &Options::default());
+    let left_out: Vec<String> = out
+        .diagnostics
+        .iter()
+        .map(ToString::to_string)
+        .filter(|d| d.contains("classes and states show or hide numbered elements"))
+        .collect();
+    // The budget binds: some lists of three are left out.
+    assert!(
+        left_out.iter().any(|d| d.contains(" 3 classes")),
+        "{left_out:?}"
+    );
+    assert!(
+        !left_out.iter().any(|d| d.contains(" 4 classes")),
+        "{left_out:?}"
+    );
+}
+
 /// A table of `cells` cells, four to a row, each recoloured by its own
 /// `:hover`, with borders `collapse` or `separate`.
 fn table_hovers(cells: usize, borders: &str) -> String {
