@@ -1101,6 +1101,32 @@ fn a_level_a_class_gives_a_span_lifts_the_level_it_keeps_in() {
     );
 }
 
+/// The same, with the class on the span alone: `#ix` has no level of its
+/// own, so only the span's class can lift it over `#lx` (5,70), as
+/// Chromium paints it. The span has no item of its own; the class binds on
+/// `#ix`, the box it holds.
+#[test]
+fn a_level_a_class_gives_a_span_lifts_what_it_holds_with_no_level_of_its_own() {
+    let page = inline_level_page(
+        &format!("{INLINE_BLOCK}\n.wup {{ z-index: 5 }}"),
+        "<span id=wx style=\"position: relative\"><span id=ix></span></span>",
+        RELATIVE,
+        LATER_AT_1,
+    )
+    .replace(
+        "document.getElementById('ix').classList.add('up');",
+        "document.getElementById('wx').classList.add('wup');",
+    );
+    assert_eq!(page.matches("classList.add('wup')").count(), 1);
+    assert_eq!(page.matches("classList.add('up')").count(), 0);
+    run(
+        &page,
+        &with_test(INLINE_LEVEL_TEST),
+        "context-span-class-only",
+        false,
+    );
+}
+
 /// The same, with the span at the top of the `z-index` range: one over it
 /// stays at `i32::MAX` rather than wrapping to the bottom.
 #[test]
@@ -1252,7 +1278,12 @@ fn an_overlay_at_the_highest_level_keeps_its_order_with_a_later_block() {
     assert!(!tied.contains("id=rx"));
     run(&tied, &with_test(HIGHEST_TIED_TEST), "highest-tied", false);
     let under = highest_page("2147483646");
-    run(&under, &with_test(HIGHEST_UNDER_TEST), "highest-under", false);
+    run(
+        &under,
+        &with_test(HIGHEST_UNDER_TEST),
+        "highest-under",
+        false,
+    );
 }
 
 /// The inline-block in a static box (`#rx`) and a static box after (`#lx`):
