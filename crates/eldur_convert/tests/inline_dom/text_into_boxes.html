@@ -1,0 +1,37 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif}p{margin:0}</style><script>
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
+function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?JSON.stringify(n.data):I(n)}).join(",")}
+function R(e){var r=e.getBoundingClientRect();return {l:Math.round(r.left),t:Math.round(r.top),r:Math.round(r.right),b:Math.round(r.bottom),w:Math.round(r.width),h:Math.round(r.height)}}
+function near(a,b){return Math.abs(a-b)<=3}
+</script></head><body>
+<div id="c1"><p id="c1a">one</p><p id="c1b">two</p></div>
+<div id="c2"><p id="c2a">one</p><p id="c2b">two</p></div>
+<div id="c3"><p id="c3a">one</p><p id="c3b">two</p></div>
+<div id="c4">own<p id="c4a">one</p></div>
+<div id="c5">own<p id="c5a">one</p></div>
+<p id="x5">two</p>
+<div id="src1">moved</div>
+<div id="src2">moved</div>
+<div id="src3">moved</div>
+<div id="src4">moved</div>
+<script>
+// A page Text node a script moves into a column of boxes is read in DOM
+// order: after the boxes, between them, or before them. It leaves the element
+// it came from, and the column grows to draw it.
+function mv(c,src,ref){
+  var h=document.getElementById(c),t=document.getElementById(src).firstChild,was=R(h).h;
+  h.insertBefore(t,ref?document.getElementById(ref):null);
+  return [N(h),JSON.stringify(h.textContent),R(h).h>was];
+}
+L.apply(null,["after"].concat(mv("c1","src1",null)));
+L.apply(null,["between"].concat(mv("c2","src2","c2b")));
+L.apply(null,["before"].concat(mv("c3","src3","c3a")));
+// A column with its own text first: the moved node goes after its box.
+L.apply(null,["after-own"].concat(mv("c4","src4",null)));
+// A box put before a column's own text reads before it.
+var c5=document.getElementById("c5");
+c5.insertBefore(document.getElementById("x5"),c5.firstChild);
+L("box-before-own",N(c5),JSON.stringify(c5.textContent));
+L("emptied",JSON.stringify(document.getElementById("src1").textContent),document.getElementById("src1").childNodes.length);
+</script></body></html>

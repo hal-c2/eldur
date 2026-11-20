@@ -229,6 +229,14 @@ fn what_is_appended_after_a_box_s_boxes_goes_below_them() {
     page("append_after_boxes");
 }
 
+// #6: a page Text node a script moves into a column of boxes leaves the
+// element it came from, and the column reads it, and a box put before its own
+// text, in DOM order.
+#[test]
+fn text_moved_among_a_column_s_boxes_reads_in_dom_order() {
+    page("text_into_boxes");
+}
+
 // #6: a removed element's boxes come back with it, and a write to a text
 // beside a box keeps the box between its texts.
 #[test]
