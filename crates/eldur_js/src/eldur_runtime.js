@@ -7421,6 +7421,10 @@ function _inQtHeld(raw) {
     }
     _in.focusPending = null;
     _in.overridden = null;
+    // The link's holder, asked for itself, is no longer the link's.
+    if (_in.inlineFocus && _inInlineHolder(_in.inlineFocus) === raw) {
+        _in.inlineFocus = null;
+    }
     _inFocusChanged();
     return true;
 }
@@ -18159,6 +18163,12 @@ function _inFocusChanged() {
             _inFocusEvents(now, null, "focus", "focusin");
             return;
         }
+    }
+    // Qt has reached the listener's move: a report of what it held for the
+    // move overridden is a new move from here on.
+    if (_in.focusPending && now === _in.focusPending) {
+        _in.focusPending = null;
+        _in.overridden = null;
     }
     // In a popup of its own (a select's list): the select still has the focus.
     if (now === undefined || now === _in.focused) {
