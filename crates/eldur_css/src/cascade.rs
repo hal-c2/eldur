@@ -726,43 +726,54 @@ pub(crate) fn sheet_custom_properties(
     let _memo = properties::ParseMemo::enter();
     let mut prepared = prepare(doc, sheets, viewport);
     let match_ctx = MatchContext { doc, dynamic: None };
-    let declared: BTreeMap<NodeId, BTreeSet<String>> = nodes
+    let declared: BTreeMap<NodeId, BTreeMap<String, Option<String>>> = nodes
         .iter()
         .filter_map(|&node| {
-            let names = prepared.engine.rule_custom_names(node, &match_ctx);
-            (!names.is_empty()).then_some((node, names))
+            let rules = prepared.engine.rule_custom_declared(node, &match_ctx);
+            (!rules.is_empty()).then_some((node, rules))
         })
         .collect();
-    if declared.is_empty() {
-        return BTreeMap::new();
-    }
-    // Another pass only when a style attribute overrides what a rule says.
-    let mut stripped = false;
-    for &node in declared.keys() {
-        if let Some(decls) = prepared.engine.inline_styles.get_mut(node.index()) {
-            let before = decls.len();
-            decls.retain(|d| !matches!(d.value, DeclValue::Custom { .. }));
-            stripped |= decls.len() != before;
-        }
-    }
-    let base = stripped.then(|| prepared.engine.base_pass());
     declared
         .into_iter()
-        .map(|(node, names)| {
+        .map(|(node, rules)| {
             let i = node.index();
+            // Only its own `style` attribute is taken away: an ancestor's
+            // still reaches what its rules' `var()`s resolve to.
+            let own = prepared.engine.inline_styles.get(i).cloned();
+            let strip = own.as_ref().is_some_and(|d| {
+                d.iter()
+                    .any(|d| matches!(d.value, DeclValue::Custom { .. }))
+            });
+            let base = strip.then(|| {
+                if let Some(decls) = prepared.engine.inline_styles.get_mut(i) {
+                    decls.retain(|d| !matches!(d.value, DeclValue::Custom { .. }));
+                }
+                let base = prepared.engine.base_pass();
+                if let (Some(decls), Some(own)) = (prepared.engine.inline_styles.get_mut(i), own) {
+                    *decls = own;
+                }
+                base
+            });
             let custom = match &base {
                 Some(base) => base
                     .styles
                     .get(i)
                     .and_then(Option::as_ref)
                     .or_else(|| base.hidden.get(i).and_then(Option::as_ref))
-                    .map(|s| &s.style.custom_properties),
-                None => computed.computed(node).map(|s| &s.style.custom_properties),
+                    .map(|s| s.style.custom_properties.clone()),
+                None => computed
+                    .computed(node)
+                    .map(|s| s.style.custom_properties.clone()),
             };
-            let values = names
+            let values = rules
                 .into_iter()
-                .map(|name| {
-                    let value = custom.and_then(|c| c.get(&name)).cloned();
+                .map(|(name, written)| {
+                    // A `var()` stays one, for the runtime to resolve
+                    // against what an ancestor holds after a script's write.
+                    let value = match written {
+                        Some(tokens) if contains_var_function(&tokens) => Some(tokens),
+                        _ => custom.as_ref().and_then(|c| c.get(&name)).cloned(),
+                    };
                     (name, value)
                 })
                 .collect();
@@ -1024,11 +1035,16 @@ pub(crate) fn prepare<'a>(
 
 impl CascadeEngine<'_> {
     /// The custom properties the rules matching `node` declare, its
-    /// `style` attribute's left out.
-    fn rule_custom_names(&self, node: NodeId, match_ctx: &MatchContext<'_>) -> BTreeSet<String> {
-        let mut names = BTreeSet::new();
+    /// `style` attribute's left out, each with the tokens the winning
+    /// declaration wrote (`None` for a CSS-wide keyword).
+    fn rule_custom_declared(
+        &self,
+        node: NodeId,
+        match_ctx: &MatchContext<'_>,
+    ) -> BTreeMap<String, Option<String>> {
+        let mut won: BTreeMap<String, (CascadeKey, Option<String>)> = BTreeMap::new();
         let Some(elem) = self.doc.element(node) else {
-            return names;
+            return BTreeMap::new();
         };
         let bloom = self.ancestor_blooms[node.index()] | self.dynamic_bloom;
         self.element_rules.for_each_candidate_with(
@@ -1037,15 +1053,30 @@ impl CascadeEngine<'_> {
             self.extra_classes(node),
             |sel, rule| {
                 if matches_selector(sel, node, match_ctx) {
-                    for decl in rule.declarations {
-                        if let DeclValue::Custom { name, .. } = &decl.value {
-                            names.insert(name.clone());
+                    for (offset, decl) in rule.declarations.iter().enumerate() {
+                        if let DeclValue::Custom { name, value } = &decl.value {
+                            let key = CascadeKey {
+                                tier: OriginTier::of(rule.origin, decl.important),
+                                is_inline_style: false,
+                                layer_key: rule.layer_key.clone(),
+                                specificity: rule.specificity,
+                                order: rule.base_order.saturating_add(offset as u32),
+                            };
+                            let tokens = match value {
+                                CustomDeclValue::Tokens(t) => Some(t.clone()),
+                                CustomDeclValue::Wide(_) => None,
+                            };
+                            if won.get(name).is_none_or(|(k, _)| *k < key) {
+                                won.insert(name.clone(), (key, tokens));
+                            }
                         }
                     }
                 }
             },
         );
-        names
+        won.into_iter()
+            .map(|(name, (_, tokens))| (name, tokens))
+            .collect()
     }
 
     fn extra_classes(&self, node: NodeId) -> &[String] {
