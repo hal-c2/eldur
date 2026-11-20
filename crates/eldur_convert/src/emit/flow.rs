@@ -602,7 +602,12 @@ impl Emitter<'_, '_> {
                 });
                 let above = pending_cases.as_ref().filter(|_| !escapes);
                 let (mut obj, top, top_cases, bottom, bottom_cases) = self.float_group(
-                    floats, around, decoration, pending, above, escapes, clear_top,
+                    floats,
+                    around,
+                    decoration,
+                    (pending, above),
+                    escapes,
+                    clear_top,
                 );
                 if escapes {
                     escaped_top = Some(top);
@@ -997,8 +1002,9 @@ impl Emitter<'_, '_> {
         floats: &[LayoutBox<'_>],
         around: &[LayoutBox<'_>],
         decoration: TextDecorationLine,
-        pending: MarginSet,
-        pending_cases: Option<&Escape>,
+        // The margins before the group, and what they are in each case when
+        // the blocks before it may hide.
+        (pending, pending_cases): (MarginSet, Option<&Escape>),
         escapes: bool,
         clear_top: Option<MarginSet>,
     ) -> (Object, MarginSet, Option<Escape>, MarginSet, Option<Escape>) {
@@ -1054,7 +1060,7 @@ impl Emitter<'_, '_> {
             None => Gap::Number(round(pending.value() - top.value())),
         };
         match shift {
-            Gap::Number(n) if n == 0.0 => {}
+            Gap::Number(0.0) => {}
             Gap::Number(n) => {
                 row.set("anchors.topMargin", Value::Number(n));
             }
@@ -1106,7 +1112,7 @@ impl Emitter<'_, '_> {
                     None => Gap::Number(past(column.escaped_bottom)),
                 };
                 let more = match more {
-                    Gap::Number(n) if n == 0.0 => String::new(),
+                    Gap::Number(0.0) => String::new(),
                     Gap::Number(n) if n < 0.0 => format!(" - {}", fmt_number(-n)),
                     Gap::Number(n) => format!(" + {}", fmt_number(n)),
                     Gap::Expr(e) => format!(" + ({e})"),
