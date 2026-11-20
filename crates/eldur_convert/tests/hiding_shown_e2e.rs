@@ -617,6 +617,33 @@ const CASES: &[Case] = &[
   s.style.display = s.style.display ? '' : 'var(--d)';",
         back: &[],
     },
+    // An element a script makes with a `var()` display reads the custom
+    // property where it is put, as loaded and after a later write there.
+    Case {
+        name: "created_variable_display_follows",
+        body: r#"<style>p{margin:0;height:20px}#w{--d:block}</style>
+<div id="w"><p id="a">A</p><p id="c">C</p></div>
+<script>const made = document.createElement('p'); made.textContent = 'B'; made.style.display = 'var(--d)'; document.getElementById('w').insertBefore(made, document.getElementById('c'));</script>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const w = document.getElementById('w');
+  w.style.setProperty('--d', w.style.getPropertyValue('--d') ? '' : 'none');",
+        back: &[],
+    },
+    // The same, with the display written once the element is in place.
+    Case {
+        name: "appended_then_variable_display_follows",
+        body: r#"<style>p{margin:0;height:20px}#w{--d:block}</style>
+<div id="w"><p id="a">A</p><p id="c">C</p></div>
+<script>const made = document.createElement('p'); made.textContent = 'B'; document.getElementById('w').insertBefore(made, document.getElementById('c')); made.style.display = 'var(--d)';</script>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const w = document.getElementById('w');
+  w.style.setProperty('--d', w.style.getPropertyValue('--d') ? '' : 'none');",
+        back: &[],
+    },
     // `ruby` and `math` are valid displays that win over the `none` before
     // them: an inline box once `hidden` is removed. A script hiding an
     // inline box alone in its line isn't followed yet (as with `inline`),
@@ -1197,6 +1224,16 @@ fn the_stylesheets_custom_property_comes_back_once_the_attributes_is_removed() {
 #[test]
 fn a_name_inside_a_string_in_the_style_attribute_declares_nothing() {
     run(case("attribute_string_holds_a_name"));
+}
+
+#[test]
+fn a_created_elements_variable_display_reads_where_it_is_put_and_follows_writes_there() {
+    run(case("created_variable_display_follows"));
+}
+
+#[test]
+fn an_appended_elements_variable_display_follows_a_later_write() {
+    run(case("appended_then_variable_display_follows"));
 }
 
 #[test]
