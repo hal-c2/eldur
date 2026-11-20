@@ -16837,6 +16837,10 @@ function _vSlotIn(c, raw, ref, refBox) {
     var list = c.kids;
     var at = ref ? list.indexOf(ref) : -1;
     var m = _meta(raw);
+    // Put before itself, it stays where it is among its element's boxes.
+    if (refBox && refBox.item === raw && m.vSlotOf === c) {
+        return;
+    }
     if (m.vSlotOf && m.vSlotOf.boxes) {
         m.vSlotOf.boxes = m.vSlotOf.boxes.filter(function(b) { return b.item !== raw; });
     }
@@ -16879,6 +16883,9 @@ function _vUnhold(rawNodes) {
             var was = m.vSlotOf;
             was.boxes = (was.boxes || []).filter(function(b) { return b.item !== n; });
             m.vSlotOf = null;
+            // Wherever it goes now takes it as any element: it is the form
+            // of that place it waits for, not of a line's.
+            m.vUnformed = false;
         }
     });
 }
@@ -20438,11 +20445,18 @@ function _vTryInsert(raw, nodes, ref, going) {
     if (!host) {
         return false;
     }
-    if (raw.__eldurInline ? raw.model && _isConnected(_vHostElement(raw.model)) : _isConnected(raw)) {
-        _vFormHeld(nodes);
-    }
     _vPut(host, nodes, ref, going);
     return true;
+}
+
+// `true` when the line `host` (a model or an inline node) is on the page.
+function _vOnPage(host) {
+    var v = host;
+    while (v && v.__eldurInline && !v.model && v.vparent) {
+        v = v.vparent;
+    }
+    var model = v && v.__eldurInline ? v.model : v;
+    return !!model && _isConnected(_vHostElement(model));
 }
 
 // A box made while its inline element was off the page takes the form the
@@ -20474,6 +20488,11 @@ function _vPut(host, nodes, ref, going) {
     if (going && nodes.indexOf(going) !== -1) {
         going = null;
     }
+    // Every way into a line comes here, `before`, `after` and `replaceWith`
+    // on a node already in one among them.
+    if (_vOnPage(host)) {
+        _vFormHeld(nodes);
+    }
     var held = _ceHold(nodes);
     var leaving = _ceMoving(nodes, going);
     _vInsert(host, nodes, ref);
@@ -20481,6 +20500,8 @@ function _vPut(host, nodes, ref, going) {
         _vRemove(going);
     } else if (going) {
         _takeOut(going);
+        // Replaced, it is no longer its inline element's, as one removed is.
+        _vUnhold([going]);
     }
     _ceLeft(leaving);
     _ceInserted(held);
