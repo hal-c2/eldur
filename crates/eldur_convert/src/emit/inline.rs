@@ -13,7 +13,7 @@ use eldur_css::{
 use eldur_dom::NodeId;
 use eldur_qml::{Member, Object, Value};
 
-use super::Emitter;
+use super::{Emitter, Level};
 use super::controls::{line_box, normal_line, text_scale};
 use super::decoration::{border_width, is_visible};
 use super::units::{fmt_number, number, round};
@@ -302,12 +302,9 @@ enum Piece<'b, 'a> {
 /// `z-index` over the flow, or over the flow and no higher at `auto`. One
 /// under 0 stays in the flow, as a block's does. The span is the one in the
 /// world being emitted, so a level a class gives it counts.
-///
-/// The level is one over the span's own; at `i32::MAX` it stays there, tied
-/// with a box at one under, and tree order puts the later one over.
-fn context_level(span: &ComputedStyle) -> Option<i32> {
+fn context_level(span: &ComputedStyle) -> Option<Level> {
     match span.z_index {
-        Some(z) if crate::boxes::is_containing_block(span) => (z >= 0).then(|| z.saturating_add(1)),
+        Some(z) if crate::boxes::is_containing_block(span) => (z >= 0).then(|| Level::from(z) + 1),
         _ => Some(1),
     }
 }
