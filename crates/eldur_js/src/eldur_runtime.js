@@ -7306,6 +7306,10 @@ function focus(item) {
     if (_inQtHeld(raw)) {
         return;
     }
+    if (_in && _in.away && !_inWindowActive()) {
+        _inFocusWhileAway(raw);
+        return;
+    }
     // A link in a line is not an item: its `Text` holds the focus for it, or
     // with no words of its own, the icon it carries.
     var holder = _in && raw.__eldurInline ? _inInlineHolder(raw) : null;
@@ -7327,22 +7331,6 @@ function focus(item) {
             _inFocusChanged();
             return;
         }
-    }
-    // The window is away: the page's focus moves now, and what it moved to
-    // hears of it when the window is back, as the window's return reads what
-    // Qt holds then. What had the focus heard of its blur when the window went.
-    if (_in && _in.away && !_inWindowActive()) {
-        _activeElement = raw;
-        if (_in.focused !== raw) {
-            _in.focused = raw;
-            _in.focusMoves++;
-        }
-        if (typeof raw.forceActiveFocus === "function") {
-            raw.forceActiveFocus();
-        } else if (typeof raw.focus === "boolean") {
-            raw.focus = true;
-        }
-        return;
     }
     var prev = _activeElement;
     _activeElement = raw;
@@ -7371,6 +7359,43 @@ function focus(item) {
         }
         _dispatchDynamic(raw, "focus", null);
         _dispatchDynamic(raw, "focusin", null);
+    }
+}
+
+// The window is away: the page's focus moves now, and what it moved to hears
+// of it when the window is back, as the window's return reads what Qt holds
+// then. What had the focus heard of its blur when the window went, and hears
+// its `change` now, as the focus leaves it.
+function _inFocusWhileAway(raw) {
+    var was = _in.focused;
+    _activeElement = raw;
+    _in.inlineFocus = raw.__eldurInline ? raw : null;
+    if (was !== raw) {
+        _in.focused = raw;
+        _in.focusMoves++;
+        if (_nodeTag(raw) !== "body") {
+            _in.tabFrom = null;
+        }
+        if (_inIsField(raw)) {
+            _meta(raw).changeBase = String(raw.text);
+        }
+        _inWatchHidden(raw);
+        if (was && _inIsField(was)) {
+            _flushChange(was);
+        } else if (was && _meta(was).numberDirty) {
+            _meta(was).numberDirty = false;
+            _dispatchDynamic(was, "change", null);
+        }
+        if (_pageGone() || !_in || _in.focused !== raw) {
+            return;
+        }
+    }
+    // A link in a line is not an item: its `Text` holds the focus for it.
+    var holder = raw.__eldurInline ? _inInlineHolder(raw) : raw;
+    if (holder && typeof holder.forceActiveFocus === "function") {
+        holder.forceActiveFocus();
+    } else if (holder && typeof holder.focus === "boolean") {
+        holder.focus = true;
     }
 }
 
