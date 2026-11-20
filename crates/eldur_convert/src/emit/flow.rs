@@ -1462,14 +1462,42 @@ impl Emitter<'_, '_> {
     /// it, as `lists::holds_level` does. A class that makes or unmakes the
     /// context restacks the context itself, so that one still counts.
     fn restacked(&self, b: &LayoutBox<'_>) -> bool {
-        b.node.is_some_and(|n| self.restacks.contains(&n))
-            || matches!(&b.content, crate::boxes::Content::Blocks(kids) if kids.iter().any(|k| {
-                if is_context(&k.style) {
-                    k.node.is_some_and(|n| self.restacks.contains(&n))
-                } else {
-                    self.restacked(k)
+        self.marked(b.node)
+            || match &b.content {
+                crate::boxes::Content::Blocks(kids) => kids.iter().any(|k| self.restacked_held(k)),
+                // Inline content counts too, as in `lists::holds_level`: a
+                // class can give a span or an inline-block a level.
+                crate::boxes::Content::Inline(items) => {
+                    items.iter().any(|i| self.restacked_inline(i))
                 }
-            }))
+                crate::boxes::Content::Empty => false,
+            }
+    }
+
+    /// Whether a box the box holds restacks: a context only when a class
+    /// restacks the context itself.
+    fn restacked_held(&self, k: &LayoutBox<'_>) -> bool {
+        if is_context(&k.style) {
+            self.marked(k.node)
+        } else {
+            self.restacked(k)
+        }
+    }
+
+    fn restacked_inline(&self, i: &crate::boxes::Inline<'_>) -> bool {
+        use crate::boxes::Inline;
+        match i {
+            Inline::Span(s) => {
+                self.marked(s.node)
+                    || (!is_context(s.style) && s.children.iter().any(|c| self.restacked_inline(c)))
+            }
+            Inline::Atomic(b) => self.restacked_held(b),
+            Inline::Text(_) | Inline::LineBreak => false,
+        }
+    }
+
+    fn marked(&self, n: Option<eldur_dom::NodeId>) -> bool {
+        n.is_some_and(|n| self.restacks.contains(&n))
     }
 
     /// Whether a percentage height on a child of the current block means
