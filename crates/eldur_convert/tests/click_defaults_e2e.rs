@@ -35,18 +35,25 @@ TestCase {
     name: "ClickDefaults"
     when: windowShown
 
-    // Page A, and Next made over it inside the listener that sets A's title.
+    // Page A, Next made over it inside the listener that sets A's title to
+    // Next, and C over Next inside the one that sets Next's to C.
     function pages() {
         const component = Qt.createComponent("A.qml")
         verify(component.status === Component.Ready, component.errorString())
         const a = createTemporaryObject(component, host, { width: 800, height: 600 })
         waitForRendering(a)
         a.forceActiveFocus()
-        const at = { a: a, next: null, layers: [Eldur._in] }
+        const at = { a: a, next: null, c: null, layers: [Eldur._in] }
         a.titleChanged.connect(function() {
             if (a.title === "Next" && !at.next) {
                 at.next = createTemporaryObject(Qt.createComponent("Next.qml"), host, { width: 800, height: 600 })
                 at.layers.push(Eldur._in)
+                at.next.titleChanged.connect(function() {
+                    if (at.next.title === "C" && !at.c) {
+                        at.c = createTemporaryObject(Qt.createComponent("C.qml"), host, { width: 800, height: 600 })
+                        at.layers.push(Eldur._in)
+                    }
+                })
             }
         })
         return at
@@ -91,7 +98,7 @@ TestCase {
         tryVerify(function() { return at.next !== null && settled(at) }, 1000, "A was never swapped out")
     }
 
-    function test_1_label_in_a_link() {
+    function test_01_label_in_a_link() {
         const at = pages()
         console.log("LC -- label in a link")
         const p = middle(at.a, "lab")
@@ -99,7 +106,7 @@ TestCase {
         finish(at)
     }
 
-    function test_2_double_click_whose_second_press_swaps() {
+    function test_02_double_click_whose_second_press_swaps() {
         const at = pages()
         console.log("LC -- double click whose second press swaps")
         const p = middle(at.a, "lab2")
@@ -107,7 +114,7 @@ TestCase {
         finish(at)
     }
 
-    function test_3_double_click_whose_first_press_swaps() {
+    function test_03_double_click_whose_first_press_swaps() {
         const at = pages()
         console.log("LC -- double click whose first press swaps")
         const p = middle(at.a, "lab3")
@@ -115,7 +122,7 @@ TestCase {
         finish(at)
     }
 
-    function test_4_double_click_whose_second_press_swaps_from_a_promise() {
+    function test_04_double_click_whose_second_press_swaps_from_a_promise() {
         const at = pages()
         console.log("LC -- double click whose second press swaps from a promise")
         const p = middle(at.a, "lab4")
@@ -130,7 +137,7 @@ TestCase {
 
     // Both presses before the event loop turns: the first press's click runs
     // when the second comes, and makes Next under it.
-    function test_5_double_click_whose_second_press_comes_before_the_first_click_ran() {
+    function test_05_double_click_whose_second_press_comes_before_the_first_click_ran() {
         const at = pages()
         console.log("LC -- double click whose second press comes before the first click ran")
         const p = middle(at.a, "lab5")
@@ -138,8 +145,36 @@ TestCase {
         finish(at)
     }
 
+    // Next's catch-up move to the second press makes C: the press is C's.
+    function test_06_double_click_whose_second_press_a_move_hands_on_to_a_third_page() {
+        const at = pages()
+        console.log("LC -- double click whose second press a move hands on to a third page")
+        const p = middle(at.a, "lab7")
+        mouseDoubleClickSequence(host, p.x, p.y)
+        finish(at)
+    }
+
+    // Next's pointerover, part of the second press, makes C: the press goes
+    // with it, and C hears its release alone.
+    function test_07_double_click_whose_second_press_is_lost_to_a_third_page() {
+        const at = pages()
+        console.log("LC -- double click whose second press is lost to a third page")
+        const p = middle(at.a, "lab6")
+        mouseDoubleClickSequence(host, p.x, p.y)
+        finish(at)
+    }
+
+    function test_08_press_whose_mousedown_swaps() {
+        rest()
+        const at = pages()
+        console.log("LC -- press whose mousedown swaps")
+        const p = middle(at.a, "dn")
+        mouseClick(host, p.x, p.y)
+        finish(at)
+    }
+
     // No move first: the one Ljós catches the pointer up with makes Next.
-    function test_6_press_whose_move_swaps() {
+    function test_09_press_whose_move_swaps() {
         rest()
         const at = pages()
         console.log("LC -- press whose move swaps")
@@ -148,7 +183,7 @@ TestCase {
         finish(at)
     }
 
-    function test_7_move_whose_pointerover_swaps() {
+    function test_10_move_whose_pointerover_swaps() {
         rest()
         const at = pages()
         console.log("LC -- move whose pointerover swaps")
@@ -157,6 +192,17 @@ TestCase {
         tryVerify(function() { return at.next !== null }, 1000, "A was never swapped out")
         mouseMove(host, p.x + 5, p.y)
         mouseMove(host, 400, p.y)
+        finish(at)
+    }
+
+    // As test_03, on the text in a button: its click goes on up to the
+    // button, which submits its form.
+    function test_11_double_click_whose_first_press_swaps_on_a_buttons_text() {
+        rest()
+        const at = pages()
+        console.log("LC -- double click whose first press swaps, on a button's text")
+        const p = middle(at.a, "in9")
+        mouseDoubleClickSequence(host, p.x, p.y)
         finish(at)
     }
 }
@@ -174,7 +220,7 @@ fn a_press_does_nothing_more_once_its_page_is_gone() {
     };
     let dir = std::env::temp_dir().join(format!("eldur-click-defaults-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("temp dir");
-    for (at, name) in ["A", "Next"].into_iter().enumerate() {
+    for (at, name) in ["A", "Next", "C"].into_iter().enumerate() {
         let out = eldur_convert::convert(
             &Input {
                 html: PAGE.replace("NAME", name),
