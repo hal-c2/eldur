@@ -17430,17 +17430,15 @@ function _inFlushLater() {
     }
 }
 
-// A page Qt destroyed while its items held a press hears no release: the
-// shield that press put on the page that took over ends with it.
+// A page Qt destroyed while its items held a press hears no release: that
+// press is over as if released. The page that took over lifts its shield as
+// after a release, once what is queued on it has run under the shield.
 function _inHolderGone(gone) {
-    _inLayers.forEach(function(layer) {
-        if (layer.shieldFor === gone) {
-            layer.shieldFor = null;
-            if (layer.shielded) {
-                _inUnshield(layer);
-            }
-        }
-    });
+    gone.qtHeld = 0;
+    gone.upTurn = false;
+    if (_in && _in.shieldFor === gone) {
+        Qt.callLater(_inFlushLater);
+    }
 }
 
 function _inUnshield(layer) {
