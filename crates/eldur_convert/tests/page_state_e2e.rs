@@ -1150,18 +1150,15 @@ TestCase {
 }
 "##;
 
-#[test]
-fn a_covered_pages_own_callbacks_see_its_document() {
-    if support::no_qt() {
-        return;
-    }
+// Converts each page into `dir` as `<name>.qml` with its own script; the
+// pages share the first one's runtime file, and so its state.
+fn write_pages(dir: &std::path::Path, pages: &[(&str, &str)]) {
     let options = Options {
         root: RootKind::Item,
         ..Options::default()
     };
-    let dir = std::env::temp_dir().join(format!("eldur-covered-document-{}", std::process::id()));
-    std::fs::create_dir_all(&dir).expect("temp dir");
-    for (at, (name, html)) in [("Under", UNDER), ("Over", OVER)].into_iter().enumerate() {
+    std::fs::create_dir_all(dir).expect("temp dir");
+    for (at, (name, html)) in pages.iter().copied().enumerate() {
         let out = eldur_convert::convert(
             &Input {
                 html: html.to_owned(),
@@ -1189,6 +1186,15 @@ fn a_covered_pages_own_callbacks_see_its_document() {
             .expect("write page");
         }
     }
+}
+
+#[test]
+fn a_covered_pages_own_callbacks_see_its_document() {
+    if support::no_qt() {
+        return;
+    }
+    let dir = std::env::temp_dir().join(format!("eldur-covered-document-{}", std::process::id()));
+    write_pages(&dir, &[("Under", UNDER), ("Over", OVER)]);
     std::fs::write(dir.join("tst_covered_document.qml"), COVERED_TEST).expect("write test");
     std::fs::write(dir.join("under.txt"), "fetched\n").expect("write fetched file");
     let output = support::qmltestrunner()
@@ -1274,6 +1280,140 @@ fn a_covered_pages_own_callbacks_see_its_document() {
             logged.join("\n    "),
             between.join("\n    "),
             after.join("\n    ")
+        ));
+    }
+    assert!(problems.is_empty(), "{}", problems.join("\n  "));
+}
+
+// A covered page whose listener goes back onto the entry the page on top
+// opened on, and which is the document again once that page went.
+const BACK_UNDER: &str = r##"<!doctype html><html><head><meta charset="utf-8"></head><body>
+<p id="under">under</p>
+<script>
+function L(){console.log("HB "+[].slice.call(arguments).join(" "))}
+function where() { return location.href.slice(location.href.lastIndexOf("/") + 1); }
+L("under at", where());
+var under = document.getElementById("under");
+under.addEventListener("back", function() {
+  history.back();
+  L("covered back", history.length, JSON.stringify(history.state), where());
+});
+under.addEventListener("again", function() {
+  L("up again", history.length, JSON.stringify(history.state), where());
+  history.forward();
+  L("forward", history.length, JSON.stringify(history.state), where());
+  history.back();
+  L("back", history.length, JSON.stringify(history.state), where());
+});
+</script>
+</body></html>"##;
+
+const BACK_OVER: &str = r##"<!doctype html><html><head><meta charset="utf-8"></head><body>
+<p id="over">over</p>
+<script>
+function L(){console.log("HB "+[].slice.call(arguments).join(" "))}
+function where() { return location.href.slice(location.href.lastIndexOf("/") + 1); }
+history.pushState({ over: 1 }, "", "#o");
+L("over pushed", history.length, JSON.stringify(history.state), where());
+</script>
+</body></html>"##;
+
+const COVERED_BACK_TEST: &str = r##"
+import QtQuick
+import QtTest
+import "eldur_runtime.js" as R
+
+Item {
+    id: host
+    width: 800
+    height: 600
+
+TestCase {
+    name: "CoveredHistory"
+    when: windowShown
+
+    function make(file) {
+        const component = Qt.createComponent(file)
+        verify(component.status === Component.Ready, component.errorString())
+        const page = createTemporaryObject(component, host, { width: 800, height: 600 })
+        waitForRendering(page)
+        return page
+    }
+    function named(item, name) {
+        if (item.objectName === name) {
+            return item
+        }
+        for (let i = 0; i < item.children.length; ++i) {
+            const found = named(item.children[i], name)
+            if (found) {
+                return found
+            }
+        }
+        return null
+    }
+    function send(page, name, type) {
+        R.wrap(named(page, name)).dispatchEvent(new R.Event(type))
+    }
+    function test_covered_back() {
+        const under = make("Under.qml")
+        const over = make("Over.qml")
+        send(under, "under", "back")
+        wait(50)
+        over.destroy()
+        wait(100)
+        send(under, "under", "again")
+    }
+}
+}
+"##;
+
+#[test]
+fn a_covered_pages_back_onto_the_top_pages_entry_leaves_each_its_address() {
+    if support::no_qt() {
+        return;
+    }
+    let dir = std::env::temp_dir().join(format!("eldur-covered-back-{}", std::process::id()));
+    write_pages(&dir, &[("Under", BACK_UNDER), ("Over", BACK_OVER)]);
+    std::fs::write(dir.join("tst_covered_back.qml"), COVERED_BACK_TEST).expect("write test");
+    let output = support::qmltestrunner()
+        .args(["-platform", "offscreen", "-input"])
+        .arg(dir.join("tst_covered_back.qml"))
+        .env("QT_FORCE_STDERR_LOGGING", "1")
+        .output()
+        .expect("run qmltestrunner");
+    let text = format!(
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
+    std::fs::remove_dir_all(&dir).expect("remove temp dir");
+    let mut problems: Vec<String> = support::problem_lines(&text, |l| {
+        l.contains("FAIL!") || l.contains("Warning:") || l.contains("QWARN") || l.contains("Error:")
+    });
+    if !output.status.success() {
+        problems.push(format!("qmltestrunner exited with {}", output.status));
+    }
+    let logged: Vec<_> = text
+        .lines()
+        .filter_map(|l| l.find("HB ").map(|at| &l[at..]))
+        .collect();
+    let wanted = [
+        "HB under at Under.qml",
+        r##"HB over pushed 2 {"over":1} Over.qml#o"##,
+        // The covered page goes back onto the entry the page on top opened
+        // on, which is that page's: its own address stays.
+        "HB covered back 2 null Under.qml",
+        // The document again, on that entry: it is still the gone page's, so
+        // going back or forward over it never takes its address.
+        "HB up again 2 null Under.qml",
+        r##"HB forward 2 {"over":1} Under.qml"##,
+        "HB back 2 null Under.qml",
+    ];
+    if logged != wanted {
+        problems.push(format!(
+            "logged\n    {}\n  wanted\n    {}",
+            logged.join("\n    "),
+            wanted.join("\n    ")
         ));
     }
     assert!(problems.is_empty(), "{}", problems.join("\n  "));
