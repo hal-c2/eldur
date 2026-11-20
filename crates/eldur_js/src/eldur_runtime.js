@@ -41,9 +41,10 @@ var _micro = { queue: [], draining: false, native: false, cause: null };
 var _pageGen = 0;
 
 // A job keeps the cause of the code that queued it, so a promise begun inside
-// an observer's callback is still that callback's work when it runs.
-function _microEnqueue(job) {
-    _micro.queue.push({ run: job, cause: _micro.cause });
+// an observer's callback is still that callback's work when it runs, and the
+// page it is for: a covered page's job runs in that page's document.
+function _microEnqueue(job, page) {
+    _micro.queue.push({ run: job, cause: _micro.cause, page: page === undefined ? _root : page });
     Qt.callLater(_microDrain);
 }
 
@@ -58,7 +59,7 @@ function _microDrain() {
         _micro.cause = job.cause;
         try {
             // Called bare, as a browser calls a microtask, with no `this`.
-            run();
+            _asPage(job.page, run);
         } catch (err) {
             console.error(err && err.stack ? err.stack : err);
         }
@@ -82,6 +83,7 @@ var Promise = (function() {
     }
 
     function schedule(p, w) {
+        // A reaction is for the page that asked for it, whoever settles the promise.
         _microEnqueue(function() {
             var handler = p._state === FULFILLED ? w.onFulfilled : w.onRejected;
             if (typeof handler !== "function") {
@@ -96,7 +98,7 @@ var Promise = (function() {
                 return;
             }
             w.resolve(result);
-        });
+        }, w.page);
     }
 
     function resolver(p) {
@@ -159,7 +161,7 @@ var Promise = (function() {
     Promise.prototype.then = function(onFulfilled, onRejected) {
         var self = this;
         return new Promise(function(resolve, reject) {
-            var w = { onFulfilled: onFulfilled, onRejected: onRejected, resolve: resolve, reject: reject };
+            var w = { onFulfilled: onFulfilled, onRejected: onRejected, resolve: resolve, reject: reject, page: _root };
             if (self._state === PENDING) {
                 self._waiting.push(w);
             } else {
@@ -833,10 +835,11 @@ function init(rootItem, baseUrl, documentUrl) {
 // new page: what the last one listened to, the timers and frames it asked for, its
 // custom elements, the rules read from its root and the runtime's helpers that
 // served it all go, as they do when the last page goes with none after it. Every module-level variable that belongs to a page is reset here.
-// Two pages alive at once in one engine have one document, the newer: the
-// covered page's document and window listeners and fallback title are put
-// aside when another page takes over, and are its own again when it is the
-// document again. Its timers, frames and custom elements stay shared.
+// Two pages alive at once in one engine: the newer is up, and has input and
+// the host's events. The covered page's document and window listeners and
+// fallback title are put aside when another page takes over, and are its own
+// again when it is up again; its own callbacks still run in its own document
+// meanwhile (`_asPage`). The timer queue and custom elements stay shared.
 function _resetPageState() {
     _dropHelper(_timerWake);
     _dropHelper(_rafAnim);
@@ -1331,6 +1334,73 @@ function _detachDeadRoots() {
     });
 }
 
+// A covered page's own callback (a timer, frame, promise job, observer, or a
+// listener on its nodes) means that page's document, as each page has its own
+// in a browser: for the call, it is the document, with what `init` worked out
+// for it, and the page on top is again afterwards. The swap leaves `_docGen`
+// alone, as the page on top is the document again before anything under way
+// on it looks. A gone page's callback has no document left, and is dropped.
+function _asPage(page, fn, self, args) {
+    if (!page || page === _root) {
+        return fn.apply(self, args);
+    }
+    // The page on top may have gone with nothing ticking since: the one under
+    // it is the document then, and may be this one.
+    _pageGone();
+    if (page === _root) {
+        return fn.apply(self, args);
+    }
+    var kept = _live(page) ? _pageCaches.get(page) : undefined;
+    if (!kept || _roots.indexOf(page) === -1) {
+        return undefined;
+    }
+    var top = _root;
+    var topIn = _in;
+    // Kept where a nested swap, and `_pageGone`, look for it.
+    _pageCaches.set(top, _pageCacheSave());
+    _pageCaches.delete(page);
+    _pageCacheLoad(kept);
+    _root = page;
+    _in = _inLayers.get(page) || null;
+    try {
+        return fn.apply(self, args);
+    } finally {
+        // A page the callback made over this one is the document now, and
+        // `init` kept this page's state.
+        if (_root === page) {
+            _pageCaches.set(page, _pageCacheSave());
+            var back = _pageCaches.get(top);
+            if (back) {
+                _pageCacheLoad(back);
+                _pageCaches.delete(top);
+            } else {
+                // The top page went, and its kept state with it: what `_pageGone`
+                // lets go of must not be this page's listeners.
+                _documentListeners = _freshListeners();
+                _windowListeners = _freshListeners();
+            }
+            _root = top;
+            _in = topIn;
+            // Gone meanwhile, it gives the document to the page under it.
+            _pageGone();
+        }
+    }
+}
+
+// The page whose node `raw` is: the root it is under, or `_root` for what is
+// under none (a node not in a page yet, `document`, `window`).
+function _pageOf(raw) {
+    if (_roots.length < 2 || !raw || raw === document || raw === window) {
+        return _root;
+    }
+    for (var at = raw; at; at = _logicalParent(at)) {
+        if (_roots.indexOf(at) !== -1) {
+            return at;
+        }
+    }
+    return _root;
+}
+
 function _pageGone() {
     // A covered page can go while the document stays: its kept state goes now.
     _pageForgetDead();
@@ -1415,7 +1485,7 @@ function _timerRunOne() {
         _timerInsert(t);
     }
     try {
-        t.callback.apply(null, t.args);
+        _asPage(t.page, t.callback, null, t.args);
     } finally {
         _microDrain();
         if (_timers.length > 0 && _timers[0].due <= Date.now()) {
@@ -1443,7 +1513,7 @@ function _scheduleTimer(callback, delay, repeat, extraArgs) {
     var ms = Math.max(0, Number(delay) || 0);
     _timerInsert({
         id: id, ms: ms, due: Date.now() + ms, seq: _timerSeq++,
-        repeat: Boolean(repeat), callback: callback, args: extraArgs
+        repeat: Boolean(repeat), callback: callback, args: extraArgs, page: _root
     });
     _wakeForTimers();
     return id;
@@ -1506,7 +1576,7 @@ function _ensureRafAnim() {
         }
         var timestamp = Date.now() - _startTime;
         for (var i = 0; i < batch.length; ++i) {
-            batch[i].cb(timestamp);
+            _asPage(batch[i].page, batch[i].cb, null, [timestamp]);
             _microDrain();
         }
         _obsStep();
@@ -1575,7 +1645,7 @@ function requestAnimationFrame(callback) {
         return 0;
     }
     var id = _nextRafId++;
-    _rafQueue.push({ id: id, cb: callback });
+    _rafQueue.push({ id: id, cb: callback, page: _root });
     var anim = _ensureRafAnim();
     anim.running = true;
     return id;
@@ -1841,6 +1911,7 @@ function fetch(input, initOpts) {
 
     return new Promise(function(resolve, reject) {
         var gen = _pageGen;
+        var page = _root;
         var xhr = new XMLHttpRequest();
         xhr.open(method, url, true);
 
@@ -1852,10 +1923,14 @@ function fetch(input, initOpts) {
             }
         }
 
+        // Settled in the page that asked, so what it runs next is in its document.
         xhr.onreadystatechange = function() {
             if (xhr.readyState !== XMLHttpRequest.DONE || gen !== _pageGen) {
                 return;
             }
+            _asPage(page, done);
+        };
+        var done = function() {
             var bodyText = xhr.responseText || "";
             var rawStatus = Number(xhr.status) || 0;
             var isLocalOk = rawStatus === 0 && url.indexOf("http://") !== 0 && url.indexOf("https://") !== 0 && bodyText.length > 0;
@@ -1890,7 +1965,7 @@ function fetch(input, initOpts) {
             if (gen !== _pageGen) {
                 return;
             }
-            reject(new TypeError("Network request failed for " + url));
+            _asPage(page, function() { reject(new TypeError("Network request failed for " + url)); });
         };
 
         if (opts.body !== undefined && opts.body !== null) {
@@ -9138,6 +9213,7 @@ function MutationObserver(callback) {
     }
     var self = this instanceof MutationObserver ? this : Object.create(MutationObserver.prototype);
     self._cb = callback;
+    self._page = _root;
     self._id = ++_mo.nextId;
     self._records = [];
     self._nodes = [];
@@ -9345,7 +9421,7 @@ function _moNotify() {
                 continue;
             }
             try {
-                list[i]._cb.call(list[i], records, list[i]);
+                _asPage(list[i]._page, list[i]._cb, list[i], [records, list[i]]);
             } catch (err) {
                 console.error(err && err.stack ? err.stack : err);
             }
@@ -9679,7 +9755,7 @@ function _obsStep() {
         });
         if (entries.length > 0) {
             try {
-                resized[r]._cb.call(resized[r], entries, resized[r]);
+                _asPage(resized[r]._page, resized[r]._cb, resized[r], [entries, resized[r]]);
             } catch (err) {
                 console.error(err && err.stack ? err.stack : err);
             }
@@ -9694,8 +9770,9 @@ function _obsStep() {
     for (var i = 0; i < watching.length; ++i) {
         var io = watching[i];
         io._targets.forEach(function(t) {
-            var e = _ioEntry(io, t.m);
-            if (e.index !== t.index || e.entry.isIntersecting !== t.inside) {
+            // Its implicit root is its own page's viewport.
+            var e = _asPage(io._page, _ioEntry, null, [io, t.m]);
+            if (e && (e.index !== t.index || e.entry.isIntersecting !== t.inside)) {
                 t.index = e.index;
                 t.inside = e.entry.isIntersecting;
                 io._records.push(e.entry);
@@ -9726,7 +9803,7 @@ function _ioDeliver() {
             continue;
         }
         try {
-            list[i]._cb.call(list[i], records, list[i]);
+            _asPage(list[i]._page, list[i]._cb, list[i], [records, list[i]]);
         } catch (err) {
             console.error(err && err.stack ? err.stack : err);
         }
@@ -9788,6 +9865,7 @@ function ResizeObserver(callback) {
     }
     var self = this instanceof ResizeObserver ? this : Object.create(ResizeObserver.prototype);
     self._cb = callback;
+    self._page = _root;
     self._id = ++_obs.nextId;
     self._targets = [];
     return self;
@@ -9871,6 +9949,7 @@ function IntersectionObserver(callback, options) {
     }
     var margin = _ioMargin(o.rootMargin === undefined ? "0px" : o.rootMargin);
     self._cb = callback;
+    self._page = _root;
     self._id = ++_obs.nextId;
     self._root = root;
     // The root's record, which stays when a restyle replaces its item.
@@ -10013,9 +10092,22 @@ function _ioEntry(io, target) {
     };
 }
 
+// An event at a covered page's node is that page's: its listeners, and its
+// path up to `document` and `window`, are in its own document.
+function _dispatchDynamic(raw, type, qtEv) {
+    var page = _pageOf(raw);
+    // A covered root's own `resize` or `scroll` is no event of its document:
+    // the host moved a page that is not up.
+    if (page === _root || page === raw && _ROOT_HEARS[type] === true) {
+        return _dispatchOnPage(raw, type, qtEv);
+    }
+    // A gone page's node hears nothing, and nothing was cancelled.
+    return _asPage(page, _dispatchOnPage, null, [raw, type, qtEv]) !== false;
+}
+
 // A browser's one event: target and ancestors, fixed when it starts, capture
 // listeners from the root down, then the rest from the target up.
-function _dispatchDynamic(raw, type, qtEv) {
+function _dispatchOnPage(raw, type, qtEv) {
     // A tap, heard by some handler under the point: see `_beginTap`.
     if (type === "click" && !raw.__eldurInline && qtEv && qtEv.scenePosition && !qtEv.preventDefault) {
         return !_beginTap(qtEv, raw).ev.defaultPrevented;
