@@ -3624,7 +3624,10 @@ fn an_initializer_that_may_throw_runs_inside_its_module() {
         // whose accessors the page may define; an object bound earlier may be
         // changed by then.
         ("export const { b: q } = { a: 1 };\n", "{ b: "),
-        ("const o = { a: 1 };\nexport const { a: q } = o;\n", "{ a: "),
+        (
+            "const o = { a: 1 };\nexport const { a: q } = o;\n",
+            "{ a: q }",
+        ),
         // An array pattern runs `Array.prototype[Symbol.iterator]`.
         ("export const [q] = [1];\n", "] = [1]"),
     ];
@@ -3661,11 +3664,11 @@ fn an_initializer_that_cannot_throw_stays_hoisted() {
     // Each name the pattern reads is one of the literal's own data properties.
     let m = module_script(
         "m.js",
-        "const b = 2;\nexport const { a: one, b: two = 3 } = { a: 1, ...{ b } };\n",
+        "const b = 2;\nexport const { a: one, b: two = 3 } = { a: 1, b };\n",
     );
     let js = run_rewrite(&[m], &resolver).page_js;
     assert!(!js.contains("function __eldur_run_m0()"), "{js}");
-    assert!(js.contains("= { a: 1, ...{ b: __eldur_m0_b } };"), "{js}");
+    assert!(js.contains("{ a: 1, b: __eldur_m0_b }"), "{js}");
 }
 
 /// A listener a module wires to an element at conversion is heard only once
@@ -3721,7 +3724,7 @@ fn window_onload_is_set_where_it_runs() {
     );
     let out = run_rewrite(&[first, m], &resolver);
     let js = &out.page_js;
-    let run = function_body(js, "__eldur_run_m0");
+    let run = function_body(js, "__eldur_run_m1");
     assert!(
         run.find("__eldur_window_onload = null;")
             .expect("null set in its module")
