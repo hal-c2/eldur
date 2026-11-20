@@ -7416,13 +7416,20 @@ function _inFocusWhileHeard(raw) {
 // A move to what Qt still holds while a listener's move is on its way to Qt:
 // Qt has no change to report, so the page hears this one now.
 function _inQtHeld(raw) {
-    if (!_in || !_in.focusPending || _in.focused === raw || !raw.activeFocus || _in.focusShift) {
+    if (!_in || !_in.focusPending || _in.focused === raw || _in.focusShift) {
+        return false;
+    }
+    // A link in a line is held for by its `Text`, which other links share.
+    var holds = raw.__eldurInline ? _inInlineHolder(raw) : raw;
+    if (!holds || !holds.activeFocus) {
         return false;
     }
     _in.focusPending = null;
     _in.overridden = null;
-    // The link's holder, asked for itself, is no longer the link's.
-    if (_in.inlineFocus && _inInlineHolder(_in.inlineFocus) === raw) {
+    if (raw.__eldurInline) {
+        _in.inlineFocus = raw;
+    } else if (_in.inlineFocus && _inInlineHolder(_in.inlineFocus) === raw) {
+        // The link's holder, asked for itself, is no longer the link's.
         _in.inlineFocus = null;
     }
     _inFocusChanged();
@@ -16679,7 +16686,7 @@ function _inInstall() {
         page: _root, overlay: null, held: 0, last: null, pressed: false, hoverP: null, hoverM: null,
         downTarget: {}, noMouse: false, count: 0, countButton: -1, countAt: null, countTime: 0,
         capture: null, captureNext: null, defaults: [], scrolled: null, restoreFocus: null,
-        restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusMoves: 0, focusShift: false, focusPending: null, untold: [], shiftTo: null, change: null, overridden: null, away: false, seenActive: false, windowHas: false,
+        restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusMoves: 0, focusShift: false, focusPending: null, untold: [], shiftTo: null, change: null, overridden: null, away: false, seenActive: false, windowHas: false, backLater: false,
         spaceDown: null, typing: null, popovers: [], radioLast: {}, focusProbe: null
     };
     _inLayers.set(_root, _in);
@@ -17047,11 +17054,15 @@ function _inClickOn(target, bit, button, count, scene, mods, moved) {
         return;
     }
     var ev = _inClickEvent(target, scene, mods, count);
+    // A user's click: its promises run after each listener, as a press's do.
+    var native = _micro.native;
+    _micro.native = true;
     if (typeof target.clicked === "function") {
         _clickedControlWith(target, ev);
     } else {
         _dispatchDynamic(target, "click", ev);
     }
+    _micro.native = native;
     if (!ev.defaultPrevented) {
         defaults.forEach(function(run) { run(); });
     }
@@ -17638,7 +17649,9 @@ function _inKeyed(qtEv, down) {
         var layer = _in;
         var gen = _docGen;
         _inFlushLater();
-        // A click listener that made another page ended the key.
+        // The click's task ends with its promises, before the key's begins.
+        _microDrain();
+        // A click listener or its promise that made another page ended the key.
         if (_in !== layer || _docGen !== gen) {
             qtEv.accepted = true;
             return true;
@@ -18175,14 +18188,28 @@ function _inFocusChanged() {
     // Back in a window that went away: Qt gives the focus back to what had it,
     // which hears of it again, from nowhere.
     var back = _in.away && active;
+    // The window hears it has the focus before what had it does, and out of
+    // Qt's report: a listener of the window's may take out what Qt gave the
+    // focus back to. What has the focus then is found again.
+    if (back && _in.windowHas !== true) {
+        if (!_in.backLater) {
+            var layer = _in;
+            layer.backLater = true;
+            Qt.callLater(function() {
+                layer.backLater = false;
+                if (_pageGone() || _in !== layer) {
+                    return;
+                }
+                _inWindowFocus(true);
+                if (!_pageGone() && _in === layer) {
+                    _inFocusChanged();
+                }
+            });
+        }
+        return;
+    }
     if (back) {
         _in.away = false;
-        // The window hears it has the focus before what had it does.
-        var layer = _in;
-        _inWindowFocus(true);
-        if (_pageGone() || _in !== layer) {
-            return;
-        }
         if (now === _in.focused && now) {
             _inFocusEvents(now, null, "focus", "focusin");
             return;
