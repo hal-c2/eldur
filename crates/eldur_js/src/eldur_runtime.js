@@ -16779,7 +16779,7 @@ function _inInstallFor(raw, type) {
 function _inInstall() {
     _in = {
         page: _root, overlay: null, held: 0, last: null, pressed: false, hoverP: null, hoverM: null,
-        downTarget: {}, noMouse: false, count: 0, handed: false, handedTo: null,
+        downTarget: {}, noMouse: false, count: 0, handed: false, handedTo: null, qtHeld: 0,
         capture: null, captureNext: null, defaults: [], scrolled: null, restoreFocus: null,
         restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusMoves: 0, focusShift: false, focusPending: null, untold: [], shiftTo: null, change: null, overridden: null, away: false, seenActive: false, windowHas: false, backLater: false, backGen: 0, windowTelling: false,
         spaceDown: null, typing: null, popovers: [], radioLast: {}, focusProbe: null
@@ -16866,15 +16866,35 @@ function _inPointedOn(page) {
         if (_pageGone() || !_in) {
             return;
         }
+        // What Qt holds down on this page's items, which hear the rest of a
+        // press whichever page is the document.
+        var mine = _inLayers.get(page);
+        var qtBefore = mine ? mine.qtHeld : 0;
+        if (mine && buttons !== -1) {
+            mine.qtHeld = buttons;
+        }
         if (_root !== page) {
             // Qt keeps a press it gave to this page's items, and the rest of
-            // it with them, while another page holds it: that page's to hear.
-            var mine = _inLayers.get(page);
-            if (buttons !== -1 && mine && mine.handedTo && mine.handedTo === _in) {
-                _inPointed(scene, buttons, modifiers);
-                if (_in && _in.held === 0) {
-                    mine.handedTo = null;
-                }
+            // it with them, while another page holds it: the page at the end
+            // of its hand-overs, the document now, hears it.
+            var to = mine && buttons !== -1 && qtBefore !== 0 ? _inHandedEnd(mine.handedTo) : null;
+            if (mine && buttons === 0) {
+                mine.handedTo = null;
+            }
+            if (!to) {
+                return;
+            }
+            if (scene.x === -1e9 && mine.last) {
+                scene = mine.last;
+            }
+            // The click of the release before runs first here too, and may
+            // hand the document on once more.
+            var still = _inStillOwn();
+            _inFlushLater();
+            if (still()) {
+                _inDeliver(to, qtBefore, scene, buttons, modifiers);
+            } else {
+                _inHandOver(to, qtBefore, scene, buttons, modifiers);
             }
             return;
         }
@@ -16882,13 +16902,15 @@ function _inPointedOn(page) {
         // That click may make another page the document, even one that hands
         // it back to this page before it ends: this event lands on that one.
         var layer = _in;
-        var before = layer.held;
+        if (buttons !== -1) {
+            layer.handedTo = null;
+        }
         var own = _inStillOwn();
         _inFlushLater();
         if (own()) {
             _inPointed(scene, buttons, modifiers);
         } else {
-            _inHandOver(layer, before, scene, buttons, modifiers);
+            _inHandOver(layer, qtBefore, scene, buttons, modifiers);
         }
     };
 }
@@ -16896,23 +16918,97 @@ function _inPointedOn(page) {
 // Another page became the document between the events of the mouse, while
 // Qt had this one's already on its way to the old page's items. In a browser
 // it lands on the document it finds: a press there is the new page's, and
-// so is the rest of it. A press the old page had begun is none of the new
-// page's: it never had its start.
-function _inHandOver(layer, heldBefore, scene, buttons, modifiers) {
-    _inForgetPress(layer);
-    if (heldBefore !== 0 || _pageGone() || !_in) {
+// so is the rest of it. `before` is what Qt held down before this event.
+function _inHandOver(layer, before, scene, buttons, modifiers) {
+    if (scene.x === -1e9 && layer.last) {
+        scene = layer.last;
+    }
+    _inLose(layer);
+    if (_pageGone() || !_in) {
         return;
     }
-    var to = _in;
-    _inPointed(scene, buttons, modifiers);
-    if (_in === to && to.held !== 0) {
+    _inDeliver(_in, before, scene, buttons, modifiers);
+}
+
+// The event as the document `to` finds it. A press the old page had begun is
+// none of the new page's, which never had its start; its release lands there
+// alone, as a `mouseup` that counts no press and makes no click.
+function _inDeliver(to, before, scene, buttons, modifiers) {
+    if (buttons === -1) {
+        _inPointed(scene, buttons, modifiers);
+        return;
+    }
+    var lone = before & ~buttons & ~to.held;
+    var fresh = buttons & ~before;
+    _inPointed(scene, (buttons & to.held) | fresh, modifiers);
+    if (_pageGone() || _in !== to) {
+        return;
+    }
+    if (to.held & fresh) {
         to.handed = true;
-        layer.handedTo = to;
+    }
+    if (lone) {
+        _inLoneRelease(lone, scene, modifiers);
     }
 }
 
+// The release of a press this page never heard. Its items never had the
+// press either, so what the old page's items do with the release is not this
+// page's: it is handed, as a press handed over is, until its taps have run.
+function _inLoneRelease(bits, scene, mods) {
+    var layer = _in;
+    var at = scene.x === -1e9 ? layer.last : scene;
+    if (!at) {
+        return;
+    }
+    var own = _inStillOwn();
+    layer.handed = true;
+    _inLater(function() {
+        if (layer.held === 0) {
+            layer.handed = false;
+        }
+    });
+    for (var bit = 1; bit <= 16; bit <<= 1) {
+        if (!(bits & bit)) {
+            continue;
+        }
+        var target = layer.capture || _inHit(at);
+        var button = _IN_BUTTON(bit);
+        _inFire("pointerup", target, at, mods, { button: button });
+        if (!own()) {
+            return;
+        }
+        if (!layer.noMouse && !_inMouseBarred(target)) {
+            _inFire("mouseup", target, at, mods, { button: button, detail: 0 });
+            if (!own()) {
+                return;
+            }
+        }
+    }
+}
+
+// The layer that holds a press handed on from page to page during it: the
+// document's, or none if the chain ends on a page that went.
+function _inHandedEnd(layer) {
+    for (var n = 0; layer && n < 16; ++n) {
+        if (layer === _in) {
+            return layer;
+        }
+        layer = layer.handedTo;
+    }
+    return null;
+}
+
 // A press whose page stopped being the document: its events are over, and
-// its layer lets it go without a word.
+// its layer lets it go without a word. What Qt still sends its items goes on
+// to the page that took over.
+function _inLose(layer) {
+    _inForgetPress(layer);
+    if (!_pageGone() && _in && _in !== layer) {
+        layer.handedTo = _in;
+    }
+}
+
 function _inForgetPress(layer) {
     layer.held = 0;
     layer.downTarget = {};
@@ -16925,6 +17021,7 @@ function _inForgetPress(layer) {
     layer.restoreScroll.forEach(function(s) { s.interactive = true; });
     layer.restoreScroll = [];
     layer.scrolled = null;
+    _inRestoreFocus(layer);
 }
 
 // One call for each thing the mouse does; `buttons` is -1 for "as it was", from
@@ -16952,15 +17049,26 @@ function _inPointed(scene, buttons, modifiers) {
     var own = _inStillOwn();
     if (changed) {
         _in.held = was;
-        _inMoved(_in.last, mods);
-        // The move's listeners made another page the document. The rest of
-        // the move is neither's; a press or release that came with it is an
-        // event of its own in a browser, which lands on the new page.
+        // A listener of the boundary events made another page the document.
+        // They are part of this event in a browser, which is lost with them,
+        // a press or release that came with it too.
+        var target = _inRetarget(_in.last, mods, own);
+        if (!own()) {
+            _inLose(layer);
+            return;
+        }
+        _inFire("pointermove", target, _in.last, mods, { button: -1 });
+        if (own() && !_in.noMouse) {
+            _inFire("mousemove", target, _in.last, mods, { button: 0 });
+        }
+        // The move's listeners did. The rest of the move is neither's; a
+        // press or release that came with it is an event of its own in a
+        // browser, which lands on the new page.
         if (!own()) {
             if (held !== was) {
                 _inHandOver(layer, was, scene, buttons, modifiers);
             } else {
-                _inForgetPress(layer);
+                _inLose(layer);
             }
             return;
         }
@@ -16976,7 +17084,7 @@ function _inPointed(scene, buttons, modifiers) {
         // A listener made another page the document: what else this event
         // holds for the old one's elements is none of either's.
         if (!own()) {
-            _inForgetPress(layer);
+            _inLose(layer);
             return;
         }
     }
@@ -17145,18 +17253,6 @@ function _inRetarget(scene, mods, own) {
     return target;
 }
 
-function _inMoved(scene, mods) {
-    var own = _inStillOwn();
-    var target = _inRetarget(scene, mods, own);
-    if (!own()) {
-        return;
-    }
-    _inFire("pointermove", target, scene, mods, { button: -1 });
-    if (own() && !_in.noMouse) {
-        _inFire("mousemove", target, scene, mods, { button: 0 });
-    }
-}
-
 function _inDown(bit, scene, mods, heldBefore) {
     var own = _inStillOwn();
     var target = _inRetarget(scene, mods, own);
@@ -17231,7 +17327,7 @@ function _inUp(bit, scene, mods) {
     if (_in.held === 0) {
         _inEndCapture(scene, mods);
         _in.noMouse = false;
-        _inRestoreFocus();
+        _inRestoreFocus(_in);
     }
     var moved = _inReleaseScrollers();
     var hitNow = heldBy || _inHit(scene);
@@ -17381,9 +17477,9 @@ function _inKeepFocus(target) {
     }
 }
 
-function _inRestoreFocus() {
-    var r = _in.restoreFocus;
-    _in.restoreFocus = null;
+function _inRestoreFocus(layer) {
+    var r = layer.restoreFocus;
+    layer.restoreFocus = null;
     if (!r) {
         return;
     }
@@ -17578,7 +17674,6 @@ function afterTap(eventPoint, run) {
     }
 }
 
-// Whether the page and layer an input began on are still the document's.
 // What a press handed over from another page does after its listeners: the
 // nearest element on its way up that does anything, as its items would have
 // had Qt given them the press. A control is pressed as by a key.
@@ -17594,8 +17689,9 @@ function _inHandedDefaults(target) {
                 node.toggle();
                 m.pressing = was;
                 m.toggledNow = true;
+                return [];
             }
-            return [];
+            return i === 0 ? [] : [function() { _inActivate(node); }];
         }
         if (_nodeTag(node) === "label") {
             var control = _labelControl(node);
@@ -17610,6 +17706,7 @@ function _inHandedDefaults(target) {
     return [];
 }
 
+// Whether the page and layer an input began on are still the document's.
 function _inStillOwn() {
     var gen = _docGen;
     var layer = _in;

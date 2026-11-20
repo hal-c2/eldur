@@ -1,7 +1,7 @@
 <!doctype html><html><head><meta charset="utf-8"><title>NAME</title>
 <style>
 body { margin: 0; font: 16px sans-serif }
-#wrap, label, #mv, #ov { display: block; width: 200px; height: 40px }
+#wrap, label, #mv, #ov, #dn, #bt9 { display: block; width: 200px; height: 40px }
 input { display: block; margin: 0 }
 </style>
 </head><body>
@@ -15,8 +15,14 @@ input { display: block; margin: 0 }
 <input type="checkbox" id="box4">
 <label id="lab5" for="box5">quick</label>
 <input type="checkbox" id="box5">
+<label id="lab6" for="box6">again</label>
+<input type="checkbox" id="box6">
+<label id="lab7" for="box7">onward</label>
+<input type="checkbox" id="box7">
 <div id="mv">moved</div>
 <div id="ov">over</div>
+<div id="dn">down</div>
+<form id="f9"><button id="bt9"><div id="in9">send</div></button></form>
 <script>
 // The host makes page Next when this one's title says so.
 var name = document.title;
@@ -48,6 +54,19 @@ document.getElementById("mv").addEventListener("mousemove", function() {
 });
 // As box3, with the second press already there when the first click runs.
 document.getElementById("box5").addEventListener("click", function() { if (name === "A") document.title = "Next"; });
+// As box5, and the second press's way onto Next's label makes page C: the
+// press goes on to C.
+document.getElementById("box6").addEventListener("click", function() { if (name === "A") document.title = "Next"; });
+document.getElementById("lab6").addEventListener("pointerover", function() {
+  if (name === "Next") { L("over makes C"); document.title = "C"; }
+});
+// As box5, and a move on Next's label makes page C: the press after it is C's.
+document.getElementById("box7").addEventListener("click", function() { if (name === "A") document.title = "Next"; });
+document.getElementById("lab7").addEventListener("mousemove", function() {
+  if (name === "Next") { L("move makes C"); document.title = "C"; }
+});
+// A press whose mousedown makes Next: its release lands on Next alone.
+document.getElementById("dn").addEventListener("mousedown", function() { if (name === "A") document.title = "Next"; });
 // A move whose first boundary event makes Next: the rest of it is neither
 // page's, and Next's hover starts at the next move, from nothing.
 var ov = document.getElementById("ov");
@@ -55,5 +74,11 @@ var ov = document.getElementById("ov");
   ov.addEventListener(type, function(e) { L(type, e.target.id); });
 });
 ov.addEventListener("pointerover", function() { if (name === "A") { L("over swaps"); document.title = "Next"; } });
+// As box3, on the text in a button: the second press is Next's, and its click
+// goes on up to the button, which submits its form.
+document.getElementById("in9").addEventListener("click", function(e) {
+  if (name === "A") { e.preventDefault(); document.title = "Next"; }
+});
+document.getElementById("f9").addEventListener("submit", function(e) { e.preventDefault(); L("submit", e.submitter.id); });
 </script>
 </body></html>
