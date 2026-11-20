@@ -117,9 +117,9 @@ struct PageBuilder<'a> {
     /// replaced, once the cycles are known, by marking the rest of its cycle
     /// failed too.
     cycle_failure_markers: HashMap<usize, String>,
-    /// Per module of a cycle run at load, in the order their run functions end:
-    /// the line where its run marks it done, which `finish` makes the cycle's
-    /// once every group is known.
+    /// Per module of a cycle run at load: the line where its run marks it
+    /// done, which `finish` makes wait for the rest of its cycle once every
+    /// group is known.
     cycle_done_markers: Vec<(usize, String)>,
     module_exports: HashMap<usize, ModuleExports>,
     /// Module index -> the top-level function returning its namespace, for
@@ -503,19 +503,23 @@ impl<'a> PageBuilder<'a> {
                     format!("if ({run}.state === 2) throw {run}.error;"),
                     format!("if ({run}.state) return;"),
                 ];
+                let in_cycle = self.cycle_groups.contains_key(&script_idx);
+                if !body.is_empty() || in_cycle {
+                    // Running: a module of its cycle importing it goes on, and
+                    // one of its cycle ending meanwhile waits for it.
+                    lines.push(format!("{run}.state = 3;"));
+                }
                 if !body.is_empty() {
                     let marker =
                         self.unique_page_name(&format!("__eldur_cycle_failed_m{script_idx}_"));
                     self.cycle_failure_markers
                         .insert(script_idx, marker.clone());
-                    // Running: a module of its cycle importing it goes on.
-                    lines.push(format!("{run}.state = 3;"));
                     lines.push(format!(
                         "try {{\n{}\n}} catch (err) {{\n    {run}.state = 2;\n    {run}.error = err;\n    {marker}\n    throw err;\n}}",
                         indent_block(&body.join("\n"), 4)
                     ));
                 }
-                if self.cycle_groups.contains_key(&script_idx) {
+                if in_cycle {
                     let marker =
                         self.unique_page_name(&format!("__eldur_cycle_done_m{script_idx}_"));
                     self.cycle_done_markers.push((script_idx, marker.clone()));
@@ -1277,29 +1281,43 @@ impl<'a> PageBuilder<'a> {
             page_js = page_js.replace(placeholder.as_str(), &ident);
         }
 
-        // A cycle shares one result, settled when its root, the module whose
-        // run ends last, ends: each other module that ran to its end waits in
-        // state 4, which runs nothing more but settles no `import()` yet.
-        for (i, (idx, marker)) in self.cycle_done_markers.iter().enumerate() {
+        // A cycle shares one result, settled when its root, the module the
+        // cycle was entered at, ends. Which one that is depends on the page at
+        // runtime: an importer that stopped at an earlier throw leaves the
+        // cycle to be entered at another module's script. A module that ends
+        // while another of its cycle still runs (3) waits in state 4, which
+        // runs nothing more but settles no `import()`; the last to end marks
+        // itself and each waiting module ran.
+        for (idx, marker) in &self.cycle_done_markers {
             let group = self.cycle_groups.get(idx);
-            let run = &self.module_runs[idx];
-            let ends_later = |m: &usize| self.cycle_groups.get(m) == group;
-            let line = if self.cycle_done_markers[i + 1..]
+            let mut others: Vec<usize> = self
+                .cycle_groups
                 .iter()
-                .any(|(m, _)| ends_later(m))
-            {
-                format!("{run}.state = 4;")
+                .filter(|(m, g)| Some(*g) == group && *m != idx)
+                .map(|(m, _)| *m)
+                .collect();
+            others.sort_unstable();
+            let others: Vec<&String> = others
+                .iter()
+                .filter_map(|m| self.module_runs.get(m))
+                .collect();
+            let run = &self.module_runs[idx];
+            let line = if others.is_empty() {
+                format!("{run}.state = 1;")
             } else {
-                std::iter::once(run)
-                    .chain(
-                        self.cycle_done_markers[..i]
-                            .iter()
-                            .filter(|(m, _)| ends_later(m))
-                            .map(|(m, _)| &self.module_runs[m]),
-                    )
-                    .map(|r| format!("{r}.state = 1;"))
+                let running = others
+                    .iter()
+                    .map(|r| format!("{r}.state === 3"))
                     .collect::<Vec<_>>()
-                    .join(" ")
+                    .join(" || ");
+                let settle = others
+                    .iter()
+                    .map(|r| format!("if ({r}.state === 4) {r}.state = 1;"))
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                format!(
+                    "if ({running}) {{ {run}.state = 4; }} else {{ {run}.state = 1; {settle} }}"
+                )
             };
             page_js = page_js.replace(marker.as_str(), &line);
         }

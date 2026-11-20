@@ -3050,7 +3050,7 @@ fn an_imported_module_runs_before_its_importer_and_a_lazy_one_on_its_first_impor
             .contains("Eldur.importModule(__eldur_module_namespace)")
             && out
                 .page_js
-                .contains("__eldur_run_m3(), __eldur_module_namespace.value ="),
+                .contains("__eldur_run_m3(); return __eldur_module_namespace.value ||"),
         "{}",
         out.page_js
     );
@@ -3462,7 +3462,10 @@ fn function_body<'s>(js: &'s str, name: &str) -> &'s str {
 }
 
 /// A module of a cycle that ran to its end is done only once its cycle is: an
-/// `import()` of it before then waits, and rejects if the cycle fails.
+/// `import()` of it before then waits, and rejects if the cycle fails. Which
+/// module ends the cycle is known only at runtime: the cycle may be entered at
+/// either module, as an importer that stopped at an earlier throw leaves it to
+/// the other module's script.
 #[test]
 fn a_cycle_member_is_done_only_with_its_cycle() {
     let resolver = FakeResolver::default();
@@ -3476,14 +3479,18 @@ fn a_cycle_member_is_done_only_with_its_cycle() {
     );
     let out = run_rewrite(&[wa, wb], &resolver);
     let js = &out.page_js;
-    let wb_run = function_body(js, "__eldur_run_m1");
-    assert!(!wb_run.contains("__eldur_run_m1.state = 1;"), "{js}");
-    let wa_run = function_body(js, "__eldur_run_m0");
-    let root_done = wa_run.find("__eldur_run_m0.state = 1;").expect("wa done");
-    let member_done = wa_run
-        .find("__eldur_run_m1.state = 1;")
-        .unwrap_or_else(|| panic!("wb done with wa:\n{js}"));
-    assert!(root_done < member_done, "{js}");
+    for (me, other) in [
+        ("__eldur_run_m0", "__eldur_run_m1"),
+        ("__eldur_run_m1", "__eldur_run_m0"),
+    ] {
+        let run = function_body(js, me);
+        assert!(run.contains(&format!("{me}.state = 3;")), "{js}");
+        let done = format!(
+            "if ({other}.state === 3) {{ {me}.state = 4; }} else {{ {me}.state = 1; if ({other}.state === 4) {other}.state = 1; }}"
+        );
+        assert!(run.contains(&done), "{me} waits for {other}:\n{js}");
+        assert!(!run.contains(&format!("\n    {me}.state = 1;")), "{js}");
+    }
 }
 
 /// The namespace an `import()` resolves to is handed out only after the
