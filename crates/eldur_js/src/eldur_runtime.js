@@ -20988,7 +20988,8 @@ function _vFromCreated(raw) {
         return leaf;
     }
     var tag = m.createdTag;
-    var kidSource = m.flow ? m.flow.children : raw.children;
+    // A copy: a child made a node leaves the item, and the list with it.
+    var kidSource = Array.prototype.slice.call((m.flow ? m.flow.children : raw.children) || []);
     var kids = [];
     // Nodes a script already has of it are the ones it keeps.
     var had = m.vModel;
@@ -21008,9 +21009,14 @@ function _vFromCreated(raw) {
     } else if (typeof raw.text !== "string" && m.explicitText !== undefined && m.explicitText !== "") {
         kids.push(_vLeaf(m.explicitText, null, null));
     }
-    for (var i = 0; kidSource && i < kidSource.length; ++i) {
+    for (var i = 0; i < kidSource.length; ++i) {
         var ch = kidSource[i];
-        if (_meta(ch).createdTag) {
+        var chTag = _meta(ch).createdTag;
+        // A control or an image stays a box, as `_vAsNode` keeps one: the
+        // same item, its value and state with it.
+        if (chTag && _V_STAYS_BOX.test(chTag)) {
+            kids.push({ stayBox: ch });
+        } else if (chTag) {
             kids.push(_vFromCreated(ch));
         }
     }
@@ -21037,10 +21043,18 @@ function _vFromCreated(raw) {
         m.attrs.hidden = "";
     }
     v.eldurClasses = m.classes.join(" ");
+    var stay = [];
     for (var k = 0; k < kids.length; ++k) {
+        if (kids[k].stayBox) {
+            stay.push({ item: kids[k].stayBox, at: v.kids.length });
+            continue;
+        }
         kids[k].vparent = v;
         v.kids.push(kids[k]);
     }
+    stay.forEach(function(b) {
+        _vSlotIn(v, b.item, v.kids[b.at] || null, null);
+    });
     // `destroy` waits for the event loop: till then the item would still be a
     // child of its line, for a script asking now.
     if (raw.parent) {
