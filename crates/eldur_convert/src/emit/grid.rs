@@ -915,12 +915,13 @@ impl Emitter<'_, '_> {
             // overflows its row as in CSS.
             let auto_row = auto_row_px(style);
             for (obj, c) in grid.children_mut().zip(&items) {
-                let extra = match c.style.box_sizing {
-                    BoxSizing::ContentBox => {
-                        let line = c.node.and_then(|n| node_line(self.doc, n));
-                        self.insets(&c.style, line).vertical()
-                    }
-                    BoxSizing::BorderBox => 0.0,
+                let line = c.node.and_then(|n| node_line(self.doc, n));
+                let insets = self.insets(&c.style, line).vertical();
+                // A border box is never shorter than its padding and border
+                // (CSS Box Sizing §3).
+                let (extra, floor) = match c.style.box_sizing {
+                    BoxSizing::ContentBox => (insets, 0.0),
+                    BoxSizing::BorderBox => (0.0, insets),
                 };
                 if let Size::Length(l) = &c.style.height
                     && (l.as_px().is_some() || is_viewport_relative(l))
@@ -929,7 +930,8 @@ impl Emitter<'_, '_> {
                     // `max-height` (CSS 2 §10.7), not the raw one.
                     let height = match l.as_px() {
                         Some(px) => {
-                            number(clamped_px(px, &c.style.min_height, &c.style.max_height) + extra)
+                            let used = clamped_px(px, &c.style.min_height, &c.style.max_height);
+                            number((used + extra).max(floor))
                         }
                         None => size_value(l, extra),
                     };
@@ -2133,7 +2135,7 @@ fn less_margin(props: Vec<(String, Value)>, margin: f32) -> Vec<(String, Value)>
 }
 
 /// `px` held between px limits; a limit in other units is not applied.
-fn clamped_px(px: f32, min: &Size, max: &Size) -> f32 {
+pub(super) fn clamped_px(px: f32, min: &Size, max: &Size) -> f32 {
     let limit = |s: &Size| match s {
         Size::Length(l) => l.as_px(),
         _ => None,
