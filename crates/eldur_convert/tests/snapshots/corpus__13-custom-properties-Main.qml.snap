@@ -1356,6 +1356,10 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 renderType: Text.NativeRendering
                             }
+
+                            Item {
+                                Layout.fillHeight: true
+                            }
                         }
 
                         Item {
@@ -1412,6 +1416,10 @@ ApplicationWindow {
                                 Layout.fillWidth: true
                                 renderType: Text.NativeRendering
                             }
+
+                            Item {
+                                Layout.fillHeight: true
+                            }
                         }
 
                         Item {
@@ -1467,6 +1475,10 @@ ApplicationWindow {
                                 wrapMode: Text.WordWrap
                                 Layout.fillWidth: true
                                 renderType: Text.NativeRendering
+                            }
+
+                            Item {
+                                Layout.fillHeight: true
                             }
                         }
 

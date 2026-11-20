@@ -1130,7 +1130,7 @@ impl Emitter<'_, '_> {
             }
             None => col_tracks,
         };
-        let tall = definite || given == Given::Stretched;
+        let tall = definite || matches!(given, Given::Stretched | Given::Line);
         let row_tracks = tracks_for(
             &style.grid_template_rows,
             &style.grid_auto_rows,
