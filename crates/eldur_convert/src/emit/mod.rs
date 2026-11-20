@@ -1819,15 +1819,25 @@ fn has_percent_height(k: &LayoutBox<'_>) -> bool {
         if l.percent > 0.0 && l.px == 0.0 && l.vw == 0.0 && l.vh == 0.0)
 }
 
-/// A block with a percentage height and nothing in it: `auto`, it is 0 high.
+/// A block with a percentage height and nothing in or around it: `auto`, it
+/// takes no height at all. A margin adds to its resolved height, so a
+/// `height: 100%` child with one would outgrow the line it resolves against
+/// on every rearrange. A `min-height` only sets a floor, which the line
+/// settles at, so it may stay.
 fn auto_height_is_zero(k: &LayoutBox<'_>) -> bool {
     let s = &k.style;
+    let no_margin = |m: &eldur_css::LengthAuto| match m {
+        eldur_css::LengthAuto::Auto => true,
+        eldur_css::LengthAuto::Length(l) => l.as_px() == Some(0.0),
+    };
     has_percent_height(k)
         && matches!(k.content, Content::Empty)
         && s.padding.top.as_px() == Some(0.0)
         && s.padding.bottom.as_px() == Some(0.0)
         && decoration::border_width(&s.border.top) == 0.0
         && decoration::border_width(&s.border.bottom) == 0.0
+        && no_margin(&s.margin.top)
+        && no_margin(&s.margin.bottom)
 }
 
 /// Where along one axis a lone item sits in its flex or grid container.
