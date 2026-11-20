@@ -485,6 +485,38 @@ pub fn style_attribute_hides_with(style: &str, custom: &BTreeMap<String, String>
     }
 }
 
+/// The custom properties the rules matching each of `nodes` declare, valued
+/// as the stylesheets alone make them, the node's own `style` attribute's
+/// taken away: what a script's `removeProperty` on the attribute leaves,
+/// and which values the element declares rather than inherits. `None` for
+/// one that computes to the guaranteed-invalid value. `computed` is the
+/// page's cascade, reused when no attribute overrides a rule.
+#[must_use]
+pub fn sheet_custom_properties(
+    doc: &Document,
+    sheets: &[Stylesheet],
+    viewport: &Viewport,
+    computed: &StyleMap,
+    nodes: &BTreeSet<NodeId>,
+) -> BTreeMap<NodeId, BTreeMap<String, Option<String>>> {
+    cascade::sheet_custom_properties(doc, sheets, viewport, computed, nodes)
+}
+
+/// The custom properties a `style` attribute declares, parsed as the
+/// cascade parses it: a `;` or `:` inside a string or `url()` is part of
+/// its value.
+#[must_use]
+pub fn style_attribute_custom_names(style: &str) -> BTreeSet<String> {
+    let (decls, _) = parse::parse_inline_style(style, "style attribute", Origin::Author);
+    decls
+        .into_iter()
+        .filter_map(|d| match d.value {
+            parse::DeclValue::Custom { name, .. } => Some(name),
+            _ => None,
+        })
+        .collect()
+}
+
 /// The `nodes` the stylesheets would still hide with their own `style`
 /// attribute's `display` and their `hidden` attribute taken away, so a script
 /// clearing either leaves them hidden by an author rule's `display: none`.
