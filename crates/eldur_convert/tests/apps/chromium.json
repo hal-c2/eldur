@@ -91394,6 +91394,116 @@
     ],
     "(focus)": "l"
    }
+  },
+  {
+   "name": "click x6",
+   "log": [
+    "blur l from x6 active BODY has true",
+    "focusout l from x6 active BODY has true",
+    "focus x6 from l active x6 has true",
+    "focusin x6 from l active x6 has true",
+    "click x6 has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "x6"
+   }
+  },
+  {
+   "name": "press y6, which x6's blur moves on to z6, and press w6, which focuses z6 and then y6, in the same turn",
+   "log": [
+    "blur x6 from y6 active BODY has true",
+    "focus z6 from - active z6 has true",
+    "focusin z6 from - active z6 has true",
+    "focusout x6 from - active z6 has true",
+    "click y6 has true",
+    "blur z6 from y6 active BODY has true",
+    "focusout z6 from y6 active BODY has true",
+    "focus y6 from z6 active y6 has true",
+    "focusin y6 from z6 active y6 has true",
+    "click w6 has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "y6"
+   }
+  },
+  {
+   "name": "click x7",
+   "log": [
+    "blur y6 from x7 active BODY has true",
+    "focusout y6 from x7 active BODY has true",
+    "focus x7 from y6 active x7 has true",
+    "focusin x7 from y6 active x7 has true",
+    "click x7 has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "x7"
+   }
+  },
+  {
+   "name": "press p7, which x7's blur moves on to its link m7, and press w7, which focuses p7, in the same turn",
+   "log": [
+    "blur x7 from p7 active BODY has true",
+    "focus m7 from - active m7 has true",
+    "focusin m7 from - active m7 has true",
+    "focusout x7 from - active m7 has true",
+    "click p7 has true",
+    "blur m7 from p7 active BODY has true",
+    "focusout m7 from p7 active BODY has true",
+    "focus p7 from m7 active p7 has true",
+    "focusin p7 from m7 active p7 has true",
+    "click w7 has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "p7"
+   }
   }
  ],
  "lines_closed": [

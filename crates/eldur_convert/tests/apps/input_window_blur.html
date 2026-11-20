@@ -22,7 +22,14 @@ button { margin: 4px; }
 <button id="x5">x5</button>
 <button id="y5">y5</button>
 <button id="z5">z5</button>
+<button id="x6">x6</button>
+<button id="y6">y6</button>
+<button id="z6">z6</button>
+<button id="w6">w6</button>
+<button id="x7">x7</button>
+<button id="w7">w7</button>
 <p>words <a href="#" id="l">l</a> more</p>
+<p tabindex="0" id="p7">held <a href="#" id="m7">m7</a></p>
 <script>
 // The window loses focus and gets it back, by itself and right after a blur
 // listener moved the focus. `document.hasFocus()` follows the window.
@@ -60,6 +67,20 @@ on("x2").addEventListener("click", function () {
 // press back on x5, still shown, comes in the same turn.
 on("x5").addEventListener("click", function () {
   on("x5").addEventListener("blur", function () { on("z5").focus(); }, { once: true });
+}, { once: true });
+// Pressing y6 moves the focus from x6, whose blur listener focuses z6. A
+// press on w6 in the same turn focuses z6 again and then y6, and keeps its own.
+on("x6").addEventListener("click", function () {
+  on("x6").addEventListener("blur", function () { on("z6").focus(); }, { once: true });
+  on("w6").addEventListener("mousedown", function (ev) {
+    ev.preventDefault(); on("z6").focus(); on("y6").focus();
+  }, { once: true });
+}, { once: true });
+// Pressing the paragraph p7 moves the focus from x7, whose blur listener
+// focuses the link m7 in it. A press on w7 in the same turn focuses p7.
+on("x7").addEventListener("click", function () {
+  on("x7").addEventListener("blur", function () { on("m7").focus(); }, { once: true });
+  on("w7").addEventListener("mousedown", function (ev) { ev.preventDefault(); on("p7").focus(); }, { once: true });
 }, { once: true });
 // A link in a line keeps the focus while its window is away.
 on("l").addEventListener("click", function (ev) { ev.preventDefault(); });
