@@ -398,3 +398,15 @@ fn a_throwing_initializer_fails_its_module_only() {
     let read = ["out"];
     assert_eq!(run("hoist", &read), wanted("hoist", &read));
 }
+
+/// `wa.js` and `wb.js` import each other. `wb.js` runs to its end, then `wa.js`
+/// calls `import("./wb.js")` and throws. The cycle shares one result, so that
+/// `import()` and a later one reject with `wa`'s error, as Chromium's do.
+#[test]
+fn an_import_of_a_cycle_member_waits_for_its_cycle() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("cyclewait", &read), wanted("cyclewait", &read));
+}
