@@ -512,6 +512,9 @@ fn static_page(name: &str) -> String {
         r#"<!doctype html><html><head><meta charset="utf-8"><title>{name}</title></head><body>
 <button id="pop" popovertarget="menu">pop</button>
 <div id="menu" popover>menu</div>
+<input type="checkbox" id="box">
+<details id="d1" name="g"><summary id="s1">one</summary>one</details>
+<details id="d2" name="g" open><summary>two</summary>two</details>
 <p>{name}</p>
 <div style="height: 3000px"></div>
 <script>
@@ -526,6 +529,14 @@ document.addEventListener("go", function() {{ console.log("LC {name} go"); }});
 // behalf, and nothing on the new one's: its popover stays shut.
 document.getElementById("pop").addEventListener("click", function() {{ Promise.resolve().then(function() {{ document.title = "Pop"; }}); }});
 document.getElementById("menu").addEventListener("beforetoggle", function(e) {{ console.log("LC {name} menu " + e.newState); }});
+// A box whose `input` listener makes another page tells this one no `change`.
+document.getElementById("box").addEventListener("input", function() {{ document.title = "Box"; }});
+document.getElementById("box").addEventListener("change", function() {{ console.log("LC {name} box change"); }});
+// A summary whose click listener makes another page opens nothing, and so
+// closes nothing of the same name on the new page.
+document.getElementById("s1").addEventListener("click", function() {{ document.title = "Sum"; }});
+document.getElementById("d1").addEventListener("toggle", function() {{ if (this.open) console.log("LC {name} d1 opened"); }});
+document.getElementById("d2").addEventListener("toggle", function() {{ if (!this.open) console.log("LC {name} d2 closed"); }});
 // The key a keydown listener made another page with goes no further.
 document.addEventListener("keypress", function(e) {{ if (e.key === "s" || e.key === "c") console.log("LC {name} press " + e.key); }});
 document.addEventListener("keydown", function(e) {{ console.log("LC {name} key " + e.key); }});
@@ -650,6 +661,18 @@ TestCase {
         console.log("LC click made " + pop.made.title)
         pop.made.destroy()
         wait(200)
+        const box = opened(contact, "Box")
+        mouseClick(element(contact, "box"))
+        wait(50)
+        console.log("LC click made " + box.made.title)
+        box.made.destroy()
+        wait(200)
+        const sum = opened(contact, "Sum")
+        mouseClick(element(contact, "s1"))
+        wait(50)
+        console.log("LC click made " + sum.made.title)
+        sum.made.destroy()
+        wait(200)
         contact.forceActiveFocus()
         // A listener that makes another page ends the event's document and
         // window steps, the rest of its own list too: none is the new page's.
@@ -711,6 +734,8 @@ const STATIC_WANT: &[&str] = &[
     "LC Contact kept key d",
     "LC Contact again key d",
     "LC click made Pop",
+    "LC click made Box",
+    "LC click made Sum",
     "LC key s made Next",
     "LC key w made Last",
     "LC resize made Fin",
@@ -734,9 +759,11 @@ fn a_page_made_after_one_went_with_nothing_ticking_hears_only_its_own_listeners(
     };
     let dir = std::env::temp_dir().join(format!("eldur-static-pages-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("temp dir");
-    for (at, name) in ["Home", "About", "Contact", "Pop", "Next", "Last", "Fin", "End"]
-        .into_iter()
-        .enumerate()
+    for (at, name) in [
+        "Home", "About", "Contact", "Pop", "Box", "Sum", "Next", "Last", "Fin", "End",
+    ]
+    .into_iter()
+    .enumerate()
     {
         let out = eldur_convert::convert(
             &Input {

@@ -7328,6 +7328,22 @@ function focus(item) {
             return;
         }
     }
+    // The window is away: the page's focus moves now, and what it moved to
+    // hears of it when the window is back, as the window's return reads what
+    // Qt holds then. What had the focus heard of its blur when the window went.
+    if (_in && _in.away && !_inWindowActive()) {
+        _activeElement = raw;
+        if (_in.focused !== raw) {
+            _in.focused = raw;
+            _in.focusMoves++;
+        }
+        if (typeof raw.forceActiveFocus === "function") {
+            raw.forceActiveFocus();
+        } else if (typeof raw.focus === "boolean") {
+            raw.focus = true;
+        }
+        return;
+    }
     var prev = _activeElement;
     _activeElement = raw;
     var hadFocus = Boolean(raw.activeFocus || raw.focus);
@@ -9426,7 +9442,13 @@ function _dispatchDynamic(raw, type, qtEv) {
     if (domEv._afterDispatch && !domEv.defaultPrevented) {
         var after = domEv._afterDispatch;
         domEv._afterDispatch = null;
-        after.forEach(function(run) { run(); });
+        // A listener that made another page the document leaves this
+        // event's defaults to the page it was dispatched in.
+        after.forEach(function(run) {
+            if (_docGen === gen) {
+                run();
+            }
+        });
     }
     return !domEv.defaultPrevented;
 }
@@ -16634,10 +16656,15 @@ function _clickedControl(raw) {
     _clickedControlWith(raw, event("click", wrap(raw), counted ? { detail: counted } : null));
 }
 
-function _toggleEvents(raw) {
+function _toggleEvents(raw, own) {
     var m = _meta(raw);
+    own = own || _inStillOwn();
     if (_in || m.connected.input) {
         _dispatchDynamic(raw, "input", null);
+    }
+    // An `input` listener that made another page leaves `change` unheard.
+    if (!own()) {
+        return;
     }
     if (_in || m.connected.change) {
         _dispatchDynamic(raw, "change", null);
@@ -17337,7 +17364,10 @@ function _clickedControlWith(raw, ev, own) {
             _inUndoToggle(raw);
             return;
         }
-        _toggleEvents(raw);
+        _toggleEvents(raw, own);
+        if (!own()) {
+            return;
+        }
     }
     if (_in && !ev.defaultPrevented) {
         _inActivate(raw);
@@ -18251,6 +18281,8 @@ function _inFocusChanged() {
     }
     // Away again before the window heard it was back: it hears nothing of
     // that return, and what had the focus has heard of its blur already.
+    // A script's `focus()` while the window is away moves the page's focus
+    // itself, and what Qt reports of it is heard when the window is back.
     if (_in.away && !active) {
         if (_in.backLater) {
             _in.backLater = false;
