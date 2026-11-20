@@ -76,8 +76,9 @@ struct PageBuffers {
     /// bindings so cross-script redeclarations follow browser "later wins" semantics without emitting
     /// duplicate declarations in `page.js`.
     var_func_slots: HashMap<String, (usize, usize)>,
-    /// Top-level `const`/`var` identifiers whose pure literal values are already available at module load.
-    pure_top_vars: HashSet<String>,
+    /// Top-level `const`/`var` identifiers whose pure literal values are already available at module load,
+    /// with what is known of each value.
+    pure_top_vars: HashMap<String, PureKind>,
     handler_fns: Vec<String>,
     init_stmts: Vec<String>,
     dcl_stmts: Vec<String>,
@@ -658,6 +659,25 @@ impl<'a> PageBuilder<'a> {
         }
     }
 
+    /// `dep`, already emitted, is imported by the module emitted last. When
+    /// `dep` is of a cycle a module of which is still being emitted, the
+    /// importer waits on that module too, so it is of the cycle, from the
+    /// module still being emitted on: a browser fails it with the cycle. A
+    /// `dep` that finished outside any running cycle stays apart.
+    fn join_running_cycle(&mut self, dep: usize) {
+        let Some(&group) = self.cycle_groups.get(&dep) else {
+            return;
+        };
+        let running = self
+            .visiting_stack
+            .iter()
+            .copied()
+            .find(|m| self.cycle_groups.get(m) == Some(&group));
+        if let Some(m) = running {
+            self.join_cycle(m);
+        }
+    }
+
     /// The page modules `v` imports with `import("literal")`, mapped from
     /// specifier to the expression the call becomes. The function that returns
     /// the module's namespace is declared once the module is emitted. The module is
@@ -865,6 +885,7 @@ impl<'a> PageBuilder<'a> {
                         }
                     } else {
                         self.ensure_module_emitted(dep_idx);
+                        self.join_running_cycle(dep_idx);
                         if let Some(run) = self.module_runs.get(&dep_idx)
                             && called.insert(dep_idx)
                         {
@@ -1064,7 +1085,7 @@ impl<'a> PageBuilder<'a> {
                                 .unwrap_or_else(|| local_orig.to_string());
                             let is_mutated =
                                 sym_id.is_some_and(|sid| scoping.symbol_is_mutated(sid));
-                            let deferred = !out.pure_top_vars.contains(&emitted_local);
+                            let deferred = !out.pure_top_vars.contains_key(&emitted_local);
                             me.insert(exported, emitted_local, deferred, is_mutated);
                         }
                     }
@@ -1322,7 +1343,8 @@ impl PageBuffers {
         }
         let slot_idx = self.top_decls.len();
         self.top_decls.push(fn_code);
-        self.pure_top_vars.insert(name.to_string());
+        self.pure_top_vars
+            .insert(name.to_string(), PureKind::Object);
         if is_classic {
             self.var_func_slots
                 .insert(name.to_string(), (slot_idx, self.init_stmts.len()));
@@ -1380,7 +1402,8 @@ impl PageBuffers {
         if let Some(id) = &cls.id {
             let emitted_name = lowerer.bound_name(id).to_string();
             if all_static_pure && self.at_load() {
-                self.pure_top_vars.insert(emitted_name.clone());
+                self.pure_top_vars
+                    .insert(emitted_name.clone(), PureKind::Object);
             }
             if is_exported && let Some(me) = mod_exports {
                 let orig_name = id.name.to_string();
@@ -1465,7 +1488,11 @@ impl PageBuffers {
                 matches!(&decl.id, BindingPattern::ObjectPattern(obj) if obj.rest.is_some());
             let is_destructured_var = vd.kind == VariableDeclarationKind::Var
                 && !matches!(&decl.id, BindingPattern::BindingIdentifier(_));
-            // A lazy module's bindings get their values when it runs.
+            // A lazy module's bindings get their values when it runs. One whose
+            // value could throw while it is worked out is worked out where the
+            // module or script runs, so the throw stops that module only.
+            let init_kind =
+                pure_init_kind(init, scoping, &self.pure_top_vars, &lowerer.symbol_renames);
             let is_pure = !self.in_lazy_module
                 && !has_obj_rest
                 && !is_destructured_var
@@ -1475,14 +1502,16 @@ impl PageBuffers {
                     &self.pure_top_vars,
                     &lowerer.symbol_renames,
                 )
-                && is_pure_top_level_init(
-                    init,
-                    scoping,
-                    &self.pure_top_vars,
-                    &lowerer.symbol_renames,
-                );
+                && init_kind.is_some_and(|k| pattern_cannot_throw(&decl.id, k));
 
             if is_pure {
+                let init_kind = init_kind.unwrap_or(PureKind::Unknown);
+                // A destructured name's value is not followed.
+                let bound_kind = if matches!(&decl.id, BindingPattern::BindingIdentifier(_)) {
+                    init_kind
+                } else {
+                    PureKind::Unknown
+                };
                 lowerer.visit_binding_pattern(&decl.id);
                 let pat_str = lowerer.editor.extract_and_consume(decl.id.span());
                 lowerer.visit_expression(init);
@@ -1507,7 +1536,7 @@ impl PageBuffers {
                         self.top_decls
                             .push(format!("var {emitted_name} = {init_str};"));
                         if self.at_load() {
-                            self.pure_top_vars.insert(emitted_name.clone());
+                            self.pure_top_vars.insert(emitted_name.clone(), bound_kind);
                         }
                         self.var_func_slots
                             .insert(emitted_name.clone(), (slot_idx, self.init_stmts.len()));
@@ -1527,7 +1556,7 @@ impl PageBuffers {
                     if vd.kind == VariableDeclarationKind::Const && self.at_load() {
                         for ident in &bound_idents {
                             self.pure_top_vars
-                                .insert(lowerer.bound_name(ident).to_string());
+                                .insert(lowerer.bound_name(ident).to_string(), bound_kind);
                         }
                     }
                     if let Some(me) = mod_exports.as_deref_mut() {
@@ -1651,7 +1680,8 @@ impl PageBuffers {
                         .shared
                         .alloc_fn_name(&format!("__eldur_default_{script_idx}"));
                     self.top_decls.push(format!("const {def_name} = {fn_str};"));
-                    self.pure_top_vars.insert(def_name.clone());
+                    self.pure_top_vars
+                        .insert(def_name.clone(), PureKind::Object);
                     (def_name, false)
                 };
                 if let Some(me) = mod_exports {
@@ -1709,7 +1739,7 @@ impl PageBuffers {
                     (def_name, false)
                 };
                 if all_static_pure && self.at_load() {
-                    self.pure_top_vars.insert(name.clone());
+                    self.pure_top_vars.insert(name.clone(), PureKind::Object);
                 }
                 if let Some(static_stmts) = lowerer
                     .post_class_static_inits
@@ -1728,12 +1758,9 @@ impl PageBuffers {
             ExportDefaultDeclarationKind::TSInterfaceDeclaration(_) => {}
             _ => {
                 if let Some(expr) = decl_kind.as_expression() {
-                    let is_pure = is_pure_top_level_init(
-                        expr,
-                        scoping,
-                        &self.pure_top_vars,
-                        &lowerer.symbol_renames,
-                    );
+                    let kind =
+                        pure_init_kind(expr, scoping, &self.pure_top_vars, &lowerer.symbol_renames);
+                    let is_pure = kind.is_some();
                     lowerer.visit_expression(expr);
                     let expr_str = lowerer.editor.extract_and_consume(expr.span());
                     let def_name = lowerer
@@ -1742,7 +1769,8 @@ impl PageBuffers {
                     if is_pure && self.at_load() {
                         self.top_decls
                             .push(format!("const {def_name} = {expr_str};"));
-                        self.pure_top_vars.insert(def_name.clone());
+                        self.pure_top_vars
+                            .insert(def_name.clone(), kind.unwrap_or(PureKind::Unknown));
                         if let Some(me) = mod_exports {
                             me.insert("default", def_name, false, false);
                         }
@@ -1818,7 +1846,12 @@ impl PageBuffers {
         } else {
             self.top_decls
                 .push(format!("const {local} = {target_ident};"));
-            self.pure_top_vars.insert(local.to_string());
+            let kind = self
+                .pure_top_vars
+                .get(target_ident)
+                .copied()
+                .unwrap_or(PureKind::Unknown);
+            self.pure_top_vars.insert(local.to_string(), kind);
         }
     }
 
@@ -2927,7 +2960,7 @@ fn is_valid_js_ident(s: &str) -> bool {
 fn pattern_defaults_are_pure(
     pat: &BindingPattern<'_>,
     scoping: &Scoping,
-    pure_vars: &HashSet<String>,
+    pure_vars: &HashMap<String, PureKind>,
     symbol_renames: &HashMap<SymbolId, String>,
 ) -> bool {
     match pat {
@@ -2956,31 +2989,118 @@ fn pattern_defaults_are_pure(
     }
 }
 
+/// What is known of a value worked out at load, so an operator that converts
+/// it is hoisted only where the conversion cannot throw.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum PureKind {
+    Number,
+    BigInt,
+    String,
+    Boolean,
+    /// `null` or `undefined`.
+    Nullish,
+    Array,
+    /// A function, class, regular expression or object literal: converting it
+    /// to a primitive runs its own code, which may throw.
+    Object,
+    /// Read without converting it, as another binding holds it.
+    Unknown,
+}
+
+impl PureKind {
+    fn is_primitive(self) -> bool {
+        matches!(
+            self,
+            Self::Number | Self::BigInt | Self::String | Self::Boolean | Self::Nullish
+        )
+    }
+
+    fn merge(self, other: Self) -> Self {
+        if self == other { self } else { Self::Unknown }
+    }
+
+    /// What a numeric operator gives for primitive operands of these kinds:
+    /// `None` when it throws, as for a BigInt mixed with a Number.
+    fn numeric(self, other: Self) -> Option<Self> {
+        match (self == Self::BigInt, other == Self::BigInt) {
+            (false, false) => Some(Self::Number),
+            (true, true) => Some(Self::BigInt),
+            _ => None,
+        }
+    }
+}
+
 fn is_pure_top_level_init(
     expr: &Expression<'_>,
     scoping: &Scoping,
-    pure_vars: &HashSet<String>,
+    pure_vars: &HashMap<String, PureKind>,
     symbol_renames: &HashMap<SymbolId, String>,
 ) -> bool {
-    match unwrap_parens(expr) {
-        Expression::BooleanLiteral(_)
-        | Expression::NullLiteral(_)
-        | Expression::NumericLiteral(_)
-        | Expression::StringLiteral(_)
-        | Expression::BigIntLiteral(_)
-        | Expression::RegExpLiteral(_)
-        | Expression::FunctionExpression(_)
-        | Expression::ArrowFunctionExpression(_) => true,
+    pure_init_kind(expr, scoping, pure_vars, symbol_renames).is_some()
+}
 
-        Expression::TemplateLiteral(tpl) => tpl
-            .expressions
-            .iter()
-            .all(|e| is_pure_top_level_init(e, scoping, pure_vars, symbol_renames)),
+/// Whether binding `kind`'s value to `pat` cannot throw: an object pattern
+/// needs a value that is not nullish and an array pattern an array, and each
+/// of their names is a plain name, so nothing nested is read.
+fn pattern_cannot_throw(pat: &BindingPattern<'_>, kind: PureKind) -> bool {
+    let plain = |p: &BindingPattern<'_>| match p {
+        BindingPattern::BindingIdentifier(_) => true,
+        BindingPattern::AssignmentPattern(a) => {
+            matches!(a.left, BindingPattern::BindingIdentifier(_))
+        }
+        _ => false,
+    };
+    match pat {
+        BindingPattern::BindingIdentifier(_) => true,
+        BindingPattern::AssignmentPattern(_) => false,
+        BindingPattern::ObjectPattern(obj) => {
+            !matches!(kind, PureKind::Nullish | PureKind::Unknown)
+                && obj.rest.is_none()
+                && obj.properties.iter().all(|p| plain(&p.value))
+        }
+        BindingPattern::ArrayPattern(arr) => {
+            kind == PureKind::Array
+                && arr.elements.iter().flatten().all(plain)
+                && arr.rest.as_ref().is_none_or(|r| plain(&r.argument))
+        }
+    }
+}
+
+/// What `expr` gives, when working it out at load has no effect and cannot
+/// throw; `None` otherwise.
+fn pure_init_kind(
+    expr: &Expression<'_>,
+    scoping: &Scoping,
+    pure_vars: &HashMap<String, PureKind>,
+    symbol_renames: &HashMap<SymbolId, String>,
+) -> Option<PureKind> {
+    let kind = |e: &Expression<'_>| pure_init_kind(e, scoping, pure_vars, symbol_renames);
+    let primitive = |e: &Expression<'_>| kind(e).filter(|k| k.is_primitive());
+    match unwrap_parens(expr) {
+        Expression::BooleanLiteral(_) => Some(PureKind::Boolean),
+        Expression::NullLiteral(_) => Some(PureKind::Nullish),
+        Expression::NumericLiteral(_) => Some(PureKind::Number),
+        Expression::StringLiteral(_) => Some(PureKind::String),
+        Expression::BigIntLiteral(_) => Some(PureKind::BigInt),
+        Expression::RegExpLiteral(_)
+        | Expression::FunctionExpression(_)
+        | Expression::ArrowFunctionExpression(_) => Some(PureKind::Object),
+
+        // Each value is converted to a string.
+        Expression::TemplateLiteral(tpl) => {
+            for e in &tpl.expressions {
+                primitive(e)?;
+            }
+            Some(PureKind::String)
+        }
 
         Expression::Identifier(id) => {
             if id.is_global_reference(scoping) {
-                matches!(id.name.as_str(), "undefined" | "NaN" | "Infinity")
-                    || pure_vars.contains(id.name.as_str())
+                match id.name.as_str() {
+                    "undefined" => Some(PureKind::Nullish),
+                    "NaN" | "Infinity" => Some(PureKind::Number),
+                    name => pure_vars.get(name).copied(),
+                }
             } else {
                 let resolved_name = id
                     .reference_id
@@ -2988,59 +3108,127 @@ fn is_pure_top_level_init(
                     .and_then(|rid| scoping.get_reference(rid).symbol_id())
                     .and_then(|sid| symbol_renames.get(&sid))
                     .map_or(id.name.as_str(), String::as_str);
-                pure_vars.contains(resolved_name)
+                pure_vars.get(resolved_name).copied()
             }
         }
 
-        Expression::UnaryExpression(u) => {
-            u.operator != UnaryOperator::Delete
-                && is_pure_top_level_init(&u.argument, scoping, pure_vars, symbol_renames)
-        }
+        Expression::UnaryExpression(u) => match u.operator {
+            UnaryOperator::Delete => None,
+            UnaryOperator::LogicalNot => kind(&u.argument).map(|_| PureKind::Boolean),
+            UnaryOperator::Typeof => kind(&u.argument).map(|_| PureKind::String),
+            UnaryOperator::Void => kind(&u.argument).map(|_| PureKind::Nullish),
+            // `+` of a BigInt throws.
+            UnaryOperator::UnaryPlus => primitive(&u.argument)
+                .filter(|k| *k != PureKind::BigInt)
+                .map(|_| PureKind::Number),
+            UnaryOperator::UnaryNegation | UnaryOperator::BitwiseNot => {
+                primitive(&u.argument).map(|k| k.numeric(k).unwrap_or(PureKind::Number))
+            }
+        },
 
         Expression::BinaryExpression(b) => {
-            !matches!(b.operator, BinaryOperator::In | BinaryOperator::Instanceof)
-                && is_pure_top_level_init(&b.left, scoping, pure_vars, symbol_renames)
-                && is_pure_top_level_init(&b.right, scoping, pure_vars, symbol_renames)
+            use BinaryOperator as Op;
+            match b.operator {
+                // Each throws for a right side that is not an object, and
+                // may run code of the object's.
+                Op::In | Op::Instanceof => None,
+                Op::StrictEquality | Op::StrictInequality => {
+                    kind(&b.left)?;
+                    kind(&b.right)?;
+                    Some(PureKind::Boolean)
+                }
+                Op::Equality
+                | Op::Inequality
+                | Op::LessThan
+                | Op::LessEqualThan
+                | Op::GreaterThan
+                | Op::GreaterEqualThan => {
+                    primitive(&b.left)?;
+                    primitive(&b.right)?;
+                    Some(PureKind::Boolean)
+                }
+                Op::Addition => {
+                    let (l, r) = (primitive(&b.left)?, primitive(&b.right)?);
+                    if l == PureKind::String || r == PureKind::String {
+                        Some(PureKind::String)
+                    } else {
+                        l.numeric(r)
+                    }
+                }
+                // A BigInt can be divided by zero, raised to a negative
+                // power, shifted out of range or shifted unsigned, each of
+                // which throws.
+                Op::Division
+                | Op::Remainder
+                | Op::Exponential
+                | Op::ShiftLeft
+                | Op::ShiftRight
+                | Op::ShiftRightZeroFill => primitive(&b.left)?
+                    .numeric(primitive(&b.right)?)
+                    .filter(|k| *k == PureKind::Number),
+                Op::Subtraction
+                | Op::Multiplication
+                | Op::BitwiseOR
+                | Op::BitwiseXOR
+                | Op::BitwiseAnd => primitive(&b.left)?.numeric(primitive(&b.right)?),
+            }
         }
 
-        Expression::LogicalExpression(l) => {
-            is_pure_top_level_init(&l.left, scoping, pure_vars, symbol_renames)
-                && is_pure_top_level_init(&l.right, scoping, pure_vars, symbol_renames)
-        }
+        Expression::LogicalExpression(l) => Some(kind(&l.left)?.merge(kind(&l.right)?)),
 
         Expression::ConditionalExpression(c) => {
-            is_pure_top_level_init(&c.test, scoping, pure_vars, symbol_renames)
-                && is_pure_top_level_init(&c.consequent, scoping, pure_vars, symbol_renames)
-                && is_pure_top_level_init(&c.alternate, scoping, pure_vars, symbol_renames)
+            kind(&c.test)?;
+            Some(kind(&c.consequent)?.merge(kind(&c.alternate)?))
         }
 
-        Expression::SequenceExpression(seq) => seq
-            .expressions
-            .iter()
-            .all(|e| is_pure_top_level_init(e, scoping, pure_vars, symbol_renames)),
-
-        Expression::ArrayExpression(arr) => arr.elements.iter().all(|el| match el {
-            oxc_ast::ast::ArrayExpressionElement::SpreadElement(sp) => {
-                is_pure_top_level_init(&sp.argument, scoping, pure_vars, symbol_renames)
+        Expression::SequenceExpression(seq) => {
+            let mut last = PureKind::Nullish;
+            for e in &seq.expressions {
+                last = kind(e)?;
             }
-            oxc_ast::ast::ArrayExpressionElement::Elision(_) => true,
-            _ => el
-                .as_expression()
-                .is_some_and(|e| is_pure_top_level_init(e, scoping, pure_vars, symbol_renames)),
-        }),
+            Some(last)
+        }
 
-        Expression::ObjectExpression(obj) => obj.properties.iter().all(|p| match p {
-            ObjectPropertyKind::ObjectProperty(prop) => {
-                prop.kind == PropertyKind::Init
-                    && !prop.computed
-                    && is_pure_top_level_init(&prop.value, scoping, pure_vars, symbol_renames)
+        Expression::ArrayExpression(arr) => {
+            for el in &arr.elements {
+                match el {
+                    // Spreading a value that is not iterable throws.
+                    oxc_ast::ast::ArrayExpressionElement::SpreadElement(sp) => {
+                        if !matches!(kind(&sp.argument)?, PureKind::Array | PureKind::String) {
+                            return None;
+                        }
+                    }
+                    oxc_ast::ast::ArrayExpressionElement::Elision(_) => {}
+                    _ => {
+                        kind(el.as_expression()?)?;
+                    }
+                }
             }
-            ObjectPropertyKind::SpreadProperty(sp) => {
-                is_pure_top_level_init(&sp.argument, scoping, pure_vars, symbol_renames)
-            }
-        }),
+            Some(PureKind::Array)
+        }
 
-        _ => false,
+        Expression::ObjectExpression(obj) => {
+            for p in &obj.properties {
+                match p {
+                    ObjectPropertyKind::ObjectProperty(prop) => {
+                        if prop.kind != PropertyKind::Init || prop.computed {
+                            return None;
+                        }
+                        kind(&prop.value)?;
+                    }
+                    // A value read without converting it may have getters,
+                    // which spreading runs.
+                    ObjectPropertyKind::SpreadProperty(sp) => {
+                        if kind(&sp.argument)? == PureKind::Unknown {
+                            return None;
+                        }
+                    }
+                }
+            }
+            Some(PureKind::Object)
+        }
+
+        _ => None,
     }
 }
 
