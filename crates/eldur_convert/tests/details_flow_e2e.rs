@@ -1057,6 +1057,62 @@ SUPPORT
 }
 "##;
 
+// Markup the analysis cannot read is parsed by the runtime, which has to
+// read its tag and attribute names in any case, as Chromium does.
+const UPPER_PAGE: &str = r##"<!doctype html>
+<style>body { font: 16px/18px sans-serif; }</style>
+<div id="box"></div>
+<div>After</div>
+<button id="make">Make</button>
+<script>
+const label = 'Upper summary';
+document.getElementById('make').addEventListener('click', () => {
+  document.getElementById('box').innerHTML =
+    ['<DETAILS OPEN><SUMMARY>', label, '</SUMMARY><P>Upper inside</P></DETAILS>'].join('');
+});
+</script>
+"##;
+
+const UPPER_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 800
+    height: 600
+
+TestCase {
+    name: "DetailsUpper"
+    when: windowShown
+SUPPORT
+
+    function test_an_upper_case_details_opens_and_closes() {
+        const page = load(Qt.createComponent("Main.qml"))
+        mouseClick(find(page, i => i.eldurTag === "button" && i.text === "Make"))
+        tryVerify(() => textOf(page, "Upper inside") !== null, 2000, "made lines")
+        const summary = textOf(page, "Upper summary")
+        const inside = textOf(page, "Upper inside")
+        const after = textOf(page, "After")
+        verify(summary && inside && after, "made lines")
+        verify(disclosure(summary) !== null, "Upper summary has no marker")
+        verify(inside.visible, "OPEN does not open it")
+        verify(disclosure(summary).open, "Upper summary shows the closed marker")
+        below(page, inside, after, 16, "open")
+        mouseClick(summary, 60, summary.height / 2)
+        wait(100)
+        verify(!inside.visible, "Upper inside shows once closed")
+        below(page, summary, after, 0, "closed")
+    }
+}
+}
+"##;
+
+#[test]
+fn a_details_a_script_spells_in_upper_case_is_a_disclosure() {
+    run(UPPER_PAGE, UPPER_TEST, "eldur-details-upper");
+}
+
 #[test]
 fn a_closed_details_brings_no_margin_of_what_it_folds() {
     run(CLOSED_PAGE, CLOSED_TEST, "eldur-details-closed");
