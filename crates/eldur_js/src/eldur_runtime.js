@@ -24297,10 +24297,6 @@ function _gStyle(raw) {
     s["white-space"] = _gWhiteSpace(s["white-space-collapse"], s["text-wrap-mode"]);
     s.color = s.color === undefined ? s["color"] : s.color;
     var color = _gColor(s["color"], inherited ? inherited["color"] : "rgb(0, 0, 0)");
-    // Chromium's own sheet greys a disabled field's text (`input:disabled`).
-    if (tag === "input" && !won["color"] && _isFormControl(raw) && (raw.enabled === false || _isDisabled(raw))) {
-        color = "rgb(84, 84, 84)";
-    }
     s["color"] = color;
     s["font-weight"] = String(_gResolveWeight(s["font-weight"], inherited ? inherited["font-weight"] : "400"));
     var initialNames = Object.keys(_G_INITIAL);
