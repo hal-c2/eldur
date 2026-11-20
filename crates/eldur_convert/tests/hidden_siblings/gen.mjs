@@ -12,6 +12,8 @@
 //   hidden block, which hides and shows it with itself;
 // - `margin.html`: a block whose margins collapse with the next one's only
 //   while shown.
+// - `empty.html`: the same with an empty block, whose margins collapse
+//   through it into the next one's only while shown.
 //
 //   node crates/eldur_convert/tests/hidden_siblings/gen.mjs
 //

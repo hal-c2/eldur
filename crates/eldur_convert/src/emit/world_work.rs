@@ -137,6 +137,37 @@ fn a_property_over_thirteen_conditions_still_binds() {
     assert!(warned, "no warning: {:?}", out.diagnostics);
 }
 
+#[test]
+fn a_full_group_leaves_room_for_other_conditions() {
+    // Nine hover-shown items in one list make a group of 2^9 worlds, all
+    // of MAX_WORLDS. A paragraph after the list, shown by a tenth hover,
+    // still needs its own world to show at all.
+    let pairs: String = (0..9)
+        .map(|i| format!("<li class=a{i}>a{i}</li><li class=h{i}>h{i}</li>"))
+        .collect();
+    let rules: String = (0..9)
+        .map(|i| format!(".h{i}{{display:none}} .a{i}:hover + .h{i}{{display:list-item}} "))
+        .collect();
+    let page = format!(
+        "<!DOCTYPE html><style>{rules} .q{{display:none}} .b:hover + .q{{display:block}}</style>\
+         <ol>{pairs}<li>c</li></ol><p class=b>b</p><p class=q>q</p>"
+    );
+    let out = convert_str(&page, &Options::default());
+    let qml = out.main_qml().expect("Main.qml");
+    assert!(
+        qml.lines()
+            .any(|l| l.contains("visible:") && l.contains("bHover.hovered")),
+        "q does not show while b is hovered:\n{qml}"
+    );
+    // The group no longer fits beside the paragraph's world, and says so.
+    let warned = out
+        .diagnostics
+        .iter()
+        .map(ToString::to_string)
+        .any(|d| d.contains("9 classes and states show or hide numbered elements"));
+    assert!(warned, "no warning: {:?}", out.diagnostics);
+}
+
 /// A table of `cells` cells, four to a row, each recoloured by its own
 /// `:hover`, with borders `collapse` or `separate`.
 fn table_hovers(cells: usize, borders: &str) -> String {

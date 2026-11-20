@@ -615,5 +615,65 @@
     "top": 70
    }
   ]
+ },
+ "empty initial": {
+  "markers": [],
+  "tops": [
+   {
+    "text": "0",
+    "shown": true,
+    "top": 10
+   },
+   {
+    "text": "a",
+    "shown": true,
+    "top": 40
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 70
+   }
+  ]
+ },
+ "empty hover": {
+  "markers": [],
+  "tops": [
+   {
+    "text": "0",
+    "shown": true,
+    "top": 10
+   },
+   {
+    "text": "a",
+    "shown": true,
+    "top": 40
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 90
+   }
+  ]
+ },
+ "empty left": {
+  "markers": [],
+  "tops": [
+   {
+    "text": "0",
+    "shown": true,
+    "top": 10
+   },
+   {
+    "text": "a",
+    "shown": true,
+    "top": 40
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 70
+   }
+  ]
  }
 }

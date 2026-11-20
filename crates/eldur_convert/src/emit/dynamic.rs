@@ -1380,7 +1380,8 @@ impl Dynamic<'_, '_> {
     /// Hideable elements that number or count make groups as well: a
     /// sibling's marker or `counter()` depends on how many of them show at
     /// once, which no single element's own combinations cover. Each
-    /// numbered list is a group, and the page's counters one more.
+    /// numbered list is a group, and the page's counters one more. A group
+    /// is added only when all its worlds fit beside the elements' own.
     fn worlds(
         &mut self,
         excluded: &BTreeSet<u16>,
@@ -1441,22 +1442,6 @@ impl Dynamic<'_, '_> {
                 groups.entry(Some(list.index())).or_default().extend(deps);
             }
         }
-        let mut joint: Vec<Vec<u16>> = Vec::new();
-        for group in groups.into_values().filter(|g| g.len() > 1) {
-            // 2^9 is MAX_WORLDS; more would be cut anyway.
-            if group.len() > 9 {
-                self.diags.warning(
-                    "css",
-                    None,
-                    format!(
-                        "{} classes and states show or hide numbered elements; a marker or counter is right only while one of them differs from the document",
-                        group.len()
-                    ),
-                );
-            } else {
-                joint.push(group.into_iter().collect());
-            }
-        }
         fn subsets(deps: &[u16]) -> impl Iterator<Item = (usize, Vec<u16>)> + '_ {
             (0..1usize << deps.len()).map(move |mask| {
                 let mut w: Vec<u16> = deps
@@ -1469,13 +1454,9 @@ impl Dynamic<'_, '_> {
                 (w.len(), w)
             })
         }
-        // The joint groups' worlds come first, after the document's, so the
-        // cut below drops one only when the groups alone are too many.
-        let mut first: BTreeSet<(usize, Vec<u16>)> = BTreeSet::from([(0, Vec::new())]);
-        for j in &joint {
-            first.extend(subsets(j));
-        }
-        let mut rest: BTreeSet<(usize, Vec<u16>)> = BTreeSet::new();
+        // Each element's own worlds, as on a page with no groups: a group
+        // never takes their place.
+        let mut set: BTreeSet<(usize, Vec<u16>)> = BTreeSet::from([(0, Vec::new())]);
         for e in &self.found.elements {
             let deps: Vec<u16> = e
                 .depends_on
@@ -1483,24 +1464,43 @@ impl Dynamic<'_, '_> {
                 .copied()
                 .filter(|c| !excluded.contains(c))
                 .collect();
-            rest.extend(subsets(&deps).filter(|w| !first.contains(w)));
+            set.extend(subsets(&deps));
         }
-        let total = first.len() + rest.len();
-        if total > MAX_WORLDS {
+        if set.len() > MAX_WORLDS {
             self.diags.warning(
                 "css",
                 None,
                 format!(
-                    "classes and states combine in {total} ways; only {MAX_WORLDS} are converted"
+                    "classes and states combine in {} ways; only {MAX_WORLDS} are converted",
+                    set.len()
                 ),
             );
         }
-        first
-            .into_iter()
-            .chain(rest)
-            .take(MAX_WORLDS)
-            .map(|(_, w)| w)
-            .collect()
+        // A group goes in whole or not at all: a part of its worlds would
+        // number some combinations and not others.
+        for group in groups.into_values().filter(|g| g.len() > 1) {
+            let group: Vec<u16> = group.into_iter().collect();
+            // 2^10 is past MAX_WORLDS on its own.
+            let fits = group.len() <= 9 && {
+                let new: Vec<_> = subsets(&group).filter(|w| !set.contains(w)).collect();
+                let fits = set.len() + new.len() <= MAX_WORLDS;
+                if fits {
+                    set.extend(new);
+                }
+                fits
+            };
+            if !fits {
+                self.diags.warning(
+                    "css",
+                    None,
+                    format!(
+                        "{} classes and states show or hide numbered elements; a marker or counter is right only while one of them differs from the document",
+                        group.len()
+                    ),
+                );
+            }
+        }
+        set.into_iter().take(MAX_WORLDS).map(|(_, w)| w).collect()
     }
 
     fn emit_world(
