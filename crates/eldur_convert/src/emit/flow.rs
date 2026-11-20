@@ -889,12 +889,10 @@ impl Emitter<'_, '_> {
         } else {
             if let Some(Member::Child(obj)) = layout.members.get_mut(last) {
                 // The last item's own last blocks may hide: what stays inside
-                // the edge is the bottom margin of the last one shown.
+                // the edge is the bottom margin of the last one shown. When
+                // the item itself may hide, a layout skips it and its margin.
                 let reach = &self.hideable_ids;
-                match pending_cases
-                    .take()
-                    .filter(|c| hidden.boxes.is_empty() && c.reaches(reach))
-                {
+                match pending_cases.take().filter(|c| c.reaches(reach)) {
                     Some(cases) => match cases.gap(0.0) {
                         Gap::Expr(e) => {
                             obj.set("Layout.bottomMargin", Value::expr(e));

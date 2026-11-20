@@ -644,6 +644,46 @@ const CASES: &[Case] = &[
   w.style.setProperty('--d', w.style.getPropertyValue('--d') ? '' : 'none');",
         back: &[],
     },
+    // In the world a class makes, the custom property is what that class's
+    // rule declares, not the value as loaded.
+    Case {
+        name: "class_world_variable_display",
+        body: r#"<style>p{margin:0;height:20px}#w{--d:block}#w.off{--d:none}#shy{display:none}</style>
+<div id="w"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const w = document.getElementById('w'); const s = document.getElementById('shy');
+  if (!w.classList.contains('off')) { w.classList.add('off'); s.style.display = 'var(--d)'; } else { w.classList.remove('off'); s.style.display = ''; }",
+        back: &[],
+    },
+    // A rule's custom property that reads another one follows a later write
+    // of that one on an ancestor.
+    Case {
+        name: "sheet_variable_chain",
+        body: r#"<style>p{margin:0;height:20px}#w{--d:block}#in{--e:var(--d)}</style>
+<div id="w"><div id="in"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const s = document.getElementById('shy'); const w = document.getElementById('w');
+  if (!s.style.display) { s.style.display = 'var(--e)'; w.style.setProperty('--d', 'none'); } else { s.style.display = ''; w.style.removeProperty('--d'); }",
+        back: &[],
+    },
+    // A padded column's last item, which a script may hide, keeps its last
+    // block's margin inside only while that block shows.
+    Case {
+        name: "padded_last_item_tail_hides",
+        body: r#"<style>p{margin:0;height:20px}#w{padding:1px 0}#tail{margin-bottom:20px}</style>
+<div id="w"><p id="a">A</p><div id="last"><p id="x">X</p><p id="tail">T</p></div></div><p id="c">C</p>
+<script>function hideLast() { document.getElementById('last').style.display = 'none'; }</script>"#,
+        ids: &["a", "c"],
+        load: &[9.0, 90.0],
+        toggled: &[9.0, 50.0],
+        toggle: "const t = document.getElementById('tail');
+  t.style.display = t.style.display === 'none' ? '' : 'none';",
+        back: &[],
+    },
     // `ruby` and `math` are valid displays that win over the `none` before
     // them: an inline box once `hidden` is removed. A script hiding an
     // inline box alone in its line isn't followed yet (as with `inline`),
@@ -1234,6 +1274,21 @@ fn a_created_elements_variable_display_reads_where_it_is_put_and_follows_writes_
 #[test]
 fn an_appended_elements_variable_display_follows_a_later_write() {
     run(case("appended_then_variable_display_follows"));
+}
+
+#[test]
+fn a_class_worlds_custom_property_is_what_its_rule_declares() {
+    run(case("class_world_variable_display"));
+}
+
+#[test]
+fn a_rules_custom_property_reading_another_follows_a_write_of_that_one() {
+    run(case("sheet_variable_chain"));
+}
+
+#[test]
+fn a_padded_columns_hideable_last_item_keeps_its_last_blocks_margin_only_while_shown() {
+    run(case("padded_last_item_tail_hides"));
 }
 
 #[test]

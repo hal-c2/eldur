@@ -1586,8 +1586,18 @@ impl<'a, 'd> Emitter<'a, 'd> {
         // What a rule declares on it holds against an ancestor's later
         // write though it matched the ancestor's value as loaded, and stays
         // under its `style` attribute's for a script's `removeProperty`.
+        // In a world a class makes, its rules decide the value: the loaded
+        // one stays for a `var()` the runtime resolves and under the
+        // attribute, where these styles hold the attribute's.
         if let Some(declared) = self.sheet_vars.get(&node) {
-            vars.extend(declared.iter().map(|(k, v)| (k.clone(), v.clone())));
+            vars.extend(declared.iter().map(|(k, v)| {
+                let held = match v {
+                    Some(t) if t.to_ascii_lowercase().contains("var(") => v.clone(),
+                    _ if inline.contains(k) => v.clone(),
+                    _ => own.get(k).cloned(),
+                };
+                (k.clone(), held)
+            }));
         }
         (!vars.is_empty()).then_some(vars)
     }
