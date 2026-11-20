@@ -189,5 +189,21 @@
     "errors": [
       "Error: shown"
     ]
+  },
+  "cyclewait": {
+    "lines": [
+      "wb runs",
+      "wa runs b",
+      "inline runs",
+      "wb rejected in wa wa",
+      "wb rejected wa",
+      "done"
+    ],
+    "text": {
+      "out": "done"
+    },
+    "errors": [
+      "Error: wa"
+    ]
   }
 }
