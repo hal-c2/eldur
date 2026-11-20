@@ -560,7 +560,15 @@ impl Emitter<'_, '_> {
                 && !collapsed
                 && !child.node.is_some_and(|n| self.script_hides.contains(&n))
                 && !child.node.is_some_and(|n| self.restacks.contains(&n))
-                && super::lists::rises_in_flow(&child.style);
+                && super::lists::rises_in_flow(&child.style)
+                // A box at `auto` is no stacking context: a level it holds,
+                // or one a script, class or state may give it or what it
+                // holds, lifts only that box, so it stays in its block and
+                // the block lifts.
+                && (child.style.z_index.is_some()
+                    || !(self.writes_z_index
+                        || self.restacked(child)
+                        || super::lists::holds_level(child)));
             self.rise_out = rise;
             let emitted = self.block(child, decoration);
             if emitted.collapse_through {
