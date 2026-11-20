@@ -1157,27 +1157,12 @@ fn a_span_under_0_keeps_the_level_it_holds_in_the_flow() {
     }
 }
 
-/// The same, with the level under 0 from a class. Chromium paints `#lx`
-/// over `#ix` (5,70), as with the level from the start, but the converter
-/// keeps the lift of the world without the class, so `#ix` is over `#lx`.
-/// A block in the span's place loses the level the same way; this pins
-/// that the two agree ("`z-index` or `opacity` on an inline element that is
-/// no box", docs/spec/layout.md).
-const CLASS_UNDER_TEST: &str = r##"
-    function test_a_level_under_0_a_class_gives_is_lost_as_for_a_block() {
-        compare(front(page, 5, 70), "ix", "Chromium: lx")
-        compare(front(page, 30, 50), "rx")
-        compare(front(page, 150, 50), "bx")
-        compare(front(page, 75, 30), "ox")
-        compare(front(page, 150, 30), "ax")
-        compare(front(page, 150, 90), "lx")
-    }
-}
-}
-"##;
-
+/// The same, with the level under 0 from a class: Chromium paints `#lx`
+/// over `#ix` (5,70; 30,70), as with the level from the start. The level a
+/// class gives `#ix` and the one a class gives the span are worlds of their
+/// own, so the block takes the span's level in the one with both.
 #[test]
-fn a_level_under_0_a_class_gives_a_span_is_lost_as_for_a_block() {
+fn a_level_under_0_a_class_gives_a_span_keeps_what_it_holds_in_the_flow() {
     for (name, kid) in [
         (
             "context-span-class-under",
@@ -1200,11 +1185,13 @@ fn a_level_under_0_a_class_gives_a_span_is_lost_as_for_a_block() {
              document.getElementById('wx').classList.add('wup');",
         );
         assert_eq!(page.matches("classList.add('wup')").count(), 1);
-        run(&page, &with_test(CLASS_UNDER_TEST), name, false);
+        run(&page, &with_test(UNDER_SPAN_TEST), name, false);
     }
 }
 
-/// A block at the top of the `z-index` range: one over it stays there.
+/// A block at the top of the `z-index` range: one over it is out of
+/// `i32`'s range, and stays one over rather than wrap or meet the level
+/// one under.
 #[test]
 fn a_block_at_the_highest_level_stays_at_the_top() {
     let page = r#"<!doctype html><html><body>
@@ -1212,8 +1199,60 @@ fn a_block_at_the_highest_level_stays_at_the_top() {
 </body></html>"#;
     let out = convert_str(page, &Options::default());
     let qml = out.main_qml().expect("Main.qml");
-    assert!(qml.contains("z: 2147483647"), "the block\n{qml}");
+    assert!(qml.contains("z: 2147483648"), "the block\n{qml}");
     assert!(!qml.contains("z: -2147483648"), "the block\n{qml}");
+}
+
+/// An overlay at the top of the `z-index` range in a static block, and a
+/// later block at `level`: Chromium paints the later block over the overlay
+/// at the same level, in tree order, and under it one level under.
+fn highest_page(level: &str) -> String {
+    HELD.replace(
+        "#ox { position: absolute;",
+        "#ox { position: absolute; z-index: 2147483647;",
+    )
+    .replace(
+        "#bx { background: blue }",
+        &format!("#bx {{ position: relative; z-index: {level}; background: blue }}"),
+    )
+    .replace("<div id=rx></div>", "")
+    .replace("var rx = document.getElementById('rx');\n", "")
+}
+
+/// Chromium's fronts (`elementFromPoint`), with `#bx` at `i32::MAX`.
+const HIGHEST_TIED_TEST: &str = r##"
+    function test_a_later_block_at_the_highest_level_is_over_the_overlay() {
+        compare(front(page, 30, 50), "bx", "tree order puts the later block over")
+        compare(front(page, 30, 30), "ox")
+        compare(front(page, 150, 30), "ax")
+        compare(front(page, 150, 50), "bx")
+        compare(front(page, 75, 70), "bx")
+    }
+}
+}
+"##;
+
+/// The same, with `#bx` one under.
+const HIGHEST_UNDER_TEST: &str = r##"
+    function test_a_later_block_one_under_the_highest_level_is_under_the_overlay() {
+        compare(front(page, 30, 50), "ox", "the overlay is a level over the block")
+        compare(front(page, 30, 30), "ox")
+        compare(front(page, 150, 30), "ax")
+        compare(front(page, 150, 50), "bx")
+        compare(front(page, 75, 70), "bx")
+    }
+}
+}
+"##;
+
+#[test]
+fn an_overlay_at_the_highest_level_keeps_its_order_with_a_later_block() {
+    let tied = highest_page("2147483647");
+    assert_eq!(tied.matches("z-index: 2147483647").count(), 2);
+    assert!(!tied.contains("id=rx"));
+    run(&tied, &with_test(HIGHEST_TIED_TEST), "highest-tied", false);
+    let under = highest_page("2147483646");
+    run(&under, &with_test(HIGHEST_UNDER_TEST), "highest-under", false);
 }
 
 /// The inline-block in a static box (`#rx`) and a static box after (`#lx`):
