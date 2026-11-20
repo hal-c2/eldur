@@ -380,3 +380,12 @@ fn change_comes_only_when_the_text_changed() {
 fn a_scripted_click_bubbles() {
     page("ev_scripted");
 }
+
+// #23: what the drive drew differently from Chromium: a span before a
+// button's text, an emptied button, whitespace runs, markup in a button, a
+// disabled fieldset's legend, a line after a paragraph, a span moved to the
+// body.
+#[test]
+fn the_drives_drawn_gaps_match_chromium() {
+    page("drawn_gaps");
+}
