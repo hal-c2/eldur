@@ -7322,19 +7322,26 @@ function _displayHides(raw, value) {
 // (`eldurVars`), virtual inline ones too. Each element's are substituted before they pass
 // on, so a child's override does not change what its parent's resolved to.
 function _ownVars(raw) {
-    var chain = [];
-    for (var at = raw; at && typeof at === "object" && chain.length < 256;) {
-        chain.push(at);
+    var logical = [];
+    for (var at = raw; at && typeof at === "object" && logical.length < 256;) {
+        logical.push(at);
         var up = _logicalParent(at);
-        // An untagged wrapper the logical walk steps over, the `html`
-        // element on a page with no runtime DOM, still holds what the
-        // stylesheets declare on it.
-        for (var q = at.parent; q && q !== up && typeof q === "object" && chain.length < 256; q = q.parent) {
+        at = up === at ? null : up;
+    }
+    // An untagged wrapper the logical walk steps over, the `html` element on
+    // a page with no runtime DOM, still holds what the stylesheets declare
+    // on it. Only those: a physical walk from an item under a virtual
+    // inline element passes the host the logical walk reaches anyway, and
+    // the host taken twice would override the inline element's value.
+    var onPath = new Set(logical);
+    var chain = [];
+    for (var l = 0; l < logical.length && chain.length < 256; ++l) {
+        chain.push(logical[l]);
+        for (var q = logical[l].parent; q && typeof q === "object" && !onPath.has(q) && chain.length < 256; q = q.parent) {
             if (q.eldurVars && typeof q.eldurVars === "object") {
                 chain.push(q);
             }
         }
-        at = up === at ? null : up;
     }
     var vars = {};
     for (var c = chain.length - 1; c >= 0; --c) {
@@ -12559,6 +12566,11 @@ function _fitGlyphs(item, turned) {
 // will sit under; only here is it known (layout.md §1.2).
 function _connectSubtree(raw) {
     var cur = _materializeSubtree(raw);
+    // Its `var()` display was decided where it was made, or not at all: it
+    // reads the custom properties of the place it is put, swapped or not.
+    if (!_gActive()) {
+        _varDisplaysFollow(cur);
+    }
     var turned = false;
     for (var up = cur.parent; up && !turned; up = up.parent) {
         turned = _resamples(up);
@@ -22481,7 +22493,35 @@ function _gInlineDecls(raw, m) {
 }
 
 function _gVars(raw, parent) {
-    var inherited = parent ? _gStyle(parent).vars : {};
+    var inherited = parent ? _gStyle(parent).vars : _gVarsThroughInline(raw);
+    return _gVarsOver(raw, inherited);
+}
+
+// An item under a virtual inline element has no parent to inherit its styles
+// from, but a custom property still passes down through the inline elements
+// to it: the nearest box above them gives the ones it starts from, then each
+// inline element, outermost first, its own (#85).
+function _gVarsThroughInline(raw) {
+    var chain = [];
+    var at = _logicalParent(raw);
+    while (at && typeof at === "object" && at !== raw && at.__eldurInline && chain.length < 256) {
+        chain.push(at);
+        var up = _logicalParent(at);
+        at = up === at ? null : up;
+    }
+    if (chain.length === 0) {
+        return {};
+    }
+    var vars = at && typeof at === "object" && at !== raw && !at.__eldurInline ? _gStyle(at).vars : {};
+    for (var c = chain.length - 1; c >= 0; --c) {
+        vars = _gVarsOver(chain[c], vars);
+    }
+    return vars;
+}
+
+// The custom properties `raw` declares, by its rules and `style`, over the
+// ones it inherits.
+function _gVarsOver(raw, inherited) {
     var own = null;
     var rules = _gRules();
     var matched = _gMatched(raw);
@@ -27814,6 +27854,9 @@ function _gSettle() {
         // Templates paint the states, but what a script reads comes from the rules.
         _gWatchStates();
         _gClosedHiddenBoxes();
+        // A class change can change what a custom property is, and with it
+        // what a script's `var()` display shows as (#85).
+        _varDisplaysFollow(_root);
         _tableRepaintAll();
         _gRunning = false;
         return;
