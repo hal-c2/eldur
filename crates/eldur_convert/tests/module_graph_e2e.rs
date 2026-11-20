@@ -423,3 +423,53 @@ fn a_cycle_entered_at_another_member_settles_with_it() {
     let read = ["out"];
     assert_eq!(run("cycleentry", &read), wanted("cycleentry", &read));
 }
+
+/// `bad.js` throws before it adds a click listener to `go` and sets its
+/// `onclick`; `good.js` adds one after it. A click is heard only by
+/// `good.js`'s, as in Chromium: a listener its module never reached is never
+/// added.
+#[test]
+fn a_listener_after_its_modules_throw_is_never_heard() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("listenthrow", &read), wanted("listenthrow", &read));
+}
+
+/// A classic script sets `window.onload`; two modules throw before they set it
+/// to another handler and to `null`. The classic script's handler is called at
+/// load: an assignment that never ran changes nothing.
+#[test]
+fn a_window_onload_assignment_counts_only_if_it_ran() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("onloadthrow", &read), wanted("onloadthrow", &read));
+}
+
+/// A module sets `window.onload = null` after a classic script set a handler,
+/// and a later module throws before it sets another. No handler is called at
+/// load: the last assignment that ran wins.
+#[test]
+fn the_last_window_onload_assignment_that_ran_wins() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("onloadnull", &read), wanted("onloadnull", &read));
+}
+
+/// `source.js` pushes to an array before copying it, and defines a getter
+/// that throws before destructuring the object it is on. Each initializer
+/// sees what ran before it: the copy has two items and the destructuring
+/// throws, so only `source.js` fails and its `import()` rejects.
+#[test]
+fn an_initializer_sees_what_ran_before_it() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("readlater", &read), wanted("readlater", &read));
+}

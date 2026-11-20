@@ -65,6 +65,10 @@ const out = {
   hoist: await record("hoist", ["out"]),
   cyclewait: await record("cyclewait", ["out"]),
   cycleentry: await record("cycleentry", ["out"]),
+  listenthrow: await record("listenthrow", ["out"], "#go"),
+  onloadthrow: await record("onloadthrow", ["out"]),
+  onloadnull: await record("onloadnull", ["out"]),
+  readlater: await record("readlater", ["out"]),
 };
 await browser.close();
 fs.writeFileSync(path.join(here, "chromium.json"), `${JSON.stringify(out, null, 2)}\n`);
