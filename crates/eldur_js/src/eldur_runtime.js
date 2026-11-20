@@ -5800,10 +5800,13 @@ function getText(item) {
             return _vNodesBeside(raw, textChild).map(getText).join("");
         }
         var own = cellModel ? _vText(cellModel) : _pseudoOwn(raw, String(textChild.text));
-        // A column's own text before its boxes: what follows it is its too.
+        // A column's own text among its boxes: all of them, in DOM order.
         if (!cellModel && textChild.parent === raw && _gIsLayout(raw) && raw.contentItem === undefined) {
-            var after = _rawKids(raw, true).filter(function(k) { return k !== textChild; });
-            return own + after.map(function(k) { return _wsText(_wsBefore(k)) + getText(k); }).join("") + _wsText(_wsEnd(raw));
+            var kids = _rawKids(raw, true);
+            var read = kids.indexOf(textChild) === -1 ? own : "";
+            return read + kids.map(function(k) {
+                return _wsText(_wsBefore(k)) + (k === textChild ? own : getText(k));
+            }).join("") + _wsText(_wsEnd(raw));
         }
         return own;
     }
@@ -21201,6 +21204,8 @@ function _vToReal(v) {
         _btnTakeOut(v);
     }
     if (v.vtext) {
+        // It leaves the text that drew it, as an element leaves its line.
+        _vRemove(v);
         var plain = _unwrap(document.createTextNode(v.data));
         var said = _itemMeta.get(v);
         if (said && said.wrapper) {
@@ -21937,6 +21942,13 @@ function _rawChildNodes(raw) {
         return own.kids.filter(_vIsRendered);
     }
     var out = own ? own.kids.filter(_vIsRendered) : [];
+    // An element drawn as its own Text beside a column of what follows: that
+    // Text is its first Text node, which a script can move like any other.
+    var ownText = _vHasRules() && _childContainer(raw) !== raw ? _findTextChild(raw) : null;
+    if (ownText && ownText.parent === raw && !_vModelOf(ownText) && !_meta(ownText).vSplit
+        && ownText.text !== "") {
+        _vEnsureModel(ownText);
+    }
     var withLeaves = function(leaves, leaf) {
         leaves.forEach(function(l) {
             l.vparent = raw;
