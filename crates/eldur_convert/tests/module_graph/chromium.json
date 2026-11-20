@@ -121,5 +121,41 @@
       "label": "set by ea"
     },
     "errors": []
+  },
+  "cycle": {
+    "lines": [
+      "cb runs",
+      "ca runs b",
+      "inline runs",
+      "cb dcl",
+      "cb rejected ca",
+      "done"
+    ],
+    "text": {
+      "out": "done"
+    },
+    "errors": [
+      "Error: ca",
+      "Error: ca",
+      "Error: ca"
+    ]
+  },
+  "skip": {
+    "lines": [
+      "bad runs",
+      "inline runs",
+      "good runs",
+      "bad early dcl",
+      "good dcl",
+      "late runs",
+      "late resolved 1",
+      "done"
+    ],
+    "text": {
+      "out": "done"
+    },
+    "errors": [
+      "Error: bad"
+    ]
   }
 }

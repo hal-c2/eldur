@@ -59,6 +59,8 @@ const out = {
   nested: await record("nested/page", ["a", "b"]),
   eager: await record("eager", ["out"]),
   element: await record("element", ["out", "label"]),
+  cycle: await record("cycle", ["out"]),
+  skip: await record("skip", ["out"]),
 };
 await browser.close();
 fs.writeFileSync(path.join(here, "chromium.json"), `${JSON.stringify(out, null, 2)}\n`);
