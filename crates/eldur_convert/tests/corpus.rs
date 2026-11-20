@@ -135,6 +135,49 @@ fn the_files_a_page_needs() {
     }
 }
 
+/// The runtime marks a summary a script makes with `EldurDisclosure`, so the
+/// file ships with a page whose scripts can make one, however they spell the
+/// tag, and not with one that only names an id `summary`.
+#[test]
+fn a_page_that_can_make_a_summary_ships_its_disclosure() {
+    let label = "<p id=\"box\"></p><script>const label = 'Made';";
+    for (case, script, ships) in [
+        (
+            "created",
+            "document.getElementById('box').append(document.createElement('SUMMARY'));",
+            true,
+        ),
+        (
+            "opaque",
+            "document.getElementById('box').innerHTML = ['<details><summary>', label, '</summary></details>'].join('');",
+            true,
+        ),
+        (
+            "opaque upper",
+            "document.getElementById('box').innerHTML = ['<DETAILS><SUMMARY>', label, '</SUMMARY></DETAILS>'].join('');",
+            true,
+        ),
+        (
+            "an id",
+            "document.getElementById('box').innerHTML = label; document.getElementById('summary');",
+            false,
+        ),
+    ] {
+        let html = format!("{label}{script}</script><p id=\"summary\">-</p>");
+        let output = eldur_convert::convert_str(&html, &Options::default());
+        let files = file_list(&output);
+        assert!(
+            files.contains("eldur_runtime.js"),
+            "{case}: no runtime in\n{files}"
+        );
+        assert_eq!(
+            files.contains("EldurDisclosure.qml"),
+            ships,
+            "{case}:\n{files}"
+        );
+    }
+}
+
 #[test]
 fn page_without_body_or_scripts_converts() {
     for html in [
