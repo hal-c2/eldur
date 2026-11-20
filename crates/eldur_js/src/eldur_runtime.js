@@ -6642,8 +6642,10 @@ function _zPage(raw) {
 // over those. A level written over it stays live too: at what the box holds
 // now, which the kids' own bindings keep current, as a class that raises a
 // kid later moves only that kid's binding. Only on a page the runtime lays
-// out does each pass paint every box's level (`_gPaintBox`), so a plain
-// write there is the one the next pass would make.
+// out does each pass paint the level of each box it made (`_gPaintBox`), so
+// a plain write there is the one the next pass would make; a box the
+// converter made is painted by its template there too, and its level stays
+// live.
 function _zLevelOf(x) {
     var own = _zOwn(x);
     if (own !== null) {
@@ -6653,7 +6655,7 @@ function _zLevelOf(x) {
 }
 
 function _zSetLevel(x, value) {
-    if (_gActive()) {
+    if (_gActive() && _gIsBox(x)) {
         x.z = value;
     } else {
         x.z = Qt.binding(function() { return _zLevelOf(x); });
@@ -6662,7 +6664,7 @@ function _zSetLevel(x, value) {
 
 // The item that took `box` out to its stop's column stands at its lift.
 function _zSetHost(host, box, value) {
-    if (_gActive()) {
+    if (_gActive() && _gIsBox(box)) {
         host.z = value;
     } else {
         host.z = Qt.binding(function() {
@@ -27286,6 +27288,12 @@ function _gSettle() {
     _aScan();
     _gReposition();
     _gRunning = false;
+    // An animation a pass starts applies in the style that pass resolves
+    // (CSS Animations 1 §3), so the first paint already shows a paused one's
+    // moment rather than waiting for the ticker's first frame.
+    if (_aDirty && _aAll.length > 0) {
+        _aSample();
+    }
 }
 
 // A model only holds what computes to inline. What it was given can stop being
