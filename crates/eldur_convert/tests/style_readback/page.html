@@ -9,6 +9,7 @@
 <div id="g" style="--x:1;--x:2">G</div>
 <div id="h" style="COLOR:blue">H</div>
 <div id="k">K</div>
+<p>P <span id="sp">S</span></p>
 <script>
 const log = (s) => console.log("RB " + s);
 for (const id of ["a", "b", "c", "d", "e", "f", "g"]) {
@@ -31,6 +32,9 @@ for (const v of ["flow", "block flow", "inline flow", "block flow-root",
   k.style.display = v;
   log("k [" + v + "] " + k.style.display);
 }
+const sp = document.getElementById("sp");
+sp.style.display = "flow";
+log("sp display " + sp.style.display);
 const done = document.createElement("div");
 done.id = "rbdone";
 document.body.appendChild(done);

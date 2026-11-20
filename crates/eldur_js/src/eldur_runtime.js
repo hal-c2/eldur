@@ -7668,6 +7668,9 @@ function _setStyleAt(item, prop, value) {
         m.styles[rawName] = str;
     }
     _gTouch();
+    if (name.indexOf("--") === 0 && !_gHasCascade()) {
+        _varDisplaysFollow(raw);
+    }
     if (_vBlockFont(raw, name)) {
         return;
     }
@@ -8114,23 +8117,89 @@ function _displayHides(raw, value) {
     return got !== null && got.trim().toLowerCase() === "none";
 }
 
-// The custom properties the element and its ancestors declare themselves,
-// the nearest winning.
+// The custom properties the element and its ancestors declare, in their
+// `style` attributes or, as the converter resolved them, their stylesheets
+// (`eldurVars`), virtual inline ones too. Each element's are substituted before they pass
+// on, so a child's override does not change what its parent's resolved to.
 function _ownVars(raw) {
-    var vars = {};
-    for (var at = raw, depth = 0; at && depth < 256; at = _gParent(at), ++depth) {
-        if (typeof at !== "object" || at.__eldurInline) {
-            break;
-        }
-        var decls = _styleDecls(at, _meta(at));
-        for (var i = 0; i < decls.length; ++i) {
-            var k = decls[i][0];
-            if (k.indexOf("--") === 0 && vars[k] === undefined) {
-                vars[k] = String(decls[i][1]).replace(/!\s*important\s*$/i, "").trim();
+    var chain = [];
+    for (var at = raw; at && typeof at === "object" && chain.length < 256;) {
+        chain.push(at);
+        var up = _logicalParent(at);
+        // An untagged wrapper the logical walk steps over, the `html`
+        // element on a page with no runtime DOM, still holds what the
+        // stylesheets declare on it.
+        for (var q = at.parent; q && q !== up && typeof q === "object" && chain.length < 256; q = q.parent) {
+            if (q.eldurVars && typeof q.eldurVars === "object") {
+                chain.push(q);
             }
         }
+        at = up === at ? null : up;
+    }
+    var vars = {};
+    for (var c = chain.length - 1; c >= 0; --c) {
+        var decls = _styleDecls(chain[c], _meta(chain[c]));
+        var own = null;
+        // What the stylesheets declare on it, under its `style` attribute's.
+        var sheet = chain[c].eldurVars;
+        if (sheet && typeof sheet === "object") {
+            var sheetNames = Object.keys(sheet);
+            for (var s = 0; s < sheetNames.length; ++s) {
+                own = own || {};
+                own[sheetNames[s]] = sheet[sheetNames[s]] === null ? "initial" : String(sheet[sheetNames[s]]);
+            }
+        }
+        for (var i = 0; i < decls.length; ++i) {
+            if (decls[i][0].indexOf("--") === 0) {
+                own = own || {};
+                own[decls[i][0]] = String(decls[i][1]).replace(/!\s*important\s*$/i, "").trim();
+            }
+        }
+        if (own === null) {
+            continue;
+        }
+        var env = Object.assign({}, vars, own);
+        var next = Object.assign({}, vars);
+        var names = Object.keys(own);
+        for (var n = 0; n < names.length; ++n) {
+            var k = names[n];
+            var written = own[k];
+            if (written === "inherit" || written === "unset" || written === "revert") {
+                continue;
+            }
+            var got = written === "initial" ? null : _gSubstitute(written, env, [k]);
+            if (got === null) {
+                delete next[k];
+            } else {
+                next[k] = got;
+            }
+        }
+        vars = next;
     }
     return vars;
+}
+
+// With no cascade, a custom property a script sets is not a style the
+// boxes recompute from: each box under `raw` whose script-written display
+// takes a `var()` is shown or hidden again by what it now resolves to.
+function _varDisplaysFollow(raw) {
+    var stack = [raw];
+    for (var seen = 0; stack.length > 0 && seen < 100000; ++seen) {
+        var at = stack.pop();
+        if (!at || typeof at !== "object") {
+            continue;
+        }
+        var m = _meta(at);
+        if (!at.__eldurInline && typeof at.visible === "boolean"
+            && Object.prototype.hasOwnProperty.call(m.styles, "display")
+            && /var\(/i.test(m.styles.display)) {
+            _setShown(at, !_displayHides(at, m.styles.display));
+        }
+        var kids = _rawElementChildren(at) || [];
+        for (var i = 0; i < kids.length; ++i) {
+            stack.push(kids[i]);
+        }
+    }
 }
 
 // Whether the element's own declaration says `display: none`. The
@@ -15921,10 +15990,16 @@ function _vSetStyle(v, prop, value) {
         _vParseCss(m, str);
     } else {
         var camel = name.indexOf("--") === 0 ? name : _kebabToCamel(name);
+        if (camel === "display") {
+            str = _displayWritten(str);
+        }
         if (str === "") {
             delete m.styles[camel];
         } else {
             m.styles[camel] = str;
+        }
+        if (camel.indexOf("--") === 0 && !_gHasCascade()) {
+            _varDisplaysFollow(v);
         }
     }
     _vChanged(v.model);

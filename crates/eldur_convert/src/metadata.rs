@@ -218,6 +218,20 @@ pub(crate) fn declare_rules_hide(obj: &mut Object) {
         .insert(0, decl("bool", "eldurRulesHide", Value::Bool(true)));
 }
 
+/// `eldurVars`: the custom properties the stylesheets declare on the element
+/// (`null` for one they take away), resolved as loaded, which a `var()`
+/// display a script writes reads at runtime under the `style` attribute's own.
+pub(crate) fn declare_vars(
+    obj: &mut Object,
+    vars: &std::collections::BTreeMap<String, Option<String>>,
+) {
+    let json = serde_json::to_string(vars).unwrap_or_else(|_| "{}".to_owned());
+    obj.members.insert(
+        0,
+        decl("var", "eldurVars", Value::expr(format!("({json})"))),
+    );
+}
+
 /// An element whose attributes the runtime acts on when it hears the person
 /// itself: what a control validates by, what a link follows, what takes a stop
 /// in the focus order or opens a dialog.

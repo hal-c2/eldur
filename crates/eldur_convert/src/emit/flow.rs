@@ -346,23 +346,29 @@ pub(crate) struct Wrap {
     left: bool,
 }
 
-/// The condition on which an item that only holds hidden boxes has content.
-fn shown_when(obj: &Object, b: &LayoutBox<'_>, cx: &mut Emitter<'_, '_>) -> Option<String> {
+/// The condition on which an item that only holds hidden boxes, or boxes a
+/// script hides, has content, and whether one of them shows as loaded.
+fn shown_when(obj: &Object, b: &LayoutBox<'_>, cx: &mut Emitter<'_, '_>) -> Option<(String, bool)> {
     let line = b.node.and_then(|n| node_line(cx.doc, n));
     let insets = cx.insets(&b.style, line);
     if insets.vertical() != 0.0 || !matches!(b.style.height, eldur_css::Size::Auto) {
         return None;
     }
     if let Some(shown) = waits_for_text(obj) {
-        return Some(shown);
+        return Some((shown, false));
     }
     let mut ids = Vec::new();
+    let mut loaded = false;
     let mut kids: Vec<&Object> = vec![obj];
     while let Some(holder) = kids.pop() {
         for member in &holder.members {
             if let Member::Child(kid) = member {
                 match (&kid.id, kid.get("visible")) {
                     (Some(id), Some(Value::Bool(false))) => ids.push(format!("{id}.visible")),
+                    (Some(id), _) if cx.hideable_ids.contains(id) => {
+                        ids.push(format!("{id}.visible"));
+                        loaded = true;
+                    }
                     _ if let Some(shown) = waits_for_text(kid) => ids.push(shown),
                     // An item's line of text is its only child.
                     _ if kid.type_name == "EldurLines" => kids.push(kid),
@@ -371,7 +377,7 @@ fn shown_when(obj: &Object, b: &LayoutBox<'_>, cx: &mut Emitter<'_, '_>) -> Opti
             }
         }
     }
-    (!ids.is_empty() && ids.len() <= HiddenRun::NEAREST).then(|| ids.join(" || "))
+    (!ids.is_empty() && ids.len() <= HiddenRun::NEAREST).then(|| (ids.join(" || "), loaded))
 }
 
 /// An empty block a script may fill is kept as a `Text` with no line box; until
@@ -767,6 +773,9 @@ impl Emitter<'_, '_> {
                 && (folds.is_some() || child.node.is_some_and(|n| self.script_hides.contains(&n)))
                 && crate::boxes::is_block_level(child.style.display);
             let hides = (collapsed || reached) && obj.id.is_some();
+            if reached && let Some(id) = &obj.id {
+                self.hideable_ids.insert(id.clone());
+            }
             let shown_when_hides = obj.id.as_ref().map(|id| format!("{id}.visible"));
             // An item holding only hidden boxes: its margins collapse through
             // it until something in it shows.
@@ -790,12 +799,12 @@ impl Emitter<'_, '_> {
                         hidden.escaping = true;
                         let cases = emitted.top_cases.as_ref();
                         hidden.escape(&id, cases, before, pending, !collapsed);
-                    } else if let Some(shown) = &holds {
+                    } else if let Some((shown, loaded)) = &holds {
                         // Empty at the column's top, it lets the margins
                         // after it escape too (#51).
                         hidden.escaping = true;
                         let cases = emitted.top_cases.as_ref();
-                        hidden.escape(&format!("({shown})"), cases, before, pending, false);
+                        hidden.escape(&format!("({shown})"), cases, before, pending, *loaded);
                     } else {
                         escaped_top = Some(pending);
                         escaped_cases = emitted.top_cases.clone().map(|e| e.joined(before));
@@ -862,7 +871,7 @@ impl Emitter<'_, '_> {
                 hidden.box_cases.clear();
                 hidden.shown_bottom = None;
                 hidden.holder = None;
-                if let Some(shown) = holds {
+                if let Some((shown, _)) = holds {
                     hidden.holder = Some((usize::MAX, shown.clone()));
                     let mut given = pending;
                     given.join(emitted.top);
