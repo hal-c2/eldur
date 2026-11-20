@@ -838,6 +838,8 @@ function init(rootItem, baseUrl, documentUrl) {
 // aside when another page takes over, and are its own again when it is the
 // document again. Its timers, frames and custom elements stay shared.
 function _resetPageState() {
+    // It holds the last page's items; the next one starts with none.
+    _gVarDisplays.clear();
     _dropHelper(_timerWake);
     _dropHelper(_rafAnim);
     _dropHelper(_aTicker);
@@ -6911,7 +6913,9 @@ function _setStyleAt(item, prop, value) {
                     }
                 });
             } else {
-                _setShown(raw, !_displayHides(raw, str));
+                // A closed disclosure keeps it folded; `_detailsShow` reads
+                // this display when it opens.
+                _setShown(raw, !_displayHides(raw, str) && !_gFoldedAway(raw));
                 _gShownInline(raw, str === "inline");
             }
         }
@@ -7447,7 +7451,7 @@ function _varDisplaysFollow(raw) {
         if (_gHasCascade()) {
             _gShowAsRules(at);
         } else {
-            _setShown(at, !_displayHides(at, m.styles.display));
+            _setShown(at, !_displayHides(at, m.styles.display) && !_gFoldedAway(at));
         }
     }
     return checked;
