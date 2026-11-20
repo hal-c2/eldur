@@ -397,11 +397,13 @@ const WANT: &[&str] = &[
 
 // Each test, by the line it starts with, and how many late timers run in it:
 // page 1's must not run once page 2 is made, and two pages up at once run both.
+// A page that goes while another is up takes its timers with it, as page 1
+// does: page 6's is due after it went, and only page 5's runs.
 const LATE: &[(&str, usize)] = &[
     ("LC page 1", 0),
     ("LC page 2", 1),
     ("LC page 3", 2),
-    ("LC page 5", 2),
+    ("LC page 5", 1),
     ("LC page 7", 1),
     ("LC page 9", 1),
 ];
@@ -973,12 +975,14 @@ fn a_covered_page_renumbers_its_items() {
     assert!(problems.is_empty(), "{}", problems.join("\n  "));
 }
 
-// A page with another made over it. What the covered page's own script set
+// A page with another made over it. What the covered page's own script sets
 // going (a timer, the frame, promise job and observers it asks for in turn, a
-// listener the host dispatches at) means that page's own document: its lookups
-// find its nodes, and what it makes goes into its body. The page on top still
-// finds only its own. A timer of the covered page that went is dropped: it has
-// no document left, and is none of the top page's.
+// fetch, a listener the host dispatches at) means that page's own document:
+// its lookups find its nodes, and what it makes goes into its body. The page
+// on top still finds only its own. A covered page that went takes what it set
+// going with it: its timer is dropped, and its interval leaves the queue.
+// The host's events say when each part runs, so how long making a page takes
+// changes nothing.
 const UNDER: &str = r##"<!doctype html><html><head><meta charset="utf-8"></head><body>
 <p id="under">under</p>
 <ul id="ulist"><li>one</li></ul>
@@ -998,20 +1002,31 @@ function look(when) {
     body && mine && body.contains(mine) ? "own-body" : "other-body",
     document.querySelector("#made-" + when) === made ? "made-found" : "made-lost");
 }
-document.getElementById("under").addEventListener("ping", function() { look("listener"); });
-setTimeout(function() {
-  look("timer");
-  requestAnimationFrame(function() { look("frame"); });
-  Promise.resolve().then(function() { look("job"); });
-  new MutationObserver(function() { look("observer"); })
-    .observe(document.getElementById("ulist"), { childList: true });
-  document.getElementById("ulist").appendChild(document.createElement("li"));
-  var sized = new ResizeObserver(function() { sized.disconnect(); look("resize"); });
-  sized.observe(document.getElementById("under"));
-  var seen = new IntersectionObserver(function() { seen.disconnect(); look("intersect"); });
-  seen.observe(document.getElementById("under"));
-}, 300);
-setTimeout(function() { look("late"); }, 1500);
+var under = document.getElementById("under");
+under.addEventListener("go", function() {
+  setTimeout(function() {
+    look("timer");
+    requestAnimationFrame(function() { look("frame"); });
+    Promise.resolve().then(function() { look("job"); });
+    new MutationObserver(function() { look("observer"); })
+      .observe(document.getElementById("ulist"), { childList: true });
+    document.getElementById("ulist").appendChild(document.createElement("li"));
+    // Measured in its own page, the target has the width that page gave it.
+    var sized = new ResizeObserver(function(entries) {
+      sized.disconnect();
+      look(entries[0].contentRect.width > 0 ? "resize" : "resize-unsized");
+    });
+    sized.observe(under);
+    var seen = new IntersectionObserver(function() { seen.disconnect(); look("intersect"); });
+    seen.observe(under);
+    fetch("under.txt").then(function(r) { return r.text(); }).then(function(t) {
+      look(t.trim() === "fetched" ? "fetch" : "fetch-wrong");
+    });
+  }, 0);
+  setInterval(function() {}, 50);
+});
+under.addEventListener("ping", function() { look("listener"); });
+under.addEventListener("arm", function() { setTimeout(function() { look("late"); }, 300); });
 </script>
 </body></html>"##;
 
@@ -1020,19 +1035,21 @@ const OVER: &str = r##"<!doctype html><html><head><meta charset="utf-8"></head><
 <script>
 function L(){console.log("CD "+[].slice.call(arguments).join(" "))}
 L("over up");
-setTimeout(function() {
-  var made = ["timer", "frame", "job", "observer"].filter(function(w) {
-    return document.getElementById("made-" + w);
-  });
-  L("over",
+function check(e) {
+  var made = ["timer", "frame", "job", "observer", "resize", "intersect", "fetch", "listener", "late"]
+    .filter(function(w) { return document.getElementById("made-" + w); });
+  L(e.type,
     document.getElementById("over") ? "own" : "lost",
     document.getElementById("under") || document.querySelector("#under") ? "sees-under" : "no-under",
     document.body.contains(document.getElementById("over")) ? "own-body" : "other-body",
     made.length === 0 ? "none-made" : "made " + made.join(","));
-}, 700);
-setTimeout(function() {
-  L("over after", document.getElementById("made-late") ? "made late" : "none-made");
-}, 1800);
+}
+var over = document.getElementById("over");
+over.addEventListener("check", check);
+over.addEventListener("after", check);
+// The document hears what its elements do: every listener then goes through
+// the runtime's dispatch, which the host's events reach, as the covered page's do.
+document.addEventListener("click", function() {});
 </script>
 </body></html>"##;
 
@@ -1069,16 +1086,24 @@ TestCase {
         }
         return null
     }
+    // The host tells a page's element: no script of that page runs then.
+    function send(page, name, type) {
+        R.wrap(named(page, name)).dispatchEvent(new R.Event(type))
+    }
     function test_covered_page_document() {
         const under = make("Under.qml")
-        make("Over.qml")
-        wait(1000)
-        // The host tells the covered page's element: no script of that page runs then.
-        R.wrap(named(under, "under")).dispatchEvent(new R.Event("ping"))
+        const over = make("Over.qml")
+        send(under, "under", "go")
+        wait(800)
+        send(over, "over", "check")
+        send(under, "under", "ping")
         wait(100)
-        // Its late timer is still queued when it goes.
+        // Its late timer is still queued when it goes, and its interval with it.
+        send(under, "under", "arm")
         under.destroy()
-        wait(1000)
+        wait(600)
+        send(over, "over", "after")
+        console.log("CD intervals " + R._timers.filter(t => t.repeat).length)
     }
 }
 }
@@ -1124,10 +1149,13 @@ fn a_covered_pages_own_callbacks_see_its_document() {
         }
     }
     std::fs::write(dir.join("tst_covered_document.qml"), COVERED_TEST).expect("write test");
+    std::fs::write(dir.join("under.txt"), "fetched\n").expect("write fetched file");
     let output = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(dir.join("tst_covered_document.qml"))
         .env("QT_FORCE_STDERR_LOGGING", "1")
+        // The covered page's fetch reads a file beside it.
+        .env("QML_XHR_ALLOW_FILE_READ", "1")
         .output()
         .expect("run qmltestrunner");
     let text = format!(
@@ -1147,23 +1175,48 @@ fn a_covered_pages_own_callbacks_see_its_document() {
         .filter_map(|l| l.find("CD ").map(|at| &l[at..]))
         .collect();
     let mine = "under no-over query-mine own-body made-found";
-    let want = [
-        "CD over up".to_owned(),
-        format!("CD timer {mine}"),
-        format!("CD job {mine}"),
-        format!("CD observer {mine}"),
-        format!("CD frame {mine}"),
-        format!("CD resize {mine}"),
-        format!("CD intersect {mine}"),
-        "CD over own no-under own-body none-made".to_owned(),
-        format!("CD listener {mine}"),
-        "CD over after none-made".to_owned(),
+    // Between the page on top coming up and the host's check, the covered
+    // page's callbacks run in no order a page can rely on: the frame, the
+    // observers and the fetch are each due at their own time.
+    let mut between: Vec<String> = [
+        "timer",
+        "job",
+        "observer",
+        "frame",
+        "resize",
+        "intersect",
+        "fetch",
+    ]
+    .iter()
+    .map(|when| format!("CD {when} {mine}"))
+    .collect();
+    between.sort();
+    // The host's events order the rest: the check, the listener, and what is
+    // left once the covered page went.
+    let listener = format!("CD listener {mine}");
+    let after = [
+        "CD check own no-under own-body none-made",
+        listener.as_str(),
+        "CD after own no-under own-body none-made",
+        "CD intervals 0",
     ];
-    if logged != want {
+    let in_order = logged.len() == 1 + between.len() + after.len()
+        && logged[0] == "CD over up"
+        && {
+            let mut ran: Vec<String> = logged[1..=between.len()]
+                .iter()
+                .map(|l| (*l).to_owned())
+                .collect();
+            ran.sort();
+            ran == between
+        }
+        && logged[1 + between.len()..] == after;
+    if !in_order {
         problems.push(format!(
-            "logged\n    {}\n  wanted\n    {}",
+            "logged\n    {}\n  wanted \"CD over up\", then in any order\n    {}\n  then\n    {}",
             logged.join("\n    "),
-            want.join("\n    ")
+            between.join("\n    "),
+            after.join("\n    ")
         ));
     }
     assert!(problems.is_empty(), "{}", problems.join("\n  "));
