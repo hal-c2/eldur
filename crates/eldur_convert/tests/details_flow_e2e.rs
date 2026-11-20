@@ -471,6 +471,107 @@ SUPPORT
 }
 "##;
 
+// A made summary is activated as Chromium does it: a button inside it takes
+// the click itself, a summary a rule makes a block has no marker, and the
+// value a script gives `open` stays.
+const ACTS_PAGE: &str = r##"<!doctype html>
+<style>
+:root { --fg: #c1c3c8; }
+:root[data-theme='light'] { --fg: #23262f; }
+body { color: var(--fg); font: 16px/18px sans-serif; }
+#b > summary { display: block; }
+</style>
+<script>document.documentElement.dataset.theme = 'light';</script>
+<div id="host"></div>
+<p id="out">Out none</p>
+<button id="make">Make</button>
+<button id="attr">Attr</button>
+<script>
+const out = document.getElementById('out');
+document.getElementById('make').addEventListener('click', () => {
+  document.getElementById('host').innerHTML =
+    '<details id="a"><summary>Ctl sum <button id="inner">Inner</button></summary><p>Ctl body</p></details>'
+    + '<details id="b"><summary>Block sum</summary><p>Block body</p></details>'
+    + '<details id="c"><summary>Attr sum</summary><p>Attr body</p></details>';
+  document.getElementById('inner').addEventListener('click', () => { out.textContent = 'Out inner'; });
+});
+document.getElementById('attr').addEventListener('click', () => {
+  const c = document.getElementById('c');
+  c.setAttribute('open', 'open');
+  out.textContent = 'Out ' + c.getAttribute('open') + ' ' + c.open;
+});
+</script>
+"##;
+
+const ACTS_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 800
+    height: 600
+
+TestCase {
+    name: "DetailsActs"
+    when: windowShown
+SUPPORT
+
+    function shows(page, item) {
+        for (let i = item; i && i !== page; i = i.parent) {
+            if (!i.visible || i.opacity === 0)
+                return false
+        }
+        return true
+    }
+
+    function button(page, label) {
+        return find(page, i => i.eldurTag === "button" && i.text === label)
+    }
+
+    function hidden(page, words) {
+        const t = textOf(page, words)
+        return t === null || !shows(page, t)
+    }
+
+    // The marker in the summary the words are in: up to its details, which
+    // holds the body too, and no further.
+    function markerOf(page, words) {
+        let marker = null
+        for (let i = textOf(page, words); i && i !== page && marker === null; i = i.parent) {
+            if (textOf(i, " body") !== null)
+                break
+            marker = disclosure(i)
+        }
+        return marker
+    }
+
+    function test_made_activation() {
+        const page = load(Qt.createComponent("Main.qml"))
+        verify(page.eldurOpenElements === true, "the page does not style made elements")
+        mouseClick(button(page, "Make"))
+        tryVerify(() => textOf(page, "Block sum") !== null && button(page, "Inner") !== null,
+                  2000, "made lines")
+        waitForRendering(page)
+
+        const inner = button(page, "Inner")
+        mouseClick(inner)
+        tryVerify(() => textOf(page, "Out inner") !== null, 2000, "the inner button did not hear its click")
+        wait(100)
+        verify(hidden(page, "Ctl body"), "a click on a button in the summary opened its details")
+
+        verify(markerOf(page, "Attr sum") !== null, "a list-item summary has no marker")
+        verify(markerOf(page, "Block sum") === null, "a summary made a block has a marker")
+
+        mouseClick(button(page, "Attr"))
+        tryVerify(() => textOf(page, "Out open true") !== null, 2000,
+                  "the open attribute lost its value: " + (textOf(page, "Out ") || {}).text)
+        tryVerify(() => !hidden(page, "Attr body"), 2000, "setting open did not open it")
+    }
+}
+}
+"##;
+
 // A `<details>` a script closes while an ancestor hides it stays closed once
 // the ancestor shows again, and opens as before.
 const UNDER_PAGE: &str = r##"<!doctype html>
@@ -753,6 +854,8 @@ body { font: 16px/18px sans-serif; }
 <details><summary>Wrap summary</summary><p>Wrap para</p></details>
 <div class="f">Wrap float</div><p>Wrap text</p>
 <div style="clear: both"></div>
+<div class="f">Tail float</div><details open><summary>Tail summary</summary><p>Tail para</p></details>
+<div style="clear: both">Tail after</div>
 <button id="t">Dim</button>
 <script>
 document.getElementById('t').addEventListener('click', () => {
@@ -829,6 +932,16 @@ SUPPORT
         click(page, "Wrap summary")
         below(page, textOf(page, "Wrap para"), wrapFloat, 16, "wrapped float, open")
         below(page, textOf(page, "Wrap para"), wrapText, 16, "wrapped float, open")
+
+        // Chromium: a block clearing a float the details was wrapped around
+        // is past the paragraph's 16 px while it is open, and right under
+        // the summary once it closes.
+        const tailSummary = textOf(page, "Tail summary")
+        const tailAfter = textOf(page, "Tail after")
+        verify(tailSummary && tailAfter, "tail lines")
+        below(page, textOf(page, "Tail para"), tailAfter, 16, "cleared float, open")
+        click(page, "Tail summary")
+        below(page, tailSummary, tailAfter, 0, "cleared float, closed")
     }
 }
 }
@@ -932,6 +1045,11 @@ fn what_a_script_makes_in_a_details_folds_as_the_rest() {
 #[test]
 fn a_details_closed_under_a_hidden_ancestor_stays_closed_when_it_shows() {
     run(UNDER_PAGE, UNDER_TEST, "eldur-details-under");
+}
+
+#[test]
+fn a_made_summary_is_activated_and_marked_as_chromium_does_it() {
+    run(ACTS_PAGE, ACTS_TEST, "eldur-details-acts");
 }
 
 #[test]
