@@ -422,7 +422,21 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
     } else {
         String::new()
     };
-    files.extend(crate::emit::components(&main, &runtime));
+    // A page can hold an element of a tag when its HTML has one, a script
+    // creates one (`createElement`, literal markup), or a script inserts
+    // markup the analysis cannot read and spells the tag's start somewhere.
+    // A tag a script builds out of pieces is not seen.
+    let can_make = |tag: &str| {
+        doc.descendants(doc.root())
+            .any(|n| doc.element(n).is_some_and(|e| e.local_name() == tag))
+            || scripts.analysis.created.iter().any(|c| c.tag == tag)
+            || (!scripts.analysis.opaque_inserts.is_empty()
+                && scripts
+                    .inputs
+                    .iter()
+                    .any(|i| i.source.contains(&format!("<{tag}"))))
+    };
+    files.extend(crate::emit::components(&main, &runtime, can_make));
     // Each state the page was emitted in wrote its svgs; a state that was
     // folded away leaves files nothing shows.
     let shown = |path: &str| {
