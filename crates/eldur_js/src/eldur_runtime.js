@@ -18539,7 +18539,10 @@ function labelled(item) {
     var raw = _unwrap(item);
     // Qt also gives a press to a covered page's label under the point, whose
     // tap joins the document's press: that label is not in the document the
-    // press is on, so its control gets nothing.
+    // press is on, so its control gets nothing. The control's page is the
+    // label's: the converter names it by the label's own QML id, and
+    // `_inHandedDefaults` takes labels from the document's own path, so a
+    // `for` id the page on top shares never finds the top page's control.
     if (_pageOf(raw) !== _root) {
         return;
     }
