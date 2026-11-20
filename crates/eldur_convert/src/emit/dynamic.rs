@@ -57,6 +57,16 @@ pub(super) fn marker(node: NodeId) -> String {
     format!("{MARKER}{}", node.index())
 }
 
+/// The marker comment [`Emitter`] puts on the first box an inline element
+/// with no item of its own holds, when a class may make the element a
+/// stacking context: the box's lift follows the class, so the class binds
+/// there. [`strip_markers`] strips it with the others.
+pub(super) fn carried_marker(node: NodeId) -> String {
+    format!("{MARKER}{CARRIED}{}", node.index())
+}
+
+const CARRIED: &str = "in:";
+
 fn marked(obj: &Object) -> Option<usize> {
     obj.members.iter().find_map(|m| match m {
         Member::Comment(c) => c.strip_prefix(MARKER).and_then(|n| n.parse().ok()),
@@ -895,11 +905,20 @@ fn object_at<'o>(root: &'o mut Object, path: &[Step]) -> Option<&'o mut Object> 
 
 /// Every marked object's path.
 fn marker_paths(obj: &Object, path: &mut Path, out: &mut HashMap<usize, Path>) {
+    marks_under(obj, path, MARKER, out);
+}
+
+/// Where each [`carried_marker`] is.
+fn carried_paths(obj: &Object, path: &mut Path, out: &mut HashMap<usize, Path>) {
+    marks_under(obj, path, &format!("{MARKER}{CARRIED}"), out);
+}
+
+fn marks_under(obj: &Object, path: &mut Path, prefix: &str, out: &mut HashMap<usize, Path>) {
     // An item can be more than one element's: an icon in an inline link is
     // the svg's item and the link's.
     for m in &obj.members {
         if let Member::Comment(c) = m
-            && let Some(i) = c.strip_prefix(MARKER).and_then(|n| n.parse().ok())
+            && let Some(i) = c.strip_prefix(prefix).and_then(|n| n.parse().ok())
         {
             out.entry(i).or_insert_with(|| path.clone());
         }
@@ -907,7 +926,7 @@ fn marker_paths(obj: &Object, path: &mut Path, out: &mut HashMap<usize, Path>) {
     for (i, m) in obj.members.iter().enumerate() {
         if let Member::Child(c) = m {
             path.push(Step::Child(i));
-            marker_paths(c, path, out);
+            marks_under(c, path, prefix, out);
             path.pop();
         }
     }
@@ -960,6 +979,8 @@ struct Across {
     restacks: HashSet<NodeId>,
     /// The elements hidden in some combination (the keys of `shown`).
     hideable: HashSet<NodeId>,
+    /// Elements a class or state may make a stacking context or not.
+    contexts: HashSet<NodeId>,
 }
 
 impl Dynamic<'_, '_> {
@@ -1007,6 +1028,13 @@ impl Dynamic<'_, '_> {
             .map(|e| e.node)
             .collect();
         let doc = self.cx.doc;
+        let contexts: HashSet<NodeId> = self
+            .found
+            .elements
+            .iter()
+            .filter(|e| matches!(restacks(&e.by_mask), Restacks::Subtree))
+            .map(|e| e.node)
+            .collect();
         let restacks: HashSet<NodeId> = self
             .found
             .elements
@@ -1035,6 +1063,7 @@ impl Dynamic<'_, '_> {
             shares,
             restacks,
             hideable: shown.keys().copied().collect(),
+            contexts,
         };
         let (styles, collapsed) = self.world(&[], &shown);
         let Emitted {
@@ -1047,11 +1076,20 @@ impl Dynamic<'_, '_> {
         } = Self::emit_world(self.cx, &styles, &across, collapsed, self.diags);
         let mut markers = HashMap::new();
         marker_paths(&root, &mut Vec::new(), &mut markers);
+        let mut carried = HashMap::new();
+        carried_paths(&root, &mut Vec::new(), &mut carried);
+        carried.retain(|i, _| !markers.contains_key(i));
         // A condition on an element without an item of its own (an inline
         // link in a paragraph) has nothing to bind; its combinations would
-        // only change the form of the text around it.
+        // only change the form of the text around it. A class that may make
+        // it a stacking context binds on a box it holds.
         let unmarked: BTreeSet<u16> = (0..self.conds.len())
-            .filter(|&c| !markers.contains_key(&node_of(&self.conds[c].cond).index()))
+            .filter(|&c| {
+                let cond = &self.conds[c].cond;
+                let at = node_of(cond).index();
+                !markers.contains_key(&at)
+                    && !(carried.contains_key(&at) && matches!(cond, Condition::Class { .. }))
+            })
             .map(|c| u16::try_from(c).expect("conditions fit u16"))
             .collect();
         for &c in &unmarked {
@@ -1149,6 +1187,7 @@ impl Dynamic<'_, '_> {
         }
         let mut sources = Sources {
             probe: self.cx.probe.is_some(),
+            carried,
             ..Sources::default()
         };
         let mut bindings: BTreeMap<Path, Vec<(String, String, Option<Member>)>> = BTreeMap::new();
@@ -1649,6 +1688,7 @@ impl Dynamic<'_, '_> {
         emitter.shares = across.shares.clone();
         emitter.restacks = across.restacks.clone();
         emitter.hideable = across.hideable.clone();
+        emitter.restack_contexts = across.contexts.clone();
         emitter.collapsed = collapsed.clone();
         let root = emitter.document(tree.as_ref(), body);
         cx.svgs.borrow_mut().append(&mut emitter.svgs);
@@ -2226,6 +2266,11 @@ struct Sources {
     exprs: BTreeMap<u16, Option<String>>,
     /// `cls_` properties to declare, by the path of the object.
     classes: BTreeMap<Path, (NodeId, BTreeSet<String>)>,
+    /// Where an inline element with no item of its own binds its classes
+    /// ([`carried_marker`]), by its node's index.
+    carried: HashMap<usize, Path>,
+    /// Their properties to declare there, by the path of the box.
+    carried_classes: BTreeMap<Path, BTreeMap<NodeId, BTreeSet<String>>>,
     /// Hover/press handlers to add: path, handler type, id.
     handlers: BTreeMap<Path, Vec<(&'static str, String)>>,
     /// What takes the focus by `tabindex`, with no control's policy to do it.
@@ -2275,7 +2320,12 @@ impl Sources {
         let cond = &dynamic.conds[usize::from(c)].cond;
         let node = node_of(cond);
         // `run` leaves out conditions without an item.
-        let path = markers.get(&node.index())?;
+        let carried = !markers.contains_key(&node.index());
+        let path = markers
+            .get(&node.index())
+            .or_else(|| self.carried.get(&node.index()))?
+            .clone();
+        let path = &path;
         let obj = object_at(root, path)?;
         let id = match &obj.id {
             Some(id) => id.clone(),
@@ -2292,6 +2342,16 @@ impl Sources {
         };
         let control = classify(doc, node);
         let expr = match cond {
+            Condition::Class { class, .. } if carried => {
+                self.carried_classes
+                    .entry(path.clone())
+                    .or_default()
+                    .entry(node)
+                    .or_default()
+                    .insert(class.clone());
+                format!("{id}.{}", crate::metadata::carried_class_prop(node, class))
+            }
+            _ if carried => return None,
             Condition::Class { class, .. } => {
                 self.classes
                     .entry(path.clone())
@@ -2401,6 +2461,7 @@ impl Sources {
         _imports: &mut BTreeSet<&'static str>,
     ) {
         let mut paths: BTreeSet<&Path> = self.classes.keys().collect();
+        paths.extend(self.carried_classes.keys());
         paths.extend(self.handlers.keys());
         paths.extend(self.hover_enabled.iter());
         paths.extend(self.positions.keys());
@@ -2426,6 +2487,9 @@ impl Sources {
             }
             if let Some((node, classes)) = self.classes.get(path) {
                 crate::metadata::declare_classes(obj, doc, *node, classes);
+            }
+            for (node, classes) in self.carried_classes.get(path).into_iter().flatten() {
+                crate::metadata::declare_carried_classes(obj, doc, *node, classes);
             }
             if let Some(&(node, of_type)) = self.positions.get(path) {
                 crate::metadata::declare_position(obj, doc, node, of_type);
