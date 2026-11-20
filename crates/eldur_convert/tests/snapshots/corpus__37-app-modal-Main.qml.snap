@@ -217,12 +217,12 @@ ApplicationWindow {
         implicitHeight: overlayContent.implicitHeight
         objectName: "overlay"
         visible: overlay.cls_open ? ((overlaySlot.parent ? overlaySlot.parent.visible : false)) : (((overlaySlot.parent ? overlaySlot.parent.visible : false) && (false)))
-        anchors.left: parent.left
-        anchors.right: parent.right
+        anchors.left: parent ? (parent.left) : undefined
+        anchors.right: parent ? (parent.right) : undefined
         anchors.leftMargin: 0
         anchors.rightMargin: 0
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
+        anchors.top: parent ? (parent.top) : undefined
+        anchors.bottom: parent ? (parent.bottom) : undefined
         anchors.topMargin: 0
         anchors.bottomMargin: 0
 

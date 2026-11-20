@@ -219,9 +219,9 @@ ApplicationWindow {
                                 visible: menu.cls_open ? ((menuListSlot.parent ? menuListSlot.parent.visible : false)) : (((menuListSlot.parent ? menuListSlot.parent.visible : false) && (false)))
                                 z: 10
                                 width: 182
-                                anchors.right: parent.right
+                                anchors.right: parent ? (parent.right) : undefined
                                 anchors.rightMargin: 0
-                                y: parent.height + 4
+                                y: parent ? (parent.height + 4) : 0
                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
 
                                 RectangularShadow {
