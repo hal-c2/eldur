@@ -69,6 +69,8 @@ const out = {
   onclickthrow: await record("onclickthrow", ["out"], "#go"),
   onloadthrow: await record("onloadthrow", ["out"]),
   onloadnull: await record("onloadnull", ["out"]),
+  onloadplace: await record("onloadplace", ["out"]),
+  onloadreset: await record("onloadreset", ["out"]),
   readlater: await record("readlater", ["out"]),
 };
 await browser.close();

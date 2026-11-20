@@ -275,6 +275,32 @@
       "Error: handler"
     ]
   },
+  "onloadplace": {
+    "lines": [
+      "handler runs",
+      "listen runs",
+      "late runs",
+      "listener",
+      "late onload"
+    ],
+    "text": {
+      "out": "late"
+    },
+    "errors": [
+      "Error: handler"
+    ]
+  },
+  "onloadreset": {
+    "lines": [
+      "reset runs",
+      "listener",
+      "reset onload"
+    ],
+    "text": {
+      "out": "reset"
+    },
+    "errors": []
+  },
   "readlater": {
     "lines": [
       "copy 2",

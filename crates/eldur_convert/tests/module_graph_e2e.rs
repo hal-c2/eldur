@@ -470,6 +470,32 @@ fn the_last_window_onload_assignment_that_ran_wins() {
     assert_eq!(run("onloadnull", &read), wanted("onloadnull", &read));
 }
 
+/// `handler.js` throws before it sets `window.onload`, `listen.js` adds a
+/// `load` listener, and `late.js` sets `window.onload`. The handler takes its
+/// place among the `load` listeners when the assignment runs, so the listener
+/// is heard first.
+#[test]
+fn a_window_onload_takes_its_place_when_it_is_set() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("onloadplace", &read), wanted("onloadplace", &read));
+}
+
+/// A classic script sets `window.onload`, another adds a `load` listener, and a
+/// module sets `window.onload = null` and then another handler. `null` takes
+/// the handler out of the `load` listeners, so the new one is heard after the
+/// listener.
+#[test]
+fn a_window_onload_set_again_after_null_is_heard_last() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("onloadreset", &read), wanted("onloadreset", &read));
+}
+
 /// `source.js` pushes to an array before copying it, and defines a getter
 /// that throws before destructuring the object it is on. Each initializer
 /// sees what ran before it: the copy has two items and the destructuring

@@ -385,7 +385,13 @@ const APP_NAME = "Demo";
 let counter = 0;
 let saved;
 let a, b;
+var __eldur_load_listeners = [];
 var __eldur_window_onload = null;
+function __eldur_call_window_onload() {
+    if (typeof __eldur_window_onload === "function") {
+        __eldur_window_onload.call(Eldur.window, Eldur.event("load", Eldur.window, null));
+    }
+}
 function onReady() {
     counter += 10;
 }
@@ -394,20 +400,20 @@ function __eldur_init(rootItem) {
     Eldur.init(rootItem || (typeof root !== "undefined" ? root : null));
     saved = Eldur.localStorage.getItem("saved") ?? "none";
     ({ a, b } = parsePair(saved));
-    __eldur_window_onload = function() {
+    __eldur_window_onload = Eldur.setOnload(__eldur_load_listeners, __eldur_call_window_onload, function() {
         counter += 100;
-    };
-    __eldur_window_onload = function() {
+    });
+    __eldur_load_listeners.push(function () {
+        onReady(Eldur.event("load", Eldur.window, null));
+    });
+    __eldur_window_onload = Eldur.setOnload(__eldur_load_listeners, __eldur_call_window_onload, function() {
         outLabel.text = APP_NAME + ":" + counter;
-    };
+    });
     console.log("top-level tail", a, b);
     (() => {
         counter += 1;
     })(Eldur.event("DOMContentLoaded", Eldur.document, null));
-    if (typeof __eldur_window_onload === "function") {
-        __eldur_window_onload.call(Eldur.window, Eldur.event("load", Eldur.window, null));
-    }
-    onReady(Eldur.event("load", Eldur.window, null));
+    Eldur.fireLoad(__eldur_load_listeners);
 }
 "###);
 }
@@ -3726,20 +3732,68 @@ fn window_onload_is_set_where_it_runs() {
     let js = &out.page_js;
     let run = function_body(js, "__eldur_run_m1");
     assert!(
-        run.find("__eldur_window_onload = null;")
+        run.find("__eldur_window_onload = Eldur.setOnload(__eldur_load_listeners, __eldur_call_window_onload, null);")
             .expect("null set in its module")
             > run.find("fail()").expect("fail call"),
         "{js}"
     );
     let init = function_body(js, "__eldur_init");
     assert!(
-        init.contains("__eldur_window_onload = function () {"),
+        init.contains(
+            "__eldur_window_onload = Eldur.setOnload(__eldur_load_listeners, __eldur_call_window_onload, function () {"
+        ),
         "{js}"
     );
     assert!(
-        init.contains("if (typeof __eldur_window_onload === \"function\") {"),
+        function_body(js, "__eldur_call_window_onload")
+            .contains("if (typeof __eldur_window_onload === \"function\") {"),
         "{js}"
     );
+}
+
+/// A `load` listener and `window.onload` each take their place among the
+/// `load` listeners where they run: the listener is pushed where its module
+/// adds it, and each assignment goes through `Eldur.setOnload`, which adds the
+/// handler at the end, keeps its place while replaced, and takes it out on
+/// `null`. Nothing is put in place at conversion.
+#[test]
+fn load_listeners_take_their_place_where_they_run() {
+    let resolver = FakeResolver::default();
+    let handler = module_script(
+        "handler.js",
+        "fail();\nwindow.onload = () => console.log(\"h1\");\nfunction fail() { throw new Error(\"bad\"); }\n",
+    );
+    let listen = module_script(
+        "listen.js",
+        "window.addEventListener(\"load\", () => console.log(\"l\"));\n",
+    );
+    let reset = module_script(
+        "reset.js",
+        "window.onload = null;\nwindow.onload = () => console.log(\"h2\");\n",
+    );
+    let out = run_rewrite(&[handler, listen, reset], &resolver);
+    let js = &out.page_js;
+    let set = "__eldur_window_onload = Eldur.setOnload(__eldur_load_listeners, __eldur_call_window_onload, ";
+    let run0 = function_body(js, "__eldur_run_m0");
+    assert!(
+        run0.find(set).expect("h1 set in its module") > run0.find("fail()").expect("fail call"),
+        "{js}"
+    );
+    let run1 = function_body(js, "__eldur_run_m1");
+    assert!(
+        run1.contains("__eldur_load_listeners.push(function () {"),
+        "{js}"
+    );
+    let run2 = function_body(js, "__eldur_run_m2");
+    let null_at = run2.find(&format!("{set}null);")).expect("null set");
+    assert!(run2[null_at + 1..].contains(set), "{js}");
+    let init = function_body(js, "__eldur_init");
+    assert!(
+        init.trim_end()
+            .ends_with("Eldur.fireLoad(__eldur_load_listeners);"),
+        "{js}"
+    );
+    assert!(!init.contains("__eldur_window_onload"), "{js}");
 }
 
 /// Whatever runs at load, inside `__eldur_init` or a module's run function,
