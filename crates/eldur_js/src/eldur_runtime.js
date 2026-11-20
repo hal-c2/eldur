@@ -533,6 +533,13 @@ function _setRoot(root) {
 var _roots = [];
 // Each page's input layer, by its root: the layer is made on the root.
 var _inLayers = new Map();
+// The window's own count of presses, which no page has: a browser counts the
+// presses on its window, so a press where the last one was, on a page made
+// over that one's, is its second.
+var _inCounting = _inNoCount();
+// The count of the press whose defaults are running: a label's click on its
+// control carries it.
+var _inDefaultsDetail = 0;
 // What `init` worked out for a page's own items (its rules, models, statics),
 // by its root, kept while a later page is the document: when that one goes,
 // the earlier is the document again with what it had.
@@ -866,6 +873,7 @@ function _resetPageState() {
     _tap = null;
     _in = null;
     _inLayers = new Map();
+    _inCounting = _inNoCount();
     _pageCaches = new Map();
     _dialogs = [];
     _dialogs.moved = 0;
@@ -16771,7 +16779,7 @@ function _inInstallFor(raw, type) {
 function _inInstall() {
     _in = {
         page: _root, overlay: null, held: 0, last: null, pressed: false, hoverP: null, hoverM: null,
-        downTarget: {}, noMouse: false, count: 0, countButton: -1, countAt: null, countTime: 0,
+        downTarget: {}, noMouse: false, count: 0,
         capture: null, captureNext: null, defaults: [], scrolled: null, restoreFocus: null,
         restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusMoves: 0, focusShift: false, focusPending: null, untold: [], shiftTo: null, change: null, overridden: null, away: false, seenActive: false, windowHas: false, backLater: false, backGen: 0, windowTelling: false,
         spaceDown: null, typing: null, popovers: [], radioLast: {}, focusProbe: null
@@ -16790,7 +16798,7 @@ function _inInstall() {
         + "}", home, "eldur_input");
     _in.overlay = overlay;
     // A page in another window still has its layer: its pointer is not the document's.
-    var pointed = _inOnPage(_root, _inPointed);
+    var pointed = _inPointedOn(_root);
     overlay.pointed.connect(pointed);
     // On what holds the page: Qt gives a hover to one branch, so one over the
     // page would leave every element's `:hover` and cursor without.
@@ -16844,14 +16852,35 @@ function _inInstall() {
     // came first; there is no such listener, as this runs at the first.
 }
 
+function _inNoCount() {
+    return { count: 0, button: -1, at: null, time: 0, window: null };
+}
+
+// What the mouse does on `page`, for its layer. Running the click of the
+// release before may make another page the document; Qt gave this to the
+// items of the page that went, so the new page's never hear it and it is
+// neither page's. A person's next press comes after that click has run, and
+// is the new page's from the start.
+function _inPointedOn(page) {
+    return function(scene, buttons, modifiers) {
+        if (_pageGone() || _root !== page || !_in) {
+            return;
+        }
+        var layer = _in;
+        // Nothing the mouse does overtakes the click of the release before it.
+        _inFlushLater();
+        if (_in === layer) {
+            _inPointed(scene, buttons, modifiers);
+        }
+    };
+}
+
 // One call for each thing the mouse does; `buttons` is -1 for "as it was", from
 // a hover, and a released point has no position left to read.
 function _inPointed(scene, buttons, modifiers) {
     if (_pageGone() || !_in) {
         return;
     }
-    // Nothing the mouse does overtakes the click of the release before it.
-    _inFlushLater();
     if (scene.x === -1e9) {
         scene = _in.last;
     }
@@ -17049,13 +17078,18 @@ function _inDown(bit, scene, mods, heldBefore) {
     var target = _inRetarget(scene, mods);
     var button = _IN_BUTTON(bit);
     var now = Date.now();
-    var at = _in.countAt;
-    var again = _in.countButton === bit && at && now - _in.countTime <= Qt.styleHints.mouseDoubleClickInterval
+    var counting = _inCounting;
+    var at = counting.at;
+    var window = _in.focusProbe ? _in.focusProbe.window : null;
+    var again = counting.button === bit && counting.window === window && at
+        && now - counting.time <= Qt.styleHints.mouseDoubleClickInterval
         && Math.abs(at.x - scene.x) < 2 && Math.abs(at.y - scene.y) < 2;
-    _in.count = again ? _in.count + 1 : 1;
-    _in.countButton = bit;
-    _in.countAt = Qt.point(scene.x, scene.y);
-    _in.countTime = now;
+    counting.count = again ? counting.count + 1 : 1;
+    counting.button = bit;
+    counting.at = Qt.point(scene.x, scene.y);
+    counting.time = now;
+    counting.window = window;
+    _in.count = counting.count;
     _in.pressed = true;
     _in.downTarget[bit] = target;
     if (heldBefore === 0) {
@@ -17168,10 +17202,22 @@ function _inClickOn(target, bit, button, count, scene, mods, moved) {
     if (!own()) {
         return;
     }
+    // A default may make another page the document too (a label's click on
+    // its control, a fragment's `hashchange`): what is left is none of its.
     if (!ev.defaultPrevented) {
-        defaults.forEach(function(run) { run(); });
+        var detail = _inDefaultsDetail;
+        _inDefaultsDetail = count;
+        try {
+            defaults.forEach(function(run) {
+                if (own()) {
+                    run();
+                }
+            });
+        } finally {
+            _inDefaultsDetail = detail;
+        }
     }
-    if (count === 2) {
+    if (count === 2 && own()) {
         _inFire("dblclick", target, scene, mods, { detail: 2 });
     }
 }
@@ -17384,15 +17430,16 @@ function afterClick(follow) {
 // A label's control gets a click of its own, counted as the press that made it.
 function labelled(item) {
     var raw = _unwrap(item);
+    var detail = _inDefaultsDetail || 1;
     if (typeof raw.click === "function") {
-        _meta(raw).clickDetail = 1;
+        _meta(raw).clickDetail = detail;
         raw.click();
         delete _meta(raw).clickDetail;
         return;
     }
     raw.forceActiveFocus();
     if (_in) {
-        var ev = event("click", wrap(raw), { detail: 1 });
+        var ev = event("click", wrap(raw), { detail: detail });
         ev.target = wrap(raw);
         ev.bubbles = true;
         _dispatchDynamic(raw, "click", ev);
