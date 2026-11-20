@@ -328,7 +328,7 @@
    "LC ws \"g \",wb,\" \",wi",
    "LC markup gmb,\" now\" \"Go now\" gm \" now\" 21",
    "LC legend gl false true true true",
-   "LC after-p sc 17",
+   "LC after-p sc \"\\n\" true",
    "LC to-body \"end \" true true"
   ],
   "clicks": []
