@@ -6,8 +6,8 @@ use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
 use eldur_css::{
-    Diagnostic, Display, Easing, Length, LengthAuto, LoadedSheet, Origin, PseudoState, Rgba,
-    Severity, Stylesheet, StylesheetLoader, Viewport, collect_stylesheets, compute_styles,
+    Diagnostic, Direction, Display, Easing, Length, LengthAuto, LoadedSheet, Origin, PseudoState,
+    Rgba, Severity, Stylesheet, StylesheetLoader, Viewport, collect_stylesheets, compute_styles,
 };
 use eldur_dom::Document;
 
@@ -1219,6 +1219,29 @@ fn collect_stylesheets_and_imports_with_cycles_diamond_and_depth_limit() {
     assert_eq!(ts.margin.top, px(15.0));
     assert_eq!(ts.color, Rgba::new(20, 40, 60, 255));
     assert_eq!(ts.font_size, 24.0);
+}
+
+/// HTML §15.3.5: the `dir` attribute sets `direction`, which inherits, and a
+/// nested `dir` sets it again; `auto` and other values leave it inherited.
+#[test]
+fn the_dir_attribute_sets_the_direction() {
+    let doc = Document::parse(
+        r#"<!doctype html><html><body>
+        <div id="r" dir="RTL"><p id="in">x</p><div id="l" dir="ltr"></div><div id="o" dir="auto"></div></div>
+        <div id="n"></div>
+        </body></html>"#,
+    );
+    let map = compute_styles(&doc, &[], &Viewport::default());
+    let direction = |id: &str| {
+        map.style(doc.element_by_id(id).expect(id))
+            .expect(id)
+            .direction
+    };
+    assert_eq!(direction("r"), Direction::Rtl);
+    assert_eq!(direction("in"), Direction::Rtl);
+    assert_eq!(direction("l"), Direction::Ltr);
+    assert_eq!(direction("o"), Direction::Rtl);
+    assert_eq!(direction("n"), Direction::Ltr);
 }
 
 #[test]
