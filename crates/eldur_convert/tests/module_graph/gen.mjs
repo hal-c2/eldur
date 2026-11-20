@@ -61,6 +61,8 @@ const out = {
   element: await record("element", ["out", "label"]),
   cycle: await record("cycle", ["out"]),
   skip: await record("skip", ["out"]),
+  cross: await record("cross", ["out"]),
+  hoist: await record("hoist", ["out"]),
 };
 await browser.close();
 fs.writeFileSync(path.join(here, "chromium.json"), `${JSON.stringify(out, null, 2)}\n`);

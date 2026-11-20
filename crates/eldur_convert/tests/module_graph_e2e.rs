@@ -373,3 +373,28 @@ fn a_module_skipped_by_a_failed_importer_runs_later() {
     let read = ["out"];
     assert_eq!(run("skip", &read), wanted("skip", &read));
 }
+
+/// A module that reaches a cycle through a module of it that already ran, not
+/// back to the module still running, is part of that cycle: when the cycle
+/// throws it fails too, its `import()` rejects, and a module importing it does
+/// not run.
+#[test]
+fn a_module_reaching_a_running_cycle_fails_with_it() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("cross", &read), wanted("cross", &read));
+}
+
+/// A top-level initializer that throws while it is worked out, here a template
+/// whose value's `toString` throws, fails its module only: the scripts after it
+/// run and an `import()` of it rejects with that error.
+#[test]
+fn a_throwing_initializer_fails_its_module_only() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("hoist", &read), wanted("hoist", &read));
+}
