@@ -321,6 +321,18 @@
   ],
   "clicks": []
  },
+ "drawn_gaps": {
+  "log": [
+   "LC span-before gs,\"Save\" \"GoSave\" true true true",
+   "LC emptied 0 true true",
+   "LC ws \"g \",wb,\" \",wi",
+   "LC markup gmb,\" now\" \"Go now\" gm \" now\" 21",
+   "LC legend gl false true true true",
+   "LC after-p sc 17",
+   "LC to-body \"end \" true true"
+  ],
+  "clicks": []
+ },
  "ev_change": {
   "log": [
    "LC focus",
