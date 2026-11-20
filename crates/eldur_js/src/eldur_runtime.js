@@ -86,17 +86,23 @@ var Promise = (function() {
 
     // Whether taking on `value` runs no script: it has no `then` a getter
     // gives, and none to call but this runtime's own on its own promise. Looked
-    // up by descriptor, so no getter runs to find out.
+    // up by descriptor, so no getter runs to find out. A proxy's trap that
+    // throws while it is looked up is a script's, so the value is too, and
+    // the other reactions still get queued.
     function takesNoScript(value) {
         if (!value || typeof value !== "object" && typeof value !== "function") {
             return true;
         }
-        for (var at = value; at; at = Object.getPrototypeOf(at)) {
-            var d = Object.getOwnPropertyDescriptor(at, "then");
-            if (d) {
-                return !("get" in d) && !("set" in d)
-                    && (typeof d.value !== "function" || d.value === ownThen && value instanceof Promise);
+        try {
+            for (var at = value; at; at = Object.getPrototypeOf(at)) {
+                var d = Object.getOwnPropertyDescriptor(at, "then");
+                if (d) {
+                    return !("get" in d) && !("set" in d)
+                        && (typeof d.value !== "function" || d.value === ownThen && value instanceof Promise);
+                }
             }
+        } catch (err) {
+            return false;
         }
         return true;
     }

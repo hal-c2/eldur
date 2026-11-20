@@ -1066,6 +1066,12 @@ over.addEventListener("after", function(e) {
   L("history", history.length, JSON.stringify(history.state), location.hash || "-");
   history.back();
   L("back", history.length, JSON.stringify(history.state), location.hash || "-");
+  // A value whose lookup throws in a proxy's trap: the reaction before the
+  // handler's still lets the handler's be queued.
+  var proxied = new Promise(function(settle) { window.settleProxied = settle; });
+  proxied.then();
+  proxied.then(function(v) { L("proxied", typeof v); });
+  window.settleProxied(new Proxy({}, { getOwnPropertyDescriptor: function() { throw new Error("trap"); } }));
   window.chained.then(function(v) { L("chained", v.v); });
   window.settleChained({ v: "settled" });
 });
@@ -1233,6 +1239,7 @@ fn a_covered_pages_own_callbacks_see_its_document() {
         "CD after own no-under own-body none-made",
         r##"CD history 2 {"under":1} -"##,
         "CD back 2 null -",
+        "CD proxied object",
         "CD chained settled",
         "CD intervals 0",
     ];
