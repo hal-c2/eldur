@@ -743,6 +743,42 @@ const CASES: &[Case] = &[
         toggle: "document.getElementById('w').classList.toggle('k');",
         back: &[],
     },
+    // The margins collapse around a rule's `var()` display as a class change
+    // leaves it: hidden, it keeps no 40px gap between its neighbours.
+    Case {
+        name: "class_variable_display_margins_close",
+        body: r#"<style>p{margin:0;height:20px}#o{--d:block}#w.k{--d:none}#shy{margin:40px 0;display:var(--d)}</style>
+<div id="o"><div id="w"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 128.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('w').classList.toggle('k');",
+        back: &[],
+    },
+    // The same for a script's `var()` display.
+    Case {
+        name: "written_variable_display_margins_close",
+        body: r#"<style>p{margin:0;height:20px}#o{--d:block}#w.k{--d:none}#shy{margin:40px 0}</style>
+<div id="o"><div id="w"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 128.0],
+        toggled: &[8.0, 128.0],
+        toggle: "const s = document.getElementById('shy'); const w = document.getElementById('w');
+  if (!s.style.display) { s.style.display = 'var(--d)'; } else { w.classList.toggle('k'); }",
+        back: &[8.0, 28.0],
+    },
+    // `url(/*)` names `/*`, so the `display:none` after it is the attribute's
+    // own and clearing it leaves nothing for `[style*="display"]` to match.
+    Case {
+        name: "url_comment_display_cleared",
+        body: r#"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="background-image:url(/*);display:none">B</p><p id="c">C</p>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "",
+        back: &[],
+    },
     // In the world a class makes, the custom property is what that class's
     // rule declares, not the value as loaded.
     Case {
@@ -1438,4 +1474,19 @@ fn a_custom_property_only_a_class_declares_is_the_hosts_attribute_until_then() {
 #[test]
 fn a_rules_variable_display_follows_a_custom_property_only_a_class_declares() {
     run(case("class_only_variable_written_display"));
+}
+
+#[test]
+fn margins_close_around_a_rules_variable_display_a_class_hides() {
+    run(case("class_variable_display_margins_close"));
+}
+
+#[test]
+fn margins_close_around_a_scripts_variable_display_a_class_hides() {
+    run(case("written_variable_display_margins_close"));
+}
+
+#[test]
+fn a_comment_opener_in_an_unquoted_url_leaves_display_the_attributes_own() {
+    run(case("url_comment_display_cleared"));
 }
