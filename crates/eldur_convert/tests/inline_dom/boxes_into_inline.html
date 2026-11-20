@@ -31,6 +31,12 @@ function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?
 <p id="ml" style="width:120px"><span id="mlx">x</span></p>
 <div id="mod" style="display:flex"><b id="mob">a long bold run that wraps</b><input id="moi" value="k" style="width:40px"></div>
 <p id="mo" style="width:120px"><span id="mox">x</span></p>
+<div id="mnd" style="display:flex"><b id="mnb">another bold run</b></div>
+<p id="mn"><span id="mnx">x</span></p>
+<div id="mmd" style="display:flex"><b id="mmb">a long bold <i id="mmi">run</i> that wraps</b></div>
+<p id="mm" style="width:120px"><span id="mmx">x</span></p>
+<div id="mkd" style="display:flex"><b id="mkb">a long bold <input id="mki" value="k" style="width:40px"> run that wraps</b></div>
+<p id="mk" style="width:120px"><span id="mkx">x</span></p>
 <script>
 // Boxes a script appends to an inline element go into that element: an atomic
 // box sits on its line after its text, a block splits the line around it.
@@ -138,6 +144,22 @@ L("page-wraps-in-made",N(mls),I(mlb.parentNode)===I(mls),R(mlb).b-R(mlb).t,R(mlb
 var mo=document.getElementById("mo"),mos=document.createElement("span"),mob=document.getElementById("mob"),moi=document.getElementById("moi");
 mos.append("f ",mob,moi);mo.append(mos);
 L("own-item-wraps-in-made",N(mos),I(mob.parentNode)===I(mos),R(mob).b-R(mob).t,R(mob).l-R(mo).l,R(mo).r-R(mob).r,mob.getClientRects().length);
+// One with an element of its own in its text wraps the same.
+var mm=document.getElementById("mm"),mms=document.createElement("span"),mmb=document.getElementById("mmb");
+mms.append("f ",mmb);mm.append(mms);
+L("mixed-wraps-in-made",N(mms),I(mmb.parentNode)===I(mms),I(document.getElementById("mmi").parentNode),R(mmb).b-R(mmb).t,R(mmb).l-R(mm).l,JSON.stringify(mmb.textContent));
+// And one holding a box: the box stays a box on the wrapped line.
+var mk=document.getElementById("mk"),mks=document.createElement("span"),mkb=document.getElementById("mkb"),mki=document.getElementById("mki");
+mks.append("f ",mkb);mk.append(mks);
+L("box-holder-wraps-in-made",N(mks),I(mkb.parentNode)===I(mks),I(mki.parentNode),mki.value,R(mkb).b-R(mkb).t>30,R(mkb).l-R(mk).l,R(mki).r-R(mki).l);
+// Out of the line again, below the body's boxes, it is drawn: the element
+// alone, and the made one holding it (where its text sits beside the element
+// is drawn_gaps' to-body, a Known gap).
+document.body.append(mob);
+L("own-item-out",I(mob.parentNode),JSON.stringify(mob.textContent),near(R(mob).b-R(mob).t,17),R(mob).r-R(mob).l>100,mob.getClientRects().length);
+var mn=document.getElementById("mn"),mns=document.createElement("span"),mnb=document.getElementById("mnb");
+mns.append("n ",mnb);mn.append(mns);mnb.textContent="BETA bold";document.body.append(mns);
+L("made-out",I(mns.parentNode),I(mnb.parentNode)===I(mns),JSON.stringify(mnb.textContent),near(R(mnb).b-R(mnb).t,17),R(mnb).r-R(mnb).l>40);
 // One replaced while its element is hidden is no longer the element's.
 var mp=document.getElementById("mp"),mz=document.createElement("input");mp.append(mz);
 mp.style.display="none";mp.replaceChild(document.createTextNode("r"),mz);mp.style.display="";
