@@ -1409,6 +1409,8 @@ function _asPage(page, fn, self, args) {
     _pageCacheLoad(kept, true);
     _root = page;
     _in = _inLayers.get(page) || null;
+    // The entry the history is on: whether the callback moved it.
+    var entryWas = _historyEntries[_historyIndex];
     try {
         return fn.apply(self, args);
     } finally {
@@ -1417,14 +1419,18 @@ function _asPage(page, fn, self, args) {
         if (_root === page) {
             _asPageSettle();
             var mine = _pageCacheSave();
-            // The history stayed where the page on top has it: this page is
-            // still on its own entry.
-            mine.entryIndex = kept.entryIndex;
-            mine.entryUrl = kept.entryUrl;
+            // The history is the pages' one and stays out of the swap. This
+            // page is still on its own entry, unless its callback moved the
+            // history: then it is on the entry it moved to.
+            if (_historyEntries[_historyIndex] === entryWas) {
+                mine.entryIndex = kept.entryIndex;
+                mine.entryUrl = kept.entryUrl;
+            }
             _pageCaches.set(page, mine);
             var back = _pageCaches.get(top);
             if (back) {
-                _pageCacheLoad(back);
+                // Where the callback left the history, the page on top is.
+                _pageCacheLoad(back, true);
                 _pageCaches.delete(top);
             } else {
                 // The top page went, and its kept state with it: what `_pageGone`
