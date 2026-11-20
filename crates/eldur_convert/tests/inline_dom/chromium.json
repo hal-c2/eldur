@@ -13,7 +13,7 @@
  "boxes_into_inline": {
   "log": [
    "LC made s \"in\",m,made true true true",
-   "LC input s \"in\",m,made,f true true v 27",
+   "LC input s \"in\",m,made,f true true v 33",
    "LC block r \"two\",rm,blk true true true \"one twooblock three\"",
    "LC out BODY true \"one twoo three\"",
    "LC form true 1",
@@ -40,6 +40,10 @@
    "LC page-into-made \"e\",mgb,mgi \"g \" true true bold k 48",
    "LC page-wraps-in-made \"f \",mlb,mli true 37 0 10 2",
    "LC own-item-wraps-in-made \"f \",mob,moi true 37 0 10 2",
+   "LC mixed-wraps-in-made \"f \",mmb true mmb 37 0 \"a long bold run that wraps\"",
+   "LC box-holder-wraps-in-made \"f \",mkb true mkb k true 0 48",
+   "LC own-item-out BODY \"a long bold run that wraps\" true true 1",
+   "LC made-out BODY true \"BETA bold\" true true",
    "LC replaced \"b \",\"r\" true",
    "LC self-ref \"c\",qa,qb",
    "LC out-narrow 300"
