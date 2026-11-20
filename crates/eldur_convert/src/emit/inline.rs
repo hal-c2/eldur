@@ -292,8 +292,9 @@ fn percent_width(style: &ComputedStyle) -> Option<(f32, f32)> {
 enum Piece<'b, 'a> {
     /// A run of text between boxes, its spans kept.
     Run(Vec<Inline<'a>>),
-    /// A box, with the innermost element around it that has its own node.
-    Atomic(&'b LayoutBox<'a>, Option<NodeId>),
+    /// A box, with the innermost element around it that has its own node,
+    /// and whether an element around it makes a stacking context.
+    Atomic(&'b LayoutBox<'a>, Option<NodeId>, bool),
 }
 
 fn pieces<'b, 'a>(
@@ -308,7 +309,8 @@ fn pieces<'b, 'a>(
             Inline::Atomic(b) => {
                 end_run(run, out);
                 let owner = chain.iter().rev().find_map(|span| span.node);
-                out.push(Piece::Atomic(b, owner));
+                let kept = chain.iter().any(|span| super::flow::is_context(span.style));
+                out.push(Piece::Atomic(b, owner, kept));
             }
             Inline::Span(span)
                 if has_atomic(&span.children)
@@ -665,7 +667,7 @@ impl Emitter<'_, '_> {
             // A generated box is not a child `all_inline` sees, but the element
             // around it reaches across it all the same: the runtime finds the
             // box by the element's key.
-            if let Piece::Atomic(_, Some(owner)) = piece {
+            if let Piece::Atomic(_, Some(owner), _) = piece {
                 self.cut_nodes.insert(*owner);
             }
             if let Piece::Run(items) = piece {
@@ -774,8 +776,19 @@ impl Emitter<'_, '_> {
                     }
                     flow.push_child(text);
                 }
-                Piece::Atomic(a, owner) => {
+                Piece::Atomic(a, owner, kept) => {
+                    let before = self.above_flow.take();
                     let part = self.atomic(a, decoration, &flow_id);
+                    // A span that makes a stacking context keeps a level the
+                    // box has, or a class gives it, inside: to the block it
+                    // is over the flow and no higher, as a context at `auto`.
+                    if kept && self.above_flow.is_some() {
+                        self.above_flow = Some(1);
+                    }
+                    self.above_flow = match (before, self.above_flow) {
+                        (Some(a), Some(b)) => Some(a.max(b)),
+                        (a, b) => a.or(b),
+                    };
                     runs |= part.own;
                     let mut obj = part.obj;
                     // A `Text` is placed as a run: the line measures it on its

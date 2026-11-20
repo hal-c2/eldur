@@ -1752,7 +1752,7 @@ impl Emitter<'_, '_> {
 
 /// Whether a box makes a stacking context: one at `auto` that still
 /// makes one, or a positioned box with a level.
-fn is_context(style: &ComputedStyle) -> bool {
+pub(super) fn is_context(style: &ComputedStyle) -> bool {
     crate::boxes::is_context_at_auto(style)
         || (crate::boxes::is_containing_block(style) && style.z_index.is_some())
 }
