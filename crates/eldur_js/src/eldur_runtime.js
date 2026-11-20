@@ -16686,7 +16686,7 @@ function _inInstall() {
         page: _root, overlay: null, held: 0, last: null, pressed: false, hoverP: null, hoverM: null,
         downTarget: {}, noMouse: false, count: 0, countButton: -1, countAt: null, countTime: 0,
         capture: null, captureNext: null, defaults: [], scrolled: null, restoreFocus: null,
-        restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusMoves: 0, focusShift: false, focusPending: null, untold: [], shiftTo: null, change: null, overridden: null, away: false, seenActive: false, windowHas: false, backLater: false, windowTelling: false,
+        restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusMoves: 0, focusShift: false, focusPending: null, untold: [], shiftTo: null, change: null, overridden: null, away: false, seenActive: false, windowHas: false, backLater: false, backGen: 0, windowTelling: false,
         spaceDown: null, typing: null, popovers: [], radioLast: {}, focusProbe: null
     };
     _inLayers.set(_root, _in);
@@ -16729,6 +16729,10 @@ function _inInstall() {
         var first = !layer.seenActive;
         if (probe.active) {
             layer.seenActive = true;
+        } else if (layer.backLater) {
+            // Away again before the window heard it was back.
+            layer.backLater = false;
+            ++layer.backGen;
         }
         // Coming back to an element that kept the focus, Qt's report of it
         // tells the window, so a window listener's move starts from it.
@@ -17057,14 +17061,20 @@ function _inClickOn(target, bit, button, count, scene, mods, moved) {
     }
     var ev = _inClickEvent(target, scene, mods, count);
     // A user's click: its promises run after each listener, as a press's do.
+    // One of them may make another page the document, which the rest of this
+    // click is none of.
     var native = _micro.native;
     _micro.native = true;
+    var own = _inStillOwn();
     if (typeof target.clicked === "function") {
-        _clickedControlWith(target, ev);
+        _clickedControlWith(target, ev, own);
     } else {
         _dispatchDynamic(target, "click", ev);
     }
     _micro.native = native;
+    if (!own()) {
+        return;
+    }
     if (!ev.defaultPrevented) {
         defaults.forEach(function(run) { run(); });
     }
@@ -17304,11 +17314,24 @@ function afterTap(eventPoint, run) {
     }
 }
 
-function _clickedControlWith(raw, ev) {
+// Whether the page and layer an input began on are still the document's.
+function _inStillOwn() {
+    var gen = _docGen;
+    var layer = _in;
+    return function() {
+        return !_pageGone() && _in === layer && _docGen === gen;
+    };
+}
+
+function _clickedControlWith(raw, ev, own) {
     var m = _meta(raw);
     var toggled = Boolean(m.toggledNow);
     m.toggledNow = false;
+    own = own || _inStillOwn();
     _dispatchDynamic(raw, "click", ev);
+    if (!own()) {
+        return;
+    }
     if (toggled) {
         if (ev.defaultPrevented) {
             _inUndoToggle(raw);
@@ -18198,7 +18221,11 @@ function _inFocusChanged() {
         if (!_in.backLater) {
             var layer = _in;
             layer.backLater = true;
+            var gen = ++layer.backGen;
             Qt.callLater(function() {
+                if (layer.backGen !== gen) {
+                    return;
+                }
                 layer.backLater = false;
                 if (_pageGone() || _in !== layer) {
                     return;
@@ -18219,6 +18246,15 @@ function _inFocusChanged() {
                 }
                 _inFocusChanged();
             });
+        }
+        return;
+    }
+    // Away again before the window heard it was back: it hears nothing of
+    // that return, and what had the focus has heard of its blur already.
+    if (_in.away && !active) {
+        if (_in.backLater) {
+            _in.backLater = false;
+            ++_in.backGen;
         }
         return;
     }
