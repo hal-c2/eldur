@@ -14059,7 +14059,9 @@ function _parseFragment(src, inSvg) {
     var gap = "";
     var lastTag = "";
     var pos = 0;
-    var tagOpenRe = new RegExp("<([a-zA-Z][a-zA-Z0-9-]*)(\\s" + _TAG_REST + ")?\\s*(\\/?)(>|$)", "g");
+    // A `/` not closing the tag separates its name from an attribute, as
+    // HTML's tokenizer reads `<i/aria-label="Now">`.
+    var tagOpenRe = new RegExp("<([a-zA-Z][a-zA-Z0-9-]*)((?:\\s|\\/(?!>))" + _TAG_REST + ")?\\s*(\\/?)(>|$)", "g");
     var voidTags = _VOID_TAGS;
 
     while (pos < src.length) {
