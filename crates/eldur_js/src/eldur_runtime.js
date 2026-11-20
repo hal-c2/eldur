@@ -5584,7 +5584,13 @@ function getText(item) {
         if (cellModel && _vBesideModel(raw, textChild)) {
             return _vNodesBeside(raw, textChild).map(getText).join("");
         }
-        return cellModel ? _vText(cellModel) : _pseudoOwn(raw, String(textChild.text));
+        var own = cellModel ? _vText(cellModel) : _pseudoOwn(raw, String(textChild.text));
+        // A column's own text before its boxes: what follows it is its too.
+        if (!cellModel && textChild.parent === raw && _gIsLayout(raw) && raw.contentItem === undefined) {
+            var after = _rawKids(raw, true).filter(function(k) { return k !== textChild; });
+            return own + after.map(function(k) { return _wsText(_wsBefore(k)) + getText(k); }).join("") + _wsText(_wsEnd(raw));
+        }
+        return own;
     }
     var m = _meta(raw);
     if (m.explicitText !== undefined) {
@@ -11196,7 +11202,30 @@ function _insertChildrenAt(raw, nodes, ref) {
         at.destroy();
         at = ref;
     }
-    _insertRawNodesBefore(_appendTarget(raw), nodes, at);
+    var real = _forRealItems(nodes);
+    _insertRawNodesBefore(_appendTarget(raw), real, at);
+    // A Text node standing in a column, below its boxes, is drawn as the
+    // column's own text or lines are.
+    var own = _gIsBox(raw) ? null : _findTextChild(raw);
+    var lines = _gIsBox(raw) || own ? null : _anonLinesOf(raw);
+    if ((own && typeof own.lineHeight === "number") || lines) {
+        real.forEach(function(n) {
+            if (!_isTextNode(n) || typeof n.text !== "string" || n === own) {
+                return;
+            }
+            n.font = (own || lines).font;
+            n.color = (own || lines).color;
+            if (own) {
+                n.lineHeightMode = own.lineHeightMode;
+                n.lineHeight = own.lineHeight;
+            } else if (lines.lineHeight > 0) {
+                n.lineHeightMode = 1; // Text.FixedHeight
+                n.lineHeight = lines.lineHeight;
+            }
+            n.textFormat = 0; // Text.PlainText
+            n.wrapMode = 1; // Text.WordWrap
+        });
+    }
 }
 
 function _insertRawNodesBefore(container, rawNodes, rawRef) {
