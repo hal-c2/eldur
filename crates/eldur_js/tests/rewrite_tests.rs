@@ -3508,7 +3508,7 @@ fn a_namespace_runs_its_module_first() {
     let ns = js
         .find("function __eldur_module_namespace")
         .unwrap_or_else(|| panic!("no namespace:\n{js}"));
-    let line = js[ns..].lines().next().unwrap();
+    let line = js[ns..].lines().next().expect("namespace line");
     assert!(line.contains("() { __eldur_run_m1(); return "), "{line}");
 }
 
