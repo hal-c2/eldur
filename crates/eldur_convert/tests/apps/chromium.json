@@ -91669,12 +91669,89 @@
    }
   },
   {
+   "name": "click f11",
+   "log": [
+    "blur p9 from f11 active BODY has true",
+    "focusout p9 from f11 active BODY has true",
+    "focus f11 from p9 active f11 has true",
+    "focusin f11 from p9 active f11 has true",
+    "click f11 has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "f11"
+   }
+  },
+  {
+   "name": "the window goes away from f11",
+   "log": [
+    "blur f11 from - active f11 has false",
+    "focusout f11 from - active f11 has false",
+    "listener blur at window true active f11 has false",
+    "handler blur at window true active f11 has false"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "f11"
+   }
+  },
+  {
+   "name": "the window comes back to f11, whose onfocus moves the focus to g11",
+   "log": [
+    "listener focus at window true active f11 has true",
+    "handler focus at window true active f11 has true",
+    "blur f11 from g11 active BODY has true",
+    "focusout f11 from g11 active BODY has true",
+    "focus g11 from f11 active g11 has true",
+    "focusin g11 from f11 active g11 has true",
+    "focus g11 from - active g11 has true",
+    "focusin g11 from - active g11 has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "g11"
+   }
+  },
+  {
    "name": "click r8",
    "log": [
-    "blur p9 from r8 active BODY has true",
-    "focusout p9 from r8 active BODY has true",
-    "focus r8 from p9 active r8 has true",
-    "focusin r8 from p9 active r8 has true",
+    "blur g11 from r8 active BODY has true",
+    "focusout g11 from r8 active BODY has true",
+    "focus r8 from g11 active r8 has true",
+    "focusin r8 from g11 active r8 has true",
     "click r8 has true"
    ],
    "state": {
