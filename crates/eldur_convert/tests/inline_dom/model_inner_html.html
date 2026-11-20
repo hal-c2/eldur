@@ -6,6 +6,7 @@ function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?
 <p id="p">one <em>e</em></p>
 <p id="q">two</p>
 <span id="r">three</span>
+<div id="ih">x</div>
 <script>
 // An element's markup is all its nodes', a box beside its text included.
 var p=document.getElementById("p"),s=document.createElement("span");
@@ -26,4 +27,7 @@ r.append(ri);
 L("r",r.innerHTML,r.childNodes.length,JSON.stringify(r.textContent),r.outerHTML);
 // A field made for the line is as wide as one made for a block.
 L("field",ri.getBoundingClientRect().width>150);
+// Text moved from one child to another is markup changed.
+var ih=document.getElementById("ih");ih.innerHTML="<p>A</p><p>BC</p>";ih.children[0].textContent="AB";ih.children[1].textContent="C";
+L("moved",ih.innerHTML);
 </script></body></html>

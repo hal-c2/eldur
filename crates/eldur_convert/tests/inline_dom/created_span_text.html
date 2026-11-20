@@ -7,6 +7,7 @@ function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?
 <p id="q">two</p>
 <div id="d"><div id="dd">block</div></div>
 <div id="h"></div>
+<p id="sc">v</p>
 <script>
 // A created span's text is its own Text node, as a parsed span's is: in a
 // line, loose, at the end of the body, beside a block, or parsed from markup.
@@ -30,4 +31,7 @@ e.textContent="w";
 e.firstChild.data="v";
 e.append("u");
 L("em",N(e),JSON.stringify(q.textContent),q.innerHTML);
+// A node a script holds of a loose span is still its own once the span is in a line.
+var cs=document.createElement("span");cs.textContent="old";var ct=cs.firstChild;ct.data="new";document.getElementById("sc").append(cs);
+L("kept",cs.firstChild===ct,JSON.stringify(cs.textContent),JSON.stringify(document.getElementById("sc").innerText));
 </script></body></html>
