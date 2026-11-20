@@ -141,7 +141,8 @@ body { margin: 0 }
 <div class=g id=q style="width:300px;grid-template-columns:minmax(200px,1fr) 1fr"><div id=q1 style="width:50%;justify-self:center"></div><div id=q2></div></div>
 <div class=g id=r style="width:300px;grid-template-columns:minmax(200px,1fr) 1fr"><div id=r1 style="width:50%;justify-self:end"></div><div id=r2></div></div>
 <div class=g id=s style="width:600px;grid-template-columns:minmax(200px,1fr) 1fr"><div id=s1 style="width:50%"></div><div id=s2></div></div>
-<script>var named = ['m','m1','m2','n','n1','n2','o','o1','o2','o3','o4','o5','p','p1','p2','q','q1','q2','r','r1','r2','s','s1','s2'].map(function (i) { return document.getElementById(i); });</script>
+<div class=g id=t style="width:400px;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));grid-auto-rows:50px"><div id=t1 style="height:100px;max-height:40px"><div id=t2 style="height:50%"></div></div><div id=t3 style="box-sizing:border-box;height:100px;max-height:10px;padding:15px 0"></div></div>
+<script>var named = ['m','m1','m2','n','n1','n2','o','o1','o2','o3','o4','o5','p','p1','p2','q','q1','q2','r','r1','r2','s','s1','s2','t','t1','t2','t3'].map(function (i) { return document.getElementById(i); });</script>
 </body></html>"#;
 
 const GRID_TEST: &str = r##"
@@ -190,6 +191,15 @@ TestCase {
         compare(o1.height, 50)
         compare(o2.height, 40)
         compare(o3.height, 100)
+    }
+    // A percentage height is of the used height, and a border box keeps its
+    // padding however small its max-height.
+    function test_used_heights_reach_children_and_keep_padding() {
+        const t1 = findChild(page, "t1"), t2 = findChild(page, "t2"), t3 = findChild(page, "t3")
+        verify(t1 && t2 && t3)
+        compare(t1.height, 40)
+        compare(t2.height, 20)
+        compare(t3.height, 30)
     }
     // A percentage width in a frozen fr column keeps the column's minimum,
     // aligned or not.

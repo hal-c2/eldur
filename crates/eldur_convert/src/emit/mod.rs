@@ -752,10 +752,15 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 Some((self.grid(b, &in_flow, decoration, line), "Content"))
             }
             Content::Blocks(_) => {
+                // Percentages are of the used height, after `min-height`
+                // and `max-height` (CSS 2 §10.5, §10.7).
                 let base = match &style.height {
-                    Size::Length(h) => h.as_px().map(|px| match style.box_sizing {
-                        BoxSizing::ContentBox => px,
-                        BoxSizing::BorderBox => (px - deco.insets.vertical()).max(0.0),
+                    Size::Length(h) => h.as_px().map(|px| {
+                        let used = grid::clamped_px(px, &style.min_height, &style.max_height);
+                        match style.box_sizing {
+                            BoxSizing::ContentBox => used,
+                            BoxSizing::BorderBox => (used - deco.insets.vertical()).max(0.0),
+                        }
                     }),
                     _ => None,
                 };
