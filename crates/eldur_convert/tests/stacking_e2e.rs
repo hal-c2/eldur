@@ -820,6 +820,56 @@ fn a_later_blocks_relative_box_paints_over_an_earlier_blocks_overlay() {
     run(HELD, &with_test(HELD_TEST), "held", false);
 }
 
+/// The same blocks, with a class that makes the later one a stacking
+/// context (`opacity`): Chromium paints it, and `#rx` in it, as one layer
+/// after `#ox`, so its flow is over `#ox` too. Without the class `#rx` rises
+/// out of `#bx`, and with it `#rx` stays in it: the earlier block sends
+/// `#ox` to the stop in both, so they keep one shape and the class applies.
+const DIMMED_TEST: &str = r##"
+    function test_a_later_block_a_class_makes_a_context_is_over_an_earlier_overlay() {
+        compare(front(page, 25, 50), "rx", "what it holds is over the earlier block's overlay")
+        compare(front(page, 75, 50), "bx", "and its flow is too")
+        compare(front(page, 150, 50), "bx")
+        compare(front(page, 75, 30), "ox")
+        compare(front(page, 150, 30), "ax")
+        compare(front(page, 25, 70), "rx")
+        compare(front(page, 75, 70), "bx")
+    }
+}
+}
+"##;
+
+#[test]
+fn a_class_that_makes_a_later_block_a_context_keeps_the_earlier_blocks_shape() {
+    let page = HELD
+        .replace(
+            "#bx { background: blue }",
+            "#bx { background: blue }\n.dim { opacity: 0.5 }",
+        )
+        .replace(
+            "var rx = document.getElementById('rx');",
+            "var rx = document.getElementById('rx');\nbx.classList.add('dim');",
+        );
+    let options = Options {
+        root: RootKind::Item,
+        viewport: Viewport {
+            width: 900.0,
+            height: 1200.0,
+            ..Viewport::default()
+        },
+        ..Options::default()
+    };
+    let out = convert_str(&page, &options);
+    assert!(
+        !out.diagnostics
+            .iter()
+            .any(|d| d.to_string().contains("dynamic-form")),
+        "{:?}",
+        out.diagnostics
+    );
+    run(&page, &with_test(DIMMED_TEST), "dimmed", false);
+}
+
 /// A float the runtime lays out (`#fm`, which a script makes) and one it
 /// lays out again (`#ff`), whose raised kid (`#fc` at 10) lifts it: the kid
 /// is over the box after the float (`#fv` at 2) and over the new float.
