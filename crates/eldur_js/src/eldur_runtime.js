@@ -6864,7 +6864,7 @@ function _setStyleAt(item, prop, value) {
         m.styles[rawName] = str;
     }
     _gTouch();
-    if (name.indexOf("--") === 0 && !_gHasCascade()) {
+    if (name.indexOf("--") === 0 && !_gActive()) {
         _varDisplaysFollow(raw);
     }
     if (_vBlockFont(raw, name)) {
@@ -7417,10 +7417,11 @@ function _gUnderVars(raw, scope) {
     return false;
 }
 
-// With no cascade, a custom property a script sets is not a style the
+// With no live boxes, a custom property a script sets is not a style the
 // boxes recompute from: each box under `raw` whose script-written display
-// takes a `var()` is shown or hidden again by what it now resolves to.
-// Returns how many boxes it checked.
+// takes a `var()` is shown or hidden again by what it now resolves to, as
+// the rules have it when the page holds them. Returns how many boxes it
+// checked.
 function _varDisplaysFollow(raw) {
     if (_gVarDisplays.size === 0) {
         return 0;
@@ -7440,8 +7441,14 @@ function _varDisplaysFollow(raw) {
         if (!_gUnderVars(at, raw)) {
             continue;
         }
-        ++checked;
-        _setShown(at, !_displayHides(at, m.styles.display));
+        if (++checked === 1 && _gHasCascade()) {
+            ++_gGen;
+        }
+        if (_gHasCascade()) {
+            _gShowAsRules(at);
+        } else {
+            _setShown(at, !_displayHides(at, m.styles.display));
+        }
     }
     return checked;
 }
@@ -11100,7 +11107,9 @@ function _isLines(raw) {
 }
 
 // A text node or an inline-level element: what CSS puts on a line.
-function _joinsLine(node) {
+// Asked before an insertion, `into` and `ref` are where it is going: its
+// display may read a custom property only that place declares.
+function _joinsLine(node, into, ref) {
     if (node && node.__eldurInline) {
         return node.eldurTag === "#text";
     }
@@ -11118,7 +11127,7 @@ function _joinsLine(node) {
     var atomic = /^(button|input|textarea|select|img|canvas)$/.test(tag) || _vInlineTag(tag);
     if (_gHasCascade()) {
         ++_gGen;
-        var s = _gStyle(node);
+        var s = into ? _gStyleInto(node, into, ref) : _gStyle(node);
         // Hidden, it holds the place in the line its element would take when shown.
         return _gInlineLevel(s) || s.display === "none" && atomic;
     }
@@ -11295,7 +11304,7 @@ function _textStartsLine(raw, column, lines) {
 // The line `nodes` go on when `raw` takes them before `ref`, made if a box needs
 // it; null when they go where they always did.
 function _lineToJoin(raw, nodes, ref) {
-    if (_gIsBox(raw) || raw.__eldurInline || !nodes.every(_joinsLine)) {
+    if (_gIsBox(raw) || raw.__eldurInline || !nodes.every(function(n) { return _joinsLine(n, raw, ref); })) {
         return null;
     }
     if (ref && ref.__eldurInline) {
@@ -11597,7 +11606,7 @@ function _insertChildrenAt(raw, nodes, ref) {
     // Inline and block children together, as an element's kids are when it is
     // made again: each stretch of the inline ones goes on the line it would alone.
     if (nodes.length > 1 && !_gIsBox(raw)) {
-        var joins = nodes.map(_joinsLine);
+        var joins = nodes.map(function(n) { return _joinsLine(n, raw, ref); });
         if (joins.some(Boolean) && !joins.every(Boolean)) {
             var from = 0;
             for (var j = 1; j <= nodes.length; ++j) {
@@ -12448,6 +12457,13 @@ function _materializeSubtree(raw) {
         } else {
             _syncUpPointersOnItem(cur);
         }
+    }
+    // A template swap leaves a new item: it is the one whose `var()`
+    // display a custom property write rechecks.
+    var styled = _meta(cur).styles;
+    if (cur !== raw && styled && Object.prototype.hasOwnProperty.call(styled, "display")) {
+        _gVarDisplays.delete(raw);
+        _gNoteVarDisplay(cur, styled.display);
     }
     var kids = _rawElementChildren(cur);
     for (var i = 0; i < kids.length; ++i) {
@@ -14667,7 +14683,7 @@ function _vSetStyle(v, prop, value) {
         }
         varsMoved = camel.indexOf("--") === 0;
     }
-    if (varsMoved && !_gHasCascade()) {
+    if (varsMoved && !_gActive()) {
         _varDisplaysFollow(v);
     }
     _vChanged(v.model);
@@ -22889,7 +22905,9 @@ function _gWeightNumber(text) {
 }
 
 function _gParent(raw) {
-    var p = _logicalParent(raw);
+    // Asked before an insertion (`_gStyleInto`), it inherits from the place it
+    // is going to: a `var()` there decides what it displays as.
+    var p = _gGoingInto && _gGoingInto.node === raw ? _gGoingInto.parent : _logicalParent(raw);
     if (p && p.__eldurInline) {
         return null;
     }
