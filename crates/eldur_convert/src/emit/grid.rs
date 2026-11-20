@@ -925,7 +925,14 @@ impl Emitter<'_, '_> {
                 if let Size::Length(l) = &c.style.height
                     && (l.as_px().is_some() || is_viewport_relative(l))
                 {
-                    let height = size_value(l, extra);
+                    // The row holds the used height, after `min-height` and
+                    // `max-height` (CSS 2 §10.7), not the raw one.
+                    let height = match l.as_px() {
+                        Some(px) => {
+                            number(clamped_px(px, &c.style.min_height, &c.style.max_height) + extra)
+                        }
+                        None => size_value(l, extra),
+                    };
                     obj.set("Layout.fillHeight", false);
                     if obj.get("Layout.alignment").is_none() {
                         obj.set("Layout.alignment", Value::expr("Qt.AlignTop"));
@@ -1772,13 +1779,17 @@ impl Emitter<'_, '_> {
                 ),
             );
         }
-        let margin_w: f32 = ["Layout.leftMargin", "Layout.rightMargin"]
-            .iter()
-            .filter_map(|name| match obj.get(name) {
-                Some(Value::Number(n)) => Some(*n as f32),
-                _ => None,
-            })
-            .sum();
+        let margins = |obj: &Object, names: [&str; 2]| -> f32 {
+            names
+                .iter()
+                .filter_map(|name| match obj.get(name) {
+                    Some(Value::Number(n)) => Some(*n as f32),
+                    _ => None,
+                })
+                .sum()
+        };
+        let margin_w = margins(obj, ["Layout.leftMargin", "Layout.rightMargin"]);
+        let margin_h = margins(obj, ["Layout.topMargin", "Layout.bottomMargin"]);
         // A column is as wide as what it holds: an item narrower than its fixed track
         // keeps the rest of it open, or the next column would start at its edge.
         if p.col_span == 1
@@ -1796,7 +1807,9 @@ impl Emitter<'_, '_> {
         }
         let mut flags = Vec::new();
         let mut ignored_alignment = false;
-        for (plan, start, span, align, size, horizontal, extra) in [
+        // Set when the margins place a percentage-wide item in its area.
+        let mut percent_placed = false;
+        for (plan, start, span, align, size, horizontal, extra, margin) in [
             (
                 cols,
                 p.col,
@@ -1805,6 +1818,7 @@ impl Emitter<'_, '_> {
                 &style.width,
                 true,
                 extra_w,
+                margin_w,
             ),
             (
                 rows,
@@ -1814,6 +1828,7 @@ impl Emitter<'_, '_> {
                 &style.height,
                 false,
                 extra_h,
+                margin_h,
             ),
         ] {
             let dim = if horizontal { "Width" } else { "Height" };
@@ -1836,16 +1851,30 @@ impl Emitter<'_, '_> {
                 {
                     let area = format!("({area})");
                     let width = length_expr(l, &area);
-                    if h_align.is_none() {
-                        let taken = extra + margin_w;
-                        let rest = if taken == 0.0 {
-                            format!("{area} - ({width})")
-                        } else {
-                            format!("{area} - ({width}) - {}", fmt_number(round(taken)))
-                        };
+                    let taken = extra + margin_w;
+                    let rest = if taken == 0.0 {
+                        format!("{area} - ({width})")
+                    } else {
+                        format!("{area} - ({width}) - {}", fmt_number(round(taken)))
+                    };
+                    // The rest of the area is margin, which places the item as
+                    // its alignment would: an aligned item narrower than its
+                    // cell would let the column shrink to it, losing the
+                    // column's minimum.
+                    let (left, right) = match h_align {
+                        Some("Qt.AlignHCenter") => {
+                            let half = format!("({rest}) / 2");
+                            (Some(half.clone()), Some(half))
+                        }
+                        Some("Qt.AlignRight") => (Some(rest), None),
+                        _ => (None, Some(rest)),
+                    };
+                    for (name, rest) in [("Layout.leftMargin", left), ("Layout.rightMargin", right)]
+                    {
+                        let Some(rest) = rest else { continue };
                         obj.set(
-                            "Layout.rightMargin",
-                            Value::Expr(match obj.get("Layout.rightMargin") {
+                            name,
+                            Value::Expr(match obj.get(name) {
                                 Some(Value::Number(n)) if *n != 0.0 => {
                                     format!("{} + {rest}", fmt_number(*n))
                                 }
@@ -1854,6 +1883,7 @@ impl Emitter<'_, '_> {
                             }),
                         );
                     }
+                    percent_placed = true;
                     Some(if extra == 0.0 {
                         Value::Expr(width)
                     } else {
@@ -1865,7 +1895,10 @@ impl Emitter<'_, '_> {
                 }
                 _ => None,
             };
-            let props = plan.props(start, span, layout_item);
+            // An auto-sized item fills its area with its margins (CSS Grid 2
+            // §11.3): a pinned track's size is the item's plus them, or the
+            // cell would grow past the track by the margins.
+            let props = less_margin(plan.props(start, span, layout_item), margin);
             let in_fr = !horizontal && span == 1 && plan.is_fr(start);
             // A percentage of the grid area cannot size the tracks that make the
             // area: the item takes its `fr` share like the rest of its tracks and
@@ -1909,6 +1942,8 @@ impl Emitter<'_, '_> {
                 (Some(v), align) => {
                     obj.set(&format!("Layout.preferred{dim}"), v);
                     match align {
+                        // Its margins already place it.
+                        Some(_) if horizontal && percent_placed => {}
                         Some(a) => flags.push(a),
                         // Stretching gives way to a set height, at the start.
                         None if !horizontal => flags.push("Qt.AlignTop"),
@@ -2073,6 +2108,38 @@ fn repeat_min_cell(tracks: &[Track]) -> Option<f32> {
         },
         _ => None,
     }
+}
+
+/// A pinned track's `Layout.*` less the item's margins along it: Qt adds an
+/// item's margins to its cell. A track the item fills is left alone.
+fn less_margin(props: Vec<(String, Value)>, margin: f32) -> Vec<(String, Value)> {
+    if margin == 0.0 || props.iter().any(|(k, _)| k.starts_with("Layout.fill")) {
+        return props;
+    }
+    props
+        .into_iter()
+        .map(|(k, v)| {
+            let v = match v {
+                Value::Number(n) => Value::Number((n - f64::from(margin)).max(0.0)),
+                Value::Expr(e) => Value::Expr(format!(
+                    "Math.max(0, ({e}) - {})",
+                    fmt_number(round(margin))
+                )),
+                v => v,
+            };
+            (k, v)
+        })
+        .collect()
+}
+
+/// `px` held between px limits; a limit in other units is not applied.
+fn clamped_px(px: f32, min: &Size, max: &Size) -> f32 {
+    let limit = |s: &Size| match s {
+        Size::Length(l) => l.as_px(),
+        _ => None,
+    };
+    let capped = limit(max).map_or(px, |m| px.min(m));
+    limit(min).map_or(capped, |m| capped.max(m))
 }
 
 fn auto_row_px(style: &ComputedStyle) -> Option<f32> {

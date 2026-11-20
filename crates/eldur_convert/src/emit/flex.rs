@@ -225,6 +225,12 @@ impl Emitter<'_, '_> {
             &style.row_gap
         };
         let own_definite = self.gap_height_definite(style, false);
+        // A row's stretched item takes the line's height as definite
+        // (css-flexbox §9.4 step 11) once the row has a height of its own,
+        // even a `min-height` or a percentage that leaves it auto: Chromium
+        // resolves the item's `height: 50%` children against it. A gap
+        // percentage resolves only against a height that does.
+        let line_definite = super::flow::has_height(style) || self.own_given == Given::Definite;
         let own = self.content_px(b, row);
         let gap = Self::gap(gap_len.as_ref(), row || own_definite, own);
 
@@ -321,7 +327,7 @@ impl Emitter<'_, '_> {
                 let (m_start, m_end) = (&child.style.margin.top, &child.style.margin.bottom);
                 let stretches = cross(style.align_items, child.style.align_self, m_start, m_end)
                     == Cross::Stretch;
-                match (stretches, own_definite) {
+                match (stretches, line_definite) {
                     (true, true) => Given::Definite,
                     (true, false) => Given::Stretched,
                     (false, _) => Given::Content,
