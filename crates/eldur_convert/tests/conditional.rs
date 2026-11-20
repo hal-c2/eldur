@@ -116,6 +116,49 @@ fn display_none_under_a_class_is_visible() {
     assert_eq!(lines_with(&qml, "visible: "), ["visible: !s.cls_gone"]);
 }
 
+/// A class that hides a block changes the margins after it, and the next
+/// item's margin reads the carry the class's world gives that block (#51):
+/// each carry read is declared on the item it names.
+#[test]
+fn a_carry_a_class_world_reads_is_declared() {
+    let qml = main_qml(
+        "<style>.off { display: none; }</style>\
+         <p id='a' style='margin:0 0 40px'>A</p><p id='shy'>Shy</p>\
+         <p id='after' style='margin:10px 0'>After</p><button id='t'>T</button>\
+         <script>document.getElementById('t').addEventListener('click', () => \
+           document.getElementById('shy').classList.toggle('off'));</script>",
+    );
+    let mut declared = Vec::new();
+    let mut current = "";
+    for line in qml.lines().map(str::trim) {
+        if let Some(id) = line.strip_prefix("id: ") {
+            current = id;
+        } else if line.starts_with("property real eldurCarry") {
+            declared.push(current.to_owned());
+        }
+    }
+    let read: Vec<&str> = qml
+        .match_indices(".eldurCarry")
+        .map(|(at, _)| {
+            let head = &qml[..at];
+            let from = head
+                .rfind(|c: char| !(c.is_alphanumeric() || c == '_'))
+                .map_or(0, |i| i + 1);
+            &head[from..]
+        })
+        .collect();
+    assert!(
+        read.contains(&"after"),
+        "the class world's margin reads after's carry:\n{qml}"
+    );
+    for id in read {
+        assert!(
+            declared.iter().any(|d| d == id),
+            "`{id}.eldurCarry` is read but not declared:\n{qml}"
+        );
+    }
+}
+
 #[test]
 fn without_state_variants_the_document_is_all_there_is() {
     let qml = main_qml_with(

@@ -33,6 +33,10 @@ pub(crate) struct Scripts {
     /// Blocks a rule on a written attribute can hide or show: see
     /// `pipeline::displays_by_written_attributes`.
     pub(crate) attribute_displays: HashSet<NodeId>,
+    /// Elements a script shows or hides that an author rule still hides with
+    /// their own `display` and `hidden` attribute gone: see
+    /// `eldur_css::rules_hide`.
+    pub(crate) rules_hide: HashSet<NodeId>,
 }
 
 impl Scripts {
@@ -341,6 +345,7 @@ pub(crate) fn collect(
         live_tables,
         has_details,
         attribute_displays: HashSet::new(),
+        rules_hide: HashSet::new(),
     }
 }
 

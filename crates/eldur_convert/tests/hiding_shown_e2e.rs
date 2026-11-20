@@ -12,14 +12,13 @@ use std::path::Path;
 
 use eldur_convert::{Options, RootKind, convert_str};
 
-/// The toggle every page has; the issue's own page is the first one.
-const TOGGLE: &str = r#"<button id="t">Toggle</button>
-<script>
-document.getElementById('t').addEventListener('click', () => {
-  const s = document.getElementById('shy');
-  s.style.display = s.style.display === 'none' ? '' : 'none';
-});
-</script>"#;
+/// What the toggle does unless a case says otherwise; the issue's own page
+/// is the first one.
+const TOGGLE: &str = "const s = document.getElementById('shy');
+  s.style.display = s.style.display === 'none' ? '' : 'none';";
+
+/// What a class toggle does.
+const CLASS_TOGGLE: &str = "document.getElementById('shy').classList.toggle('off');";
 
 struct Case {
     name: &'static str,
@@ -31,6 +30,11 @@ struct Case {
     /// as many ids as it has.
     load: &'static [f64],
     toggled: &'static [f64],
+    /// What the button runs, [`TOGGLE`] when empty.
+    toggle: &'static str,
+    /// Chromium's tops toggled back, when they aren't `load`: a box whose
+    /// `display` was a script's `none` the first time round is shown by `''`.
+    back: &'static [f64],
 }
 
 const CASES: &[Case] = &[
@@ -43,6 +47,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[50.0, 84.0],
         toggled: &[16.0, 50.0],
+        toggle: "",
+        back: &[],
     },
     // Hidden as loaded, then shown: the same page the other way round.
     Case {
@@ -52,6 +58,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[16.0, 50.0],
         toggled: &[50.0, 84.0],
+        toggle: "",
+        back: &[],
     },
     // What escapes once `#shy` is hidden is smaller than what escaped with it:
     // `#after` goes above where its own margin alone would put it.
@@ -62,6 +70,8 @@ const CASES: &[Case] = &[
         ids: &["after", "shy"],
         load: &[78.0, 30.0],
         toggled: &[10.0],
+        toggle: "",
+        back: &[],
     },
     // The margins escape through `#w` too, where its own 20 px waits for them.
     Case {
@@ -71,6 +81,8 @@ const CASES: &[Case] = &[
         ids: &["w", "after"],
         load: &[30.0, 78.0],
         toggled: &[20.0, 20.0],
+        toggle: "",
+        back: &[],
     },
     // Between two blocks: hidden, the margins either side of it collapse
     // with each other.
@@ -81,6 +93,8 @@ const CASES: &[Case] = &[
         ids: &["a", "b"],
         load: &[8.0, 100.0],
         toggled: &[8.0, 66.0],
+        toggle: "",
+        back: &[],
     },
     // An empty block after it: hidden or not, the block's margins and the
     // empty one's collapse with the next one's.
@@ -90,6 +104,8 @@ const CASES: &[Case] = &[
         ids: &["n"],
         load: &[64.0],
         toggled: &[46.0],
+        toggle: "",
+        back: &[],
     },
     // A block a script hides earlier in the column does not decide what the
     // column's last, hidden one passes on to the block after the column.
@@ -101,6 +117,8 @@ const CASES: &[Case] = &[
         ids: &["x", "next"],
         load: &[66.0, 100.0],
         toggled: &[66.0, 134.0],
+        toggle: "",
+        back: &[],
     },
     // After a block a script can hide, a wrapper whose own first block
     // hides: the gap above the wrapper is what its next block escapes then.
@@ -111,6 +129,8 @@ const CASES: &[Case] = &[
         ids: &["w", "g", "t"],
         load: &[58.0, 86.0, 104.0],
         toggled: &[28.0, 28.0, 46.0],
+        toggle: "",
+        back: &[],
     },
     // Hidden by its `style` attribute and by `hidden`: clearing its display
     // leaves the `[hidden]` rule hiding it.
@@ -121,6 +141,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[16.0, 50.0],
         toggled: &[16.0, 50.0],
+        toggle: "",
+        back: &[],
     },
     // The same with `hidden` set by a script before the toggle.
     Case {
@@ -131,6 +153,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[16.0, 50.0],
         toggled: &[16.0, 50.0],
+        toggle: "",
+        back: &[],
     },
     // Its `hidden` attribute removed as loaded: its `style` attribute still
     // hides it, and clearing its display then shows it.
@@ -142,6 +166,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[16.0, 50.0],
         toggled: &[50.0, 84.0],
+        toggle: "",
+        back: &[],
     },
     // `hidden` set by a script and the attribute then removed: it no longer
     // keeps the box hidden once its display is cleared.
@@ -153,6 +179,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[16.0, 50.0],
         toggled: &[50.0, 84.0],
+        toggle: "",
+        back: &[],
     },
     // Its `style` attribute's display removed as loaded: `hidden` set and
     // cleared again does not bring that declaration back.
@@ -164,6 +192,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[50.0, 84.0],
         toggled: &[16.0, 50.0],
+        toggle: "",
+        back: &[],
     },
     // A `display: none` inside a string of its `style` attribute is no
     // declaration: `hidden` set and cleared shows it again.
@@ -175,6 +205,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[50.0, 84.0],
         toggled: &[16.0, 50.0],
+        toggle: "",
+        back: &[],
     },
     // An invalid later `display` is dropped: with `hidden` removed, the
     // valid `display: none` before it still hides the box.
@@ -186,6 +218,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[16.0, 50.0],
         toggled: &[50.0, 84.0],
+        toggle: "",
+        back: &[],
     },
     // `el.style.display` reads the important declaration, which wins over
     // the later one: the toggle clears it.
@@ -196,6 +230,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[16.0, 50.0],
         toggled: &[50.0, 84.0],
+        toggle: "",
+        back: &[],
     },
     // `flow` alone is a valid display, a block: it wins over the `none` before it.
     Case {
@@ -206,6 +242,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[50.0, 84.0],
         toggled: &[16.0, 50.0],
+        toggle: "",
+        back: &[],
     },
     // An escaped `(` opens no bracket: the `display` after it is its own
     // declaration.
@@ -216,6 +254,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[16.0, 50.0],
         toggled: &[50.0, 84.0],
+        toggle: "",
+        back: &[],
     },
     // Two outside keywords are no display: the `none` before them still hides
     // the box once `hidden` is removed.
@@ -227,6 +267,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[16.0, 50.0],
         toggled: &[50.0, 84.0],
+        toggle: "",
+        back: &[],
     },
     // `run-in` is no display Chromium or eldur_css takes: the `none` before it
     // still hides the box.
@@ -238,6 +280,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[16.0, 50.0],
         toggled: &[50.0, 84.0],
+        toggle: "",
+        back: &[],
     },
     // A quote in a comment opens no string: the `display` after it is its own
     // declaration.
@@ -249,6 +293,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[50.0, 84.0],
         toggled: &[16.0, 50.0],
+        toggle: "",
+        back: &[],
     },
     // An escaped keyword is the keyword: `\62 lock` is `block`.
     Case {
@@ -259,6 +305,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[50.0, 84.0],
         toggled: &[16.0, 50.0],
+        toggle: "",
+        back: &[],
     },
     // A `var()` display wins over the `none` before it.
     Case {
@@ -269,6 +317,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[50.0, 84.0],
         toggled: &[16.0, 50.0],
+        toggle: "",
+        back: &[],
     },
     // A comment ends a token: `block/**/flow` is `block flow`.
     Case {
@@ -279,6 +329,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[50.0, 84.0],
         toggled: &[16.0, 50.0],
+        toggle: "",
+        back: &[],
     },
     // A comment ends a token: `bl/**/ock` is two words and no display.
     Case {
@@ -289,6 +341,8 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[16.0, 50.0],
         toggled: &[50.0, 84.0],
+        toggle: "",
+        back: &[],
     },
     // A quote in an unquoted `url(` opens no string: the `display` after it is
     // its own declaration, which keeps the box hidden once `hidden` is removed.
@@ -300,6 +354,225 @@ const CASES: &[Case] = &[
         ids: &["after", "t"],
         load: &[16.0, 50.0],
         toggled: &[50.0, 84.0],
+        toggle: "",
+        back: &[],
+    },
+    // A `var()` display that resolves to `none` hides the block as its own
+    // `style` attribute's, so clearing what a script wrote over it shows it.
+    Case {
+        name: "variable_display_cleared",
+        body: r#"<div style="--d:none"><p id="shy" style="display:var(--d)"><em>Shy</em></p></div>
+<p id="after">After</p>
+<script>document.getElementById('shy').style.display = 'none';</script>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[50.0, 84.0],
+        toggle: "",
+        back: &[],
+    },
+    // The same with the custom property from a stylesheet rule.
+    Case {
+        name: "variable_from_a_rule_cleared",
+        body: r#"<style>:root { --d: none; }</style>
+<p id="shy" style="display:var(--d)"><em>Shy</em></p>
+<p id="after">After</p>
+<script>document.getElementById('shy').style.display = 'none';</script>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[50.0, 84.0],
+        toggle: "",
+        back: &[],
+    },
+    // The `var()` display still hides a block whose `hidden` is removed.
+    Case {
+        name: "variable_hides_hidden_removed",
+        body: r#"<p id="shy" style="--d:none;display:var(--d)" hidden><em>Shy</em></p>
+<p id="after">After</p>
+<script>document.getElementById('shy').removeAttribute('hidden');</script>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[16.0, 50.0],
+        toggle: "",
+        back: &[50.0, 84.0],
+    },
+    Case {
+        name: "rule_variable_hides_hidden_removed",
+        body: r#"<style>:root { --d: none; }</style>
+<p id="shy" style="display:var(--d)" hidden><em>Shy</em></p>
+<p id="after">After</p>
+<script>document.getElementById('shy').removeAttribute('hidden');</script>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[16.0, 50.0],
+        toggle: "",
+        back: &[50.0, 84.0],
+    },
+    // A script writing a `var()` display that resolves to `none` hides it.
+    Case {
+        name: "variable_written",
+        body: r#"<p id="shy" style="--d:none"><em>Shy</em></p>
+<p id="after">After</p>"#,
+        ids: &["after", "t"],
+        load: &[50.0, 84.0],
+        toggled: &[16.0, 50.0],
+        toggle: "const s = document.getElementById('shy');
+  s.style.display = s.style.display === '' ? 'var(--d)' : '';",
+        back: &[],
+    },
+    // `ruby` and `math` are valid displays that win over the `none` before
+    // them: an inline box once `hidden` is removed. A script hiding an
+    // inline box alone in its line isn't followed yet (as with `inline`),
+    // so these pin the page as loaded.
+    Case {
+        name: "ruby_display",
+        body: r#"<p id="shy" style="display:none;display:ruby" hidden><em>Shy</em></p>
+<p id="after">After</p>
+<script>document.getElementById('shy').removeAttribute('hidden');</script>"#,
+        ids: &["after", "t"],
+        load: &[42.0, 76.0],
+        toggled: &[42.0, 76.0],
+        toggle: "void 0;",
+        back: &[],
+    },
+    Case {
+        name: "math_display",
+        body: r#"<p id="shy" style="display:none;display:math" hidden><em>Shy</em></p>
+<p id="after">After</p>
+<script>document.getElementById('shy').removeAttribute('hidden');</script>"#,
+        ids: &["after", "t"],
+        load: &[42.0, 76.0],
+        toggled: &[42.0, 76.0],
+        toggle: "void 0;",
+        back: &[],
+    },
+    Case {
+        name: "block_ruby_display",
+        body: r#"<p id="shy" style="display:none;display:block ruby" hidden><em>Shy</em></p>
+<p id="after">After</p>
+<script>document.getElementById('shy').removeAttribute('hidden');</script>"#,
+        ids: &["after", "t"],
+        load: &[50.0, 84.0],
+        toggled: &[16.0, 50.0],
+        toggle: "",
+        back: &[],
+    },
+    // The converter shows a `ruby` block as loaded.
+    Case {
+        name: "ruby_shown",
+        body: r#"<p id="shy" style="display:none;display:ruby"><em>Shy</em></p>
+<p id="after">After</p>"#,
+        ids: &["after", "t"],
+        load: &[42.0, 76.0],
+        toggled: &[42.0, 76.0],
+        toggle: "void 0;",
+        back: &[],
+    },
+    // `flow` reads back as `block`, which the toggle tests for.
+    Case {
+        name: "flow_read_back",
+        body: r#"<p id="shy"><em>Shy</em></p>
+<p id="after">After</p>
+<script>document.getElementById('shy').style.display = 'flow';</script>"#,
+        ids: &["after", "t"],
+        load: &[50.0, 84.0],
+        toggled: &[16.0, 50.0],
+        toggle: "const s = document.getElementById('shy');
+  s.style.display = s.style.display === 'block' ? 'none' : 'block';",
+        back: &[],
+    },
+    // A column with no bottom padding or border passes its last block's
+    // bottom margin on; with that block hidden, its earlier one's is what
+    // goes on, collapsing with the next block's outside the column.
+    Case {
+        name: "unpadded_column_bottom",
+        body: r#"<div id="col"><p id="a">A</p><p id="shy" style="margin:0 0 40px"><em>Shy</em></p></div>
+<p id="after">After</p>"#,
+        ids: &["after", "t"],
+        load: &[108.0, 142.0],
+        toggled: &[50.0, 84.0],
+        toggle: "",
+        back: &[],
+    },
+    Case {
+        name: "unpadded_column_bottom_nested",
+        body: r#"<div id="outer"><div id="col"><p id="a">A</p><p id="shy" style="margin:0 0 40px"><em>Shy</em></p></div></div>
+<p id="after" style="margin:10px 0">After</p>"#,
+        ids: &["after", "t"],
+        load: &[108.0, 136.0],
+        toggled: &[50.0, 78.0],
+        toggle: "",
+        back: &[],
+    },
+    // A block a class hides takes its margins with it too.
+    Case {
+        name: "class_hides",
+        body: r#"<style>.off { display: none; }</style>
+<p id="a" style="margin:0 0 40px">A</p><p id="shy">Shy</p>
+<p id="after" style="margin:10px 0">After</p>"#,
+        ids: &["a", "after", "t"],
+        load: &[8.0, 100.0, 128.0],
+        toggled: &[8.0, 66.0, 94.0],
+        toggle: CLASS_TOGGLE,
+        back: &[],
+    },
+    Case {
+        name: "class_hides_first",
+        body: r#"<style>.off { display: none; }</style>
+<p id="shy" class="off"><em>Shy</em></p>
+<p id="after">After</p>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[50.0, 84.0],
+        toggle: CLASS_TOGGLE,
+        back: &[],
+    },
+    // A stylesheet rule that hides the block too keeps it hidden once a
+    // script clears its own `display`.
+    Case {
+        name: "rule_hides_too",
+        body: r#"<style>#shy { display: none; }</style>
+<p id="shy" style="display:none"><em>Shy</em></p>
+<p id="after">After</p>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[16.0, 50.0],
+        toggle: "",
+        back: &[],
+    },
+    Case {
+        name: "rule_variable_hides_too",
+        body: r#"<style>:root { --d: none; } #shy { display: var(--d); }</style>
+<p id="shy" style="display:none"><em>Shy</em></p>
+<p id="after">After</p>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[16.0, 50.0],
+        toggle: "",
+        back: &[],
+    },
+    Case {
+        name: "class_rule_hides_too",
+        body: r#"<style>.off { display: none; }</style>
+<p id="shy" class="off" style="display:none"><em>Shy</em></p>
+<p id="after">After</p>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[16.0, 50.0],
+        toggle: "",
+        back: &[],
+    },
+    // And once a script removes its `hidden` attribute.
+    Case {
+        name: "rule_hides_hidden_removed",
+        body: r#"<style>#shy { display: none; }</style>
+<p id="shy" hidden><em>Shy</em></p>
+<p id="after">After</p>
+<script>document.getElementById('shy').removeAttribute('hidden');</script>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[16.0, 50.0],
+        toggle: "",
+        back: &[],
     },
 ];
 
@@ -310,8 +583,13 @@ fn page(case: &Case) -> String {
         .map(|id| format!("document.getElementById('{id}')"))
         .collect::<Vec<_>>()
         .join(", ");
+    let toggle = if case.toggle.is_empty() {
+        TOGGLE
+    } else {
+        case.toggle
+    };
     format!(
-        "<!DOCTYPE html>\n{}\n{TOGGLE}\n<script>\n// Named so that they get an objectName the test can find.\nvar named = [{named}];\n</script>\n",
+        "<!DOCTYPE html>\n{}\n<button id=\"t\">Toggle</button>\n<script>\ndocument.getElementById('t').addEventListener('click', () => {{\n  {toggle}\n}});\n</script>\n<script>\n// Named so that they get an objectName the test can find.\nvar named = [{named}];\n</script>\n",
         case.body
     )
 }
@@ -377,7 +655,7 @@ TestCase {{
         button.clicked()
         expect([{toggled_ids}], {toggled}, "toggled")
         button.clicked()
-        expect([{ids}], {load}, "toggled back")
+        expect([{ids}], {back}, "toggled back")
         button.clicked()
         expect([{toggled_ids}], {toggled}, "toggled again")
     }}
@@ -387,6 +665,11 @@ TestCase {{
         name = case.name,
         load = list(case.load),
         toggled = list(case.toggled),
+        back = list(if case.back.is_empty() {
+            case.load
+        } else {
+            case.back
+        }),
     )
 }
 
@@ -561,4 +844,94 @@ fn a_comment_inside_a_display_keyword_splits_it() {
 #[test]
 fn a_quote_in_an_unquoted_url_does_not_swallow_the_display_after_it() {
     run(case("quote_in_an_unquoted_url"));
+}
+
+#[test]
+fn a_variable_display_that_hides_is_the_attributes_and_clearing_shows_the_block() {
+    run(case("variable_display_cleared"));
+}
+
+#[test]
+fn a_variable_display_from_a_rules_property_is_the_attributes_too() {
+    run(case("variable_from_a_rule_cleared"));
+}
+
+#[test]
+fn a_variable_display_keeps_a_block_whose_hidden_attribute_is_removed_hidden() {
+    run(case("variable_hides_hidden_removed"));
+}
+
+#[test]
+fn a_variable_display_from_a_rules_property_keeps_it_hidden_too() {
+    run(case("rule_variable_hides_hidden_removed"));
+}
+
+#[test]
+fn a_variable_display_a_script_writes_hides_the_block() {
+    run(case("variable_written"));
+}
+
+#[test]
+fn a_ruby_display_shows_an_inline_box() {
+    run(case("ruby_display"));
+}
+
+#[test]
+fn a_math_display_shows_an_inline_box() {
+    run(case("math_display"));
+}
+
+#[test]
+fn a_block_ruby_display_shows_a_block() {
+    run(case("block_ruby_display"));
+}
+
+#[test]
+fn the_converter_shows_a_ruby_display() {
+    run(case("ruby_shown"));
+}
+
+#[test]
+fn a_flow_display_reads_back_as_block() {
+    run(case("flow_read_back"));
+}
+
+#[test]
+fn an_unpadded_column_passes_on_the_bottom_margin_left_once_its_last_block_hides() {
+    run(case("unpadded_column_bottom"));
+}
+
+#[test]
+fn an_unpadded_column_passes_it_through_its_parent_too() {
+    run(case("unpadded_column_bottom_nested"));
+}
+
+#[test]
+fn a_block_a_class_hides_takes_its_margins_with_it() {
+    run(case("class_hides"));
+}
+
+#[test]
+fn a_first_block_a_class_shows_takes_the_escaping_margin_back() {
+    run(case("class_hides_first"));
+}
+
+#[test]
+fn a_rule_that_hides_the_block_too_keeps_it_hidden_once_its_display_is_cleared() {
+    run(case("rule_hides_too"));
+}
+
+#[test]
+fn a_rule_with_a_variable_display_keeps_it_hidden_too() {
+    run(case("rule_variable_hides_too"));
+}
+
+#[test]
+fn a_class_rule_keeps_it_hidden_too() {
+    run(case("class_rule_hides_too"));
+}
+
+#[test]
+fn a_rule_keeps_a_block_whose_hidden_attribute_is_removed_hidden() {
+    run(case("rule_hides_hidden_removed"));
 }

@@ -344,6 +344,9 @@ pub(crate) struct Emitted {
     /// What `top` is while a script shows or hides the first blocks whose
     /// margins escape through this box's top edge, when that changes it.
     pub top_cases: Option<Escape>,
+    /// What `bottom` is while a script shows or hides the last blocks whose
+    /// margins escape through this box's bottom edge, when that changes it.
+    pub bottom_cases: Option<Escape>,
 }
 
 /// The children of a block container as a `ColumnLayout`.
@@ -357,6 +360,9 @@ pub(crate) struct Column {
     /// blocks, when that changes it; `escaped_top` is what it is as loaded.
     pub escaped_cases: Option<Escape>,
     pub escaped_bottom: MarginSet,
+    /// What escapes through the bottom as a script hides or shows the last
+    /// blocks, when that changes it; `escaped_bottom` is what it is as loaded.
+    pub escaped_bottom_cases: Option<Escape>,
     /// Only out-of-flow boxes' slots, which take no room: the box's own
     /// margins still collapse through it.
     pub only_slots: bool,
@@ -375,6 +381,9 @@ impl Emitter<'_, '_> {
         let mut layout = Object::new("ColumnLayout");
         layout.set("spacing", Value::Number(0.0));
         let mut pending = MarginSet::default();
+        // What `pending` is as a script shows or hides the last blocks of the
+        // item before, when that changes it.
+        let mut pending_cases: Option<Escape> = None;
         let mut escaped_top = None;
         let mut escaped_cases = None;
         let mut last: Option<usize> = None;
@@ -432,6 +441,7 @@ impl Emitter<'_, '_> {
                 layout.push_child(obj);
                 last = Some(layout.members.len() - 1);
                 pending = bottom;
+                pending_cases = None;
                 if hidden.escaping {
                     (escaped_top, escaped_cases) = settled(&mut hidden);
                 }
@@ -466,6 +476,7 @@ impl Emitter<'_, '_> {
                 layout.push_child(obj);
                 last = Some(layout.members.len() - 1);
                 pending = MarginSet::default();
+                pending_cases = None;
                 if hidden.escaping {
                     (escaped_top, escaped_cases) = settled(&mut hidden);
                 }
@@ -477,6 +488,7 @@ impl Emitter<'_, '_> {
             if emitted.collapse_through {
                 pending.join(emitted.top);
                 pending.join(emitted.bottom);
+                pending_cases = pending_cases.map(|c| c.joined(emitted.top).joined(emitted.bottom));
                 // An empty block's margins collapse with whichever box before
                 // it shows, or with what came before them all.
                 if !hidden.boxes.is_empty() {
@@ -506,6 +518,7 @@ impl Emitter<'_, '_> {
             if strut.is_some() {
                 emitted.top = MarginSet::default();
                 emitted.bottom = MarginSet::default();
+                emitted.bottom_cases = None;
             }
             // A block a script hides by its display (#51): the margins
             // either side of it then collapse together, as they do around one
@@ -515,6 +528,13 @@ impl Emitter<'_, '_> {
                 && crate::boxes::is_block_level(child.style.display);
             let hides = (collapsed || reached) && obj.id.is_some();
             let shown_when_hides = obj.id.as_ref().map(|id| format!("{id}.visible"));
+            // An item holding only hidden boxes: its margins collapse through
+            // it until something in it shows.
+            let holds = if hides {
+                None
+            } else {
+                shown_when(&obj, child, self)
+            };
             if hidden.boxes.is_empty() {
                 let before = pending;
                 if hides {
@@ -529,12 +549,24 @@ impl Emitter<'_, '_> {
                         hidden.escaping = true;
                         let cases = emitted.top_cases.as_ref();
                         hidden.escape(&id, cases, before, pending, !collapsed);
+                    } else if let Some(shown) = &holds {
+                        // Empty at the column's top, it lets the margins
+                        // after it escape too (#51).
+                        hidden.escaping = true;
+                        let cases = emitted.top_cases.as_ref();
+                        hidden.escape(&format!("({shown})"), cases, before, pending, false);
                     } else {
                         escaped_top = Some(pending);
                         escaped_cases = emitted.top_cases.clone().map(|e| e.joined(before));
                     }
                 } else if let Some(cases) = emitted.top_cases.clone() {
                     cases.joined(before).set_on(&mut obj);
+                } else if strut.is_none()
+                    && let Some(cases) = pending_cases.take()
+                {
+                    // The item before passes on what its last shown block's
+                    // bottom margin is.
+                    cases.joined(emitted.top).set_on(&mut obj);
                 } else {
                     self.set_margin(&mut obj, "Layout.topMargin", pending.value());
                 }
@@ -581,14 +613,18 @@ impl Emitter<'_, '_> {
                 hidden.boxes.clear();
                 hidden.shown_bottom = None;
                 hidden.holder = None;
-                // Its margins collapse through it until something in it shows.
-                if let Some(shown) = shown_when(&obj, child, self) {
+                if let Some(shown) = holds {
                     hidden.holder = Some((usize::MAX, shown.clone()));
                     let mut given = pending;
                     given.join(emitted.top);
                     hidden.before = given;
                     hidden.before.join(emitted.bottom);
-                    hidden.given = given.value().max(0.0);
+                    // Escaping, its top margin is the parent's.
+                    hidden.given = if hidden.escaping {
+                        0.0
+                    } else {
+                        given.value().max(0.0)
+                    };
                     hidden.push(shown, emitted.bottom);
                     before_hidden = None;
                 }
@@ -603,12 +639,15 @@ impl Emitter<'_, '_> {
             layout.push_child(obj);
             last = Some(layout.members.len() - 1);
             pending = emitted.bottom;
+            pending_cases = emitted.bottom_cases.take();
             if let Some((at, _)) = &mut hidden.holder
                 && *at == usize::MAX
             {
                 *at = layout.members.len() - 1;
             }
         }
+        // Its margins escape through the top too while all of it is hidden.
+        let escapes_through = hidden.escaping;
         // Every block of the column is one a script can hide.
         if hidden.escaping {
             (escaped_top, escaped_cases) = settled(&mut hidden);
@@ -621,6 +660,7 @@ impl Emitter<'_, '_> {
                 escaped_top: pending,
                 escaped_cases: None,
                 escaped_bottom: MarginSet::default(),
+                escaped_bottom_cases: None,
                 only_slots,
             };
         };
@@ -631,6 +671,20 @@ impl Emitter<'_, '_> {
             matches!(m, Member::Child(o) if !matches!(o.get("visible"), Some(Value::Bool(false))))
         }) {
             last = tail;
+        }
+        // What passes on as a script shows or hides the last blocks: the
+        // bottom margin of the last one shown, or what came before them all.
+        let mut escaped_bottom_cases = None;
+        if bottom_open && !escapes_through {
+            if hidden.boxes.is_empty() {
+                escaped_bottom_cases = pending_cases.take();
+            } else if hidden.holder.is_none() {
+                let cases = Escape {
+                    cases: hidden.boxes.iter().rev().cloned().collect(),
+                    otherwise: hidden.before,
+                };
+                escaped_bottom_cases = cases.varies().then_some(cases);
+            }
         }
         let escaped_bottom = if bottom_open {
             // The page as loaded: a hidden last box passes on the margins
@@ -692,6 +746,7 @@ impl Emitter<'_, '_> {
             escaped_top: escaped_top.unwrap_or_default(),
             escaped_cases,
             escaped_bottom,
+            escaped_bottom_cases,
             only_slots: false,
         }
     }

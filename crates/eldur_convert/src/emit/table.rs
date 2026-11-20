@@ -783,6 +783,7 @@ impl<'a> Emitter<'a, '_> {
             bottom: MarginSet::of(mb),
             collapse_through: false,
             top_cases: None,
+            bottom_cases: None,
         }
     }
 
@@ -1163,6 +1164,7 @@ impl<'a> Emitter<'a, '_> {
             bottom: MarginSet::of(mb),
             collapse_through: false,
             top_cases: None,
+            bottom_cases: None,
         }
     }
 
@@ -1263,6 +1265,7 @@ impl<'a> Emitter<'a, '_> {
             bottom: MarginSet::of(0.0),
             collapse_through: false,
             top_cases: None,
+            bottom_cases: None,
         };
         self.transformed(emitted, part, line).obj
     }

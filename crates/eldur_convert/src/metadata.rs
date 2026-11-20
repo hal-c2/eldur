@@ -192,16 +192,30 @@ pub(crate) fn declare_style(obj: &mut Object, doc: &Document, node: NodeId) {
 }
 
 /// `eldurStyleHides`: the element's own `style` attribute says
-/// `display: none`, so a script clearing its `display` shows it unless the
+/// `display: none`, by itself or through a custom property of `custom` (the
+/// element's), so a script clearing its `display` shows it unless the
 /// `hidden` attribute still hides it, which the runtime checks then.
-pub(crate) fn declare_style_hides(obj: &mut Object, doc: &Document, node: NodeId) {
+pub(crate) fn declare_style_hides(
+    obj: &mut Object,
+    doc: &Document,
+    node: NodeId,
+    custom: &std::collections::BTreeMap<String, String>,
+) {
     let Some(style) = doc.element(node).and_then(|e| e.attr("style")) else {
         return;
     };
-    if eldur_css::style_attribute_hides(style) {
+    if eldur_css::style_attribute_hides_with(style, custom) {
         obj.members
             .insert(0, decl("bool", "eldurStyleHides", Value::Bool(true)));
     }
+}
+
+/// `eldurRulesHide`: an author rule hides the element with its own `style`
+/// attribute's `display` and its `hidden` attribute gone, so a script
+/// clearing either leaves it hidden.
+pub(crate) fn declare_rules_hide(obj: &mut Object) {
+    obj.members
+        .insert(0, decl("bool", "eldurRulesHide", Value::Bool(true)));
 }
 
 /// An element whose attributes the runtime acts on when it hears the person
