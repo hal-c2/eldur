@@ -12731,15 +12731,90 @@ function _svgContext(raw) {
     return false;
 }
 
-// `inSvg`: the markup is the content of an `<svg>`, outside a `<foreignObject>`.
+// HTML start tags that leave SVG content, as the HTML parser's rules for
+// foreign content take them out of it. A `<font>` leaves it only with a color,
+// face or size.
+var _SVG_BREAKOUT = /^(b|big|blockquote|body|br|center|code|dd|div|dl|dt|em|embed|h[1-6]|head|hr|i|img|li|listing|menu|meta|nobr|ol|p|pre|ruby|s|small|span|strong|strike|sub|sup|table|tt|u|ul|var)$/;
+
+function _breaksOutOfSvg(tag, attrStr) {
+    return _SVG_BREAKOUT.test(tag)
+        || (tag === "font" && /(^|\s)(color|face|size)(\s*=|\s|$)/i.test(attrStr || ""));
+}
+
+// SVG elements whose content is HTML again: the HTML integration points.
+var _SVG_HTML_POINTS = { foreignobject: true, desc: true, title: true };
+
+var _VOID_TAGS = { area: true, base: true, br: true, col: true, embed: true, hr: true, img: true, input: true, link: true, meta: true, source: true, track: true, wbr: true };
+
+// The markup with what the HTML parser does to an HTML element in SVG content
+// written out: the SVG elements open around it close before it, up to the
+// nearest HTML element or integration point, and their own end tags after it
+// are dropped. Markup set into an SVG element (`inSvg`) has nothing of its own
+// to close there, so such an element stays in place, and the fragment parser
+// makes it an HTML one. Markup with no such element comes back as it was.
+function _closeSvgBeforeHtml(src, inSvg) {
+    if (!inSvg && !/<svg/i.test(src)) {
+        return src;
+    }
+    var tagRe = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)(\s[^>]*)?\s*(\/?)>/g;
+    var open = [];
+    var dropped = {};
+    var out = "";
+    var last = 0;
+    var m;
+    while ((m = tagRe.exec(src)) !== null) {
+        var tag = m[2].toLowerCase();
+        if (m[1] === "/") {
+            var at = open.length - 1;
+            while (at >= 0 && open[at].tag !== tag) {
+                --at;
+            }
+            if (at >= 0) {
+                open.length = at;
+            } else if (dropped[tag]) {
+                dropped[tag] -= 1;
+                out += src.slice(last, m.index);
+                last = tagRe.lastIndex;
+            }
+            continue;
+        }
+        var top = open.length > 0 ? open[open.length - 1] : null;
+        var foreign = top ? top.svg && !_SVG_HTML_POINTS[top.tag] : Boolean(inSvg);
+        if (foreign && _breaksOutOfSvg(tag, m[3])) {
+            var closing = "";
+            while (open.length > 0 && open[open.length - 1].svg && !_SVG_HTML_POINTS[open[open.length - 1].tag]) {
+                var gone = open.pop().tag;
+                closing += "</" + gone + ">";
+                dropped[gone] = (dropped[gone] || 0) + 1;
+            }
+            out += src.slice(last, m.index) + closing;
+            last = m.index;
+            foreign = false;
+        }
+        if (m[4] === "/" || _VOID_TAGS[tag]) {
+            continue;
+        }
+        open.push({ tag: tag, svg: tag === "svg" || foreign });
+    }
+    return last === 0 && out === "" ? src : out + src.slice(last);
+}
+
+// `inSvg`: the markup is set into an `<svg>` or an SVG element inside one,
+// outside a `<foreignObject>`.
 function _parseHtmlFragmentNodes(html, inSvg) {
     var src = String(html === null || html === undefined ? "" : html);
+    return _parseFragment(_closeSvgBeforeHtml(src, inSvg), inSvg);
+}
+
+// `inSvg`: the markup is the content of an SVG element outside an integration
+// point, with the SVG elements an HTML one leaves already closed.
+function _parseFragment(src, inSvg) {
     var nodes = [];
     var gap = "";
     var lastTag = "";
     var pos = 0;
     var tagOpenRe = /<([a-zA-Z][a-zA-Z0-9-]*)(\s[^>]*)?\s*(\/?)>/g;
-    var voidTags = { area: true, base: true, br: true, col: true, embed: true, hr: true, img: true, input: true, link: true, meta: true, source: true, track: true, wbr: true };
+    var voidTags = _VOID_TAGS;
 
     while (pos < src.length) {
         tagOpenRe.lastIndex = pos;
@@ -12769,7 +12844,7 @@ function _parseHtmlFragmentNodes(html, inSvg) {
         var attrStr = m[2] || "";
         var selfClosing = m[3] === "/" || Boolean(voidTags[tag]);
         var el = document.createElement(tag);
-        var svg = Boolean(inSvg) || tag === "svg";
+        var svg = tag === "svg" || (Boolean(inSvg) && !_breaksOutOfSvg(tag, attrStr));
         _applyAttrsFromHtml(el, attrStr, svg);
         _wsGiven(_unwrap(el), "ws", gap);
         gap = "";
@@ -12811,7 +12886,7 @@ function _parseHtmlFragmentNodes(html, inSvg) {
         }
         var inner = src.slice(afterOpen, closeStart);
         if (/<[a-zA-Z]/.test(inner)) {
-            var childWrappers = _parseHtmlFragmentNodes(inner, svg && tag !== "foreignobject");
+            var childWrappers = _parseFragment(inner, svg && !_SVG_HTML_POINTS[tag]);
             _wsGiven(_unwrap(el), "wsEnd", childWrappers.wsEnd);
             for (var c = 0; c < childWrappers.length; ++c) {
                 el.appendChild(childWrappers[c]);
