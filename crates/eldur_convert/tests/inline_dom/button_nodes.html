@@ -14,6 +14,9 @@ function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?
 <button id="ba">A</button>
 <button id="bs">A</button>
 <button id="bf">Save</button>
+<button id="be">Save</button>
+<span id="sp">Go</span>
+<button id="hd"><kbd style="display:none">Hidden</kbd>Save</button>
 <script>
 // A text-only button holds its text as a Text node, as every element does.
 var b=document.getElementById("b"),t=b.firstChild;
@@ -61,4 +64,11 @@ L("self",N(bs));bs.replaceChild(A,A);L("self-replace",N(bs),JSON.stringify(bs.in
 // One that goes into a fragment leaves the button.
 var bf=document.getElementById("bf"),fr=document.createDocumentFragment();fr.appendChild(bf.firstChild);
 L("fragment",bf.childNodes.length,JSON.stringify(bf.textContent),fr.childNodes.length,JSON.stringify(fr.textContent));
+var hd=document.getElementById("hd");hd.lastChild.data="Saved";
+L("hidden-data",JSON.stringify(hd.textContent),JSON.stringify(hd.innerText));
+// An element of the page put beside one of its Text nodes goes into the button.
+var be=document.getElementById("be"),bt=be.firstChild,sp=document.getElementById("sp");
+bt.before(sp);
+// Known gap: the element's text is not yet in the button's textContent.
+L("element-before",I(sp.parentNode),be.textContent.indexOf("Save")!==-1,bt.parentNode===be,JSON.stringify(sp.textContent));
 </script></body></html>

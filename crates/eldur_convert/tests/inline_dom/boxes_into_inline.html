@@ -7,13 +7,14 @@ function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?
 <div id="blk">block</div>
 <input id="f" value="v" style="width:60px">
 <p id="q">one <span id="r">two<i id="rm">o</i></span><b id="ra"> three</b></p>
-<form id="fm"><p><span id="fs">a </span></p></form>
-<p id="ep"><span id="sp">x <em id="em">y</em> z</span></p>
+<form id="fm"><p><span id="fs">a </span></p><fieldset id="fd" disabled><legend><span id="fl">l </span></legend><p><span id="ff">b </span></p></fieldset></form>
+<p id="ep"><span id="sp"><b id="eb">x</b> <em id="em">y</em> z</span></p>
 <p id="op"><span id="so">t</span></p>
 <p id="dp"><span id="sd">u </span>!</p>
 <p id="ip"><span id="si">w</span></p>
 <div id="fx" style="width:120px">fixed</div>
 <p id="fp">in <span id="fy">here</span></p>
+<p id="gp"><span id="g1">a</span><img id="gi" src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" width="30" height="10"><span id="g2">b</span></p>
 <script>
 // Boxes a script appends to an inline element go into that element: an atomic
 // box sits on its line after its text, a block splits the line around it.
@@ -39,10 +40,17 @@ L("out",I(blk.parentNode),near(kr.r-kr.l,qr.r-qr.l),JSON.stringify(q.textContent
 // A field in an inline element is in that element's form.
 var fq=document.createElement("input");fq.name="q";fq.value="1";document.getElementById("fs").append(fq);
 L("form",fq.form===document.getElementById("fm"),new FormData(document.getElementById("fm")).get("q"));
-// In an element in an inline element, on the same line.
+// One in an inline element in a disabled fieldset is disabled, unless in its first legend.
+var fo=document.createElement("input");fo.name="o";fo.value="2";document.getElementById("ff").append(fo);
+var fg=document.createElement("input");fg.name="g";fg.value="3";document.getElementById("fl").append(fg);
+var fdata=new FormData(document.getElementById("fm"));
+// Known gap: the one in the legend still matches :disabled, as Qt passes the fieldset's state down.
+L("fieldset",fo.form===document.getElementById("fm"),fdata.get("o"),fdata.get("g"),fo.matches(":disabled"));
+// In an element in an inline element, on the line of the text before it.
 function W(e){return e.getBoundingClientRect().width>100}
 var e2=document.createElement("input");document.getElementById("em").append(e2);
-L("nested",I(e2.parentNode),W(e2),near(R(e2).t,R(document.getElementById("ep")).t)||R(e2).t<R(document.getElementById("ep")).b);
+var eb=R(document.getElementById("eb")),er=R(e2);
+L("nested",I(e2.parentNode),W(e2),er.t<eb.b&&er.b>eb.t);
 // Its text gone, the element still holds the box.
 var so=document.getElementById("so"),e3=document.createElement("input");so.append(e3);so.removeChild(so.firstChild);
 L("box-only",I(e3.parentNode),so.childNodes.length,W(e3),I(so.parentNode));
@@ -56,6 +64,10 @@ var si=document.getElementById("si"),e5=document.createElement("input");si.appen
 L("box-siblings",N(si),JSON.stringify(si.textContent));
 e5.replaceWith("C");
 L("box-replaced",N(si),JSON.stringify(si.textContent),e5.parentNode===null);
+// Two elements on one line, apart: each keeps the box put in it.
+var g1=document.getElementById("g1"),g2=document.getElementById("g2"),i1=document.createElement("input"),i2=document.createElement("input");
+g1.append(i1);g2.append(i2);
+L("two-groups",I(i1.parentNode),I(i2.parentNode),W(i1),W(i2));
 // A block of a set width keeps it, in the line and out of it.
 var fx=document.getElementById("fx");document.getElementById("fy").append(fx);
 L("fixed-in",Math.round(R(fx).r-R(fx).l),I(fx.parentNode));
