@@ -744,6 +744,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 corner_slots.push(slot);
             }
         }
+        // A decorated block whose children's percentages are of its height
+        // has its content fill it, inside the insets.
+        let mut fill_content = false;
         let mut inner = match &b.content {
             Content::Blocks(_) if b.kind == BoxKind::Flex => {
                 Some((self.flex(b, &in_flow, decoration, line), "Content"))
@@ -779,9 +782,28 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     _ => None,
                 };
                 let outer_vh = std::mem::replace(&mut self.percent_of_vh, vh);
-                let of_parent = matches!(self.own_given, Given::Definite | Given::Line)
-                    && matches!(style.height, Size::Auto)
-                    && !deco.needed();
+                // Its content can fill it unless it clips or scrolls, which
+                // put the content in a part of their own.
+                let fillable =
+                    matches!(style.height, Size::Auto) && !deco.clips && deco.scroll.is_none();
+                // A row's line is as high as its items with their children's
+                // percentages left `auto` (css-flexbox §9.4 step 11). Qt's
+                // line is as high as the laid-out items, so a percentage
+                // resolves only where it adds nothing to the line: children
+                // that would be 0 high.
+                let line = self.own_given == Given::Line
+                    && !in_flow.is_empty()
+                    && in_flow.iter().all(|k| auto_height_is_zero(k));
+                // Decorated, the box is as high as its content, so the
+                // content fills it only for percentages that need its height
+                // and add nothing to the content's own.
+                let percent_children = || in_flow.iter().filter(|k| has_percent_height(k));
+                let decorated_fills = percent_children().next().is_some()
+                    && percent_children().all(|k| auto_height_is_zero(k));
+                let of_parent = fillable
+                    && (self.own_given == Given::Definite || line)
+                    && (!deco.needed() || decorated_fills);
+                fill_content = of_parent && deco.needed();
                 let outer_of_parent = std::mem::replace(&mut self.percent_of_parent, of_parent);
                 let percents: f32 = in_flow
                     .iter()
@@ -810,10 +832,12 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 self.percent_of_vh = outer_vh;
                 self.percent_of_parent = outer_of_parent;
                 self.percent_fills = outer_fills_percent;
-                let grown = self.own_given == Given::Grown
-                    && matches!(style.height, Size::Auto)
-                    && !deco.needed();
-                if (of_parent || grown)
+                // Undecorated, the column is the box, and Qt would centre
+                // or spread its items in a stretched or grown height.
+                let stretched = matches!(style.height, Size::Auto)
+                    && !deco.needed()
+                    && matches!(self.own_given, Given::Line | Given::Grown);
+                if (of_parent || stretched)
                     && !fills
                     && let Some(obj) = &mut column.obj
                 {
@@ -965,7 +989,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             // Flex and grid layouts distribute the box's height (a
             // `height`, `min-height` or a stretching parent) among their
             // items, so they fill it; block flow keeps its content height.
-            let fill = matches!(b.kind, BoxKind::Flex | BoxKind::Grid);
+            let fill = matches!(b.kind, BoxKind::Flex | BoxKind::Grid) || fill_content;
             let mut extra = Vec::new();
             if let Some(marker) = b.marker.as_ref().filter(|m| !m.in_line) {
                 extra.push(self.marker(b, marker));
@@ -1637,6 +1661,23 @@ pub(crate) enum Given {
     /// height to grow into: its children's percentages stay `auto`, but they
     /// stay at its top (css-flexbox §9.8).
     Grown,
+}
+
+/// Whether a block's height is a percentage alone.
+fn has_percent_height(k: &LayoutBox<'_>) -> bool {
+    matches!(&k.style.height, Size::Length(eldur_css::Length::Linear(l))
+        if l.percent > 0.0 && l.px == 0.0 && l.vw == 0.0 && l.vh == 0.0)
+}
+
+/// A block with a percentage height and nothing in it: `auto`, it is 0 high.
+fn auto_height_is_zero(k: &LayoutBox<'_>) -> bool {
+    let s = &k.style;
+    has_percent_height(k)
+        && matches!(k.content, Content::Empty)
+        && s.padding.top.as_px() == Some(0.0)
+        && s.padding.bottom.as_px() == Some(0.0)
+        && decoration::border_width(&s.border.top) == 0.0
+        && decoration::border_width(&s.border.bottom) == 0.0
 }
 
 /// Where along one axis a lone item sits in its flex or grid container.
