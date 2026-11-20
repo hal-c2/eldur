@@ -510,6 +510,8 @@ fn a_page_made_again_in_one_engine_hears_only_its_own_listeners() {
 fn static_page(name: &str) -> String {
     format!(
         r#"<!doctype html><html><head><meta charset="utf-8"><title>{name}</title></head><body>
+<button id="pop" popovertarget="menu">pop</button>
+<div id="menu" popover>menu</div>
 <p>{name}</p>
 <div style="height: 3000px"></div>
 <script>
@@ -520,6 +522,10 @@ window.addEventListener("resize", function() {{ if (document.title === "Last") d
 document.addEventListener("keydown", function(e) {{ if (e.key === "e") document.dispatchEvent(new Event("go")); }});
 window.addEventListener("go", function() {{ document.title = "End"; }}, true);
 document.addEventListener("go", function() {{ console.log("LC {name} go"); }});
+// A click whose promise makes another page does nothing more on this one's
+// behalf, and nothing on the new one's: its popover stays shut.
+document.getElementById("pop").addEventListener("click", function() {{ Promise.resolve().then(function() {{ document.title = "Pop"; }}); }});
+document.getElementById("menu").addEventListener("beforetoggle", function(e) {{ console.log("LC {name} menu " + e.newState); }});
 // The key a keydown listener made another page with goes no further.
 document.addEventListener("keypress", function(e) {{ if (e.key === "s" || e.key === "c") console.log("LC {name} press " + e.key); }});
 document.addEventListener("keydown", function(e) {{ console.log("LC {name} key " + e.key); }});
@@ -580,6 +586,20 @@ TestCase {
         return at
     }
 
+    // The item a page made for the element with this id.
+    function element(item, id) {
+        if (item.objectName === id) {
+            return item
+        }
+        for (let i = 0; i < item.children.length; ++i) {
+            const found = element(item.children[i], id)
+            if (found) {
+                return found
+            }
+        }
+        return null
+    }
+
     // The page's root scroller: what moves when its document scrolls.
     function scroller(item) {
         for (let i = 0; i < item.children.length; ++i) {
@@ -624,6 +644,13 @@ TestCase {
         wait(50)
         keyClick(Qt.Key_D)
         wait(50)
+        const pop = opened(contact, "Pop")
+        mouseClick(element(contact, "pop"))
+        wait(50)
+        console.log("LC click made " + pop.made.title)
+        pop.made.destroy()
+        wait(200)
+        contact.forceActiveFocus()
         // A listener that makes another page ends the event's document and
         // window steps, the rest of its own list too: none is the new page's.
         const next = opened(contact, "Next")
@@ -683,6 +710,7 @@ const STATIC_WANT: &[&str] = &[
     "LC Contact key d",
     "LC Contact kept key d",
     "LC Contact again key d",
+    "LC click made Pop",
     "LC key s made Next",
     "LC key w made Last",
     "LC resize made Fin",
@@ -706,7 +734,7 @@ fn a_page_made_after_one_went_with_nothing_ticking_hears_only_its_own_listeners(
     };
     let dir = std::env::temp_dir().join(format!("eldur-static-pages-{}", std::process::id()));
     std::fs::create_dir_all(&dir).expect("temp dir");
-    for (at, name) in ["Home", "About", "Contact", "Next", "Last", "Fin", "End"]
+    for (at, name) in ["Home", "About", "Contact", "Pop", "Next", "Last", "Fin", "End"]
         .into_iter()
         .enumerate()
     {
