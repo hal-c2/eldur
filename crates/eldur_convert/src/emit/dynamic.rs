@@ -1051,7 +1051,7 @@ impl Dynamic<'_, '_> {
             }
             no_item(self.cx.doc, &self.conds[usize::from(c)].cond, self.diags);
         }
-        let worlds = self.worlds(&unmarked);
+        let worlds = self.worlds(&unmarked, &shown);
         let lattice = Lattice::of(&worlds);
         let nodes: HashMap<usize, NodeId> = self
             .cx
@@ -1375,16 +1375,55 @@ impl Dynamic<'_, '_> {
 
     /// Every combination of flipped conditions some element depends on,
     /// the document's (none flipped) first.
-    fn worlds(&mut self, excluded: &BTreeSet<u16>) -> Vec<Vec<u16>> {
+    ///
+    /// Hideable elements that number or count are one group as well: a
+    /// sibling's marker or `counter()` depends on how many of them show at
+    /// once, which no single element's own combinations cover.
+    fn worlds(
+        &mut self,
+        excluded: &BTreeSet<u16>,
+        shown: &HashMap<NodeId, Display>,
+    ) -> Vec<Vec<u16>> {
         let mut set: BTreeSet<(usize, Vec<u16>)> = BTreeSet::new();
         set.insert((0, Vec::new()));
+        let mut counting: BTreeSet<u16> = BTreeSet::new();
         for e in &self.found.elements {
-            let deps: Vec<u16> = e
-                .depends_on
-                .iter()
-                .copied()
-                .filter(|c| !excluded.contains(c))
-                .collect();
+            if shown.contains_key(&e.node)
+                && e.by_mask.iter().any(|s| {
+                    s.display == Display::ListItem
+                        || !s.counter_reset.is_empty()
+                        || !s.counter_increment.is_empty()
+                        || !s.counter_set.is_empty()
+                })
+            {
+                counting.extend(e.depends_on.iter().filter(|c| !excluded.contains(c)));
+            }
+        }
+        // 2^9 is MAX_WORLDS; more would be cut anyway.
+        if counting.len() > 9 {
+            self.diags.warning(
+                "css",
+                None,
+                format!(
+                    "{} classes and states show or hide numbered elements; a marker or counter is right only while one of them differs from the document",
+                    counting.len()
+                ),
+            );
+        }
+        let joint = (counting.len() > 1 && counting.len() <= 9).then(|| Vec::from_iter(counting));
+        for deps in self
+            .found
+            .elements
+            .iter()
+            .map(|e| {
+                e.depends_on
+                    .iter()
+                    .copied()
+                    .filter(|c| !excluded.contains(c))
+                    .collect::<Vec<u16>>()
+            })
+            .chain(joint)
+        {
             for mask in 0..1usize << deps.len() {
                 let mut w: Vec<u16> = deps
                     .iter()
