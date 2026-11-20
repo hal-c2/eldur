@@ -892,7 +892,7 @@ function _resetPageState() {
     _layoutDirty = [];
     _tableHosts = [];
     _pseudoRules = null;
-    _pseudoPending = false;
+    _pseudoPending = [];
     _counterRules = [];
     _pseudoShown = new Set();
     _pseudoBoxKnown = null;
@@ -1273,13 +1273,16 @@ function _pageCacheSave() {
     };
 }
 
-function _pageCacheLoad(c) {
+// `keepHistory`: the history is the pages' one, and a covered page's callback
+// moves it from where the page on top is, whose entry, and what came after it,
+// a stale index of the covered page's would cut away.
+function _pageCacheLoad(c, keepHistory) {
     _explicitBaseUrl = c.explicitBaseUrl; _explicitDocumentUrl = c.explicitDocumentUrl;
     // In place: what holds `_locState` sees the page's address.
     for (var key in c.loc) {
         _locState[key] = c.loc[key];
     }
-    var entry = _historyEntries[c.entryIndex];
+    var entry = keepHistory ? undefined : _historyEntries[c.entryIndex];
     if (entry) {
         _historyEntries[c.entryIndex] = { state: entry.state, url: c.entryUrl };
         // And the page is on that entry again: what the gone page pushed stays
@@ -1341,7 +1344,7 @@ function _detachDeadRoots() {
 // alone, as the page on top is the document again before anything under way
 // on it looks. A gone page's callback has no document left, and is dropped.
 function _asPage(page, fn, self, args) {
-    if (!page || page === _root) {
+    if (!page || page === _root && _live(page)) {
         return fn.apply(self, args);
     }
     // The page on top may have gone with nothing ticking since: the one under
@@ -1359,7 +1362,7 @@ function _asPage(page, fn, self, args) {
     // Kept where a nested swap, and `_pageGone`, look for it.
     _pageCaches.set(top, _pageCacheSave());
     _pageCaches.delete(page);
-    _pageCacheLoad(kept);
+    _pageCacheLoad(kept, true);
     _root = page;
     _in = _inLayers.get(page) || null;
     try {
@@ -1368,7 +1371,12 @@ function _asPage(page, fn, self, args) {
         // A page the callback made over this one is the document now, and
         // `init` kept this page's state.
         if (_root === page) {
-            _pageCaches.set(page, _pageCacheSave());
+            var mine = _pageCacheSave();
+            // The history stayed where the page on top has it: this page is
+            // still on its own entry.
+            mine.entryIndex = kept.entryIndex;
+            mine.entryUrl = kept.entryUrl;
+            _pageCaches.set(page, mine);
             var back = _pageCaches.get(top);
             if (back) {
                 _pageCacheLoad(back);
@@ -1478,14 +1486,19 @@ function _timerRunOne() {
         return;
     }
     _timers.shift();
-    if (t.repeat) {
+    // A gone page's timer has nothing to run for: an interval put back would
+    // wake the engine on its beat for as long as another page is up.
+    var gone = !!t.page && !_live(t.page);
+    if (t.repeat && !gone) {
         // Late intervals keep their beat against other timers, without a burst to catch up.
         t.due = Math.max(t.due + t.ms, Date.now());
         t.seq = _timerSeq++;
         _timerInsert(t);
     }
     try {
-        _asPage(t.page, t.callback, null, t.args);
+        if (!gone) {
+            _asPage(t.page, t.callback, null, t.args);
+        }
     } finally {
         _microDrain();
         if (_timers.length > 0 && _timers[0].due <= Date.now()) {
@@ -1923,14 +1936,7 @@ function fetch(input, initOpts) {
             }
         }
 
-        // Settled in the page that asked, so what it runs next is in its document.
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState !== XMLHttpRequest.DONE || gen !== _pageGen) {
-                return;
-            }
-            _asPage(page, done);
-        };
-        var done = function() {
+        function done() {
             var bodyText = xhr.responseText || "";
             var rawStatus = Number(xhr.status) || 0;
             var isLocalOk = rawStatus === 0 && url.indexOf("http://") !== 0 && url.indexOf("https://") !== 0 && bodyText.length > 0;
@@ -1959,6 +1965,14 @@ function fetch(input, initOpts) {
                     });
                 }
             });
+        }
+
+        // Settled in the page that asked, so what it runs next is in its document.
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState !== XMLHttpRequest.DONE || gen !== _pageGen) {
+                return;
+            }
+            _asPage(page, done);
         };
 
         xhr.onerror = function() {
@@ -2565,7 +2579,9 @@ function _syncEldurClasses(raw, m) {
 // Generated text in the element's `Text`, kept out of what its content reads:
 // a generated box there would be one more thing a line or a column measures apart.
 var _pseudoRules = null;
-var _pseudoPending = false;
+// The pages with a flush queued: a covered page's callback restyles its own
+// document, which is not up when the flush runs.
+var _pseudoPending = [];
 // What each selector does to the counters generated text shows: set when some does.
 var _counterRules = [];
 
@@ -2585,13 +2601,19 @@ function _pseudoLoad() {
 }
 
 function _pseudoTouch() {
-    if (!_pseudoRules || _pseudoRules.length === 0 || _pseudoPending) {
+    var page = _root;
+    if (!_pseudoRules || _pseudoRules.length === 0 || _pseudoPending.indexOf(page) !== -1) {
         return;
     }
-    _pseudoPending = true;
+    _pseudoPending.push(page);
     Qt.callLater(function() {
-        _pseudoPending = false;
-        _pseudoFlush(false);
+        var at = _pseudoPending.indexOf(page);
+        // A layout read flushed it already.
+        if (at === -1) {
+            return;
+        }
+        _pseudoPending.splice(at, 1);
+        _asPage(page, _pseudoFlush, null, [false]);
     });
 }
 
@@ -4955,8 +4977,9 @@ function _layoutForRead() {
 function _layoutForReadNow() {
     // Generated text is the element's own for a read: a class that gave it some
     // is measured with it, as a browser lays out before it answers.
-    if (_pseudoPending) {
-        _pseudoPending = false;
+    var pending = _pseudoPending.indexOf(_root);
+    if (pending !== -1) {
+        _pseudoPending.splice(pending, 1);
         _pseudoFlush(false);
     }
     _aRead();
@@ -9380,7 +9403,9 @@ function _moDeliver(hits, raw, type, name, oldValue, added, removed, prev, next)
     if (!_mo.queued) {
         _mo.queued = true;
         _mo.chained = chained;
-        _microEnqueue(_moNotify);
+        // Every page's observers are in it: the page that mutated first may go
+        // before it runs, and each callback is bound to its own page in it.
+        _microEnqueue(_moNotify, null);
     } else if (chained) {
         _mo.chained = true;
     }
@@ -9730,6 +9755,18 @@ function _obsHookOne(item) {
     }
 }
 
+function _roMeasure(ro, entries) {
+    ro._targets.forEach(function(t) {
+        var s = _roSizes(t.m.raw);
+        var box = t.box === "border-box" ? s.border : t.box === "device-pixel-content-box" ? s.device : s.content;
+        if (box.inlineSize !== t.lastW || box.blockSize !== t.lastH) {
+            t.lastW = box.inlineSize;
+            t.lastH = box.blockSize;
+            entries.push(_roEntry(t.m.raw, s));
+        }
+    });
+}
+
 function _obsStep() {
     if (!_obs.dirty) {
         return;
@@ -9744,15 +9781,9 @@ function _obsStep() {
     var resized = _obs.ro.slice();
     for (var r = 0; r < resized.length; ++r) {
         var entries = [];
-        resized[r]._targets.forEach(function(t) {
-            var s = _roSizes(t.m.raw);
-            var box = t.box === "border-box" ? s.border : t.box === "device-pixel-content-box" ? s.device : s.content;
-            if (box.inlineSize !== t.lastW || box.blockSize !== t.lastH) {
-                t.lastW = box.inlineSize;
-                t.lastH = box.blockSize;
-                entries.push(_roEntry(t.m.raw, s));
-            }
-        });
+        // Measured in the observer's page: a covered page's target is in no
+        // document but its own, and would read as zero.
+        _asPage(resized[r]._page, _roMeasure, null, [resized[r], entries]);
         if (entries.length > 0) {
             try {
                 _asPage(resized[r]._page, resized[r]._cb, resized[r], [entries, resized[r]]);
