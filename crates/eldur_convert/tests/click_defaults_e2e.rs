@@ -7,6 +7,12 @@
 //! record of the same presses is in `tests/click_defaults/chromium.json`, by
 //! `node crates/eldur_convert/tests/click_defaults/gen.mjs`, its host swapping
 //! the pages inside the press as the Qt host here does.
+//!
+//! Some presses have no Chromium record. Chromium fires no `mousemove` inside
+//! a press where the pointer was not, while Ljós catches the pointer up with
+//! one first. When that move makes another page the document, Qt has already
+//! given the press to the old page's items, so the press is dropped. These
+//! cases are listed in `QT_ONLY`.
 
 mod support;
 
@@ -14,6 +20,9 @@ use eldur_convert::{Input, NoResources, Options, RootKind};
 
 const PAGE: &str = include_str!("click_defaults/page.html");
 const CHROMIUM: &str = include_str!("click_defaults/chromium.json");
+
+/// What each press with no Chromium record logs, after those that have one.
+const QT_ONLY: &[(&str, &[&str])] = &[("press whose move swaps", &["LC A move swaps"])];
 
 const TEST: &str = r##"
 import QtQuick
@@ -116,6 +125,14 @@ TestCase {
         twice(at, p)
         finish(at)
     }
+
+    function test_5_press_whose_move_swaps() {
+        const at = pages()
+        console.log("LC -- press whose move swaps")
+        const p = middle(at.a, "mv")
+        mouseClick(host, p.x, p.y)
+        finish(at)
+    }
 }
 }
 "##;
@@ -189,6 +206,10 @@ fn a_press_does_nothing_more_once_its_page_is_gone() {
         for line in step["log"].as_array().expect("log") {
             wanted.push(line.as_str().expect("line").to_owned());
         }
+    }
+    for (name, log) in QT_ONLY {
+        wanted.push(format!("LC -- {name}"));
+        wanted.extend(log.iter().map(|line| (*line).to_owned()));
     }
     if logged != wanted {
         problems.push(format!(

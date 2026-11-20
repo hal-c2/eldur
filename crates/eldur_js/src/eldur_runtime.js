@@ -16900,7 +16900,13 @@ function _inPointed(scene, buttons, modifiers) {
     _in.last = Qt.point(scene.x, scene.y);
     if (changed) {
         _in.held = was;
+        // The move's listeners may make another page the document: Qt gave
+        // the buttons to this page's items, so they are none of that page's.
+        var own = _inStillOwn();
         _inMoved(_in.last, mods);
+        if (!own()) {
+            return;
+        }
     }
     for (var bit = 1; bit <= 16; bit <<= 1) {
         if ((held & bit) && !(_in.held & bit)) {
