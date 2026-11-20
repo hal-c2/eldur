@@ -70,6 +70,8 @@ function _microDrain() {
 
 var Promise = (function() {
     var PENDING = 0, FULFILLED = 1, REJECTED = 2;
+    // The runtime's own `then`, set once the prototype has it.
+    var ownThen = null;
 
     function settle(p, state, value) {
         if (p._state !== PENDING) {
@@ -208,7 +210,7 @@ var Promise = (function() {
         });
     };
     // What a script puts on the prototype later is a script's `then`.
-    var ownThen = Promise.prototype.then;
+    ownThen = Promise.prototype.then;
     Promise.prototype["catch"] = function(onRejected) {
         return this.then(undefined, onRejected);
     };
