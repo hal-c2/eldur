@@ -29757,13 +29757,14 @@ function _gSettle() {
         _gDirty = false;
         ++_gGen;
         _pseudoBoxes();
+        // A class change can change what a custom property is, and with it
+        // what a script's `var()` display shows as (#85); the margin pass
+        // then collapses around the boxes as they now show.
+        _varDisplaysFollow(_root);
         _gMarginPass();
         // Templates paint the states, but what a script reads comes from the rules.
         _gWatchStates();
         _gClosedHiddenBoxes();
-        // A class change can change what a custom property is, and with it
-        // what a script's `var()` display shows as (#85).
-        _varDisplaysFollow(_root);
         _tableRepaintAll();
         _gRunning = false;
         return;
