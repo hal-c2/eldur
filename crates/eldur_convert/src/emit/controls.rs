@@ -598,6 +598,7 @@ impl Emitter<'_, '_> {
             bottom: MarginSet::of(mb),
             collapse_through: false,
             top_cases: None,
+            bottom_cases: None,
         }
     }
 
@@ -1674,6 +1675,7 @@ impl Emitter<'_, '_> {
             bottom: MarginSet::of(mb),
             collapse_through: false,
             top_cases: None,
+            bottom_cases: None,
         }
     }
 }

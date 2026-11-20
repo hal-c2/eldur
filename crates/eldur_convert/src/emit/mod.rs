@@ -178,6 +178,9 @@ pub(crate) struct Emitter<'a, 'd> {
     /// Blocks a script hides or shows by `style.display` or `hidden`: the
     /// margins either side of them collapse for both states (#51).
     pub script_hides: HashSet<NodeId>,
+    /// What an author rule still hides once a script clears the element's
+    /// own `display` or `hidden` (`Scripts::rules_hide`).
+    pub rules_hide: HashSet<NodeId>,
     /// The page holds the rule table: the runtime computes styles of its own.
     pub cascade_rules: bool,
     /// The boxes a script may put block children in.
@@ -293,6 +296,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             hides_items: false,
             writes_z_index: false,
             script_hides: HashSet::new(),
+            rules_hide: HashSet::new(),
             cascade_rules: false,
             gains: HashSet::new(),
             live_tables: HashSet::new(),
@@ -673,6 +677,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         let mut escaped_top = MarginSet::default();
         let mut escaped_cases = None;
         let mut escaped_bottom = MarginSet::default();
+        let mut escaped_bottom_cases = None;
         let mut only_slots = false;
         let outer_backdrop = self.backdrop;
         self.backdrop = if deco.gradients {
@@ -810,6 +815,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 escaped_top = column.escaped_top;
                 escaped_cases = column.escaped_cases;
                 escaped_bottom = column.escaped_bottom;
+                escaped_bottom_cases = column.escaped_bottom_cases;
                 only_slots = column.only_slots;
                 column.obj.map(|o| (o, "Content"))
             }
@@ -891,6 +897,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 bottom: MarginSet::default(),
                 collapse_through: true,
                 top_cases: None,
+                bottom_cases: None,
             };
         }
         let mut top = MarginSet::of(mt);
@@ -900,12 +907,15 @@ impl<'a, 'd> Emitter<'a, 'd> {
             top_cases = escaped_cases.map(|e: Escape| e.joined(MarginSet::of(mt)));
         }
         let mut bottom = MarginSet::of(mb);
+        let mut bottom_cases = None;
         if bottom_open {
             bottom.join(escaped_bottom);
+            bottom_cases = escaped_bottom_cases.map(|e: Escape| e.joined(MarginSet::of(mb)));
         }
         if only_slots && top_open && bottom_open {
             top.join(bottom);
             bottom = MarginSet::default();
+            bottom_cases = None;
         }
 
         let html_id = b
@@ -1000,6 +1010,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             bottom,
             collapse_through: false,
             top_cases,
+            bottom_cases,
         };
         self.transformed(e, b, line)
     }
@@ -1203,7 +1214,10 @@ impl<'a, 'd> Emitter<'a, 'd> {
             // A hidden box's own `style` attribute may be what hides it
             // (a `display: none` one a script reaches is built collapsed):
             // clearing that from a script shows it.
-            if collapsed || b.style.visibility == eldur_css::Visibility::Collapse {
+            if collapsed
+                || b.style.visibility == eldur_css::Visibility::Collapse
+                || self.gives_written_display_variables(node)
+            {
                 let declared = e.obj.members.iter().any(
                     |m| matches!(m, Member::PropertyDecl { name, .. } if name == "eldurStyle"),
                 );
@@ -1211,16 +1225,31 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     crate::metadata::declare_style(&mut e.obj, self.doc, node);
                 }
             }
+            let hidden_box = self
+                .styles
+                .computed(node)
+                .filter(|s| s.style.display == Display::None);
+            // A rule that hides it still does once a script clears its
+            // own `display` or its `hidden` attribute.
+            let rules_hide = (collapsed || b.style.visibility == eldur_css::Visibility::Collapse)
+                && hidden_box.is_some()
+                && self.rules_hide.contains(&node);
+            if rules_hide {
+                crate::metadata::declare_rules_hide(&mut e.obj);
+            }
             // A box a class world shows is bound to its classes instead,
             // and must keep following them.
             if !collapsed
+                && !rules_hide
                 && b.style.visibility == eldur_css::Visibility::Collapse
-                && self
-                    .styles
-                    .computed(node)
-                    .is_some_and(|s| s.style.display == Display::None)
+                && let Some(s) = hidden_box
             {
-                crate::metadata::declare_style_hides(&mut e.obj, self.doc, node);
+                crate::metadata::declare_style_hides(
+                    &mut e.obj,
+                    self.doc,
+                    node,
+                    &s.style.custom_properties,
+                );
             }
             if self.markers {
                 e.obj.members.push(Member::Comment(dynamic::marker(node)));
@@ -1273,6 +1302,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             bottom: MarginSet::of(mb),
             collapse_through: false,
             top_cases: None,
+            bottom_cases: None,
         }
     }
 
@@ -1346,6 +1376,22 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 ),
             ),
         }
+    }
+
+    /// Whether the element's `style` attribute declares custom properties
+    /// that a `var()` display a script writes, on it or inside it, reads at
+    /// runtime (#51).
+    fn gives_written_display_variables(&self, node: NodeId) -> bool {
+        !self.script_hides.is_empty()
+            && self
+                .doc
+                .element(node)
+                .and_then(|e| e.attr("style"))
+                .is_some_and(|s| s.contains("--"))
+            && self
+                .doc
+                .descendants(node)
+                .any(|n| self.script_hides.contains(&n))
     }
 
     fn visibility(&mut self, obj: &mut Object, style: &ComputedStyle) {

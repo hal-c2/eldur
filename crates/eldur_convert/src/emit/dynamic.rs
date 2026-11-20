@@ -224,6 +224,7 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
         emitter.hides_items = scripts.analysis.touches_inline_style;
         emitter.writes_z_index = scripts.analysis.writes_z_index;
         emitter.script_hides = scripts.display_writes();
+        emitter.rules_hide.clone_from(&scripts.rules_hide);
         emitter.cascade_rules = scripts.analysis.needs_cascade();
         // Rows a script makes are sized by the same solver, table or no table.
         emitter.has_table = scripts.analysis.open_elements
@@ -626,6 +627,9 @@ struct Diffs {
     unknown: Vec<(Path, usize)>,
     /// Elements whose form differs in some world.
     reshaped: BTreeSet<Option<NodeId>>,
+    /// Properties only a world declares, such as the carry a margin there
+    /// reads: its bindings come into the document's, so the declaration does.
+    decls: BTreeMap<(Path, String), Member>,
 }
 
 impl Diffs {
@@ -660,6 +664,18 @@ impl Diffs {
                     _ => None,
                 })
                 .collect()
+        }
+        for m in &other.members {
+            if let Member::PropertyDecl { name, .. } = m
+                && !base
+                    .members
+                    .iter()
+                    .any(|b| matches!(b, Member::PropertyDecl { name: n, .. } if n == name))
+            {
+                self.decls
+                    .entry((path.clone(), name.clone()))
+                    .or_insert_with(|| m.clone());
+            }
         }
         let (bp, op) = (props(base), props(other));
         let mut names: Vec<&str> = bp.iter().map(|&(n, _)| n).collect();
@@ -1068,6 +1084,9 @@ impl Dynamic<'_, '_> {
                             .worlds
                             .insert(w, value);
                     }
+                    for (key, decl) in shared.decls {
+                        diffs.decls.entry(key).or_insert(decl);
+                    }
                     continue;
                 }
             }
@@ -1136,6 +1155,18 @@ impl Dynamic<'_, '_> {
                 if let Some(b) = behavior {
                     obj.members.push(b);
                 }
+            }
+        }
+        for ((path, name), decl) in std::mem::take(&mut diffs.decls) {
+            let Some(obj) = object_at(&mut root, &path) else {
+                continue;
+            };
+            if !obj
+                .members
+                .iter()
+                .any(|m| matches!(m, Member::PropertyDecl { name: n, .. } if *n == name))
+            {
+                obj.members.push(decl);
             }
         }
         let locals = std::mem::take(&mut sources.locals);
@@ -1387,6 +1418,7 @@ impl Dynamic<'_, '_> {
             emitter.hides_items = scripts.analysis.touches_inline_style;
             emitter.writes_z_index = scripts.analysis.writes_z_index;
             emitter.script_hides = scripts.display_writes();
+            emitter.rules_hide.clone_from(&scripts.rules_hide);
             emitter.gains.clone_from(&scripts.gains.nodes);
             emitter.live_tables.clone_from(&scripts.live_tables);
             emitter.gains_any_empty = scripts.gains.any_empty;

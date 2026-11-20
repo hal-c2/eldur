@@ -71,6 +71,18 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         // Each needs an item of its own for the margins around it to follow it.
         scripts.wanted.extend(reached.iter().copied());
         scripts.attribute_displays = reached;
+        let hidden: std::collections::BTreeSet<_> = scripts
+            .display_writes()
+            .into_iter()
+            .filter(|&n| {
+                styles
+                    .computed(n)
+                    .is_some_and(|s| s.style.display == Display::None)
+            })
+            .collect();
+        scripts.rules_hide = eldur_css::rules_hide(&doc, &sheets, &options.viewport, &hidden)
+            .into_iter()
+            .collect();
     }
 
     // 4–5: boxes, then QML.
