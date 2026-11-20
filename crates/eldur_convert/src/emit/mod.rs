@@ -208,6 +208,9 @@ pub(crate) struct Emitter<'a, 'd> {
     /// Blocks a script hides or shows by `style.display` or `hidden`: the
     /// margins either side of them collapse for both states (#51).
     pub script_hides: HashSet<NodeId>,
+    /// The ids of emitted blocks a script hides by their display, shown or
+    /// not as loaded: an item holding only these has content while one shows.
+    pub hideable_ids: HashSet<String>,
     /// What an author rule still hides once a script clears the element's
     /// own `display` or `hidden` (`Scripts::rules_hide`).
     pub rules_hide: HashSet<NodeId>,
@@ -340,6 +343,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             hides_items: false,
             writes_z_index: false,
             script_hides: HashSet::new(),
+            hideable_ids: HashSet::new(),
             rules_hide: HashSet::new(),
             restacks: HashSet::new(),
             cascade_rules: false,
@@ -1340,6 +1344,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
             if collapsed {
                 e.obj.set("visible", false);
             }
+            if let Some(vars) = self.sheet_variables(node) {
+                crate::metadata::declare_vars(&mut e.obj, &vars);
+            }
             // A hidden box's own `style` attribute may be what hides it
             // (a `display: none` one a script reaches is built collapsed):
             // clearing that from a script shows it.
@@ -1521,6 +1528,63 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 .doc
                 .descendants(node)
                 .any(|n| self.script_hides.contains(&n))
+    }
+
+    /// The custom properties the stylesheets declare on an element whose
+    /// `var()` display a script may write, or on one of its ancestors, and
+    /// those of the inline elements between it and its parent's item: what
+    /// its computed ones have that that parent's don't, `None` for one it
+    /// drops. Those its own `style` attribute declares are left to the
+    /// runtime, which sees a script change them (#51).
+    fn sheet_variables(&self, node: NodeId) -> Option<BTreeMap<String, Option<String>>> {
+        if self.script_hides.is_empty()
+            || !self
+                .doc
+                .descendants(node)
+                .any(|n| self.script_hides.contains(&n))
+        {
+            return None;
+        }
+        let own = &self.styles.computed(node)?.style.custom_properties;
+        let empty = BTreeMap::new();
+        // An inline ancestor is a run of text with no item of its own, so
+        // what it declares is counted here.
+        let mut up = self.doc.parent_element(node);
+        while let Some(p) = up
+            && self
+                .styles
+                .computed(p)
+                .is_some_and(|s| s.style.display == Display::Inline)
+        {
+            up = self.doc.parent_element(p);
+        }
+        let parent = up
+            .and_then(|p| self.styles.computed(p))
+            .map_or(&empty, |p| &p.style.custom_properties);
+        let inline: HashSet<String> = self
+            .doc
+            .element(node)
+            .and_then(|e| e.attr("style"))
+            .map(|s| {
+                s.split(';')
+                    .filter_map(|d| d.split_once(':'))
+                    .map(|(name, _)| name.trim().to_owned())
+                    .filter(|name| name.starts_with("--"))
+                    .collect()
+            })
+            .unwrap_or_default();
+        let mut vars: BTreeMap<String, Option<String>> = own
+            .iter()
+            .filter(|(k, v)| parent.get(*k) != Some(*v) && !inline.contains(*k))
+            .map(|(k, v)| (k.clone(), Some(v.clone())))
+            .collect();
+        vars.extend(
+            parent
+                .keys()
+                .filter(|k| !own.contains_key(*k) && !inline.contains(*k))
+                .map(|k| (k.clone(), None)),
+        );
+        (!vars.is_empty()).then_some(vars)
     }
 
     fn visibility(&mut self, obj: &mut Object, style: &ComputedStyle) {

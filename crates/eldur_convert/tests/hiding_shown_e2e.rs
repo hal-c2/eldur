@@ -419,6 +419,152 @@ const CASES: &[Case] = &[
   s.style.display = s.style.display === '' ? 'var(--d)' : '';",
         back: &[],
     },
+    // A bottom margin that varies meets a top margin that varies too: the
+    // gap takes both cases.
+    Case {
+        name: "varying_edges_meet",
+        body: r#"<div id="box"><p id="a" style="margin:0">A</p><p id="shy" style="margin:0 0 40px">Shy</p></div>
+<div id="r"><p id="shy2" style="margin:30px 0 0">S2</p><p id="after" style="margin:10px 0 0">After</p></div>"#,
+        ids: &["shy2", "after", "t"],
+        load: &[84.0, 112.0, 130.0],
+        toggled: &[56.0, 84.0, 102.0],
+        toggle: "const s = document.getElementById('shy');
+  s.style.display = s.style.display === '' ? 'none' : '';
+  if (s.dataset.never) document.getElementById('shy2').style.display = 'none';",
+        back: &[],
+    },
+    // A bottom margin that varies, past a box hidden as loaded, still
+    // varies at the block after.
+    Case {
+        name: "varying_edge_past_hidden",
+        body: r#"<div id="box"><p id="a" style="margin:0">A</p><p id="shy" style="margin:0 0 40px">Shy</p></div>
+<div id="mid" style="display:none;margin:0">Mid</div>
+<p id="after" style="margin:10px 0 0">After</p>"#,
+        ids: &["after", "t"],
+        load: &[84.0, 102.0],
+        toggled: &[36.0, 54.0],
+        toggle: "const s = document.getElementById('shy');
+  s.style.display = s.style.display === '' ? 'none' : '';
+  if (s.dataset.never) document.getElementById('mid').style.display = '';",
+        back: &[],
+    },
+    // A bottom margin that varies stays inside a parent with bottom padding
+    // only while the block giving it shows.
+    Case {
+        name: "varying_edge_closed",
+        body: r#"<div id="wrap" style="padding-bottom:1px"><div id="box"><p id="a" style="margin:0">A</p><p id="shy" style="margin:0 0 40px">Shy</p></div></div>
+<p id="after" style="margin:0">After</p>"#,
+        ids: &["after", "t"],
+        load: &[85.0, 103.0],
+        toggled: &[27.0, 45.0],
+        toggle: "const s = document.getElementById('shy');
+  s.style.display = s.style.display === '' ? 'none' : '';",
+        back: &[],
+    },
+    // A custom property a script changes shows the box whose display
+    // reads it, with nothing else written.
+    Case {
+        name: "variable_changed",
+        body: r#"<div id="host" style="--d:none"><p id="shy"><em>Shy</em></p></div>
+<p id="after">After</p>
+<script>document.getElementById('shy').style.display = 'var(--d)';</script>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[50.0, 84.0],
+        toggle: "const h = document.getElementById('host');
+  h.style.setProperty('--d', h.style.getPropertyValue('--d') === 'none' ? 'block' : 'none');",
+        back: &[],
+    },
+    // An inherited custom property is resolved where it is declared: the
+    // child's `--base` does not change what the parent's `--display` is.
+    Case {
+        name: "variable_resolved_first",
+        body: r#"<div id="host" style="--base:none;--display:var(--base)"><p id="shy" style="--base:block"><em>Shy</em></p></div>
+<p id="after">After</p>"#,
+        ids: &["after", "t"],
+        load: &[50.0, 84.0],
+        toggled: &[16.0, 50.0],
+        toggle: "const s = document.getElementById('shy');
+  s.style.display = s.style.display === '' ? 'var(--display)' : '';",
+        back: &[],
+    },
+    // A custom property on an inline ancestor is one a box's `var()`
+    // display reads.
+    Case {
+        name: "variable_on_inline",
+        body: r#"<p id="line"><span style="--d:none">Text <button id="shy" style="font-size:30px">Shy</button></span></p>
+<p id="after">After</p>"#,
+        ids: &["after", "t"],
+        load: &[72.0, 106.0],
+        toggled: &[50.0, 84.0],
+        toggle: "const s = document.getElementById('shy');
+  s.style.display = s.style.display === '' ? 'var(--d)' : '';",
+        back: &[],
+    },
+    // A class a script takes away no longer hides the block: clearing its
+    // `display` after that shows it, as the class world it is in says.
+    Case {
+        name: "class_gone_display_cleared",
+        body: r#"<style>p{margin:0;height:20px}.off{display:none}</style>
+<p id="a">A</p><p id="shy" class="off">B</p><p id="c">C</p>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const s = document.getElementById('shy');
+  if (s.classList.contains('off')) { s.classList.remove('off'); s.style.display = 'none'; } else { s.style.display = s.style.display ? '' : 'none'; }",
+        back: &[8.0, 48.0],
+    },
+    // The same through a class taken off an ancestor.
+    Case {
+        name: "ancestor_class_gone_display_cleared",
+        body: r#"<style>p{margin:0;height:20px}.off #shy{display:none}</style>
+<div id="w" class="off"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const s = document.getElementById('shy'); const w = document.getElementById('w');
+  if (w.classList.contains('off')) { w.classList.remove('off'); s.style.display = 'none'; } else { s.style.display = s.style.display ? '' : 'none'; }",
+        back: &[8.0, 48.0],
+    },
+    // A class a script adds hides the block once its own `display: none`
+    // is cleared, though no rule hid it as loaded.
+    Case {
+        name: "class_added_display_cleared",
+        body: r#"<style>p{margin:0;height:20px}.off{display:none}</style>
+<p id="a">A</p><p id="shy" style="display:none">B</p><p id="c">C</p>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const s = document.getElementById('shy');
+  if (!s.classList.contains('off')) { s.classList.add('off'); } else { s.style.display = s.style.display ? '' : 'none'; }",
+        back: &[],
+    },
+    // A `var()` display a script writes reads a custom property a
+    // stylesheet declares.
+    Case {
+        name: "sheet_variable",
+        body: r#"<style>p{margin:0;height:20px}:root{--d:none}</style>
+<p id="a">A</p><p id="shy">B</p><p id="c">C</p>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const s = document.getElementById('shy');
+  s.style.display = s.style.display ? '' : 'var(--d)';",
+        back: &[],
+    },
+    // A script's custom property on an ancestor's `style` wins over the
+    // one its stylesheet declares, until the script takes it away again.
+    Case {
+        name: "sheet_variable_overridden",
+        body: r#"<style>p{margin:0;height:20px}#w{--d:none}</style>
+<div id="w"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const s = document.getElementById('shy'); const w = document.getElementById('w');
+  if (!s.style.display) { s.style.display = 'var(--d)'; } else { w.style.setProperty('--d', w.style.getPropertyValue('--d') ? '' : 'block'); }",
+        back: &[],
+    },
     // `ruby` and `math` are valid displays that win over the `none` before
     // them: an inline box once `hidden` is removed. A script hiding an
     // inline box alone in its line isn't followed yet (as with `inline`),
@@ -934,4 +1080,59 @@ fn a_class_rule_keeps_it_hidden_too() {
 #[test]
 fn a_rule_keeps_a_block_whose_hidden_attribute_is_removed_hidden() {
     run(case("rule_hides_hidden_removed"));
+}
+
+#[test]
+fn a_varying_bottom_margin_meets_a_varying_top_margin() {
+    run(case("varying_edges_meet"));
+}
+
+#[test]
+fn a_varying_bottom_margin_passes_a_block_hidden_as_loaded() {
+    run(case("varying_edge_past_hidden"));
+}
+
+#[test]
+fn a_varying_bottom_margin_stays_inside_a_padded_parent() {
+    run(case("varying_edge_closed"));
+}
+
+#[test]
+fn a_changed_custom_property_shows_the_block_again() {
+    run(case("variable_changed"));
+}
+
+#[test]
+fn a_parents_custom_property_is_resolved_before_a_child_overrides_what_it_reads() {
+    run(case("variable_resolved_first"));
+}
+
+#[test]
+fn a_custom_property_on_an_inline_ancestor_is_read() {
+    run(case("variable_on_inline"));
+}
+
+#[test]
+fn a_block_whose_hiding_class_is_gone_shows_once_its_display_is_cleared() {
+    run(case("class_gone_display_cleared"));
+}
+
+#[test]
+fn a_variable_display_reads_a_stylesheet_custom_property() {
+    run(case("sheet_variable"));
+}
+
+#[test]
+fn a_scripts_custom_property_wins_over_the_stylesheets_until_removed() {
+    run(case("sheet_variable_overridden"));
+}
+
+#[test]
+fn a_block_whose_ancestors_hiding_class_is_gone_shows_once_its_display_is_cleared() {
+    run(case("ancestor_class_gone_display_cleared"));
+}
+
+#[test]
+fn a_class_added_after_load_hides_the_block_once_its_display_is_cleared() {
+    run(case("class_added_display_cleared"));
 }

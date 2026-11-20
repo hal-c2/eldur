@@ -48,6 +48,7 @@ const CHROMIUM: &[&str] = &[
     "RB k [grid block] grid",
     "RB k [FLOW] block",
     "RB k [ Flow ] block",
+    "RB sp display block",
 ];
 
 const TEST: &str = r##"
