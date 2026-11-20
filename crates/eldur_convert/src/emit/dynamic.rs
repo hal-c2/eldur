@@ -678,14 +678,19 @@ impl Diffs {
                 let key = (path.clone(), name.clone());
                 self.decls.entry(key.clone()).or_insert_with(|| m.clone());
                 if let Some(value) = value {
-                    // Where no world declares it nothing reads it: the first
-                    // world's value stands for those.
+                    // Where no world declares it nothing reads it, and the
+                    // first world's value stands for those; but one the
+                    // runtime reads either way, such as the custom properties
+                    // a class's rule declares, is its default there (#85).
+                    let base = default_value(&other.type_name, name)
+                        .is_none()
+                        .then(|| value.clone());
                     self.changes
                         .entry(key)
                         .or_insert_with(|| Change {
                             owner,
                             ty: other.type_name.clone(),
-                            base: Some(value.clone()),
+                            base,
                             worlds: BTreeMap::new(),
                         })
                         .worlds
@@ -1877,6 +1882,8 @@ fn default_value(ty: &str, prop: &str) -> Option<Value> {
         "Layout.maximumWidth" | "Layout.maximumHeight" => {
             Some(Value::expr("Number.POSITIVE_INFINITY"))
         }
+        // No custom properties of its own (`metadata::declare_vars`).
+        "eldurVars" => Some(Value::expr("({})")),
         _ => None,
     }
 }
