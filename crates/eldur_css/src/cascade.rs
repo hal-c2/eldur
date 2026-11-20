@@ -658,6 +658,53 @@ pub(crate) fn compute_styles_walking(
     }
 }
 
+/// The `nodes` whose `display` is still `none` with their own `style`
+/// attribute's `display` and their `hidden` attribute taken away: what the
+/// stylesheets alone make of their own `display`.
+pub(crate) fn rules_hide(
+    doc: &Document,
+    sheets: &[Stylesheet],
+    viewport: &Viewport,
+    nodes: &BTreeSet<NodeId>,
+) -> BTreeSet<NodeId> {
+    if nodes.is_empty() {
+        return BTreeSet::new();
+    }
+    let _memo = properties::ParseMemo::enter();
+    let mut doc = doc.clone();
+    for &node in nodes {
+        // Only elements have attributes; anything else stays as it is.
+        let _ = doc.remove_attribute(node, "hidden");
+    }
+    let mut prepared = prepare(&doc, sheets, viewport);
+    for &node in nodes {
+        if let Some(decls) = prepared.engine.inline_styles.get_mut(node.index()) {
+            decls.retain(|d| !declares_display(d));
+        }
+    }
+    let base = prepared.engine.base_pass();
+    nodes
+        .iter()
+        .copied()
+        .filter(|node| {
+            let i = node.index();
+            base.styles
+                .get(i)
+                .and_then(Option::as_ref)
+                .or_else(|| base.hidden.get(i).and_then(Option::as_ref))
+                .is_some_and(|s| s.style.display == Display::None)
+        })
+        .collect()
+}
+
+fn declares_display(decl: &ParsedDecl) -> bool {
+    match &decl.value {
+        DeclValue::Expanded(l, _) | DeclValue::Wide(l, _) => *l == Longhand::Display,
+        DeclValue::PendingVar { target, .. } => *target == Longhand::Display,
+        DeclValue::Custom { .. } => false,
+    }
+}
+
 /// Parses inline styles, orders layers and indexes the rules of `sheets`.
 pub(crate) fn prepare<'a>(
     doc: &'a Document,
@@ -1992,7 +2039,10 @@ fn resolve_dag_var(
     resolved_base.get(name).cloned()
 }
 
-fn substitute_from_map(raw: &str, custom_props: &BTreeMap<String, String>) -> Option<String> {
+pub(crate) fn substitute_from_map(
+    raw: &str,
+    custom_props: &BTreeMap<String, String>,
+) -> Option<String> {
     substitute_with_lookup(raw, &mut |name| custom_props.get(name).cloned())
 }
 

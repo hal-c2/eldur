@@ -452,6 +452,15 @@ pub fn state_in_document(doc: &Document, node: NodeId, state: PseudoState) -> bo
 /// the last, as the cascade picks it.
 #[must_use]
 pub fn style_attribute_hides(style: &str) -> bool {
+    style_attribute_hides_with(style, &BTreeMap::new())
+}
+
+/// [`style_attribute_hides`], with a `display` that names a custom property
+/// resolved through `custom`, the element's computed custom properties
+/// ([`ComputedStyle::custom_properties`]). A `var()` that resolves to nothing
+/// leaves `display` unset, so the attribute doesn't hide.
+#[must_use]
+pub fn style_attribute_hides_with(style: &str, custom: &BTreeMap<String, String>) -> bool {
     use parse::{DeclValue, ParsedDecl};
     use properties::Longhand;
     let (decls, _) = parse::parse_inline_style(style, "style attribute", Origin::Author);
@@ -466,10 +475,27 @@ pub fn style_attribute_hides(style: &str) -> bool {
             won = Some(decl);
         }
     }
-    matches!(
-        won.map(|d| &d.value),
-        Some(DeclValue::Expanded(_, value)) if value.trim().eq_ignore_ascii_case("none")
-    )
+    match won.map(|d| &d.value) {
+        Some(DeclValue::Expanded(_, value)) => value.trim().eq_ignore_ascii_case("none"),
+        Some(DeclValue::PendingVar { raw_value, .. }) => {
+            cascade::substitute_from_map(raw_value, custom)
+                .is_some_and(|v| v.trim().eq_ignore_ascii_case("none"))
+        }
+        _ => false,
+    }
+}
+
+/// The `nodes` the stylesheets would still hide with their own `style`
+/// attribute's `display` and their `hidden` attribute taken away, so a script
+/// clearing either leaves them hidden by an author rule's `display: none`.
+#[must_use]
+pub fn rules_hide(
+    doc: &Document,
+    sheets: &[Stylesheet],
+    viewport: &Viewport,
+    nodes: &BTreeSet<NodeId>,
+) -> BTreeSet<NodeId> {
+    cascade::rules_hide(doc, sheets, viewport, nodes)
 }
 
 /// Classes some selector in `sheets` names.
