@@ -13,7 +13,7 @@
  "boxes_into_inline": {
   "log": [
    "LC made s \"in\",m,made true true true",
-   "LC input s \"in\",m,made,f true true v 21",
+   "LC input s \"in\",m,made,f true true v 23",
    "LC block r \"two\",rm,blk true true true \"one twooblock three\"",
    "LC out BODY true \"one twoo three\"",
    "LC form true 1",
@@ -37,6 +37,7 @@
    "LC detached-after \"a \",mv \"v\",INPUT mv 185 21 true",
    "LC created-box \"t\",mck true true true",
    "LC created-back \"t\",mck \"x\",SPAN true true true",
+   "LC page-into-made \"e\",mgb,mgi \"g \" true true bold k 48",
    "LC replaced \"b \",\"r\" true",
    "LC self-ref \"c\",qa,qb",
    "LC out-narrow 300"

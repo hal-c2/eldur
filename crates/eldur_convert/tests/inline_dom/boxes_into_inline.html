@@ -25,6 +25,8 @@ function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?
 <div id="mwd" style="display:flex"><div>x</div></div>
 <p id="mvp">a <span id="mv">v</span></p>
 <p id="mcp"><span id="mc">x</span></p>
+<p id="mep"><span id="me">x</span></p>
+<p id="mgp">g <b id="mgb">bold</b><input id="mgi" value="k" style="width:40px"></p>
 <script>
 // Boxes a script appends to an inline element go into that element: an atomic
 // box sits on its line after its text, a block splits the line around it.
@@ -119,6 +121,11 @@ mck.type="checkbox";mck.id="mck";mck.checked=true;mcs.append("t",mck);mc.append(
 L("created-box",N(mcs),I(mck.parentNode)===I(mcs),mck.checked,Math.round(R(mck).r-R(mck).l)>0);
 mcs.remove();mc.append(mcs);
 L("created-back",N(mcs),N(mc),I(mck.parentNode)===I(mcs),mck.checked,Math.round(R(mck).r-R(mck).l)>0);
+// Page elements a made element takes in before it goes in a line go with it:
+// an inline one as a node, a box as a box.
+var me=document.getElementById("me"),mes=document.createElement("span"),mgb=document.getElementById("mgb"),mgi=document.getElementById("mgi");
+mes.append("e",mgb,mgi);me.append(mes);
+L("page-into-made",N(mes),N(document.getElementById("mgp")),I(mgb.parentNode)===I(mes),I(mgi.parentNode)===I(mes),mgb.textContent,mgi.value,Math.round(R(mgi).r-R(mgi).l));
 // One replaced while its element is hidden is no longer the element's.
 var mp=document.getElementById("mp"),mz=document.createElement("input");mp.append(mz);
 mp.style.display="none";mp.replaceChild(document.createTextNode("r"),mz);mp.style.display="";
