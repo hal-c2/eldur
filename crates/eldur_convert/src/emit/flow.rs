@@ -601,7 +601,7 @@ impl Emitter<'_, '_> {
                     MarginSet::of(self.vertical_margin(&b.style.margin.top, line))
                 });
                 let above = pending_cases.as_ref().filter(|_| !escapes);
-                let (mut obj, top, top_cases, bottom) = self.float_group(
+                let (mut obj, top, top_cases, bottom, bottom_cases) = self.float_group(
                     floats, around, decoration, pending, above, escapes, clear_top,
                 );
                 if escapes {
@@ -615,7 +615,7 @@ impl Emitter<'_, '_> {
                 last = Some(layout.members.len() - 1);
                 self.place_hoisted(stop, &mut layout);
                 pending = bottom;
-                pending_cases = None;
+                pending_cases = bottom_cases;
                 if hidden.escaping {
                     (escaped_top, escaped_cases) = settled(&mut hidden);
                 }
@@ -1006,7 +1006,7 @@ impl Emitter<'_, '_> {
         pending_cases: Option<&Escape>,
         escapes: bool,
         clear_top: Option<MarginSet>,
-    ) -> (Object, MarginSet, Option<Escape>, MarginSet) {
+    ) -> (Object, MarginSet, Option<Escape>, MarginSet, Option<Escape>) {
         let left = floats[0].style.float == Float::Left;
         let mut row = self.float_row(floats, decoration);
         let row_id = row.id.clone().expect("a float row has an id");
@@ -1034,7 +1034,13 @@ impl Emitter<'_, '_> {
             group.push_child(row);
             // Every block beside the floats collapsed through: their margins
             // go on past the floats.
-            return (group, pending, pending_cases.cloned(), column.escaped_top);
+            return (
+                group,
+                pending,
+                pending_cases.cloned(),
+                column.escaped_top,
+                None,
+            );
         };
         let mut top = pending;
         top.join(column.escaped_top);
@@ -1090,29 +1096,43 @@ impl Emitter<'_, '_> {
             "implicitWidth",
             Value::expr(format!("{row_id}.implicitWidth")),
         );
-        let (height, bottom) = match clear_top {
+        let (height, bottom, bottom_cases) = match clear_top {
             // The clearing block keeps its own top margin, which the group
-            // leaves room for.
+            // leaves room for: the column's bottom margins past it, in each
+            // case when they depend on which blocks show.
             Some(clear) => {
-                let mut merged = column.escaped_bottom;
-                merged.join(clear);
-                let below = |px: f32| match round(px) {
+                let past = |m: MarginSet| {
+                    let mut merged = m;
+                    merged.join(clear);
+                    round(merged.value() - clear.value())
+                };
+                let more = match &column.escaped_bottom_cases {
+                    Some(cases) => cases.each(past),
+                    None => Gap::Number(past(column.escaped_bottom)),
+                };
+                let more = match more {
+                    Gap::Number(n) if n == 0.0 => String::new(),
+                    Gap::Number(n) if n < 0.0 => format!(" - {}", fmt_number(-n)),
+                    Gap::Number(n) => format!(" + {}", fmt_number(n)),
+                    Gap::Expr(e) => format!(" + ({e})"),
+                };
+                let below = match round(clear.value()) {
                     0.0 => String::new(),
                     px if px < 0.0 => format!(" + {}", fmt_number(-px)),
                     px => format!(" - {}", fmt_number(px)),
                 };
                 (
                     format!(
-                        "Math.max({col_id}.implicitHeight{}, {row_id}.y + {row_id}.implicitHeight{})",
-                        below(clear.value() - merged.value()),
-                        below(clear.value())
+                        "Math.max({col_id}.implicitHeight{more}, {row_id}.y + {row_id}.implicitHeight{below})"
                     ),
                     MarginSet::default(),
+                    None,
                 )
             }
             None => (
                 format!("Math.max({col_id}.implicitHeight, {row_id}.y + {row_id}.implicitHeight)"),
                 column.escaped_bottom,
+                column.escaped_bottom_cases,
             ),
         };
         group.set("implicitHeight", Value::expr(height));
@@ -1120,7 +1140,7 @@ impl Emitter<'_, '_> {
         // Appendix E); the lines beside them do not reach them.
         group.push_child(col);
         group.push_child(row);
-        (group, top, top_cases, bottom)
+        (group, top, top_cases, bottom, bottom_cases)
     }
 
     /// Gives line boxes the floats around them as their `exclusion`, in
@@ -1189,10 +1209,25 @@ impl Emitter<'_, '_> {
             params: vec!["line".to_owned()],
             body,
         });
+        // A summary's marker moves its first line in by its own handler:
+        // one handler does both, the marker's first, as the line then starts
+        // past the floats and the marker before its text.
+        let mut lines = Vec::new();
+        text.members.retain(|m| match m {
+            Member::Property {
+                name,
+                value: Value::Expr(e),
+            } if name == "onLineLaidOut" => {
+                lines.push(format!("({e})(line);"));
+                false
+            }
+            _ => true,
+        });
+        lines.push("eldurCut(line)".to_owned());
         text.members.push(Member::Handler {
             name: "onLineLaidOut".to_owned(),
             params: vec!["line".to_owned()],
-            body: vec!["eldurCut(line)".to_owned()],
+            body: lines,
         });
         // Lines are laid out for the place the text had then. Later: the
         // handler above reads geometry whose change would relayout the text
