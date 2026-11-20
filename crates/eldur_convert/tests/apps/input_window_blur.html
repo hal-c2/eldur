@@ -31,6 +31,11 @@ button { margin: 4px; }
 <p>words <a href="#" id="l">l</a> more</p>
 <p tabindex="0" id="p7">held <a href="#" id="m7">m7</a></p>
 <div id="gap">gap</div>
+<button id="x9">x9</button>
+<button id="w9">w9</button>
+<button id="k10">k10</button>
+<p tabindex="0" id="p9">two <a href="#" id="c9">c9</a> <a href="#" id="d9">d9</a></p>
+<button id="r8">r8</button>
 <script>
 // The window loses focus and gets it back, by itself and right after a blur
 // listener moved the focus. `document.hasFocus()` follows the window.
@@ -99,6 +104,22 @@ on("x6").addEventListener("click", function () {
 on("x7").addEventListener("click", function () {
   on("x7").addEventListener("blur", function () { on("m7").focus(); }, { once: true });
   on("w7").addEventListener("mousedown", function (ev) { ev.preventDefault(); on("p7").focus(); }, { once: true });
+}, { once: true });
+// Pressing p9 moves the focus from x9, whose blur listener focuses the link
+// c9 in it. A press on w9 in the same turn focuses its other link, d9.
+on("x9").addEventListener("click", function () {
+  on("x9").addEventListener("blur", function () { on("c9").focus(); }, { once: true });
+  on("w9").addEventListener("mousedown", function (ev) { ev.preventDefault(); on("d9").focus(); }, { once: true });
+}, { once: true });
+// k10's click queues a promise; a key in the same turn hears it settled.
+var ready = false;
+on("k10").addEventListener("click", function () {
+  Promise.resolve().then(function () { ready = true; console.log("k10 microtask"); });
+  document.addEventListener("keydown", function (ev) { console.log("keydown", ev.key, "ready", ready); }, { once: true });
+}, { once: true });
+// The window's focus listener takes r8 out as the window comes back to it.
+on("r8").addEventListener("click", function () {
+  window.addEventListener("focus", function () { on("r8").remove(); }, { once: true });
 }, { once: true });
 // A link in a line keeps the focus while its window is away.
 on("l").addEventListener("click", function (ev) { ev.preventDefault(); });
