@@ -92,9 +92,12 @@ var mh=document.getElementById("mh"),mx=document.createElement("input");mh.appen
 mh.style.display="none";mx.remove();mh.style.display="";
 L("hidden-removed",N(mh),mx.parentNode===null,W(mx));
 // An element off the page takes one as any element does.
-var mr=document.getElementById("mr");mr.remove();
+var mr=document.getElementById("mr"),mrp=mr.parentNode;mr.remove();
 var my=document.createElement("input");mr.append(my);
 L("detached-append",I(my.parentNode),N(mr));
+// Back on the page, it is drawn as one made there.
+mrp.append(mr);
+L("detached-back",N(mr),I(my.parentNode),I(mr.parentNode)===I(mrp),Math.round(R(my).r-R(my).l),Math.round(R(my).b-R(my).t),near(R(my).t,R(mr).t)||R(my).t<R(mr).b);
 // It sizes as any block from then on.
 document.body.style.width="300px";
 L("out-narrow",Math.round(R(blk).r-R(blk).l));
