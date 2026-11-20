@@ -101,6 +101,34 @@ fn hidden_items_of_separate_lists_are_not_combined() {
     );
 }
 
+#[test]
+fn a_property_over_thirteen_conditions_still_binds() {
+    // Each `aN` shows the hidden item after it, so the last item's marker
+    // depends on all thirteen hovers at once: too many for a joint group,
+    // but each hover alone must still renumber it.
+    let pairs: String = (0..13)
+        .map(|i| format!("<li class=a{i}>a{i}</li><li class=h{i}>h{i}</li>"))
+        .collect();
+    let rules: String = (0..13)
+        .map(|i| format!(".h{i}{{display:none}} .a{i}:hover + .h{i}{{display:list-item}} "))
+        .collect();
+    let page = format!("<!DOCTYPE html><style>{rules}</style><ol>{pairs}<li>c</li></ol>");
+    let out = convert_str(&page, &Options::default());
+    let qml = out.main_qml().expect("Main.qml");
+    // The last item's marker comes last; the hidden `h12` before it shows
+    // "15. " too, over the other twelve hovers.
+    let line = qml
+        .lines()
+        .filter(|l| l.contains("\"15. \""))
+        .last()
+        .unwrap_or_else(|| panic!("the last marker is not bound to the hovers:\n{qml}"));
+    let hovers: std::collections::BTreeSet<&str> = line
+        .split(|c: char| !(c.is_alphanumeric() || c == '_'))
+        .filter(|w| w.ends_with("Hover"))
+        .collect();
+    assert_eq!(hovers.len(), 13, "{line}");
+}
+
 /// A table of `cells` cells, four to a row, each recoloured by its own
 /// `:hover`, with borders `collapse` or `separate`.
 fn table_hovers(cells: usize, borders: &str) -> String {
