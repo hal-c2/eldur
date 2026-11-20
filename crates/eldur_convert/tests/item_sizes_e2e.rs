@@ -148,6 +148,9 @@ body { margin: 0 }
 <div style="height:300px"><div class=r id=e style="height:50%"><div id=e1><div class=k id=e1k></div></div></div></div>
 <div class=r id=g><div id=g1><div class=k id=g1k></div></div><div class=s id=g2></div></div>
 <div class=r id=h style="min-height:100px"><div id=h1><div id=h1g style="display:flex;flex-direction:column;width:40px;background:#fc0"><div style="height:20px"></div></div></div><div class=s id=h2></div></div>
+<div class=r id=m><div id=m1><div class=k id=m1k style="height:100%;margin-top:10px"></div></div><div class=s id=m2></div></div>
+<div class=r id=n><div id=n1><div class=k id=n1k style="min-height:5px"></div></div><div class=s id=n2></div></div>
+<div class=r id=p><div id=p1><div class=k id=p1k style="height:100%;min-height:5px"></div></div><div class=s id=p2></div></div>
 <script>var named = Array.from(document.querySelectorAll('[id]'));</script>
 </body></html>"#;
 
@@ -193,6 +196,18 @@ TestCase {
     // Without a percentage child, the content keeps its own height.
     function test_decorated_items_keep_their_content_height() {
         check("h1g", 0, 579, 40, 20)
+    }
+    // A percentage child with a margin would outgrow the line it resolves
+    // against, so it stays `auto` (Chromium gives m1k 30 high) and the row
+    // settles.
+    function test_a_child_with_a_margin_leaves_the_line_alone() {
+        check("m1", 0, 682, 100, 42)
+        check("m2", 100, 682, 100, 42)
+    }
+    // A min-height is a floor the line settles at: the child still resolves.
+    function test_a_child_with_a_min_height_still_resolves() {
+        check("n1k", 0, 741, 40, 15)
+        check("p1k", 0, 793, 40, 30)
     }
 
 }
@@ -374,12 +389,27 @@ fn run(name: &str, page: &str, test: &str) -> String {
     }
     let qml = dir.join(format!("tst_{name}.qml"));
     std::fs::write(&qml, test).expect("write test");
-    let output = support::qmltestrunner()
+    let mut child = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(&qml)
         .env("QT_FORCE_STDERR_LOGGING", "1")
-        .output()
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
         .expect("run qmltestrunner");
+    // A layout that never settles keeps the runner busy forever; fail
+    // instead of hanging the suite.
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
+    while child.try_wait().expect("wait for qmltestrunner").is_none() {
+        if std::time::Instant::now() > deadline {
+            child.kill().expect("kill qmltestrunner");
+            let _ = child.wait();
+            let _ = std::fs::remove_dir_all(&dir);
+            panic!("{name}: qmltestrunner did not finish in 60 s; the layout never settles");
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    let output = child.wait_with_output().expect("qmltestrunner output");
     std::fs::remove_dir_all(&dir).expect("remove temp dir");
     let text = format!(
         "{}\n{}\n{}",
