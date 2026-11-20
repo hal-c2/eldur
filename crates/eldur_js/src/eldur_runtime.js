@@ -16924,7 +16924,7 @@ function _inHandOver(layer, before, scene, buttons, modifiers) {
         scene = layer.last;
     }
     _inLose(layer);
-    if (_pageGone() || !_in) {
+    if (_pageGone() || !_in || !_inSameWindow(layer, _in)) {
         return;
     }
     _inDeliver(_in, before, scene, buttons, modifiers);
@@ -17004,9 +17004,17 @@ function _inHandedEnd(layer) {
 // to the page that took over.
 function _inLose(layer) {
     _inForgetPress(layer);
-    if (!_pageGone() && _in && _in !== layer) {
+    if (!_pageGone() && _in && _in !== layer && _inSameWindow(layer, _in)) {
         layer.handedTo = _in;
     }
+}
+
+// A press's points are in its own window's scene, and a page in another
+// window is another document the press was never on.
+function _inSameWindow(a, b) {
+    var wa = a.focusProbe ? a.focusProbe.window : null;
+    var wb = b.focusProbe ? b.focusProbe.window : null;
+    return !wa || !wb || wa === wb;
 }
 
 function _inForgetPress(layer) {
@@ -17305,13 +17313,19 @@ function _inDown(bit, scene, mods, heldBefore) {
 }
 
 function _inUp(bit, scene, mods) {
+    // A capture set since the last pointer event takes effect before this
+    // one, as before any other.
+    var own = _inStillOwn();
+    _inCaptureTurn(scene, mods);
+    if (!own()) {
+        return;
+    }
     var target = _in.capture || _inHit(scene);
     var button = _IN_BUTTON(bit);
     var count = _in.count;
     var from = _in.downTarget[bit];
     delete _in.downTarget[bit];
     var heldBy = _in.capture;
-    var own = _inStillOwn();
     if (_in.held === 0) {
         _inFire("pointerup", target, scene, mods, { button: button });
     } else {
@@ -17326,6 +17340,11 @@ function _inUp(bit, scene, mods) {
     }
     if (_in.held === 0) {
         _inEndCapture(scene, mods);
+        // Its `lostpointercapture` may have made another page the document:
+        // the click is neither page's.
+        if (!own()) {
+            return;
+        }
         _in.noMouse = false;
         _inRestoreFocus(_in);
     }

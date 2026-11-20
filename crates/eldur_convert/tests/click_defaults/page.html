@@ -1,7 +1,7 @@
 <!doctype html><html><head><meta charset="utf-8"><title>NAME</title>
 <style>
 body { margin: 0; font: 16px sans-serif }
-#wrap, label, #mv, #ov, #dn, #bt9 { display: block; width: 200px; height: 40px }
+#wrap, label, #mv, #ov, #dn, #cap, #bt9 { display: block; width: 200px; height: 40px }
 input { display: block; margin: 0 }
 </style>
 </head><body>
@@ -22,6 +22,7 @@ input { display: block; margin: 0 }
 <div id="mv">moved</div>
 <div id="ov">over</div>
 <div id="dn">down</div>
+<div id="cap">held</div>
 <form id="f9"><button id="bt9"><div id="in9">send</div></button></form>
 <script>
 // The host makes page Next when this one's title says so.
@@ -80,5 +81,12 @@ document.getElementById("in9").addEventListener("click", function(e) {
   if (name === "A") { e.preventDefault(); document.title = "Next"; }
 });
 document.getElementById("f9").addEventListener("submit", function(e) { e.preventDefault(); L("submit", e.submitter.id); });
+// A press that captured the pointer, whose lostpointercapture after the
+// release makes Next: the click is neither page's.
+var cap = document.getElementById("cap");
+cap.addEventListener("pointerdown", function(e) { cap.setPointerCapture(e.pointerId); });
+cap.addEventListener("lostpointercapture", function() {
+  if (name === "A") { L("lost makes Next"); document.title = "Next"; }
+});
 </script>
 </body></html>
