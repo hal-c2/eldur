@@ -38,8 +38,6 @@ use crate::scripts::Scripts;
 
 /// More worlds than this are left out (each is a full emission).
 const MAX_WORLDS: usize = 512;
-/// The most conditions one binding tests: 2^12 leaves.
-const MAX_ORDER: usize = 12;
 /// A container scripts change with more element children than this keeps
 /// its children's document positions (each position is a condition).
 const MAX_POSITIONED: usize = 32;
@@ -1707,19 +1705,6 @@ impl Dynamic<'_, '_> {
                 }
             }
         };
-        // Each leaf is one combination of `order`; past MAX_ORDER the
-        // binding would be larger than the worlds it was read from.
-        if order.len() > MAX_ORDER {
-            self.diags.warning(
-                "css",
-                line,
-                format!(
-                    "{prop} depends on {} classes and states at once; it keeps the document's value",
-                    order.len()
-                ),
-            );
-            return None;
-        }
         let mut leaves: HashMap<Vec<u16>, Option<String>> = HashMap::new();
         for mask in 0..1usize << order.len() {
             let mut flipped: Vec<u16> = order
