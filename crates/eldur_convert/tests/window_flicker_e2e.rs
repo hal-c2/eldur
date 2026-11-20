@@ -33,6 +33,21 @@ function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
 document.getElementById("t").addEventListener("change", function() { L("t change has", document.hasFocus()); });
 window.addEventListener("blur", function() { L("window blur"); });
 window.addEventListener("focus", function() { L("window focus"); });
+// A listener whose timer makes another page, page Next.
+document.addEventListener("swap", function() { setTimeout(function() { document.title = "Next"; }, 0); });
+</script>
+</body></html>"##;
+
+// The page a timer makes while the window is away.
+const NEXT: &str = r##"<!doctype html><html><head><meta charset="utf-8"><title>Next</title></head><body>
+<button id="n">n</button>
+<script>
+function L(){console.log("LC next "+[].slice.call(arguments).join(" "))}
+["focus", "focusin", "blur", "focusout"].forEach(function(type) {
+  document.getElementById("n").addEventListener(type, function() { L("n", type, "has", document.hasFocus()); });
+});
+window.addEventListener("blur", function() { L("window blur"); });
+window.addEventListener("focus", function() { L("window focus"); });
 </script>
 </body></html>"##;
 
@@ -284,6 +299,49 @@ TestCase {
         away.layer.focusProbe = away.real
         console.log("LC done")
     }
+    function test_page_made_by_a_timer_while_away() {
+        const page = open()
+        mouseClick(element(page, "b"))
+        wait(50)
+        const away = goAway()
+        const c = element(page, "c")
+        console.log("LC script focuses c")
+        Eldur.document.getElementById("c").focus()
+        console.log("LC active " + active())
+        const at = { made: null }
+        page.titleChanged.connect(function() {
+            if (page.title === "Next" && !at.made) {
+                const component = Qt.createComponent("Next.qml")
+                verify(component.status === Component.Ready, component.errorString())
+                at.made = createTemporaryObject(component, host, { width: 800, height: 600 })
+            }
+        })
+        console.log("LC a listener's timer makes page Next")
+        Eldur.document.dispatchEvent(new Eldur.Event("swap"))
+        wait(50)
+        verify(at.made, "no page Next")
+        console.log("LC active " + active())
+        // The window is still away: Next's layer reads Qt through a probe too.
+        const next = Eldur._in
+        verify(next && next !== away.layer, "no input layer for Next")
+        const nextReal = next.focusProbe
+        const win = { active: false }
+        const probe = { held: null, active: false, window: win }
+        next.focusProbe = probe
+        console.log("LC Qt reports while away")
+        probe.held = holds(c)
+        Eldur._inFocusChanged()
+        console.log("LC back")
+        win.active = true
+        probe.active = true
+        Eldur._inFocusChanged()
+        wait(100)
+        console.log("LC active " + active())
+        console.log("LC pending " + (next.focusPending ? next.focusPending.objectName : "none"))
+        next.focusProbe = nextReal
+        away.layer.focusProbe = away.real
+        console.log("LC done")
+    }
 }
 }
 "##;
@@ -414,6 +472,21 @@ const WANT: &[&str] = &[
     "LC active l",
     "LC pending none",
     "LC done",
+    "LC b focus has true",
+    "LC b focusin has true",
+    "LC away",
+    "LC b blur has false",
+    "LC b focusout has false",
+    "LC window blur",
+    "LC script focuses c",
+    "LC active c",
+    "LC a listener's timer makes page Next",
+    "LC active body",
+    "LC Qt reports while away",
+    "LC back",
+    "LC active body",
+    "LC pending none",
+    "LC done",
 ];
 
 #[test]
@@ -441,6 +514,30 @@ fn a_window_away_again_before_it_heard_it_was_back_hears_one_blur_and_no_focus()
             std::fs::create_dir_all(parent).expect("page dir");
         }
         std::fs::write(path, &file.contents).expect("write page");
+    }
+    // Page Next shares the first one's runtime file, and so its state.
+    let next = eldur_convert::convert(
+        &Input {
+            html: NEXT.to_owned(),
+            url: "next/index.html".to_owned(),
+        },
+        &options,
+        &mut NoResources,
+    );
+    for file in &next.files {
+        let name = file.path.to_string_lossy();
+        let contents = String::from_utf8_lossy(&file.contents);
+        match name.as_ref() {
+            "Main.qml" => std::fs::write(
+                dir.join("Next.qml"),
+                contents
+                    .replace("\"page.js\"", "\"next_page.js\"")
+                    .replace("Main.qml", "Next.qml"),
+            ),
+            "page.js" => std::fs::write(dir.join("next_page.js"), &file.contents),
+            _ => Ok(()),
+        }
+        .expect("write page Next");
     }
     std::fs::write(dir.join("tst_window_flicker.qml"), TEST).expect("write test");
     let output = support::qmltestrunner()
