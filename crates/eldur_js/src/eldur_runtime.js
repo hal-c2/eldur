@@ -16686,7 +16686,7 @@ function _inInstall() {
         page: _root, overlay: null, held: 0, last: null, pressed: false, hoverP: null, hoverM: null,
         downTarget: {}, noMouse: false, count: 0, countButton: -1, countAt: null, countTime: 0,
         capture: null, captureNext: null, defaults: [], scrolled: null, restoreFocus: null,
-        restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusMoves: 0, focusShift: false, focusPending: null, untold: [], shiftTo: null, change: null, overridden: null, away: false, seenActive: false, windowHas: false, backLater: false,
+        restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusMoves: 0, focusShift: false, focusPending: null, untold: [], shiftTo: null, change: null, overridden: null, away: false, seenActive: false, windowHas: false, backLater: false, windowTelling: false,
         spaceDown: null, typing: null, popovers: [], radioLast: {}, focusProbe: null
     };
     _inLayers.set(_root, _in);
@@ -16730,9 +16730,11 @@ function _inInstall() {
         if (probe.active) {
             layer.seenActive = true;
         }
+        // Coming back to an element that kept the focus, Qt's report of it
+        // tells the window, so a window listener's move starts from it.
         if (first) {
             layer.windowHas = probe.active;
-        } else if (_in === layer && !_pageGone()) {
+        } else if (_in === layer && !_pageGone() && !(probe.active && layer.away)) {
             _inWindowFocus(probe.active);
         }
     });
@@ -18187,10 +18189,11 @@ function _inFocusChanged() {
     var active = _inWindowActive();
     // Back in a window that went away: Qt gives the focus back to what had it,
     // which hears of it again, from nowhere.
-    var back = _in.away && active;
+    var back = _in.away && active && !_in.windowTelling;
     // The window hears it has the focus before what had it does, and out of
-    // Qt's report: a listener of the window's may take out what Qt gave the
-    // focus back to. What has the focus then is found again.
+    // Qt's report. A listener of the window's may move the focus on from, or
+    // take out, what Qt gave it back to: that is a move like any other, and
+    // what has the focus after it hears it is back.
     if (back && _in.windowHas !== true) {
         if (!_in.backLater) {
             var layer = _in;
@@ -18200,10 +18203,21 @@ function _inFocusChanged() {
                 if (_pageGone() || _in !== layer) {
                     return;
                 }
+                var before = layer.focused;
+                layer.windowTelling = true;
                 _inWindowFocus(true);
-                if (!_pageGone() && _in === layer) {
-                    _inFocusChanged();
+                layer.windowTelling = false;
+                if (_pageGone() || _in !== layer) {
+                    return;
                 }
+                if (layer.focused !== before) {
+                    layer.away = false;
+                    if (layer.focused && _inFocusElement() === layer.focused) {
+                        _inFocusEvents(layer.focused, null, "focus", "focusin");
+                        return;
+                    }
+                }
+                _inFocusChanged();
             });
         }
         return;
