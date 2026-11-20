@@ -1049,8 +1049,12 @@ impl Emitter<'_, '_> {
         };
         match shift {
             Gap::Number(n) if n == 0.0 => {}
-            Gap::Number(n) => row.set("anchors.topMargin", Value::Number(n)),
-            Gap::Expr(e) => row.set("anchors.topMargin", Value::expr(e)),
+            Gap::Number(n) => {
+                row.set("anchors.topMargin", Value::Number(n));
+            }
+            Gap::Expr(e) => {
+                row.set("anchors.topMargin", Value::expr(e));
+            }
         }
         let col_id = self.ids.claim("wrapped");
         col.id = Some(col_id.clone());
