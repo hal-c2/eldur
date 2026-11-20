@@ -460,6 +460,7 @@ impl<'a> PageBuilder<'a> {
                 *decl = format!("var {};", vars.join(", "));
             }
             let body = std::mem::replace(&mut self.out.init_stmts, outer);
+            debug_assert_no_top_declaration(&body);
             let mut lines = vec![
                 format!("if ({run}.state === 2) throw {run}.error;"),
                 format!("if ({run}.state) return;"),
@@ -487,6 +488,7 @@ impl<'a> PageBuilder<'a> {
             self.process_classic_or_module(pos, Some(&mut exports));
             self.out.in_eager_module = outer_eager;
             let body = self.out.init_stmts.split_off(start);
+            debug_assert_no_top_declaration(&body);
             if !body.is_empty()
                 || self.module_runs.contains_key(&script_idx)
                 || self.cycle_groups.contains_key(&script_idx)
@@ -1207,6 +1209,7 @@ impl<'a> PageBuilder<'a> {
             sections.push(self.out.module_fns.join("\n\n"));
         }
 
+        debug_assert_no_top_declaration(&self.out.init_stmts);
         let mut all_init_lines: Vec<String> = Vec::new();
         all_init_lines.extend(self.out.init_stmts);
         all_init_lines.extend(self.out.dcl_stmts);
@@ -3232,6 +3235,50 @@ fn pure_init_kind(
     }
 }
 
+/// The keyword of a declaration `stmt` starts with, if it is one.
+fn top_declaration_keyword(stmt: &str) -> Option<&'static str> {
+    const KEYWORDS: [&str; 9] = [
+        "var",
+        "let",
+        "const",
+        "function",
+        "async function",
+        "class",
+        "using",
+        "await using",
+        "enum",
+    ];
+    let stmt = stmt.trim_start();
+    KEYWORDS.into_iter().find(|k| {
+        stmt.strip_prefix(k).is_some_and(|rest| {
+            let rest = rest.trim_start();
+            // `function*` and a name, `let x`, `const {` or `[`; not `let = 1`
+            // or `var_x = 1`.
+            rest.len() < stmt.len() - k.len()
+                && rest.chars().next().is_some_and(|c| {
+                    c == '*' || c == '{' || c == '[' || c == '$' || c == '_' || c.is_alphabetic()
+                })
+                || rest.starts_with('*')
+        })
+    })
+}
+
+/// Statements in `init_stmts` run inside `__eldur_init` or a module's run
+/// function, so a declaration there would be local to that function and its
+/// name missing everywhere else. Every binding is declared in `top_decls` and
+/// only assigned here.
+fn debug_assert_no_top_declaration(stmts: &[String]) {
+    if cfg!(debug_assertions)
+        && let Some((stmt, kw)) = stmts
+            .iter()
+            .find_map(|s| top_declaration_keyword(s).map(|kw| (s, kw)))
+    {
+        panic!(
+            "a `{kw}` declaration reached the statements run at load, where it would be local:\n{stmt}"
+        );
+    }
+}
+
 fn ensure_trailing_semicolon(s: &str) -> String {
     if s.ends_with(';') || s.ends_with('}') {
         s.to_string()
@@ -3252,4 +3299,43 @@ fn indent_block(text: &str, spaces: usize) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+#[cfg(test)]
+mod top_declaration_tests {
+    use super::top_declaration_keyword;
+
+    #[test]
+    fn declarations_are_told_from_statements_that_look_like_them() {
+        for (stmt, kw) in [
+            ("var x = 1;", "var"),
+            ("let x;", "let"),
+            ("let [a] = b;", "let"),
+            ("const {a} = b;", "const"),
+            ("function f() {}", "function"),
+            ("function* g() {}", "function"),
+            ("function *g() {}", "function"),
+            ("async function f() {}", "async function"),
+            ("class C {}", "class"),
+            ("using r = open();", "using"),
+            ("await using r = open();", "await using"),
+            ("  const $x = 1;", "const"),
+        ] {
+            assert_eq!(top_declaration_keyword(stmt), Some(kw), "{stmt}");
+        }
+        for stmt in [
+            "x = 1;",
+            "var_x = 1;",
+            "letter = 2;",
+            "let = 1;",
+            "classes.push(1);",
+            "using(r);",
+            "(function () {})();",
+            "for (let i = 0; i < 2; i++) {}",
+            "if (a) { const b = 1; }",
+            "__eldur_run_m0();",
+        ] {
+            assert_eq!(top_declaration_keyword(stmt), None, "{stmt}");
+        }
+    }
 }
