@@ -91583,6 +91583,163 @@
     ],
     "(focus)": ""
    }
+  },
+  {
+   "name": "click x9",
+   "log": [
+    "focus x9 from - active x9 has true",
+    "focusin x9 from - active x9 has true",
+    "click x9 has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "x9"
+   }
+  },
+  {
+   "name": "press p9, which x9's blur moves on to its link c9, and press w9, which focuses its link d9, in the same turn",
+   "log": [
+    "blur x9 from p9 active BODY has true",
+    "focus c9 from - active c9 has true",
+    "focusin c9 from - active c9 has true",
+    "focusout x9 from - active c9 has true",
+    "click p9 has true",
+    "blur c9 from d9 active BODY has true",
+    "focusout c9 from d9 active BODY has true",
+    "focus d9 from c9 active d9 has true",
+    "focusin d9 from c9 active d9 has true",
+    "click w9 has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "d9"
+   }
+  },
+  {
+   "name": "click k10, whose click queues a promise, and Tab in the same turn",
+   "log": [
+    "blur d9 from k10 active BODY has true",
+    "focusout d9 from k10 active BODY has true",
+    "focus k10 from d9 active k10 has true",
+    "focusin k10 from d9 active k10 has true",
+    "k10 microtask",
+    "click k10 has true",
+    "keydown Tab ready true",
+    "blur k10 from p9 active BODY has true",
+    "focusout k10 from p9 active BODY has true",
+    "focus p9 from k10 active p9 has true",
+    "focusin p9 from k10 active p9 has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "p9"
+   }
+  },
+  {
+   "name": "click r8",
+   "log": [
+    "blur p9 from r8 active BODY has true",
+    "focusout p9 from r8 active BODY has true",
+    "focus r8 from p9 active r8 has true",
+    "focusin r8 from p9 active r8 has true",
+    "click r8 has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "r8"
+   }
+  },
+  {
+   "name": "the window goes away from r8",
+   "log": [
+    "blur r8 from - active r8 has false",
+    "focusout r8 from - active r8 has false",
+    "listener blur at window true active r8 has false",
+    "handler blur at window true active r8 has false"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": "r8"
+   }
+  },
+  {
+   "name": "the window comes back to r8, whose focus listener takes r8 out",
+   "log": [
+    "listener focus at window true active r8 has true",
+    "handler focus at window true active r8 has true",
+    "blur r8 from - active BODY has true",
+    "focusout r8 from - active BODY has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": ""
+   }
   }
  ],
  "lines_closed": [

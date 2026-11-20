@@ -22,7 +22,13 @@
  {"name":"press p7, which x7's blur moves on to its link m7, and press w7, which focuses p7, in the same turn","click":"#p7","again":"#w7"},
  {"name":"click gap, which nothing focusable holds","click":"#gap"},
  {"name":"the window goes away from the body","away":true},
- {"name":"the window comes back to the body","back":true}
+ {"name":"the window comes back to the body","back":true},
+ {"name":"click x9","click":"#x9"},
+ {"name":"press p9, which x9's blur moves on to its link c9, and press w9, which focuses its link d9, in the same turn","click":"#p9","again":"#w9"},
+ {"name":"click k10, whose click queues a promise, and Tab in the same turn","click":"#k10","key":"Tab"},
+ {"name":"click r8","click":"#r8"},
+ {"name":"the window goes away from r8","away":true},
+ {"name":"the window comes back to r8, whose focus listener takes r8 out","back":true}
 ],
 "watch":[{"sel":"#w"}],
 "window":true}
