@@ -157,5 +157,37 @@
     "errors": [
       "Error: bad"
     ]
+  },
+  "cross": {
+    "lines": [
+      "xb runs",
+      "xc runs b",
+      "xa runs bc",
+      "inline runs",
+      "xc rejected xa",
+      "done"
+    ],
+    "text": {
+      "out": "done"
+    },
+    "errors": [
+      "Error: xa",
+      "Error: xa",
+      "Error: xa"
+    ]
+  },
+  "hoist": {
+    "lines": [
+      "after runs",
+      "inline runs",
+      "hb rejected shown",
+      "done"
+    ],
+    "text": {
+      "out": "done"
+    },
+    "errors": [
+      "Error: shown"
+    ]
   }
 }

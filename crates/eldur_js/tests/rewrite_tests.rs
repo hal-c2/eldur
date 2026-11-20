@@ -3451,3 +3451,109 @@ fn a_throwing_module_fails_every_module_of_its_cycle() {
     assert!(marked < rethrown, "{js}");
     assert!(js.contains("function __eldur_run_m1()"), "{js}");
 }
+
+#[test]
+fn a_module_reaching_a_running_cycle_joins_it() {
+    // xa → xb → xa is a cycle; xc imports xb after xb ran, while xa still runs.
+    let resolver = FakeResolver::default();
+    let xa = module_script(
+        "xa.js",
+        "import { b } from \"./xb.js\";\nimport { c } from \"./xc.js\";\nconsole.log(b + c);\nthrow new Error(\"xa\");\n",
+    );
+    let xb = module_script(
+        "xb.js",
+        "import \"./xa.js\";\nexport const b = \"b\";\nconsole.log(\"xb\");\n",
+    );
+    let xc = module_script(
+        "xc.js",
+        "import { b } from \"./xb.js\";\nexport const c = \"c\";\nconsole.log(b);\n",
+    );
+    let out = run_rewrite(&[xa, xb, xc], &resolver);
+    let js = &out.page_js;
+    let xa_run = js.find("function __eldur_run_m0()").expect("xa");
+    let rethrown = xa_run + js[xa_run..].find("throw err;").expect("rethrown");
+    for other in ["__eldur_run_m1", "__eldur_run_m2"] {
+        let marked = xa_run
+            + js[xa_run..]
+                .find(&format!("{other}.state = 2; {other}.error = err;"))
+                .unwrap_or_else(|| panic!("{other} failed with xa:\n{js}"));
+        assert!(marked < rethrown, "{js}");
+    }
+}
+
+#[test]
+fn a_module_reaching_a_finished_cycle_keeps_its_own_state() {
+    // ya ⇄ yb finish before yc, a later script, imports yb.
+    let resolver = FakeResolver::default();
+    let ya = module_script("ya.js", "import \"./yb.js\";\nconsole.log(\"ya\");\n");
+    let yb = module_script("yb.js", "import \"./ya.js\";\nconsole.log(\"yb\");\n");
+    let yc = module_script(
+        "yc.js",
+        "import \"./yb.js\";\nconsole.log(\"yc\");\nthrow new Error(\"yc\");\n",
+    );
+    let out = run_rewrite(&[ya, yb, yc], &resolver);
+    let js = &out.page_js;
+    assert!(
+        !js.contains("__eldur_run_m0.state = 2; __eldur_run_m0.error = err;\n        throw"),
+        "{js}"
+    );
+    let yc_run = js.find("function __eldur_run_m2()").expect("yc");
+    let yc_fn = &js[yc_run..yc_run + js[yc_run..].find("\n}\n").expect("end")];
+    assert!(!yc_fn.contains("__eldur_run_m0.state = 2"), "{yc_fn}");
+    assert!(!yc_fn.contains("__eldur_run_m1.state = 2"), "{yc_fn}");
+}
+
+#[test]
+fn an_initializer_that_may_throw_runs_inside_its_module() {
+    let resolver = FakeResolver::default();
+    // Each source, and what of its last initializer must be worked out inside
+    // the module's run function.
+    let cases = [
+        ("export const q = 1n / 0n;\n", "1n / 0n"),
+        ("const big = 1n;\nexport const q = big + 1;\n", "big + 1"),
+        ("export const q = +1n;\n", "+1n"),
+        (
+            "const shown = { toString() { throw new Error(\"shown\"); } };\nexport const q = `${shown}`;\n",
+            "`${shown}`",
+        ),
+        (
+            "const shown = { valueOf() { throw new Error(\"shown\"); } };\nexport const q = shown * 2;\n",
+            "shown * 2",
+        ),
+        ("const n = 5;\nexport const q = [...n];\n", "[...n]"),
+        (
+            "const nothing = null;\nexport const { q } = nothing;\n",
+            "= nothing",
+        ),
+        (
+            "const f = function () {};\nexport const q = f < 1;\n",
+            "f < 1",
+        ),
+    ];
+    for (src, init) in cases {
+        let m = module_script("m.js", &format!("{src}console.log(\"m\");\n"));
+        let out = run_rewrite(&[m], &resolver);
+        let js = &out.page_js;
+        let run = js
+            .find("function __eldur_run_m0()")
+            .unwrap_or_else(|| panic!("no run function for {src}:\n{js}"));
+        let at = js
+            .find(init)
+            .unwrap_or_else(|| panic!("{init} missing:\n{js}"));
+        assert!(at > run, "{src} worked out outside its run:\n{js}");
+    }
+}
+
+#[test]
+fn an_initializer_that_cannot_throw_stays_hoisted() {
+    let resolver = FakeResolver::default();
+    let m = module_script(
+        "m.js",
+        "const a = 2;\nconst b = a * 3 + 1;\nconst s = `n${b}`;\nconst big = 2n * 3n;\nconst list = [...[a, b]];\nconst o = { a, ...{ b } };\nexport const all = [s, big, list, o, typeof o, !o, o === a];\n",
+    );
+    let out = run_rewrite(&[m], &resolver);
+    let js = &out.page_js;
+    assert!(!js.contains("function __eldur_run_m0()"), "{js}");
+    assert!(js.contains("const b = a * 3 + 1;"), "{js}");
+    assert!(js.contains("const big = 2n * 3n;"), "{js}");
+}

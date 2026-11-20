@@ -1,0 +1,13 @@
+<!DOCTYPE html><html><body>
+<p id="out">waiting</p>
+<script type="module" src="xa.js"></script>
+<script type="module">
+import { log } from "./log.js";
+log("inline runs");
+import("./xc.js")
+  .then(() => log("xc resolved"), (e) => log("xc rejected " + e.message))
+  .then(() => { document.getElementById("out").textContent = "done"; log("done"); });
+</script>
+<script type="module" src="xc.js"></script>
+<script type="module" src="user.js"></script>
+</body></html>
