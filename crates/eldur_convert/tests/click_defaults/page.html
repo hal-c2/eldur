@@ -2,7 +2,7 @@
 <style>
 body { margin: 0; font: 16px sans-serif }
 #wrap, label, #mv, #ov, #dn, #cap, #capgo, #upgo, #dngo, #bt9 { display: block; width: 200px; height: 40px }
-input { display: block; margin: 0 }
+input:not([type=hidden]) { display: block; margin: 0 }
 #capgo, #upgo { position: absolute; left: 300px }
 #capgo { top: 0 }
 #upgo { top: 60px }
@@ -16,6 +16,8 @@ input { display: block; margin: 0 }
 #lab10 { top: 370px }
 #pd10 { top: 420px }
 #tp { top: 470px; width: auto; height: auto }
+#lab11 { position: absolute; left: 550px; top: 60px }
+#tf11 { position: absolute; left: 0; top: 50px; width: 150px; height: 30px }
 #pop { inset: auto; right: 0; bottom: 0; margin: 0; width: 100px; height: 30px }
 </style>
 </head><body>
@@ -48,6 +50,7 @@ input { display: block; margin: 0 }
 <input id="tf8">
 <label id="lab10" for="pd10">panel</label>
 <div id="pd10">panel</div>
+<label id="lab11">hidden first<input type="hidden" name="t"><input id="tf11"></label>
 <p id="tp"><a href="#tl1">a link in a paragraph</a> <a href="#tl2">b</a></p>
 <form id="f9"><button id="bt9"><div id="in9">send</div></button></form>
 <script>
@@ -164,5 +167,15 @@ tp.addEventListener("mousedown", function(e) {
   if (name === "A") { L("text down makes Next"); document.title = "Next"; }
 });
 tp.addEventListener("mouseup", function(e) { e.stopPropagation(); });
+// A label whose first input is hidden, which is no control: its control is
+// the field after it, whose click makes Next.
+document.getElementById("lab11").addEventListener("click", function() {
+  L("lab11 control", this.control ? this.control.id || "(no id)" : "none");
+});
+document.getElementById("tf11").addEventListener("click", function(e) {
+  e.stopPropagation();
+  L("tf11 own click", e.detail);
+  if (name === "A") document.title = "Next";
+});
 </script>
 </body></html>

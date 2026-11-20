@@ -45,8 +45,9 @@ TestCase {
 
     // Page A, Next made over it inside the listener that sets A's title to
     // Next, and C over Next inside the one that sets Next's to C. With
-    // `elsewhere`, Next is made in the other window.
-    function pages(elsewhere) {
+    // `elsewhere`, Next is made in the other window; with `drop`, the host
+    // destroys A as it makes Next.
+    function pages(elsewhere, drop) {
         const component = Qt.createComponent("A.qml")
         verify(component.status === Component.Ready, component.errorString())
         const a = createTemporaryObject(component, host, { width: 800, height: 600 })
@@ -57,6 +58,9 @@ TestCase {
             if (a.title === "Next" && !at.next) {
                 at.next = createTemporaryObject(Qt.createComponent("Next.qml"), elsewhere ? other.contentItem : host, { width: 800, height: 600 })
                 at.layers.push(Eldur._in)
+                if (drop) {
+                    a.destroy()
+                }
                 at.next.titleChanged.connect(function() {
                     if (at.next.title === "C" && !at.c) {
                         at.c = createTemporaryObject(Qt.createComponent("C.qml"), host, { width: 800, height: 600 })
@@ -108,6 +112,14 @@ TestCase {
         mousePress(host, p.x, p.y)
         wait(50)
         mouseRelease(host, p.x, p.y)
+    }
+
+    // A finger's tap, which no mouse press of the page's own comes before.
+    function tapped(p) {
+        const finger = touchEvent(host)
+        finger.press(0, host, p.x, p.y).commit()
+        wait(20)
+        finger.release(0, host, p.x, p.y).commit()
     }
 
     function finish(at) {
@@ -304,12 +316,22 @@ TestCase {
         finish(at)
     }
 
-    // Ljós only, like test_21: Chromium's renderer stops answering when a
+    // A label's control is its first labelable element: a hidden input is none.
+    function test_20_label_whose_first_input_is_hidden() {
+        rest()
+        const at = pages()
+        console.log("LC -- label whose first input is hidden")
+        const p = middle(at.a, "lab11")
+        mouseClick(host, p.x, p.y)
+        finish(at)
+    }
+
+    // Ljós only, like test_22: Chromium's renderer stops answering when a
     // frame goes inside a light dismiss's beforetoggle, so there is nothing
     // to record. With the swap a task later it logs mouseup, beforetoggle,
     // click, all in the release; a swap there is test_14's, whose click is
     // neither page's.
-    function test_20_press_whose_light_dismissed_popover_swaps() {
+    function test_21_press_whose_light_dismissed_popover_swaps() {
         rest()
         const at = pages()
         console.log("LC -- press whose light-dismissed popover swaps")
@@ -320,13 +342,29 @@ TestCase {
 
     // As test_08 with Next in another window: the release is in A's window,
     // where no page is the document, so it is no page's.
-    function test_21_press_whose_mousedown_swaps_to_another_window() {
+    function test_22_press_whose_mousedown_swaps_to_another_window() {
         rest()
         const at = pages(true)
         console.log("LC -- press whose mousedown swaps to another window")
         const p = middle(at.a, "dn")
         mouseClick(host, p.x, p.y)
         finish(at)
+    }
+
+    // Ljós only: as test_19 with A destroyed while its items hold the press.
+    // Its release reaches no one, so the shield that press put on Next ends
+    // with A, and a tap on Next's link follows it. The tap is a finger's: a
+    // mouse press of Next's own would end the shield anyway. Chromium logs
+    // the release on Next (test_19).
+    function test_23_press_whose_mousedown_swaps_and_drops_its_page() {
+        rest()
+        const at = pages(false, true)
+        console.log("LC -- press whose mousedown swaps and drops its page")
+        const p = middle(at.a, "dn2")
+        held(p)
+        tryVerify(function() { return settled(at) }, 1000, "the press never settled")
+        tapped(p)
+        tryVerify(function() { return at.next.title === "Next" && settled(at) }, 1000, "the tap never ran")
     }
 }
 }
@@ -405,7 +443,7 @@ fn a_press_does_nothing_more_once_its_page_is_gone() {
     // Chromium has no counterpart: a window there is a document of its own,
     // so no press is ever handed across windows. Ljós's pages share one
     // runtime, whose document can be in another window than the press.
-    // Chromium cannot run test_20 (see there); its log is test_14's rule.
+    // Chromium cannot run test_21 (see there); its log is test_14's rule.
     for line in [
         "LC -- press whose light-dismissed popover swaps",
         "LC A mousedown pp 1",
@@ -415,6 +453,17 @@ fn a_press_does_nothing_more_once_its_page_is_gone() {
         wanted.push(line.to_owned());
     }
     wanted.push("LC -- press whose mousedown swaps to another window".to_owned());
+    // Chromium removes A's frame as test_19 does, and logs the release on
+    // Next; Qt destroys the items that held it, and no one hears it. A
+    // finger's tap on Ljós's pages is a click with no press before it.
+    for line in [
+        "LC -- press whose mousedown swaps and drops its page",
+        "LC A down makes Next",
+        "LC Next click dn2 0",
+        "LC Next hashchange #dngo",
+    ] {
+        wanted.push(line.to_owned());
+    }
     if logged != wanted {
         problems.push(format!(
             "logged\n    {}\n  wanted\n    {}",
