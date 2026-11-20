@@ -90,10 +90,10 @@ TestCase {
     readonly property var painted: ["b", "c", "d", "f", "i", "j", "l", "m", "o", "p", "t", "u", "w", "vd", "src", "mv", "vs", "rm", "gone", "vr",
         "c1", "o1", "c2", "o2", "c3", "o3", "hv", "o4", "fc", "o5", "c6", "o6", "c7", "o7", "e8", "o8", "c9", "o9", "c10", "d10", "o10", "n11",
         "k1", "v1", "k2", "v2", "k3", "v3", "k4", "v4", "k5", "m5", "v5",
-        "c1", "v1", "c2", "v2", "c3", "v3", "c4", "e4", "v4", "e5", "v5", "a6", "a7", "h8", "a8", "h9", "h10", "c11", "v11", "c12", "v12", "c13", "v13", "c14", "v14",
+        "c1", "v1", "c2", "v2", "c3", "v3", "c4", "e4", "v4", "e5", "v5", "a6", "a7", "h8", "a8", "h9", "h10", "c11", "v11", "c12", "v12", "c13", "v13", "c14", "v14", "p15", "v15", "r16", "n16",
         "p1", "p2", "r2", "a2",
         "b3", "b4", "da", "db", "k6", "n6", "v6",
-        "g1", "g2", "mq", "oq", "pq", "ax", "ox", "bx", "rx"]
+        "g1", "g2", "mq", "oq", "pq", "ax", "ox", "bx", "rx", "fa", "ff", "fc", "fv"]
 
     // The painted box nearest the front at a point, in Qt Quick's paint
     // order: the children over an item from the last level down, then the
@@ -449,6 +449,11 @@ div { height: 40px; width: 200px }
 #h10 { position: relative; right: 20px; animation: nudge 10s linear -5s paused }
 .lv0 { z-index: 0 }
 .hide { display: none }
+#p15 { height: 80px; overflow: hidden }
+#p15::after { content: ''; display: block; position: relative; z-index: 10; height: 20px; background: red }
+#v15 { transform: translate(20px, -40px) }
+#b16 { height: auto }
+#r16 { position: relative; z-index: 1; background: red }
 </style></head><body>
 <div id=t1 class=tf><div id=c1 class=in></div></div><div id=v1 class=over></div>
 <div class=gap></div>
@@ -477,8 +482,12 @@ div { height: 40px; width: 200px }
 <div id=a13><div id=c13 class="in up"></div></div><div id=v13 class=over></div>
 <div class=gap></div>
 <div id=p14 class=rel><div id=c14 class=in></div></div><div id=v14 class=over></div>
+<div class=gap></div>
+<div id=p15><div id=c15 class="in up"></div></div><div id=v15 class=over></div>
+<div class=gap></div>
+<div id=b16><div id=r16></div><div id=n16></div></div>
 <script>
-var named = ['t1','c1','v1','t2','c2','v2','t3','c3','v3','p4','c4','e4','v4','p5','e5','f5','v5','h6','a6','v6','o7','h7','a7','v7','h8','a8','h9','h10','p11','c11','v11','p12','c12','v12','a13','c13','v13','p14','c14','v14'].map(function (id) { return document.getElementById(id); });
+var named = ['t1','c1','v1','t2','c2','v2','t3','c3','v3','p4','c4','e4','v4','p5','e5','f5','v5','h6','a6','v6','o7','h7','a7','v7','h8','a8','h9','h10','p11','c11','v11','p12','c12','v12','a13','c13','v13','p14','c14','v14','p15','c15','v15','b16','r16','n16'].map(function (id) { return document.getElementById(id); });
 // A box raised inside a transformed box at `auto`, which keeps it in; a
 // box that lifted its block hidden.
 document.getElementById('c1').style.zIndex = '10';
@@ -496,6 +505,10 @@ document.getElementById('c13').style.display = '';
 document.getElementById('p14').classList.add('hide');
 document.getElementById('c14').style.zIndex = '10';
 document.getElementById('p14').classList.remove('hide');
+// A kid that lifted its block lowered: the block's `::after` still lifts
+// it. And a raised block made taller moves what follows it.
+document.getElementById('c15').style.zIndex = '-1';
+document.getElementById('r16').style.height = '80px';
 </script></body></html>"#;
 
 /// Chromium's fronts.
@@ -524,6 +537,10 @@ const CONTEXTS_TEST: &str = r##"
         compare(front(page, 100, 1230), "c12", "its block's level taken away")
         compare(front(page, 100, 1350), "c13", "a raised block hidden and shown")
         compare(front(page, 100, 1470), "c14", "a level set under a block a class hides")
+        compare(front(page, 100, 1610), "p15", "its ::after lifts the block")
+        compare(front(page, 100, 1630), "v15")
+        compare(front(page, 100, 1780), "r16", "a raised block made taller")
+        compare(front(page, 100, 1820), "n16", "moves what follows it")
     }
 }
 }
@@ -556,6 +573,10 @@ const CONTEXTS_UNSCRIPTED: &str = r##"
         compare(front(page, 100, 1230), "v12")
         compare(front(page, 100, 1350), "c13")
         compare(front(page, 100, 1470), "v14")
+        compare(front(page, 100, 1610), "p15")
+        compare(front(page, 100, 1630), "v15")
+        compare(front(page, 100, 1780), "n16")
+        compare(front(page, 100, 1820), "")
     }
 }
 }
@@ -797,6 +818,56 @@ const HELD_TEST: &str = r##"
 #[test]
 fn a_later_blocks_relative_box_paints_over_an_earlier_blocks_overlay() {
     run(HELD, &with_test(HELD_TEST), "held", false);
+}
+
+/// A float the runtime lays out (`#fm`, which a script makes) and one it
+/// lays out again (`#ff`), whose raised kid (`#fc` at 10) lifts it: the kid
+/// is over the box after the float (`#fv` at 2) and over the new float.
+const FLOAT_LIFT: &str = r#"<!doctype html><html><head><style>
+body { margin: 0 }
+div { height: 40px; width: 200px }
+.fl { float: left; width: 100px; background: #aaa }
+#fc { position: relative; z-index: 10; background: red }
+#fv { position: relative; transform: translate(20px, -20px); z-index: 2; background: blue }
+</style></head><body>
+<div id=fa><div id=ff class=fl><div id=fc></div></div></div><div id=fv></div>
+<script>
+var named = ['fa','ff','fc','fv'].map(function (id) { return document.getElementById(id); });
+var made = document.createElement('div');
+made.className = 'fl';
+made.id = 'fm';
+document.getElementById('fa').appendChild(made);
+</script></body></html>"#;
+
+/// Chromium's fronts.
+const FLOAT_LIFT_TEST: &str = r##"
+    function test_a_floats_raised_kid_stays_raised() {
+        compare(front(page, 50, 30), "fc", "over the box after its float")
+        compare(front(page, 150, 30), "fc", "over the float the script made")
+        compare(front(page, 150, 50), "fv")
+        compare(front(page, 210, 30), "fv")
+    }
+}
+}
+"##;
+
+#[test]
+fn a_runtime_laid_float_keeps_the_level_its_kid_lifts_it_to() {
+    run(FLOAT_LIFT, &with_test(FLOAT_LIFT_TEST), "float-lift", false);
+}
+
+/// Hoisted overlays at the top of the `z-index` range keep their order: the
+/// host is one over the level, which does not wrap or meet the next.
+#[test]
+fn the_highest_hoisted_levels_stay_apart() {
+    let page = r#"<!doctype html><html><body>
+<div><div id=top style="position: absolute; z-index: 2147483647"></div><div id=next style="position: absolute; z-index: 2147483646"></div></div>
+<div style="position: relative"></div>
+</body></html>"#;
+    let out = convert_str(page, &Options::default());
+    let qml = out.main_qml().expect("Main.qml");
+    assert!(qml.contains("z: 2147483648"), "the highest host\n{qml}");
+    assert!(qml.contains("z: 2147483647"), "the next host\n{qml}");
 }
 
 /// Boxes a script makes out of flow are painted in gates over the page,

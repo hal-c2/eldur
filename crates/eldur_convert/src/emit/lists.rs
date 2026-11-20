@@ -357,8 +357,12 @@ impl Emitter<'_, '_> {
             .filter(|_| self.options.source_comments)
             .map(|n| describe(self.doc, n));
         if let Some(stop) = hoist {
-            let host =
-                self.hoisted_host(b, obj, block_id.as_deref(), Value::Number(f64::from(lift)));
+            // Out in its stop's column its host is a level of its own, where
+            // the two highest keep their order rather than meet at the top.
+            let lift = style
+                .z_index
+                .map_or(f64::from(lift), |z| f64::from(z.max(0)) + 1.0);
+            let host = self.hoisted_host(b, obj, block_id.as_deref(), Value::Number(lift));
             self.hoisted.push((stop, host));
         } else {
             match (fixed, self.fixed_block.as_mut()) {
