@@ -537,21 +537,26 @@ function setOnload(listeners, call, value) {
 // A top-level `DOMContentLoaded` or `load` listener, added where the
 // `addEventListener` call runs. The callback is the value it had there, as a
 // browser takes it: a function is called on `target`, an object has its
-// `handleEvent` called, and `null` adds nothing. As in a browser, a callback
-// already added with the same target and capture is not added again, and a
-// `load` listener on `document` is never called, since `load` is dispatched at
+// `handleEvent` called, and `null` adds nothing. The options are read first,
+// for any callback. As in a browser, a callback already added with the same
+// target and capture is not added again, one whose `signal` has aborted is
+// not added and one whose `signal` aborts later is taken out, and a `load`
+// listener on `document` is never called, since `load` is dispatched at
 // `window` alone.
 function queueListener(listeners, target, type, callback, options) {
+    var said = _listenerOptions(options);
     if (callback === null || callback === undefined) {
         return;
     }
-    var capture = typeof options === "boolean" ? options
-        : options !== null && typeof options === "object" && !!options.capture;
+    var capture = said.capture;
     for (var i = 0; i < listeners.length; ++i) {
         var added = listeners[i];
         if (added.target === target && added.callback === callback && added.capture === capture) {
             return;
         }
+    }
+    if (said.signal && said.signal.aborted) {
+        return;
     }
     if (type === "load" && target !== window) {
         return;
@@ -573,22 +578,35 @@ function queueListener(listeners, target, type, callback, options) {
     // order added.
     call.phase = type === "load" ? 0 : target === window ? (capture ? 0 : 3) : (capture ? 1 : 2);
     listeners.push(call);
+    if (said.signal) {
+        said.signal.addEventListener("abort", function() {
+            var at = listeners.indexOf(call);
+            if (at >= 0) {
+                listeners.splice(at, 1);
+            }
+        });
+    }
 }
 
 // The page's `DOMContentLoaded` or `load` listeners, by phase and then in the
-// order they were added. One that throws is reported and the next is still
-// called, as a browser dispatches.
+// order they were added. As a browser dispatches, the listeners are the ones
+// added when the event fires, one taken out before its turn (its `signal`
+// aborted, or `window.onload = null`) is skipped, and one that throws is
+// reported and the next is still called.
 function fireListeners(listeners) {
     var order = [];
     for (var i = 0; i < listeners.length; ++i) {
-        order.push(i);
+        order.push({ call: listeners[i], at: i });
     }
     order.sort(function(a, b) {
-        return ((listeners[a].phase || 0) - (listeners[b].phase || 0)) || (a - b);
+        return ((a.call.phase || 0) - (b.call.phase || 0)) || (a.at - b.at);
     });
     for (var k = 0; k < order.length; ++k) {
+        if (listeners.indexOf(order[k].call) < 0) {
+            continue;
+        }
         try {
-            listeners[order[k]]();
+            order[k].call();
         } catch (err) {
             reportError(err);
         }
@@ -10124,14 +10142,42 @@ function _isCapture(options) {
     return options === true || Boolean(options && typeof options === "object" && options.capture);
 }
 
+// `addEventListener`'s options as a browser reads them: each once, in the
+// order `capture`, `once`, `passive`, `signal`, before anything else, a null
+// callback included, since a getter among them may run the page's code. A
+// value that is not an object is the capture flag.
+function _listenerOptions(options) {
+    var said = { capture: false, once: false, passive: undefined, signal: undefined };
+    if (options === null || options === undefined) {
+        return said;
+    }
+    if (typeof options !== "object" && typeof options !== "function") {
+        said.capture = Boolean(options);
+        return said;
+    }
+    said.capture = Boolean(options.capture);
+    said.once = Boolean(options.once);
+    var passive = options.passive;
+    said.passive = passive === undefined ? undefined : Boolean(passive);
+    var signal = options.signal;
+    if (signal !== undefined
+        && (signal === null || typeof signal !== "object" || typeof signal.addEventListener !== "function")) {
+        throw new TypeError("Failed to execute 'addEventListener' on 'EventTarget': "
+            + "Failed to read the 'signal' property from 'AddEventListenerOptions': "
+            + "Failed to convert value to 'AbortSignal'.");
+    }
+    said.signal = signal;
+    return said;
+}
+
 function _addListener(item, eventType, handler, options) {
+    var said = _listenerOptions(options);
     if (!item || typeof handler !== "function") {
         return false;
     }
     var raw = item === document || item === window ? item : _unwrap(item);
     var type = String(eventType);
-    var key = _isCapture(options) ? "capture:" + type : type;
-    var said = options && typeof options === "object" ? options : {};
+    var key = said.capture ? "capture:" + type : type;
     if (said.signal && said.signal.aborted) {
         return false;
     }
@@ -10141,7 +10187,7 @@ function _addListener(item, eventType, handler, options) {
     }
     if (m.listeners[key].indexOf(handler) === -1) {
         m.listeners[key].push(handler);
-        if (Boolean(said.once)) {
+        if (said.once) {
             if (!m.onceListeners[key]) {
                 m.onceListeners[key] = [];
             }
@@ -10152,7 +10198,7 @@ function _addListener(item, eventType, handler, options) {
         if (said.passive !== undefined) {
             m.passive = m.passive || {};
             m.passive[key] = m.passive[key] || new Map();
-            m.passive[key].set(handler, Boolean(said.passive));
+            m.passive[key].set(handler, said.passive);
         }
         if (said.signal) {
             // From the set it went into: the page may no longer be the document.

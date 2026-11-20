@@ -330,6 +330,42 @@
     },
     "errors": []
   },
+  "loadoptions": {
+    "lines": [
+      "null load capture",
+      "null load once",
+      "null load passive",
+      "null load signal",
+      "null ready capture",
+      "null ready once",
+      "null ready passive",
+      "null ready signal",
+      "load capture",
+      "load once",
+      "load passive",
+      "load signal",
+      "module null load capture",
+      "module null load once",
+      "module null load passive",
+      "module null load signal",
+      "module runs",
+      "ready aborts",
+      "load",
+      "lazy null click capture",
+      "lazy null click once",
+      "lazy null click passive",
+      "lazy null click signal",
+      "lazy click capture",
+      "lazy click once",
+      "lazy click passive",
+      "lazy click signal",
+      "lazy runs"
+    ],
+    "text": {
+      "out": "load"
+    },
+    "errors": []
+  },
   "readlater": {
     "lines": [
       "copy 2",
