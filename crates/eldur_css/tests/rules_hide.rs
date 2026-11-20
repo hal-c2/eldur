@@ -27,6 +27,8 @@ const PAGE: &str = r#"<!DOCTYPE html>
   #vary { display: var(--gone); }
   .off { display: none; }
   [hidden] { color: red; }
+  /* Matches the attribute as written, not once a script clears its display. */
+  [style*="display:none"] { display: none; }
 </style>
 <div id="shy" style="display:none">a</div>
 <div id="vary" style="display:none">b</div>
