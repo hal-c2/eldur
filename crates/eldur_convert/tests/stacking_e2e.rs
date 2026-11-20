@@ -1076,6 +1076,146 @@ fn a_span_with_a_level_of_its_own_lifts_the_level_it_keeps_in() {
     );
 }
 
+/// The same, with the span's level from a class: the span in each world
+/// is the one with that world's classes, so the class lifts `#ix` as the
+/// level the span has from the start does.
+#[test]
+fn a_level_a_class_gives_a_span_lifts_the_level_it_keeps_in() {
+    let page = inline_level_page(
+        &format!("{INLINE_BLOCK}\n.wup {{ z-index: 5 }}"),
+        "<span id=wx style=\"position: relative\"><span id=ix></span></span>",
+        RELATIVE,
+        LATER_AT_1,
+    )
+    .replace(
+        "var lx = document.getElementById('lx');",
+        "var lx = document.getElementById('lx');\n\
+         document.getElementById('wx').classList.add('wup');",
+    );
+    assert_eq!(page.matches("classList.add('wup')").count(), 1);
+    run(
+        &page,
+        &with_test(INLINE_LEVEL_TEST),
+        "context-span-class-level",
+        false,
+    );
+}
+
+/// The same, with the span at the top of the `z-index` range: one over it
+/// stays at `i32::MAX` rather than wrapping to the bottom.
+#[test]
+fn a_span_at_the_highest_level_lifts_the_level_it_keeps_in() {
+    let page = inline_level_page(
+        INLINE_BLOCK,
+        "<span id=wx style=\"position: relative; z-index: 2147483647\"><span id=ix></span></span>",
+        RELATIVE,
+        LATER_AT_1,
+    );
+    run(
+        &page,
+        &with_test(INLINE_LEVEL_TEST),
+        "context-span-highest-level",
+        false,
+    );
+}
+
+/// The same, with the span under 0: the span stays in its block's flow, as
+/// a block under 0 does, and `#ix` with it, so `#lx` is over `#ix` (5,70)
+/// and `#rx` over `#ox` in tree order (30,50). Chromium paints `#ix` under
+/// `#rx` too (5,50), which a kid under its parent cannot be in Qt. The level
+/// a class gives `#ix` still lifts `#bx` over `#ox` (75,50), as for a block
+/// in its place ("Overlays of different ancestors", docs/spec/layout.md).
+/// Neither point is checked.
+const UNDER_SPAN_TEST: &str = r##"
+    function test_a_span_under_0_keeps_what_it_holds_in_the_flow() {
+        compare(front(page, 5, 70), "lx", "the later box is over the inline box")
+        compare(front(page, 30, 50), "rx", "the box that holds it is over the earlier overlay")
+        compare(front(page, 150, 50), "bx")
+        compare(front(page, 75, 30), "ox")
+        compare(front(page, 150, 30), "ax")
+        compare(front(page, 30, 70), "lx")
+        compare(front(page, 150, 90), "lx")
+    }
+}
+}
+"##;
+
+#[test]
+fn a_span_under_0_keeps_the_level_it_holds_in_the_flow() {
+    for (name, kid) in [
+        (
+            "context-span-under",
+            "<span id=wx style=\"position: relative; z-index: -1\"><span id=ix></span></span>",
+        ),
+        (
+            "context-block-under",
+            "<div id=wx style=\"position: relative; z-index: -1\"><span id=ix></span></div>",
+        ),
+    ] {
+        let page = inline_level_page(INLINE_BLOCK, kid, RELATIVE, LATER_AT_1);
+        run(&page, &with_test(UNDER_SPAN_TEST), name, false);
+    }
+}
+
+/// The same, with the level under 0 from a class. Chromium paints `#lx`
+/// over `#ix` (5,70), as with the level from the start, but the converter
+/// keeps the lift of the world without the class, so `#ix` is over `#lx`.
+/// A block in the span's place loses the level the same way; this pins
+/// that the two agree ("`z-index` or `opacity` on an inline element that is
+/// no box", docs/spec/layout.md).
+const CLASS_UNDER_TEST: &str = r##"
+    function test_a_level_under_0_a_class_gives_is_lost_as_for_a_block() {
+        compare(front(page, 5, 70), "ix", "Chromium: lx")
+        compare(front(page, 30, 50), "rx")
+        compare(front(page, 150, 50), "bx")
+        compare(front(page, 75, 30), "ox")
+        compare(front(page, 150, 30), "ax")
+        compare(front(page, 150, 90), "lx")
+    }
+}
+}
+"##;
+
+#[test]
+fn a_level_under_0_a_class_gives_a_span_is_lost_as_for_a_block() {
+    for (name, kid) in [
+        (
+            "context-span-class-under",
+            "<span id=wx style=\"position: relative\"><span id=ix></span></span>",
+        ),
+        (
+            "context-block-class-under",
+            "<div id=wx style=\"position: relative\"><span id=ix></span></div>",
+        ),
+    ] {
+        let page = inline_level_page(
+            &format!("{INLINE_BLOCK}\n.wup {{ z-index: -1 }}"),
+            kid,
+            RELATIVE,
+            LATER_AT_1,
+        )
+        .replace(
+            "var lx = document.getElementById('lx');",
+            "var lx = document.getElementById('lx');\n\
+             document.getElementById('wx').classList.add('wup');",
+        );
+        assert_eq!(page.matches("classList.add('wup')").count(), 1);
+        run(&page, &with_test(CLASS_UNDER_TEST), name, false);
+    }
+}
+
+/// A block at the top of the `z-index` range: one over it stays there.
+#[test]
+fn a_block_at_the_highest_level_stays_at_the_top() {
+    let page = r#"<!doctype html><html><body>
+<div style="position: relative; z-index: 2147483647; height: 10px; background: red"><div style="position: relative; height: 5px; background: blue"></div></div>
+</body></html>"#;
+    let out = convert_str(page, &Options::default());
+    let qml = out.main_qml().expect("Main.qml");
+    assert!(qml.contains("z: 2147483647"), "the block\n{qml}");
+    assert!(!qml.contains("z: -2147483648"), "the block\n{qml}");
+}
+
 /// The inline-block in a static box (`#rx`) and a static box after (`#lx`):
 /// nothing after `#bx` paints later, so only the level a class gives `#ix`
 /// sends `#ox` to the stop, where Chromium has it, under `#ix` (5,50).
