@@ -7366,6 +7366,17 @@ function focus(item) {
 // of it when the window is back, as the window's return reads what Qt holds
 // then. What had the focus heard of its blur when the window went, and hears
 // its `change` now, as the focus leaves it.
+// What the page's focus leaves while the window is away hears its `change`
+// then, as on any move: its blur it heard when the window went.
+function _inLeftWhileAway(was) {
+    if (_inIsField(was)) {
+        _flushChange(was);
+    } else if (_meta(was).numberDirty) {
+        _meta(was).numberDirty = false;
+        _dispatchDynamic(was, "change", null);
+    }
+}
+
 function _inFocusWhileAway(raw) {
     var was = _in.focused;
     // Qt hears of this move after the page, as of a listener's: its report
@@ -7384,11 +7395,8 @@ function _inFocusWhileAway(raw) {
             _meta(raw).changeBase = String(raw.text);
         }
         _inWatchHidden(raw);
-        if (was && _inIsField(was)) {
-            _flushChange(was);
-        } else if (was && _meta(was).numberDirty) {
-            _meta(was).numberDirty = false;
-            _dispatchDynamic(was, "change", null);
+        if (was) {
+            _inLeftWhileAway(was);
         }
         if (_pageGone() || !_in || _in.focused !== raw) {
             return;
@@ -7508,6 +7516,29 @@ function blur(item) {
     }
     // What a change is moving to has no focus to let go of yet.
     if (_in && _in.focusShift && _in.untold.indexOf(raw) >= 0) {
+        return;
+    }
+    // While the window is away what has the page's focus heard its blur when
+    // the window went, or, focused by a script since, hears its focus only on
+    // return: it hears nothing now. Qt lets it go too, so the window's return
+    // gives the focus to nothing, and nothing is left pending.
+    if (_in && _in.away && !_inWindowActive() && _in.focused === raw) {
+        _in.focusPending = null;
+        _in.overridden = null;
+        _in.focused = null;
+        _in.focusMoves++;
+        _in.shiftTo = null;
+        if (_in.inlineFocus === raw) {
+            _in.inlineFocus = null;
+        }
+        if (_activeElement === raw) {
+            _activeElement = null;
+        }
+        var awayHolder = raw.__eldurInline ? _inInlineHolder(raw) : raw;
+        if (awayHolder && typeof awayHolder.focus === "boolean") {
+            awayHolder.focus = false;
+        }
+        _inLeftWhileAway(raw);
         return;
     }
     // Focused by a listener and not yet by Qt (`_inFocusWhileHeard`): the page
@@ -18308,17 +18339,19 @@ function _inFocusChanged() {
         }
         return;
     }
-    // Away again before the window heard it was back: it hears nothing of
-    // that return, and what had the focus has heard of its blur already.
-    // A script's `focus()` while the window is away moves the page's focus
-    // itself, and what Qt reports of it is heard when the window is back.
-    if (_in.away && !active) {
+    // Away again before the window heard it was back, Qt finds nothing held:
+    // the window hears nothing of that return, and what had the focus has
+    // heard of its blur already. What Qt holds while away is a script's
+    // `focus()` (`_inFocusWhileAway`), the page's own move, met below.
+    if (_in.away && !active && !now) {
         if (_in.backLater) {
             _in.backLater = false;
             ++_in.backGen;
         }
         return;
     }
+    // Qt has reached the listener's move: a report of what it held for the
+    // move overridden is a new move from here on.
     if (_in.focusPending && now === _in.focusPending) {
         _in.focusPending = null;
         _in.overridden = null;
@@ -18329,12 +18362,6 @@ function _inFocusChanged() {
             _inFocusEvents(now, null, "focus", "focusin");
             return;
         }
-    }
-    // Qt has reached the listener's move: a report of what it held for the
-    // move overridden is a new move from here on.
-    if (_in.focusPending && now === _in.focusPending) {
-        _in.focusPending = null;
-        _in.overridden = null;
     }
     // In a popup of its own (a select's list): the select still has the focus.
     if (now === undefined || now === _in.focused) {
