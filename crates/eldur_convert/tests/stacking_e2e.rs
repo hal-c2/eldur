@@ -94,7 +94,7 @@ TestCase {
         "at", "rt", "nt",
         "p1", "p2", "r2", "a2",
         "b3", "b4", "da", "db", "k6", "n6", "v6",
-        "g1", "g2", "mq", "oq", "pq", "ax", "ox", "bx", "rx", "fa", "ff", "fc", "fv"]
+        "g1", "g2", "mq", "oq", "pq", "ax", "ox", "bx", "rx", "qx", "gx", "fa", "ff", "fc", "fv"]
 
     // The painted box nearest the front at a point, in Qt Quick's paint
     // order: the children over an item from the last level down, then the
@@ -928,6 +928,50 @@ fn a_class_that_makes_a_later_block_a_context_keeps_the_earlier_blocks_shape() {
         out.diagnostics
     );
     run(&page, &with_test(DIMMED_TEST), "dimmed", false);
+}
+
+/// The same blocks, with a context (`#qx`, `opacity`) in the later block's
+/// relative box whose kid (`#gx`) a class gives a level. CSS keeps that
+/// level inside `#qx`, so `#rx` still paints over `#ox` in tree order, as
+/// it does without the class.
+const CONTAINED_TEST: &str = r##"
+    function test_a_level_a_class_gives_inside_a_context_leaves_the_box_over_an_earlier_overlay() {
+        compare(front(page, 5, 50), "gx", "the kid in the context is over the earlier overlay")
+        compare(front(page, 15, 50), "qx", "and the context is")
+        compare(front(page, 40, 50), "rx", "and the box that holds it is")
+        compare(front(page, 75, 50), "ox")
+        compare(front(page, 150, 50), "bx")
+        compare(front(page, 75, 30), "ox")
+        compare(front(page, 150, 30), "ax")
+        compare(front(page, 5, 70), "gx")
+        compare(front(page, 40, 70), "rx")
+    }
+}
+}
+"##;
+
+#[test]
+fn a_level_a_class_gives_inside_a_context_does_not_keep_its_box_from_rising() {
+    let page = HELD
+        .replace(
+            "#rx { position: relative; width: 50px; background: red }",
+            "#rx { position: relative; width: 50px; background: red }\n\
+             #qx { opacity: .9; width: 20px; background: orange }\n\
+             #gx { position: relative; width: 10px; background: purple }\n\
+             .up { z-index: 3 }",
+        )
+        .replace(
+            "<div id=rx></div>",
+            "<div id=rx><div id=qx><div id=gx></div></div></div>",
+        )
+        .replace(
+            "var rx = document.getElementById('rx');",
+            "var rx = document.getElementById('rx');\n\
+             var qx = document.getElementById('qx');\n\
+             document.getElementById('gx').classList.add('up');",
+        );
+    assert_ne!(page, HELD);
+    run(&page, &with_test(CONTAINED_TEST), "contained", false);
 }
 
 /// A float the runtime lays out (`#fm`, which a script makes) and one it
