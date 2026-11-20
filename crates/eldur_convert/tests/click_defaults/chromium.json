@@ -130,5 +130,20 @@
    "LC A mouseup cap 1",
    "LC A lost makes Next"
   ]
+ },
+ {
+  "name": "press in a link whose lostpointercapture swaps",
+  "log": [
+   "LC A mousedown cap2 1",
+   "LC A mouseup cap2 1",
+   "LC A lost makes Next"
+  ]
+ },
+ {
+  "name": "press in a link whose mouseup swaps",
+  "log": [
+   "LC A mousedown up2 1",
+   "LC A up makes Next"
+  ]
  }
 ]

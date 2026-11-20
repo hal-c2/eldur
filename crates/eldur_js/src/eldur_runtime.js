@@ -16779,7 +16779,7 @@ function _inInstallFor(raw, type) {
 function _inInstall() {
     _in = {
         page: _root, overlay: null, held: 0, last: null, pressed: false, hoverP: null, hoverM: null,
-        downTarget: {}, noMouse: false, count: 0, handed: false, handedTo: null, qtHeld: 0,
+        downTarget: {}, noMouse: false, count: 0, handed: false, shielded: false, handedTo: null, qtHeld: 0,
         capture: null, captureNext: null, defaults: [], scrolled: null, restoreFocus: null,
         restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusMoves: 0, focusShift: false, focusPending: null, untold: [], shiftTo: null, change: null, overridden: null, away: false, seenActive: false, windowHas: false, backLater: false, backGen: 0, windowTelling: false,
         spaceDown: null, typing: null, popovers: [], radioLast: {}, focusProbe: null
@@ -16962,12 +16962,7 @@ function _inLoneRelease(bits, scene, mods) {
         return;
     }
     var own = _inStillOwn();
-    layer.handed = true;
-    _inLater(function() {
-        if (layer.held === 0) {
-            layer.handed = false;
-        }
-    });
+    _inShield(layer);
     for (var bit = 1; bit <= 16; bit <<= 1) {
         if (!(bits & bit)) {
             continue;
@@ -17006,7 +17001,25 @@ function _inLose(layer) {
     _inForgetPress(layer);
     if (!_pageGone() && _in && _in !== layer && _inSameWindow(layer, _in)) {
         layer.handedTo = _in;
+        // A press of its own already there is that press's to finish.
+        if (_in.held === 0) {
+            _inShield(_in);
+        }
     }
+}
+
+// Qt still gives the rest of a lost event to the old page's items, and their
+// taps and links run after it: on the page that took over, which never had
+// that press, they do nothing until its own events start again.
+function _inShield(layer) {
+    if (layer.handed) {
+        return;
+    }
+    layer.handed = true;
+    layer.shielded = true;
+    // Not a run on its `later`: that is flushed only while it is the
+    // document, and a page that loses it too must not keep one waiting.
+    Qt.callLater(_inFlushLater);
 }
 
 // A press's points are in its own window's scene, and a page in another
@@ -17022,6 +17035,7 @@ function _inForgetPress(layer) {
     layer.downTarget = {};
     layer.pressed = false;
     layer.handed = false;
+    layer.shielded = false;
     layer.defaults = [];
     layer.noMouse = false;
     layer.capture = null;
@@ -17341,7 +17355,8 @@ function _inUp(bit, scene, mods) {
     if (_in.held === 0) {
         _inEndCapture(scene, mods);
         // Its `lostpointercapture` may have made another page the document:
-        // the click is neither page's.
+        // the click is neither page's, and `_inLose` keeps the old page's
+        // taps off the new one.
         if (!own()) {
             return;
         }
@@ -17365,6 +17380,12 @@ function _inLater(run) {
 }
 
 function _inFlushLater() {
+    if (_in.shielded) {
+        _in.shielded = false;
+        if (_in.held === 0) {
+            _in.handed = false;
+        }
+    }
     var runs = _in.later;
     _in.later = [];
     runs.forEach(function(run) { run(); });
