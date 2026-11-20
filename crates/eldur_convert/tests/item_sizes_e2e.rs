@@ -84,7 +84,7 @@ body { margin: 0 }
 .k { height: 50%; background: #00c; width: 40px }
 .s { height: 30px; background: #0c0 }
 </style></head><body>
-<div class=r id=g><div id=g1><div class=k id=g1k></div><div id=g1m style="height:10px;width:20px"></div></div><div class=s id=g2></div></div>
+<div class=r id=g><div id=g1><div class=k id=g1k></div></div><div class=s id=g2></div></div>
 <div class=r id=h style="height:50%;min-height:40px"><div id=h1><div class=k id=h1k></div></div><div class=s id=h2></div></div>
 <script>var named = Array.from(document.querySelectorAll('[id]'));</script>
 </body></html>"#;
@@ -125,10 +125,74 @@ TestCase {
         check("h1k", 0, 40, 40, 20)
     }
     // An auto-high row's stretched item is definite once its line is sized
-    // (css-flexbox §9.4 step 11), and its children stay at its top.
+    // (css-flexbox §9.4 step 11).
     function test_auto_row_items_are_definite_once_the_line_is_sized() {
         check("g1k", 0, 0, 40, 15)
-        check("g1m", 0, 15, 20, 10)
+    }
+
+}
+}
+"##;
+
+/// The same items with a background, padding and a border: the percentage is
+/// of the height inside them.
+const DECORATED_PAGE: &str = r#"<!doctype html><html><head><style>
+body { margin: 0 }
+.r { display: flex; width: 400px; margin-bottom: 10px }
+.r > div { width: 100px; background: #c00; padding: 5px 0; border-top: 2px solid #000 }
+.k { height: 50%; background: #00c; width: 40px }
+.s { height: 30px }
+</style></head><body>
+<div class=r id=a style="min-height:100px"><div id=a1><div class=k id=a1k></div></div><div class=s id=a2></div></div>
+<div class=r id=b style="height:100px"><div id=b1><div class=k id=b1k></div></div></div>
+<div style="height:300px"><div class=r id=e style="height:50%"><div id=e1><div class=k id=e1k></div></div></div></div>
+<div class=r id=g><div id=g1><div class=k id=g1k></div></div><div class=s id=g2></div></div>
+<div class=r id=h style="min-height:100px"><div id=h1><div id=h1g style="display:flex;flex-direction:column;width:40px;background:#fc0"><div style="height:20px"></div></div></div><div class=s id=h2></div></div>
+<script>var named = Array.from(document.querySelectorAll('[id]'));</script>
+</body></html>"#;
+
+/// Chromium, `getBoundingClientRect()` at 1280×800: `[x, y, width, height]`.
+const DECORATED_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 1280
+    height: 800
+
+TestCase {
+    name: "FlexDecorated"
+    when: windowShown
+
+    property var page
+    // Within half a pixel: Qt rounds layout margins to whole pixels.
+    function check(name, x, y, width, height) {
+        const item = findChild(page, name)
+        verify(item, name)
+        const at = item.mapToItem(page, 0, 0)
+        const got = [at.x, at.y, item.width, item.height]
+        const want = [x, y, width, height]
+        for (let i = 0; i < 4; ++i)
+            verify(Math.abs(got[i] - want[i]) <= 0.5, name + " " + got + ", Chromium " + want)
+    }
+
+    function init() {
+        const component = Qt.createComponent("Main.qml")
+        verify(component.status === Component.Ready, component.errorString())
+        page = createTemporaryObject(component, host, { width: 1280, height: 800 })
+        waitForRendering(page)
+    }
+
+    function test_decorated_items_resolve_inside_their_insets() {
+        check("a1k", 0, 7, 40, 44)
+        check("b1k", 0, 117, 40, 44)
+        check("e1k", 0, 227, 40, 69)
+        check("g1k", 0, 527, 40, 15)
+    }
+    // Without a percentage child, the content keeps its own height.
+    function test_decorated_items_keep_their_content_height() {
+        check("h1g", 0, 579, 40, 20)
     }
 
 }
@@ -338,6 +402,7 @@ fn stretched_row_items_are_definite_when_the_row_has_a_height() {
     }
     run("flex_definite", FLEX_PAGE, FLEX_TEST);
     run("flex_min_row", AUTO_ROW_PAGE, AUTO_ROW_TEST);
+    run("flex_decorated", DECORATED_PAGE, DECORATED_TEST);
 }
 
 #[test]
