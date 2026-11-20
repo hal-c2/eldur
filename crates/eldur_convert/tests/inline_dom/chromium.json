@@ -978,6 +978,17 @@
   ],
   "clicks": []
  },
+ "text_into_boxes": {
+  "log": [
+   "LC after c1a,c1b,\"moved\" \"onetwomoved\" true",
+   "LC between c2a,\"moved\",c2b \"onemovedtwo\" true",
+   "LC before \"moved\",c3a,c3b \"movedonetwo\" true",
+   "LC after-own \"own\",c4a,\"moved\" \"ownonemoved\" true",
+   "LC box-before-own x5,\"own\",c5a \"twoownone\"",
+   "LC emptied \"\" 0"
+  ],
+  "clicks": []
+ },
  "writes": {
   "log": [
    "LC text 12 Count: 12 and other end 12",
