@@ -12675,10 +12675,9 @@ function _applyAttrsFromHtml(el, attrStr) {
     var re = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
     var match;
     while ((match = re.exec(attrStr)) !== null) {
-        var name = match[1];
         var val = match[2] !== undefined ? match[2] : (match[3] !== undefined ? match[3] : (match[4] !== undefined ? match[4] : ""));
         val = _unescapeHtmlText(val);
-        var lower = name.toLowerCase();
+        var lower = match[1].toLowerCase();
         if (lower === "id") {
             el.id = val;
         } else if (lower === "class") {
@@ -12689,7 +12688,8 @@ function _applyAttrsFromHtml(el, attrStr) {
             el.type = val;
             el.setAttribute("type", val);
         } else {
-            el.setAttribute(name, val);
+            // HTML attribute names have no case: `<DETAILS OPEN>` is open.
+            el.setAttribute(lower, val);
         }
     }
 }
