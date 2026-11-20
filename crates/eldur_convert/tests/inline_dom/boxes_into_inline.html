@@ -24,6 +24,7 @@ function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?
 <p><span id="mw">w</span></p>
 <div id="mwd" style="display:flex"><div>x</div></div>
 <p id="mvp">a <span id="mv">v</span></p>
+<p id="mcp"><span id="mc">x</span></p>
 <script>
 // Boxes a script appends to an inline element go into that element: an atomic
 // box sits on its line after its text, a block splits the line around it.
@@ -111,6 +112,13 @@ L("detached-box",N(mw),I(mwi.parentNode),I(mw.parentNode),Math.round(R(mwi).r-R(
 var mv=document.getElementById("mv"),mvp=document.getElementById("mvp");mv.remove();
 var mvi=document.createElement("input");mv.append(mvi);mvp.firstChild.after(mv);
 L("detached-after",N(mvp),N(mv),I(mvi.parentNode),Math.round(R(mvi).r-R(mvi).l),Math.round(R(mvi).b-R(mvi).t),near(R(mvi).t,R(mv).t)||R(mvi).t<R(mv).b);
+// A made element holding a made box takes it along: the box stays a box,
+// its state with it, also off the page and back.
+var mc=document.getElementById("mc"),mcs=document.createElement("span"),mck=document.createElement("input");
+mck.type="checkbox";mck.id="mck";mck.checked=true;mcs.append("t",mck);mc.append(mcs);
+L("created-box",N(mcs),I(mck.parentNode)===I(mcs),mck.checked,Math.round(R(mck).r-R(mck).l)>0);
+mcs.remove();mc.append(mcs);
+L("created-back",N(mcs),N(mc),I(mck.parentNode)===I(mcs),mck.checked,Math.round(R(mck).r-R(mck).l)>0);
 // One replaced while its element is hidden is no longer the element's.
 var mp=document.getElementById("mp"),mz=document.createElement("input");mp.append(mz);
 mp.style.display="none";mp.replaceChild(document.createTextNode("r"),mz);mp.style.display="";
