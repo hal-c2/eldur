@@ -366,6 +366,24 @@ TestCase {
         tapped(p)
         tryVerify(function() { return at.next.title === "Next" && settled(at) }, 1000, "the tap never ran")
     }
+
+    // As test_23, but the host destroys A while the press is held, after its
+    // mousedown: whatever that press queued on Next has run under its shield
+    // by then, its release reaches no one, and Next's own tap is a click.
+    function test_24_press_whose_page_goes_while_it_is_held() {
+        rest()
+        const at = pages()
+        console.log("LC -- press whose page goes while it is held")
+        const p = middle(at.a, "dn2")
+        mousePress(host, p.x, p.y)
+        tryVerify(function() { return at.next !== null && settled(at) }, 1000, "A was never swapped out")
+        at.a.destroy()
+        wait(50)
+        mouseRelease(host, p.x, p.y)
+        tryVerify(function() { return settled(at) }, 1000, "the release never settled")
+        tapped(p)
+        tryVerify(function() { return at.next.title === "Next" && settled(at) }, 1000, "the tap never ran")
+    }
 }
 }
 "##;
@@ -458,6 +476,15 @@ fn a_press_does_nothing_more_once_its_page_is_gone() {
     // finger's tap on Ljós's pages is a click with no press before it.
     for line in [
         "LC -- press whose mousedown swaps and drops its page",
+        "LC A down makes Next",
+        "LC Next click dn2 0",
+        "LC Next hashchange #dngo",
+    ] {
+        wanted.push(line.to_owned());
+    }
+    // No Chromium page can be destroyed under a held press either.
+    for line in [
+        "LC -- press whose page goes while it is held",
         "LC A down makes Next",
         "LC Next click dn2 0",
         "LC Next hashchange #dngo",
