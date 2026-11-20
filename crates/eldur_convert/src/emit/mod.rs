@@ -215,6 +215,12 @@ pub(crate) struct Emitter<'a, 'd> {
     /// what they hold: they stay in their block, as a block raised out in
     /// one world and not in another leaves the worlds no common shape.
     restacks: HashSet<NodeId>,
+    /// Of those, the elements a class or state may make a stacking context
+    /// or not.
+    restack_contexts: HashSet<NodeId>,
+    /// Inline elements with no item of their own whose classes bind on a
+    /// box they hold (`dynamic::carried_marker`).
+    carried: HashSet<NodeId>,
     /// The page holds the rule table: the runtime computes styles of its own.
     pub cascade_rules: bool,
     /// The boxes a script may put block children in.
@@ -345,6 +351,8 @@ impl<'a, 'd> Emitter<'a, 'd> {
             script_hides: HashSet::new(),
             rules_hide: HashSet::new(),
             restacks: HashSet::new(),
+            restack_contexts: HashSet::new(),
+            carried: HashSet::new(),
             cascade_rules: false,
             gains: HashSet::new(),
             live_tables: HashSet::new(),

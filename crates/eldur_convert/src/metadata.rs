@@ -295,9 +295,37 @@ pub(crate) fn declare_classes(
     node: NodeId,
     classes: &BTreeSet<String>,
 ) {
+    declare_class_props(obj, doc, node, classes, class_prop);
+}
+
+/// The property a box holds a class of `node` in, for an inline element
+/// with no item of its own: `eldurIn<key>_cls_<s>`, by the key the runtime
+/// knows the element by (`key` in `eldurInline`).
+pub(crate) fn carried_class_prop(node: NodeId, class: &str) -> String {
+    format!("eldurIn{}_{}", node.index(), class_prop(class))
+}
+
+/// [`declare_classes`] for `node`'s classes on a box it holds
+/// ([`carried_class_prop`]).
+pub(crate) fn declare_carried_classes(
+    obj: &mut Object,
+    doc: &Document,
+    node: NodeId,
+    classes: &BTreeSet<String>,
+) {
+    declare_class_props(obj, doc, node, classes, |c| carried_class_prop(node, c));
+}
+
+fn declare_class_props(
+    obj: &mut Object,
+    doc: &Document,
+    node: NodeId,
+    classes: &BTreeSet<String>,
+    prop_of: impl Fn(&str) -> String,
+) {
     let has: BTreeSet<String> = doc
         .element(node)
-        .map(|e| e.classes().map(class_prop).collect())
+        .map(|e| e.classes().map(&prop_of).collect())
         .unwrap_or_default();
     // A class a condition binds to may be declared already.
     let declared: BTreeSet<&str> = obj
@@ -310,7 +338,7 @@ pub(crate) fn declare_classes(
         .collect();
     let props: BTreeSet<String> = classes
         .iter()
-        .map(|c| class_prop(c))
+        .map(|c| prop_of(c))
         .filter(|p| !declared.contains(p.as_str()))
         .collect();
     let decls = props.into_iter().map(|prop| {

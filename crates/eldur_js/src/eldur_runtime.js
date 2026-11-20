@@ -2820,6 +2820,17 @@ function _syncClassProp(raw, cls, active) {
     if (typeof raw[prop] === "boolean") {
         raw[prop] = Boolean(active);
     }
+    // An inline element with no item of its own, whose class may make it a
+    // stacking context, binds the class on the first box it holds.
+    if (raw.__eldurInline && raw.eldurKey !== undefined) {
+        var carried = "eldurIn" + raw.eldurKey + "_" + prop;
+        var holder = _elementsUnder(_root, function(node) {
+            return typeof node[carried] === "boolean";
+        }, true)[0];
+        if (holder) {
+            holder[carried] = Boolean(active);
+        }
+    }
 }
 
 function _syncEldurClasses(raw, m) {
