@@ -17459,6 +17459,12 @@ function _vSlotIn(c, raw, ref, refBox) {
     }
     m.vSlotOf = c;
     m.vHeldBy = c;
+    // Made here, it takes the form the converter wrote for it, as one put in
+    // a block does.
+    if (_isCreatedElement(raw) && _isConnected(_vHostElement(c.model || c) || c)) {
+        _connectSubtree(raw);
+        raw = m.raw || raw;
+    }
     var style = _gHasCascade() ? (++_gGen, _gStyle(raw)) : null;
     m.vSlotBlock = style ? !_gInlineLevel(style) && style.display !== "none" : _IT_BLOCK.test(_nodeTag(raw));
     var boxes = c.boxes = c.boxes || [];
