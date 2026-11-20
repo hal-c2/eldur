@@ -2031,3 +2031,18 @@ fn css_wide_keywords_on_custom_properties_direct_vs_substituted() {
         px(21.0)
     );
 }
+
+#[test]
+fn a_hidden_element_keeps_its_pseudo_elements_for_when_it_shows() {
+    let doc = Document::parse(r#"<p id="x" class="x">x</p><p id="y">y</p>"#);
+    let (sheet, _) = parse_author(
+        "p::before { content: counter(n) '. ' } .x { display: none } #y::after { content: '!' }",
+    );
+    let map = compute_styles(&doc, &[sheet], &Viewport::default());
+    let x = doc.element_by_id("x").expect("x");
+    assert!(map.get(x).is_none(), "x has no box");
+    let hidden = map.computed(x).expect("x's computed style");
+    assert_eq!(hidden.style.display, Display::None);
+    assert!(hidden.before.is_some(), "a state that shows x draws its ::before");
+    assert!(hidden.after.is_none(), "no ::after rule matches x");
+}

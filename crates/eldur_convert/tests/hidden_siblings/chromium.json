@@ -1,9 +1,9 @@
 {
  "numbered initial": {
   "markers": [
-   "1. ",
-   "2. ",
-   "3. "
+   "1.",
+   "2.",
+   "3."
   ],
   "tops": [
    {
@@ -30,10 +30,10 @@
  },
  "numbered hover": {
   "markers": [
-   "1. ",
-   "2. ",
-   "3. ",
-   "4. "
+   "1.",
+   "2.",
+   "3.",
+   "4."
   ],
   "tops": [
    {
@@ -60,9 +60,9 @@
  },
  "numbered left": {
   "markers": [
-   "1. ",
-   "2. ",
-   "3. "
+   "1.",
+   "2.",
+   "3."
   ],
   "tops": [
    {
@@ -79,6 +79,321 @@
     "text": "b",
     "shown": true,
     "top": 36
+   },
+   {
+    "text": "c",
+    "shown": true,
+    "top": 56
+   }
+  ]
+ },
+ "reversed initial": {
+  "markers": [
+   "3.",
+   "2.",
+   "1."
+  ],
+  "tops": [
+   {
+    "text": "a",
+    "shown": true,
+    "top": 16
+   },
+   {
+    "text": "x",
+    "shown": false,
+    "top": 0
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 36
+   },
+   {
+    "text": "c",
+    "shown": true,
+    "top": 56
+   }
+  ]
+ },
+ "reversed hover": {
+  "markers": [
+   "4.",
+   "3.",
+   "2.",
+   "1."
+  ],
+  "tops": [
+   {
+    "text": "a",
+    "shown": true,
+    "top": 16
+   },
+   {
+    "text": "x",
+    "shown": true,
+    "top": 36
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 56
+   },
+   {
+    "text": "c",
+    "shown": true,
+    "top": 76
+   }
+  ]
+ },
+ "reversed left": {
+  "markers": [
+   "3.",
+   "2.",
+   "1."
+  ],
+  "tops": [
+   {
+    "text": "a",
+    "shown": true,
+    "top": 16
+   },
+   {
+    "text": "x",
+    "shown": false,
+    "top": 0
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 36
+   },
+   {
+    "text": "c",
+    "shown": true,
+    "top": 56
+   }
+  ]
+ },
+ "counted initial": {
+  "markers": [
+   "1.",
+   "2.",
+   "3."
+  ],
+  "tops": [
+   {
+    "text": "a",
+    "shown": true,
+    "top": 8
+   },
+   {
+    "text": "x",
+    "shown": false,
+    "top": 0
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 28
+   },
+   {
+    "text": "c",
+    "shown": true,
+    "top": 48
+   }
+  ]
+ },
+ "counted hover": {
+  "markers": [
+   "1.",
+   "2.",
+   "3.",
+   "4."
+  ],
+  "tops": [
+   {
+    "text": "a",
+    "shown": true,
+    "top": 8
+   },
+   {
+    "text": "x",
+    "shown": true,
+    "top": 28
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 48
+   },
+   {
+    "text": "c",
+    "shown": true,
+    "top": 68
+   }
+  ]
+ },
+ "counted left": {
+  "markers": [
+   "1.",
+   "2.",
+   "3."
+  ],
+  "tops": [
+   {
+    "text": "a",
+    "shown": true,
+    "top": 8
+   },
+   {
+    "text": "x",
+    "shown": false,
+    "top": 0
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 28
+   },
+   {
+    "text": "c",
+    "shown": true,
+    "top": 48
+   }
+  ]
+ },
+ "joint initial": {
+  "markers": [
+   "1.",
+   "2.",
+   "3."
+  ],
+  "tops": [
+   {
+    "text": "a",
+    "shown": true,
+    "top": 16
+   },
+   {
+    "text": "y",
+    "shown": false,
+    "top": 0
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 36
+   },
+   {
+    "text": "x",
+    "shown": false,
+    "top": 0
+   },
+   {
+    "text": "c",
+    "shown": true,
+    "top": 56
+   }
+  ]
+ },
+ "joint hover": {
+  "markers": [
+   "1.",
+   "2.",
+   "3.",
+   "4.",
+   "5."
+  ],
+  "tops": [
+   {
+    "text": "a",
+    "shown": true,
+    "top": 16
+   },
+   {
+    "text": "y",
+    "shown": true,
+    "top": 36
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 56
+   },
+   {
+    "text": "x",
+    "shown": true,
+    "top": 76
+   },
+   {
+    "text": "c",
+    "shown": true,
+    "top": 96
+   }
+  ]
+ },
+ "joint over b": {
+  "markers": [
+   "1.",
+   "2.",
+   "3.",
+   "4."
+  ],
+  "tops": [
+   {
+    "text": "a",
+    "shown": true,
+    "top": 16
+   },
+   {
+    "text": "y",
+    "shown": false,
+    "top": 0
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 36
+   },
+   {
+    "text": "x",
+    "shown": true,
+    "top": 56
+   },
+   {
+    "text": "c",
+    "shown": true,
+    "top": 76
+   }
+  ]
+ },
+ "joint left": {
+  "markers": [
+   "1.",
+   "2.",
+   "3."
+  ],
+  "tops": [
+   {
+    "text": "a",
+    "shown": true,
+    "top": 16
+   },
+   {
+    "text": "y",
+    "shown": false,
+    "top": 0
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 36
+   },
+   {
+    "text": "x",
+    "shown": false,
+    "top": 0
    },
    {
     "text": "c",

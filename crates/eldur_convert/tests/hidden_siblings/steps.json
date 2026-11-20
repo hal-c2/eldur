@@ -1,0 +1,7 @@
+{
+ "numbered": [["initial", null], ["hover", "a"], ["left", null], ["hover", "a"]],
+ "reversed": [["initial", null], ["hover", "a"], ["left", null], ["hover", "a"]],
+ "counted": [["initial", null], ["hover", "a"], ["left", null], ["hover", "a"]],
+ "joint": [["initial", null], ["hover", "a"], ["over b", "b"], ["left", null], ["hover", "a"]],
+ "margin": [["initial", null], ["hover", "a"], ["left", null], ["hover", "a"]]
+}
