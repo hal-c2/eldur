@@ -562,11 +562,13 @@ impl Emitter<'_, '_> {
                 && !child.node.is_some_and(|n| self.restacks.contains(&n))
                 && super::lists::rises_in_flow(&child.style)
                 // A box at `auto` is no stacking context: a level it holds,
-                // or one a script, class or state may give it or what it
-                // holds, lifts only that box, so it stays in its block and
-                // the block lifts.
+                // or one a class or state may give it or what it holds, or
+                // one a script may give what it holds, lifts only that box,
+                // so it stays in its block and the block lifts. A level a
+                // script gives the box itself stacks the risen box alone,
+                // where Chromium puts it among its block's later siblings.
                 && (child.style.z_index.is_some()
-                    || !(self.writes_z_index
+                    || !((self.writes_z_index && super::lists::holds_element(child))
                         || self.restacked(child)
                         || super::lists::holds_level(child)));
             self.rise_out = rise;
