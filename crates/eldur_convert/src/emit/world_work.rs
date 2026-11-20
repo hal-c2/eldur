@@ -119,14 +119,22 @@ fn a_property_over_thirteen_conditions_still_binds() {
     // "15. " too, over the other twelve hovers.
     let line = qml
         .lines()
-        .filter(|l| l.contains("\"15. \""))
-        .last()
+        .rfind(|l| l.contains("\"15. \""))
         .unwrap_or_else(|| panic!("the last marker is not bound to the hovers:\n{qml}"));
     let hovers: std::collections::BTreeSet<&str> = line
         .split(|c: char| !(c.is_alphanumeric() || c == '_'))
         .filter(|w| w.ends_with("Hover"))
         .collect();
     assert_eq!(hovers.len(), 13, "{line}");
+    // The list's thirteen hovers are too many to combine, and the page says
+    // so: two items shown at once would number "16." only where a world has
+    // both.
+    let warned = out
+        .diagnostics
+        .iter()
+        .map(ToString::to_string)
+        .any(|d| d.contains("13 classes and states show or hide numbered elements"));
+    assert!(warned, "no warning: {:?}", out.diagnostics);
 }
 
 /// A table of `cells` cells, four to a row, each recoloured by its own
