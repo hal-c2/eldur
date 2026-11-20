@@ -1,0 +1,33 @@
+<!doctype html><html><head><meta charset="utf-8"><title>NAME</title>
+<style>
+body { margin: 0; font: 16px sans-serif }
+#wrap, label { display: block; width: 200px; height: 40px }
+input { display: block; margin: 0 }
+</style>
+</head><body>
+<a id="wrap" href="#go"><label id="lab" for="box">once</label></a>
+<input type="checkbox" id="box">
+<label id="lab2" for="box2">twice</label>
+<input type="checkbox" id="box2">
+<label id="lab3" for="box3">first</label>
+<input type="checkbox" id="box3">
+<script>
+// The host makes page Next when this one's title says so.
+var name = document.title;
+function L() { console.log("LC " + name + " " + [].slice.call(arguments).join(" ")); }
+["mousedown", "mouseup", "click", "dblclick"].forEach(function(type) {
+  document.addEventListener(type, function(e) { L(type, e.target.id, e.detail); });
+});
+window.addEventListener("hashchange", function() { L("hashchange", location.hash); });
+// A label's click on its box is the press's first default: the box's listener
+// makes another page, and the link the label is in follows nothing on it.
+document.getElementById("box").addEventListener("click", function() { if (name === "A") document.title = "Next"; });
+// The same on a double click's second press: no dblclick for either page.
+var twice = 0;
+document.getElementById("box2").addEventListener("click", function() { if (name === "A" && ++twice === 2) document.title = "Next"; });
+// Its label's own listeners go with the page: a document's are gone already.
+document.getElementById("lab2").addEventListener("dblclick", function(e) { L("lab2 own dblclick", e.detail); });
+// And on its first: the second press is the new page's.
+document.getElementById("box3").addEventListener("click", function() { if (name === "A") document.title = "Next"; });
+</script>
+</body></html>
