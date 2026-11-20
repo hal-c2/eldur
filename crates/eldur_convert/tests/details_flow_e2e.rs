@@ -575,8 +575,12 @@ SUPPORT
 // A `<details>` a script closes while an ancestor hides it stays closed once
 // the ancestor shows again, and opens as before.
 const UNDER_PAGE: &str = r##"<!doctype html>
-<style>body { font: 16px/18px sans-serif; }</style>
-<div id="wrap"><details id="w" open><summary>Wrap sum</summary><p>Wrap inside</p></details></div>
+<style>
+body { font: 16px/18px sans-serif; }
+:root[data-theme='dim'] .fold { display: none; }
+</style>
+<div id="wrap"><details id="w" open><summary>Wrap sum</summary><p>Wrap inside</p><p class="fold">Wrap dim</p></details></div>
+<button id="dim">Dim</button>
 <button id="hide">Hide</button>
 <button id="close">Close</button>
 <button id="show">Show</button>
@@ -584,6 +588,10 @@ const UNDER_PAGE: &str = r##"<!doctype html>
 <script>
 const wrap = document.getElementById('wrap');
 const w = document.getElementById('w');
+document.getElementById('dim').addEventListener('click', () => {
+  const r = document.documentElement;
+  r.dataset.theme = r.dataset.theme === 'dim' ? '' : 'dim';
+});
 document.getElementById('hide').addEventListener('click', () => { wrap.style.display = 'none'; });
 document.getElementById('close').addEventListener('click', () => { w.open = false; });
 document.getElementById('show').addEventListener('click', () => { wrap.style.display = ''; });
@@ -633,6 +641,27 @@ SUPPORT
         verify(!shows(page, inside), "Wrap inside shows though its details was closed while hidden")
         click(page, "Open")
         tryVerify(() => shows(page, inside), 2000, "Wrap inside stays hidden once its details opens")
+    }
+
+    // The fold writes only what it hides: a block its own rule hides keeps
+    // the rule's binding, and shows again once the rule lets it go.
+    function test_a_block_its_rule_hides_keeps_the_rule_under_a_hidden_ancestor() {
+        const page = load(Qt.createComponent("Main.qml"))
+        const sum = textOf(page, "Wrap sum")
+        const dim = textOf(page, "Wrap dim")
+        verify(sum !== null && dim !== null, "the details' lines")
+        verify(shows(page, dim), "Wrap dim is hidden while open")
+        click(page, "Dim")
+        tryVerify(() => !shows(page, dim), 2000, "Wrap dim shows under dim")
+        click(page, "Hide")
+        tryVerify(() => !shows(page, sum), 2000, "Wrap sum shows once its ancestor is hidden")
+        click(page, "Close")
+        click(page, "Dim")
+        click(page, "Show")
+        tryVerify(() => shows(page, sum), 2000, "Wrap sum stays hidden once its ancestor shows again")
+        verify(!shows(page, dim), "Wrap dim shows though its details is closed")
+        click(page, "Open")
+        tryVerify(() => shows(page, dim), 2000, "Wrap dim stays hidden once its details opens and no rule hides it")
     }
 }
 }
