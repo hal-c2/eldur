@@ -32,7 +32,7 @@ var gx=document.getElementById("gx");
 L("legend",I(gi.parentNode),gi.matches(":disabled"),gx.matches(":disabled"),R(gi).w>0&&R(gi).h>0,getComputedStyle(gx).color!==getComputedStyle(gi).color);
 // A span moved to the body goes at its end, after the last paragraph.
 var sc=document.getElementById("sc"),yz=document.createElement("span");yz.textContent="yz";sc.after(yz);
-L("after-p",I(yz.previousSibling),R(yz).t-R(sc).b);
+L("after-p",I(yz.previousSibling),JSON.stringify(yz.nextSibling&&yz.nextSibling.data),near(R(yz).t-R(sc).b,17));
 var gs2=document.getElementById("gs2"),last=document.getElementById("last");document.body.append(gs2);
 L("to-body",N(last),R(gs2).t>=R(last).b,near(R(gs2).l,0));
 </script></body></html>

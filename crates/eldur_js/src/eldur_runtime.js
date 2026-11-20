@@ -4010,11 +4010,17 @@ function _appendTarget(raw) {
         return extra + (text.text === "" ? 0 : text.implicitHeight) + flow.implicitHeight;
     });
     // A box no layout stretches (a legend, a float) was as wide as its text;
-    // it is as wide as the wider of its text and what it holds now.
+    // it is as wide as the wider of its text and what it holds now. A control
+    // has a `spacing` too, and places what it holds itself.
     var extraW = raw.implicitWidth - text.implicitWidth;
-    if (raw.parent && typeof raw.parent.spacing !== "number" && extraW >= 0) {
+    var laidOut = raw.parent && _gIsLayout(raw.parent) && raw.parent.contentItem === undefined;
+    if (raw.parent && !laidOut && extraW >= 0) {
         raw.implicitWidth = Qt.binding(function() {
             return extraW + Math.max(text.text === "" ? 0 : text.implicitWidth, flow.implicitWidth);
+        });
+        // Its column is as wide too: an emptied text is no width to keep to.
+        flow.width = Qt.binding(function() {
+            return Math.max(text.text === "" ? 0 : text.width, flow.implicitWidth);
         });
     }
     // `textContent = x` replaces every child; rendering a model's runs does not.
@@ -12624,8 +12630,9 @@ function _btnTakeOut(leaf) {
     delete leaf.btnAfter;
     _btnDraw(raw);
     // An emptied button draws no line at all, only its padding and border; a
-    // label would keep a line's height.
-    if (list.length === 0 && raw.text === "") {
+    // label would keep a line's height. What it holds but doesn't draw (a
+    // hidden element) is the label's still.
+    if (list.length === 0 && raw.text === "" && getText(raw) === "") {
         _btnBecomesLines(raw);
     }
 }
@@ -15405,7 +15412,14 @@ function wrap(rawItem) {
             var idx = kids.indexOf(rawItem);
             var nextRef = (idx !== -1 && idx + 1 < kids.length) ? kids[idx + 1] : null;
             var rawNodes = _expandInsertRawNodes(arguments);
+            // The whitespace after this element is a Text node of its own, so
+            // what goes right after the element goes before that whitespace.
+            var wsOwner = nextRef || _meta(p).hostBox || p;
+            var held = rawNodes.indexOf(nextRef) === -1 ? (nextRef ? _wsBefore(nextRef) : _wsEnd(wsOwner)).splice(0) : [];
             _insertChildren(p, rawNodes, nextRef);
+            if (held.length > 0) {
+                _wsMove(held, wsOwner, nextRef ? "ws" : "wsEnd", true);
+            }
         },
         replaceWith: function() {
             if (rawItem.btnOf) {
@@ -25126,6 +25140,10 @@ function _gStyle(raw) {
     s["white-space"] = _gWhiteSpace(s["white-space-collapse"], s["text-wrap-mode"]);
     s.color = s.color === undefined ? s["color"] : s.color;
     var color = _gColor(s["color"], inherited ? inherited["color"] : "rgb(0, 0, 0)");
+    // Chromium's own sheet greys a disabled field's text (`input:disabled`).
+    if (tag === "input" && !won["color"] && _isFormControl(raw) && (raw.enabled === false || _isDisabled(raw))) {
+        color = "rgb(84, 84, 84)";
+    }
     s["color"] = color;
     s["font-weight"] = String(_gResolveWeight(s["font-weight"], inherited ? inherited["font-weight"] : "400"));
     var initialNames = Object.keys(_G_INITIAL);
@@ -29357,6 +29375,11 @@ function _gFlowKids(column) {
 function _gOuter(kid) {
     // A line has no margins, and the one before it still has to be paid.
     if (_isLines(kid) && _isAnonLines(kid)) {
+        return { mt: 0, mb: 0, empty: false };
+    }
+    // An inline element alone in a column sits in an anonymous block, which
+    // has no margins of its own: the one before it is paid above it.
+    if (_gIsElement(kid) && _meta(kid).createdTag && _gStyle(kid).display === "inline") {
         return { mt: 0, mb: 0, empty: false };
     }
     if (!_gIsElement(kid) || _gStyle(kid).display === "inline") {
