@@ -16809,13 +16809,19 @@ function _inInstall() {
     // that lost the focus: `document.hasFocus()` asks only after the first.
     // The layer this probe is for, which a later page's `_in` is not.
     var layer = _in;
-    layer.seenActive = probe.active;
+    // A page made while its window is away, by a page before it, loads into
+    // a window that has been active: its coming back is a return, not a show.
+    layer.seenActive = probe.active || _inWindowSeen(probe.window);
     layer.windowHas = probe.active;
+    if (probe.active) {
+        _inSawWindow(probe.window);
+    }
     probe.activeChanged.connect(function() {
         // A page that loads into its window hears no focus of the window's.
         var first = !layer.seenActive;
         if (probe.active) {
             layer.seenActive = true;
+            _inSawWindow(probe.window);
         } else if (layer.backLater) {
             // Away again before the window heard it was back.
             layer.backLater = false;
@@ -18180,6 +18186,21 @@ function _inPlaceBefore(a, b) {
 
 // The window itself hears it lost or got the focus, once for each change:
 // after what had the focus heard its blur, and before it hears its focus again.
+// The windows any page has seen active, which outlive the page.
+var _inWindowsSeen = [];
+
+function _inWindowSeen(win) {
+    return Boolean(win) && _inWindowsSeen.indexOf(win) >= 0;
+}
+
+function _inSawWindow(win) {
+    if (!win || _inWindowSeen(win)) {
+        return;
+    }
+    _inWindowsSeen = _inWindowsSeen.filter(_live);
+    _inWindowsSeen.push(win);
+}
+
 function _inWindowFocus(active) {
     if (!_in || _in.windowHas === active) {
         return;

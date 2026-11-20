@@ -61,6 +61,9 @@ Item {
     width: 800
     height: 600
 
+    // Another window of the app, which takes the activation from the test's.
+    Component { id: elsewhere; Window { width: 40; height: 40 } }
+
 TestCase {
     name: "WindowFlicker"
     when: windowShown
@@ -342,6 +345,42 @@ TestCase {
         away.layer.focusProbe = away.real
         console.log("LC done")
     }
+
+    // Next loads while the window really is away, into a window that has been
+    // active: its coming back is a return, which Next hears as one.
+    function test_page_made_while_away_hears_the_window_come_back() {
+        const page = open()
+        mouseClick(element(page, "b"))
+        wait(50)
+        const win = host.Window.window
+        verify(win.active, "the test's window not active")
+        console.log("LC the window goes away")
+        const other = elsewhere.createObject(null)
+        other.visible = true
+        other.requestActivate()
+        tryVerify(() => !win.active, 2000, "the page's window still active")
+        wait(50)
+        const at = { made: null }
+        page.titleChanged.connect(function() {
+            if (page.title === "Next" && !at.made) {
+                const component = Qt.createComponent("Next.qml")
+                verify(component.status === Component.Ready, component.errorString())
+                at.made = createTemporaryObject(component, host, { width: 800, height: 600 })
+            }
+        })
+        console.log("LC a listener's timer makes page Next")
+        Eldur.document.dispatchEvent(new Eldur.Event("swap"))
+        wait(50)
+        verify(at.made, "no page Next")
+        console.log("LC active " + active() + " has " + Eldur.document.hasFocus())
+        console.log("LC the window comes back")
+        win.requestActivate()
+        tryVerify(() => win.active, 2000, "the page's window not active again")
+        wait(100)
+        console.log("LC active " + active() + " has " + Eldur.document.hasFocus())
+        other.destroy()
+        console.log("LC done")
+    }
 }
 }
 "##;
@@ -486,6 +525,18 @@ const WANT: &[&str] = &[
     "LC back",
     "LC active body",
     "LC pending none",
+    "LC done",
+    "LC b focus has true",
+    "LC b focusin has true",
+    "LC the window goes away",
+    "LC b blur has false",
+    "LC b focusout has false",
+    "LC window blur",
+    "LC a listener's timer makes page Next",
+    "LC active body has false",
+    "LC the window comes back",
+    "LC next window focus",
+    "LC active body has true",
     "LC done",
 ];
 
