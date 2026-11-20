@@ -11,6 +11,7 @@
 //! active element at once. What it moved to hears of the focus when the
 //! window is back, and what had it hears no second blur. A field it moved
 //! from hears its `change` then, and a link in a line moves as any element.
+//! Qt's report of the move is the page's own, so nothing is left pending.
 
 mod support;
 
@@ -133,6 +134,7 @@ TestCase {
         report(true, c)
         wait(100)
         console.log("LC active " + Eldur.document.activeElement.id)
+        console.log("LC pending " + (layer.focusPending ? layer.focusPending.objectName : "none"))
         layer.focusProbe = real
         console.log("LC done")
     }
@@ -169,6 +171,7 @@ TestCase {
         report(true, c)
         wait(100)
         console.log("LC active " + Eldur.document.activeElement.id)
+        console.log("LC pending " + (layer.focusPending ? layer.focusPending.objectName : "none"))
         layer.focusProbe = real
         console.log("LC done")
     }
@@ -206,6 +209,7 @@ TestCase {
         report(true, c)
         wait(100)
         console.log("LC active " + Eldur.document.activeElement.id)
+        console.log("LC pending " + (layer.focusPending ? layer.focusPending.objectName : "none"))
         layer.focusProbe = real
         console.log("LC done")
     }
@@ -242,6 +246,7 @@ const WANT: &[&str] = &[
     "LC c focus has true",
     "LC c focusin has true",
     "LC active c",
+    "LC pending none",
     "LC done",
     "LC b focus has true",
     "LC b focusin has true",
@@ -257,6 +262,7 @@ const WANT: &[&str] = &[
     "LC c focus has true",
     "LC c focusin has true",
     "LC active c",
+    "LC pending none",
     "LC done",
     "LC b focus has true",
     "LC b focusin has true",
@@ -272,6 +278,7 @@ const WANT: &[&str] = &[
     "LC l focus has true",
     "LC l focusin has true",
     "LC active l",
+    "LC pending none",
     "LC done",
 ];
 
