@@ -39,11 +39,6 @@ struct ValidScript<'a> {
     parsed: ParsedScript<'a>,
 }
 
-enum LoadEntry {
-    Listener(String),
-    WindowOnload,
-}
-
 #[derive(Default, Clone)]
 struct ModuleExports {
     /// Maps exported name (`"foo"`, `"default"`) -> `(top_level_ident, deferred_to_init, is_mutable)`.
@@ -83,13 +78,14 @@ struct PageBuffers {
     handler_fns: Vec<String>,
     init_stmts: Vec<String>,
     dcl_stmts: Vec<String>,
-    load_entries: Vec<LoadEntry>,
+    /// The page's `load` listeners, an array each top-level listener is
+    /// pushed to where its script or module adds it, so their order is the
+    /// order they were added as the page ran; called once it has loaded.
+    load_queue: Option<String>,
     /// The variable holding `window.onload`'s value, set where each
-    /// assignment to it runs and called once the page has loaded.
-    window_onload_slot: Option<String>,
-    /// Whether the slot has its place among the `load` listeners, which the
-    /// first assignment of a handler gives it, as a browser's does.
-    window_onload_has_place: bool,
+    /// assignment to it runs, and the function that calls it from the load
+    /// queue, where the assignment that made it a handler put it.
+    window_onload: Option<(String, String)>,
     /// Emitting a lazy module: nothing it declares exists until it runs, so
     /// its bindings are assigned in its run function, never set at load.
     in_lazy_module: bool,
@@ -1235,17 +1231,8 @@ impl<'a> PageBuilder<'a> {
         let mut all_init_lines: Vec<String> = Vec::new();
         all_init_lines.extend(self.out.init_stmts);
         all_init_lines.extend(self.out.dcl_stmts);
-        for entry in self.out.load_entries {
-            match entry {
-                LoadEntry::Listener(code) => all_init_lines.push(code),
-                LoadEntry::WindowOnload => {
-                    if let Some(slot) = &self.out.window_onload_slot {
-                        all_init_lines.push(format!(
-                            "if (typeof {slot} === \"function\") {{\n    {slot}.call(Eldur.window, Eldur.event(\"load\", Eldur.window, null));\n}}"
-                        ));
-                    }
-                }
-            }
+        if let Some(queue) = &self.out.load_queue {
+            all_init_lines.push(format!("Eldur.fireLoad({queue});"));
         }
 
         let init_function = if all_init_lines.is_empty() {
@@ -1944,6 +1931,17 @@ impl PageBuffers {
         }
     }
 
+    /// The page's `load` listener array, declared on first use.
+    fn load_queue(&mut self, shared: &mut SharedRewriteState) -> String {
+        if let Some(queue) = &self.load_queue {
+            return queue.clone();
+        }
+        let queue = shared.alloc_fn_name("__eldur_load_listeners");
+        self.top_decls.push(format!("var {queue} = [];"));
+        self.load_queue = Some(queue.clone());
+        queue
+    }
+
     fn try_handle_special_top_expr<'b>(
         &mut self,
         expr: &'b Expression<'b>,
@@ -1973,6 +1971,16 @@ impl PageBuffers {
                 };
                 let cb_str = lowerer.rewrite_listener_callback_expr(cb, None);
                 let mut invoke = format_lifecycle_invocation(cb, &cb_str, &ev, target_js);
+                if ev == "load" {
+                    // Added where it runs: one its script or module never
+                    // reaches is not heard, and the order is the order added.
+                    let queue = self.load_queue(lowerer.shared);
+                    self.init_stmts.push(format!(
+                        "{queue}.push(function () {{\n{}\n}});",
+                        indent_block(&invoke, 4)
+                    ));
+                    return true;
+                }
                 if self.in_eager_module {
                     // Its module can throw first, or never run at all.
                     let reached = lowerer.shared.alloc_fn_name("__eldur_reached");
@@ -1980,11 +1988,7 @@ impl PageBuffers {
                     self.init_stmts.push(format!("{reached} = true;"));
                     invoke = format!("if ({reached}) {{\n{}\n}}", indent_block(&invoke, 4));
                 }
-                if ev == "DOMContentLoaded" {
-                    self.dcl_stmts.push(invoke);
-                } else {
-                    self.load_entries.push(LoadEntry::Listener(invoke));
-                }
+                self.dcl_stmts.push(invoke);
                 return true;
             }
 
@@ -2022,27 +2026,33 @@ impl PageBuffers {
             {
                 if is_global_window(obj, scoping) && ev == "load" {
                     // The assignment takes effect where it runs, so one its
-                    // script or module never reaches leaves the slot as it was;
-                    // the last that ran wins, `null` included.
-                    let slot = match &self.window_onload_slot {
-                        Some(slot) => slot.clone(),
+                    // script or module never reaches leaves the handler as it
+                    // was, and the last that ran wins. A handler takes its
+                    // place among the `load` listeners when it is set, keeps it
+                    // while replaced, and loses it to `null`, so one set again
+                    // is heard after the listeners added in between.
+                    let queue = self.load_queue(lowerer.shared);
+                    let (slot, call) = match &self.window_onload {
+                        Some(pair) => pair.clone(),
                         None => {
                             let slot = lowerer.shared.alloc_fn_name("__eldur_window_onload");
+                            let call = lowerer.shared.alloc_fn_name("__eldur_call_window_onload");
                             self.top_decls.push(format!("var {slot} = null;"));
-                            self.window_onload_slot = Some(slot.clone());
-                            slot
+                            self.top_decls.push(format!(
+                                "function {call}() {{\n    if (typeof {slot} === \"function\") {{\n        {slot}.call(Eldur.window, Eldur.event(\"load\", Eldur.window, null));\n    }}\n}}"
+                            ));
+                            self.window_onload = Some((slot.clone(), call.clone()));
+                            (slot, call)
                         }
                     };
                     let value = if is_null_or_undefined(&assign.right, scoping) {
                         "null".to_string()
                     } else {
-                        if !self.window_onload_has_place {
-                            self.window_onload_has_place = true;
-                            self.load_entries.push(LoadEntry::WindowOnload);
-                        }
                         lowerer.rewrite_listener_callback_expr(&assign.right, None)
                     };
-                    self.init_stmts.push(format!("{slot} = {value};"));
+                    self.init_stmts.push(format!(
+                        "{slot} = Eldur.setOnload({queue}, {call}, {value});"
+                    ));
                     return true;
                 }
 

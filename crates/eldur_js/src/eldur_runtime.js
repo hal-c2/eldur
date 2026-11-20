@@ -518,6 +518,34 @@ function reportError(err) {
     _ceReport(err);
 }
 
+// `window.onload = value` where it runs. As a browser's event handler
+// attribute, a handler takes its place among the `load` listeners when it is
+// set, keeps that place while it is replaced, and loses it when set to anything
+// that is not an object, so one set again is heard after the listeners added in
+// between. `call` is the page's function that calls the current handler.
+function setOnload(listeners, call, value) {
+    var handler = value !== null && (typeof value === "object" || typeof value === "function");
+    var at = listeners.indexOf(call);
+    if (handler && at < 0) {
+        listeners.push(call);
+    } else if (!handler && at >= 0) {
+        listeners.splice(at, 1);
+    }
+    return handler ? value : null;
+}
+
+// The page's `load` listeners, in the order they were added. One that throws
+// is reported and the next is still called, as a browser dispatches.
+function fireLoad(listeners) {
+    for (var i = 0; i < listeners.length; ++i) {
+        try {
+            listeners[i]();
+        } catch (err) {
+            reportError(err);
+        }
+    }
+}
+
 // Helper for lowered object rest destructuring: `const { a, ...rest } = src`.
 function objectRest(source, excludedKeys) {
     var target = {};
