@@ -1,0 +1,27 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif}</style><script>
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
+function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?JSON.stringify(n.data):I(n)}).join(",")}
+</script></head><body>
+<p id="p">one <em>e</em></p>
+<p id="q">two</p>
+<span id="r">three</span>
+<script>
+// An element's markup is all its nodes', a box beside its text included.
+var p=document.getElementById("p"),s=document.createElement("span");
+s.textContent="s";
+p.append(s);
+var b=document.createElement("button");b.textContent="B";
+p.append(b);
+L("p",p.innerHTML,p.childNodes.length,JSON.stringify(p.textContent));
+var q=document.getElementById("q"),qb=document.createElement("button");qb.textContent="C";
+q.append(qb);
+var qs=document.createElement("span");qs.textContent="t";
+q.append(qs);
+L("q",q.innerHTML,q.childNodes.length,JSON.stringify(q.textContent));
+var r=document.getElementById("r"),rs=document.createElement("span");rs.textContent="u";
+r.append(rs);
+var ri=document.createElement("input");ri.value="v";
+r.append(ri);
+L("r",r.innerHTML,r.childNodes.length,JSON.stringify(r.textContent),r.outerHTML);
+</script></body></html>

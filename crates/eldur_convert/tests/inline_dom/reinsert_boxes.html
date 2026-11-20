@@ -1,0 +1,32 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif}</style><script>
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
+function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?JSON.stringify(n.data):I(n)}).join(",")}
+</script></head><body data-clicks="#k">
+<p id="p">x <span id="w">a<button id="k">K</button>b<input id="f" value="v" style="width:60px"></span> <i id="y">y</i></p>
+<p id="p3">x <span id="w3">a<button id="k3">K</button>b</span> y</p>
+<p id="p2"><span id="w2">c<select id="q"><option>A</option><option>B</option></select>d</span> e</p>
+<script>
+// An element a script takes out and puts back brings its boxes back, with
+// their listeners and state.
+function R(e){var r=e.getBoundingClientRect();return {l:Math.round(r.left),t:Math.round(r.top),r:Math.round(r.right),b:Math.round(r.bottom),w:Math.round(r.width)}}
+var w=document.getElementById("w"),k=document.getElementById("k"),f=document.getElementById("f");
+k.addEventListener("click",function(){L("clicked",I(k.parentNode),f.value)});
+f.value="typed";
+var p=w.parentNode;
+w.remove();
+L("out",I(w.parentNode),R(k).w,I(document.getElementById("k")),JSON.stringify(p.textContent));
+p.append(w);
+var kr=R(k),fr=R(f),yr=R(document.getElementById("y"));
+L("back",I(w.parentNode),N(w),I(document.getElementById("k")),kr.w>0,fr.w>0,kr.l>=yr.r-3,fr.l>=kr.r-3,f.value,JSON.stringify(p.textContent));
+var w2=document.getElementById("w2"),q=document.getElementById("q");
+q.selectedIndex=1;
+var p2=w2.parentNode;
+p2.removeChild(w2);
+p2.insertBefore(w2,p2.firstChild);
+L("select",N(w2),q.value,R(q).w>0,JSON.stringify(p2.textContent),document.querySelectorAll("select").length);
+// A write to a text beside a box keeps the box where it was.
+var w3=document.getElementById("w3"),k3=document.getElementById("k3");
+w3.firstChild.data="zz";
+L("written",N(w3),JSON.stringify(document.getElementById("p3").textContent),R(k3).w>0);
+</script></body></html>

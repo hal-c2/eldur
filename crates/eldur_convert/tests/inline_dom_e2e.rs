@@ -6,7 +6,9 @@
 //! glyphs were at; what its script logged (lines starting `LC `) is compared
 //! with what Chromium logged, recorded in `tests/inline_dom/chromium.json` by
 //! `node crates/eldur_convert/tests/inline_dom/gen.mjs`. A QML warning or an
-//! uncaught script error fails the page.
+//! uncaught script error fails the page. A page may also name texts it must
+//! draw, in order: what each visible `Text` shows once the script and clicks
+//! are done.
 
 mod support;
 
@@ -27,6 +29,18 @@ TestCase {
     name: "InlineDom"
     when: windowShown
 
+    function drawnIn(item) {
+        if (!item.visible || item.opacity === 0) {
+            return
+        }
+        if (item.lineCount !== undefined && typeof item.text === "string" && item.text !== "") {
+            console.log("DRAWN " + item.text.replace(/<[^>]*>/g, ""))
+        }
+        for (let i = 0; i < item.children.length; ++i) {
+            drawnIn(item.children[i])
+        }
+    }
+
     function test_page() {
         const component = Qt.createComponent("Main.qml")
         verify(component.status === Component.Ready, component.errorString())
@@ -41,13 +55,15 @@ TestCase {
             }
             wait(50)
         }
+        waitForRendering(page)
+        drawnIn(page)
     }
 }
 }
 "##;
 
 /// Runs one page; `Err` has what went wrong.
-fn run(name: &str, html: &str, want: &[&str], clicks: &str) -> Result<(), String> {
+fn run(name: &str, html: &str, want: &[&str], clicks: &str, drawn: &[&str]) -> Result<(), String> {
     if support::no_qt() {
         return Ok(());
     }
@@ -91,6 +107,22 @@ fn run(name: &str, html: &str, want: &[&str], clicks: &str) -> Result<(), String
             ));
         }
     }
+    let drew: Vec<_> = text
+        .lines()
+        .filter_map(|l| l.find("DRAWN ").map(|at| &l[at + 6..]))
+        .collect();
+    let mut from = 0;
+    for want in drawn {
+        match drew[from..].iter().position(|d| d == want) {
+            Some(at) => from += at + 1,
+            None => {
+                problems.push(format!(
+                    "draws no {want:?} after what came before; drew {drew:?}"
+                ));
+                break;
+            }
+        }
+    }
     if problems.is_empty() {
         Ok(())
     } else {
@@ -99,6 +131,11 @@ fn run(name: &str, html: &str, want: &[&str], clicks: &str) -> Result<(), String
 }
 
 fn page(name: &str) {
+    page_drawing(name, &[]);
+}
+
+/// `page`, and the page draws `drawn` in that order, others between allowed.
+fn page_drawing(name: &str, drawn: &[&str]) {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/inline_dom");
     let chromium: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(dir.join("chromium.json")).expect("json"))
@@ -120,7 +157,7 @@ fn page(name: &str) {
         })
         .collect();
     let clicks = format!("[{}]", clicks.join(","));
-    if let Err(e) = run(name, &html, &want, &clicks) {
+    if let Err(e) = run(name, &html, &want, &clicks, drawn) {
         panic!("{e}");
     }
 }
@@ -164,6 +201,37 @@ fn a_control_in_an_inline_element_is_its_child() {
 #[test]
 fn a_buttons_text_content_is_its_dom_text_not_what_it_draws() {
     page("button_text");
+}
+
+// #8: a text-only button holds its text as a Text node.
+#[test]
+fn a_text_only_buttons_text_is_a_node_it_draws() {
+    page_drawing("button_nodes", &["Saved", "Hi Save", "Back", "Load?"]);
+}
+
+// #6: a control or block the page made goes into the inline element.
+#[test]
+fn a_box_the_page_appends_to_an_inline_element_goes_into_it() {
+    page("boxes_into_inline");
+}
+
+// #6: a removed element's boxes come back with it, and a write to a text
+// beside a box keeps the box between its texts.
+#[test]
+fn boxes_come_back_with_the_element_that_held_them() {
+    page_drawing("reinsert_boxes", &["x zz", "K", "b y"]);
+}
+
+// #23: a created span's text is its own Text node.
+#[test]
+fn a_created_spans_text_is_its_own_node() {
+    page("created_span_text");
+}
+
+// #23: markup read on an element holding a created span and a box has both.
+#[test]
+fn inner_html_has_created_spans_and_boxes() {
+    page("model_inner_html");
 }
 
 #[test]
