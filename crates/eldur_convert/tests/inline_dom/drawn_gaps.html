@@ -1,0 +1,38 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif}</style><script>
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
+function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?JSON.stringify(n.data):I(n)}).join(",")}
+function R(e){var r=e.getBoundingClientRect();return {l:Math.round(r.left),t:Math.round(r.top),r:Math.round(r.right),b:Math.round(r.bottom),w:Math.round(r.width),h:Math.round(r.height)}}
+function near(a,b){return Math.abs(a-b)<=3}
+</script></head><body>
+<p><button id="ga">Save</button> <button id="gr">GoSave</button></p>
+<p><button id="gb">Save</button> <button id="gn">Save</button></p>
+<p><span id="gs">Go</span></p>
+<p id="ws">g <b id="wb">bold</b> <input id="wi" value="k" style="width:40px"></p>
+<button id="gm">Save</button>
+<form id="gf"><fieldset id="gd" disabled><legend><span id="gl">l </span></legend><p><input id="gx" value="2"></p></fieldset></form>
+<p id="sc">one</p>
+<p id="last">end <span id="gs2">moved</span></p>
+<script>
+// A span put before a button's text is drawn before it, on the label's line.
+var ga=document.getElementById("ga"),gs=document.getElementById("gs");
+ga.insertBefore(gs,ga.firstChild);
+L("span-before",N(ga),JSON.stringify(ga.textContent),near(R(ga).w,R(document.getElementById("gr")).w),R(gs).r<=R(ga).r-near(0,0)&&R(gs).l>=R(ga).l,near(R(gs).t+R(gs).h/2,R(ga).t+R(ga).h/2));
+// An emptied button keeps only its padding and border.
+var gb=document.getElementById("gb");gb.removeChild(gb.firstChild);
+L("emptied",gb.childNodes.length,R(gb).h<R(document.getElementById("gn")).h,R(gb).w<R(document.getElementById("gn")).w);
+// Whitespace between a page's elements is one Text node.
+L("ws",N(document.getElementById("ws")));
+// A button given markup holds it as nodes.
+var gm=document.getElementById("gm");gm.innerHTML="<b id=\"gmb\">Go</b> now";
+L("markup",N(gm),JSON.stringify(gm.textContent),I(gm.firstChild&&gm.firstChild.parentNode),JSON.stringify(gm.lastChild&&gm.lastChild.data),R(gm).h);
+// A field put in a disabled fieldset's first legend is not disabled, and it is drawn.
+var gl=document.getElementById("gl"),gi=document.createElement("input");gi.name="in";gi.value="3";gl.append(gi);
+var gx=document.getElementById("gx");
+L("legend",I(gi.parentNode),gi.matches(":disabled"),gx.matches(":disabled"),R(gi).w>0&&R(gi).h>0,getComputedStyle(gx).color!==getComputedStyle(gi).color);
+// A span moved to the body goes at its end, after the last paragraph.
+var sc=document.getElementById("sc"),yz=document.createElement("span");yz.textContent="yz";sc.after(yz);
+L("after-p",I(yz.previousSibling),R(yz).t-R(sc).b);
+var gs2=document.getElementById("gs2"),last=document.getElementById("last");document.body.append(gs2);
+L("to-body",N(last),R(gs2).t>=R(last).b,near(R(gs2).l,0));
+</script></body></html>
