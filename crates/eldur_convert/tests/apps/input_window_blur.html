@@ -30,6 +30,7 @@ button { margin: 4px; }
 <button id="w7">w7</button>
 <p>words <a href="#" id="l">l</a> more</p>
 <p tabindex="0" id="p7">held <a href="#" id="m7">m7</a></p>
+<div id="gap">gap</div>
 <script>
 // The window loses focus and gets it back, by itself and right after a blur
 // listener moved the focus. `document.hasFocus()` follows the window.
@@ -41,6 +42,23 @@ function on(id_) { return document.getElementById(id_); }
       "has", document.hasFocus());
   }, true);
 });
+// The window itself hears its blur and focus, through a listener and its
+// handler property; `visibilitychange` would say if the page were hidden.
+// They are set from the first click, after the recording's own focus moves
+// at load.
+function heard(what) {
+  return function (ev) {
+    console.log(what, ev.type, "at window", ev.target === window, "active", id(document.activeElement),
+      "has", document.hasFocus());
+  };
+}
+on("w").addEventListener("click", function () {
+  window.addEventListener("blur", heard("listener"));
+  window.addEventListener("focus", heard("listener"));
+  window.onblur = heard("handler");
+  window.onfocus = heard("handler");
+  document.addEventListener("visibilitychange", function () { console.log("visibilitychange", document.visibilityState); });
+}, { once: true });
 document.addEventListener("click", function (ev) {
   console.log("click", id(ev.target), "has", document.hasFocus());
 });

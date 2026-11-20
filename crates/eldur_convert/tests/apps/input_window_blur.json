@@ -19,7 +19,10 @@
  {"name":"click x6","click":"#x6"},
  {"name":"press y6, which x6's blur moves on to z6, and press w6, which focuses z6 and then y6, in the same turn","click":"#y6","again":"#w6"},
  {"name":"click x7","click":"#x7"},
- {"name":"press p7, which x7's blur moves on to its link m7, and press w7, which focuses p7, in the same turn","click":"#p7","again":"#w7"}
+ {"name":"press p7, which x7's blur moves on to its link m7, and press w7, which focuses p7, in the same turn","click":"#p7","again":"#w7"},
+ {"name":"click gap, which nothing focusable holds","click":"#gap"},
+ {"name":"the window goes away from the body","away":true},
+ {"name":"the window comes back to the body","back":true}
 ],
 "watch":[{"sel":"#w"}],
 "window":true}

@@ -90994,7 +90994,9 @@
    "name": "the window goes away",
    "log": [
     "blur w from - active w has false",
-    "focusout w from - active w has false"
+    "focusout w from - active w has false",
+    "listener blur at window true active w has false",
+    "handler blur at window true active w has false"
    ],
    "state": {
     "#w": [
@@ -91015,6 +91017,8 @@
   {
    "name": "the window comes back",
    "log": [
+    "listener focus at window true active w has true",
+    "handler focus at window true active w has true",
     "focus w from - active w has true",
     "focusin w from - active w has true"
    ],
@@ -91068,7 +91072,9 @@
     "focusout x from - active z has true",
     "click y has true",
     "blur z from - active z has false",
-    "focusout z from - active z has false"
+    "focusout z from - active z has false",
+    "listener blur at window true active z has false",
+    "handler blur at window true active z has false"
    ],
    "state": {
     "#w": [
@@ -91089,6 +91095,8 @@
   {
    "name": "the window comes back to z",
    "log": [
+    "listener focus at window true active z has true",
+    "handler focus at window true active z has true",
     "focus z from - active z has true",
     "focusin z from - active z has true"
    ],
@@ -91355,7 +91363,9 @@
    "name": "the window goes away from l",
    "log": [
     "blur l from - active l has false",
-    "focusout l from - active l has false"
+    "focusout l from - active l has false",
+    "listener blur at window true active l has false",
+    "handler blur at window true active l has false"
    ],
    "state": {
     "#w": [
@@ -91376,6 +91386,8 @@
   {
    "name": "the window comes back to l",
    "log": [
+    "listener focus at window true active l has true",
+    "handler focus at window true active l has true",
     "focus l from - active l has true",
     "focusin l from - active l has true"
    ],
@@ -91503,6 +91515,73 @@
      }
     ],
     "(focus)": "p7"
+   }
+  },
+  {
+   "name": "click gap, which nothing focusable holds",
+   "log": [
+    "blur p7 from - active BODY has true",
+    "focusout p7 from - active BODY has true",
+    "click gap has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "the window goes away from the body",
+   "log": [
+    "listener blur at window true active BODY has false",
+    "handler blur at window true active BODY has false"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": ""
+   }
+  },
+  {
+   "name": "the window comes back to the body",
+   "log": [
+    "listener focus at window true active BODY has true",
+    "handler focus at window true active BODY has true"
+   ],
+   "state": {
+    "#w": [
+     {
+      "box": [
+       12,
+       12,
+       25.64,
+       21
+      ],
+      "shown": true,
+      "text": "w"
+     }
+    ],
+    "(focus)": ""
    }
   }
  ],
