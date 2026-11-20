@@ -3741,6 +3741,14 @@ function _appendTarget(raw) {
     raw.implicitHeight = Qt.binding(function() {
         return extra + (text.text === "" ? 0 : text.implicitHeight) + flow.implicitHeight;
     });
+    // A box no layout stretches (a legend, a float) was as wide as its text;
+    // it is as wide as the wider of its text and what it holds now.
+    var extraW = raw.implicitWidth - text.implicitWidth;
+    if (raw.parent && typeof raw.parent.spacing !== "number" && extraW >= 0) {
+        raw.implicitWidth = Qt.binding(function() {
+            return extraW + Math.max(text.text === "" ? 0 : text.implicitWidth, flow.implicitWidth);
+        });
+    }
     // `textContent = x` replaces every child; rendering a model's runs does not.
     text.textChanged.connect(function() {
         if (!_vRendering) {
@@ -5572,6 +5580,9 @@ function _childContainer(raw) {
     var base = (typeof raw.contentHeight === "number" && raw.contentItem) ? raw.contentItem
         : raw.eldurScroller ? raw.eldurScroller.contentItem : raw;
     var m = _meta(raw);
+    if (m.btnLines) {
+        return m.btnLines;
+    }
     if (m.tableGrid) {
         return m.tableGrid;
     }
@@ -5915,6 +5926,9 @@ function getText(item) {
     if (raw.eldurTag === "input" || _meta(raw).createdTag === "input") {
         return "";
     }
+    if (_meta(raw).btnLines) {
+        return _rawChildNodes(raw).map(getText).join("");
+    }
     var vOwn = _vModelOf(raw);
     if (vOwn) {
         return _vBesideModel(raw, null) ? _vNodesBeside(raw, null).map(getText).join("") : _vTextContent(vOwn);
@@ -6001,10 +6015,26 @@ function _wsRuns(raw, key, declared) {
     if (!m[key]) {
         var given = raw[declared];
         m[key] = typeof given === "string" && given !== "" && !_isCreatedElement(raw)
-            ? [_vLeaf(given, null, null)] : [];
+            && !(key === "ws" && _wsEndsRunBefore(raw)) ? [_vLeaf(given, null, null)] : [];
         m[key].forEach(function(leaf) { leaf.wsOwner = raw; leaf.wsKey = key; });
     }
     return m[key];
+}
+
+// The whitespace before an item on a line can be the last Text node of the
+// run before it, which holds it already: it is one node, as in Chromium.
+function _wsEndsRunBefore(raw) {
+    var line = raw.parent;
+    if (!line || !_isLines(line)) {
+        return false;
+    }
+    var prev = null;
+    for (var i = 0; i < line.children.length && line.children[i] !== raw; ++i) {
+        prev = line.children[i];
+    }
+    var model = prev ? _vModelOf(prev) : null;
+    var last = model && model.kids.length > 0 ? model.kids[model.kids.length - 1] : null;
+    return Boolean(last && last.vtext && /^[ \t\n\r\f]+$/.test(last.data));
 }
 
 // Whitespace in markup a script gives, kept like the converter's.
@@ -6579,6 +6609,18 @@ function _setInnerHTMLAt(item, html) {
     var elementsInBox = _gIsBox(raw) && /<(?!br\b)[a-z]/i.test(str);
     if (blockInBox || elementsInBox || _markupMakesElements(raw)) {
         _replaceWithMarkup(raw, str);
+        _rememberMarkup(raw, str);
+        return;
+    }
+    // A button given elements holds them as nodes, on a line of its own.
+    if (_isTextButton(raw) && /<[a-z]/i.test(str)) {
+        // What it held goes: its Text nodes are no line's yet.
+        _btnForget(raw);
+        _meta(raw).btnNodes = [];
+        _meta(raw).btnDrawn = raw.text;
+        _btnBecomesLines(raw);
+        _replaceWithMarkup(raw, str);
+        _btnLineStyle(raw);
         _rememberMarkup(raw, str);
         return;
     }
@@ -11889,7 +11931,44 @@ function _inlineBecomesLines(raw) {
 // text put in it leaves. One drawing markup a script gave it (`innerHTML`)
 // holds no nodes (Known gap): its text is the markup, not a node's.
 function _drawsOwnText(raw) {
-    return _isTextButton(raw) && !_meta(raw).btnMarkup;
+    return _isTextButton(raw) && !_meta(raw).btnMarkup && !_meta(raw).btnLines;
+}
+
+// A text button given an element holds what it draws as a line of nodes, as a
+// paragraph does: its Text nodes and the element side by side, each drawn
+// where it stands among them.
+function _btnBecomesLines(raw) {
+    var m = _meta(raw);
+    if (m.btnLines) {
+        return m.btnLines;
+    }
+    var leaves = m.btnMarkup ? [] : _btnNodes(raw).slice();
+    var label = raw.contentItem;
+    var lines = _newLines(raw);
+    lines.font = Qt.binding(function() { return raw.font; });
+    lines.color = Qt.binding(function() { return raw.palette.buttonText; });
+    lines.textAlign = 4; // Text.AlignHCenter
+    var texts = leaves.map(_vToReal);
+    _btnForget(raw);
+    delete m.btnMarkup;
+    m.btnLines = lines;
+    // A control only takes in a content item that has no parent yet, and a
+    // made line has the page's.
+    lines.parent = raw;
+    raw.contentItem = lines;
+    // The converter counted the label's lines; the line holds what is drawn
+    // now, and an empty one is no line at all.
+    raw.implicitHeight = Qt.binding(function() {
+        return raw.topPadding + raw.bottomPadding + (lines.children.length > 0 ? lines.implicitHeight : 0);
+    });
+    if (label) {
+        label.visible = false;
+    }
+    if (texts.length > 0) {
+        _insertInFlow(lines, texts, null);
+        texts.forEach(function(n) { _dressLineText(lines, n); });
+    }
+    return lines;
 }
 
 function _isTextButton(raw) {
@@ -12005,6 +12084,11 @@ function _btnTakeOut(leaf) {
     delete leaf.btnBefore;
     delete leaf.btnAfter;
     _btnDraw(raw);
+    // An emptied button draws no line at all, only its padding and border; a
+    // label would keep a line's height.
+    if (list.length === 0 && raw.text === "") {
+        _btnBecomesLines(raw);
+    }
 }
 
 function _btnDraw(raw) {
@@ -12093,6 +12177,14 @@ function _insertChildren(raw, nodes, ref, going, atStart) {
         });
         return;
     }
+    if (nodes.length > 0 && !nodes.every(_isTextNode) && _drawsOwnText(raw)) {
+        _btnBecomesLines(raw);
+    }
+    if (_meta(raw).btnLines) {
+        // Its Text nodes are a line's now, each the same node.
+        ref = ref ? _gCurrent(ref) : ref;
+        going = going ? _gCurrent(going) : going;
+    }
     if (nodes.length > 0 && nodes.every(_isTextNode) && _drawsOwnText(raw)
         && (!ref || ref.btnOf === raw) && (!going || going.btnOf === raw)) {
         _putDrawnText(raw, nodes, atStart, ref, going);
@@ -12166,14 +12258,17 @@ function _insertChildrenAt(raw, nodes, ref) {
                 n.wrapMode = 1; // Text.WordWrap
             }
         });
+        _btnLineStyle(raw);
         return;
     }
     if (_gIsBox(raw) && !nodes.every(function(n) { return _vStaysInline(n, raw, ref); })) {
         _gBoxTextToKids(raw);
         ref = ref ? _gCurrent(ref) : ref;
     }
-    // What is not inline-level goes beside the anonymous line, not in it.
-    var at = ref && ref.parent && _isLines(ref.parent) && _isAnonLines(ref.parent) ? ref.parent : ref;
+    // What is not inline-level goes beside the anonymous line, not in it; a
+    // button's line is all it holds.
+    var at = ref && ref.parent && _isLines(ref.parent) && _isAnonLines(ref.parent)
+        && ref.parent !== _meta(raw).btnLines ? ref.parent : ref;
     // A box's lines are remade from its children at its next layout.
     if (at && at !== ref && _gIsBox(raw)) {
         var inLine = [];
@@ -12208,6 +12303,33 @@ function _insertChildrenAt(raw, nodes, ref) {
             n.textFormat = 0; // Text.PlainText
             n.wrapMode = 1; // Text.WordWrap
         });
+    }
+    _btnLineStyle(raw);
+}
+
+// A button that took in elements draws them on a line of its own, which no
+// layout styles as a flow; an element there takes the button's font, as
+// Chromium's inherits it.
+function _btnLineStyle(raw) {
+    var lines = _meta(raw).btnLines;
+    if (!lines) {
+        return;
+    }
+    if (_gHasCascade()) {
+        ++_gGen;
+    }
+    for (var i = 0; i < lines.children.length; ++i) {
+        var kid = lines.children[i];
+        var tag = _meta(kid).createdTag;
+        if (!tag || tag === "#text" || !_isPlainTextItem(kid)) {
+            continue;
+        }
+        if (_gHasCascade()) {
+            _gPaintText(kid, _gStyle(kid), lines.width, kid);
+        } else {
+            kid.font = lines.font;
+            kid.color = lines.color;
+        }
     }
 }
 
@@ -12512,10 +12634,14 @@ function _lookupTemplate(raw) {
     if (templates[exact]) {
         return { component: templates[exact], exactKey: exact, step: exact };
     }
+    // The converter writes no form for an element in a control; a button's
+    // line styles what it holds from the cascade (`_btnLineStyle`).
+    var holder = _logicalParent(raw);
+    var styledInLine = Boolean(holder && _meta(holder).btnLines) && _gHasCascade();
     for (var i = 1; i < keys.length; ++i) {
         var cand = keys[i];
         if (templates[cand]) {
-            if (!_meta(raw).lookCarried && !_warnedMissingTemplates[exact]) {
+            if (!_meta(raw).lookCarried && !styledInLine && !_warnedMissingTemplates[exact]) {
                 _warnedMissingTemplates[exact] = true;
                 console.warn("eldur: no style template for " + exact + "; using " + cand);
             }
@@ -12527,7 +12653,7 @@ function _lookupTemplate(raw) {
     var classed = exact.split("@")[0] + ".";
     var classless = exact.indexOf(".") < 0
         && Object.keys(templates).some(function(k) { return k.indexOf(classed) === 0; });
-    if (!classless && !_meta(raw).lookCarried && !_warnedMissingTemplates[exact]) {
+    if (!classless && !_meta(raw).lookCarried && !styledInLine && !_warnedMissingTemplates[exact]) {
         _warnedMissingTemplates[exact] = true;
         console.warn("eldur: no style template for " + exact + "; using generic");
     }
@@ -13111,6 +13237,34 @@ function _connectSubtree(raw) {
         turned = _resamples(up);
     }
     _fitGlyphs(cur, turned);
+    _fieldsetHolds(cur);
+}
+
+// A control put in a disabled fieldset. The converter holds the fieldset's
+// controls off with its `enabled`, which its legend's would inherit too; once
+// one is in its first legend, each control answers for itself.
+function _fieldsetHolds(raw) {
+    var fieldset = null;
+    for (var at = _logicalParent(raw), n = 0; at && n < 256; at = _logicalParent(at), ++n) {
+        if (_nodeTag(at) === "fieldset" && getAttribute(at, "disabled") !== null) {
+            fieldset = at;
+            break;
+        }
+    }
+    if (!fieldset) {
+        return;
+    }
+    var isControl = function(node) {
+        return !node.__eldurInline && /^(button|input|select|textarea)$/.test(_nodeTag(node));
+    };
+    var controls = isControl(raw) ? [raw] : _elementsUnder(raw, isControl, false);
+    if (fieldset.enabled === false) {
+        if (controls.some(function(c) { return !_isDisabled(c); })) {
+            _fieldsetTurned(fieldset);
+        }
+        return;
+    }
+    controls.forEach(function(c) { c.enabled = !_isDisabled(c); });
 }
 
 function _unescapeHtmlText(str) {
@@ -22058,8 +22212,10 @@ function _vCarryModel(raw, old, nodes) {
 
 // `true` when the nodes went into a line of text, in place of `going` if given.
 function _vTryInsert(raw, nodes, ref, going) {
-    // A button drawing its text keeps its Text nodes itself.
-    if (nodes.length > 0 && nodes.every(_isTextNode) && _drawsOwnText(raw) || _takesMarkupText(raw, nodes, ref, going)) {
+    // A button drawing its text keeps its Text nodes itself; given an
+    // element, it holds them in a line (`_btnBecomesLines`).
+    if (nodes.length > 0 && _drawsOwnText(raw) || _takesMarkupText(raw, nodes, ref, going)
+        || _meta(raw).btnLines) {
         return false;
     }
     var host = _vHostOf(raw, nodes, ref);
