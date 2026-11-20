@@ -1,0 +1,13 @@
+<!DOCTYPE html><html><body>
+<p id="out">waiting</p>
+<script type="module" src="ca.js"></script>
+<script type="module">
+import { log } from "./log.js";
+log("inline runs");
+import("./cb.js")
+  .then(() => log("cb resolved"), (e) => log("cb rejected " + e.message))
+  .then(() => { document.getElementById("out").textContent = "done"; log("done"); });
+</script>
+<script type="module" src="cb.js"></script>
+<script type="module" src="user.js"></script>
+</body></html>

@@ -198,7 +198,10 @@ fn run(page: &str, read: &[&str]) -> Seen {
         .map(|f| String::from_utf8_lossy(&f.contents).into_owned())
         .unwrap_or_default();
     std::fs::remove_dir_all(&dir).expect("remove temp dir");
-    let uncaught = |l: &str| l.find("Uncaught ").map(|at| l[at + 9..].trim_end().to_owned());
+    let uncaught = |l: &str| {
+        l.find("Uncaught ")
+            .map(|at| l[at + 9..].trim_end().to_owned())
+    };
     let mut problems = support::problem_lines(&text, |l| {
         uncaught(l).is_none()
             && (l.contains("FAIL!")
@@ -344,4 +347,29 @@ fn a_lazy_modules_element_lookup_runs_with_the_module() {
     }
     let read = ["out", "label"];
     assert_eq!(run("element", &read), wanted("element", &read));
+}
+
+/// A module that throws fails every module of its cycle: one of them that ran
+/// to its end still rejects its `import()` and reports at its own script with
+/// that error, a module importing it does not run, and a `DOMContentLoaded`
+/// listener the finished one added is heard.
+#[test]
+fn a_throwing_cycle_fails_every_module_in_it() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("cycle", &read), wanted("cycle", &read));
+}
+
+/// A module whose import threw stops before the imports after it: one of those
+/// runs at its own script, another at its `import()`, and of the listeners the
+/// throwing module would add only the one before the throw is heard.
+#[test]
+fn a_module_skipped_by_a_failed_importer_runs_later() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("skip", &read), wanted("skip", &read));
 }

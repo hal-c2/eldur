@@ -1,0 +1,12 @@
+<!DOCTYPE html><html><body>
+<p id="out">waiting</p>
+<script type="module" src="a.js"></script>
+<script type="module">
+import { log } from "./log.js";
+log("inline runs");
+import("./late.js")
+  .then((m) => log("late resolved " + m.v), (e) => log("late rejected " + e.message))
+  .then(() => { document.getElementById("out").textContent = "done"; log("done"); });
+</script>
+<script type="module" src="good.js"></script>
+</body></html>
