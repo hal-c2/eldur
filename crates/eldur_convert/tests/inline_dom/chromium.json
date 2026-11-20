@@ -838,7 +838,8 @@
   "log": [
    "LC p one <em>e</em><span>s</span><button>B</button> 4 \"one esB\"",
    "LC q two<button>C</button><span>t</span> 3 \"twoCt\"",
-   "LC r three<span>u</span><input> 3 \"threeu\" <span id=\"r\">three<span>u</span><input></span>"
+   "LC r three<span>u</span><input> 3 \"threeu\" <span id=\"r\">three<span>u</span><input></span>",
+   "LC field true"
   ],
   "clicks": []
  },

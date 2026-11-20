@@ -24,4 +24,6 @@ r.append(rs);
 var ri=document.createElement("input");ri.value="v";
 r.append(ri);
 L("r",r.innerHTML,r.childNodes.length,JSON.stringify(r.textContent),r.outerHTML);
+// A field made for the line is as wide as one made for a block.
+L("field",ri.getBoundingClientRect().width>150);
 </script></body></html>
