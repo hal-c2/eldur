@@ -5130,6 +5130,9 @@ function _polishDown(item) {
 function _detachNode(raw) {
     var leaving = _ceLeaving(raw);
     _takeOut(raw);
+    // Removed, a box is no longer its inline element's, even one parked while
+    // that element was hidden; a render parking it keeps it (`_vParkSlots`).
+    _vUnhold([raw]);
     _ceLeft(leaving);
 }
 
@@ -17622,7 +17625,8 @@ function _vSlotIn(c, raw, ref, refBox) {
     m.vHeldBy = c;
     // Made here, it takes the form the converter wrote for it, as one put in
     // a block does.
-    if (_isCreatedElement(raw) && _isConnected(_vHostElement(c.model || c) || c)) {
+    // One with no model is off the page, so the element keeps its form.
+    if (_isCreatedElement(raw) && c.model && _isConnected(_vHostElement(c.model) || c)) {
         _connectSubtree(raw);
         raw = m.raw || raw;
     }
@@ -21073,11 +21077,14 @@ function _vToReal(v) {
     var mm = _meta(made);
     var script = m.wrapper;
     var look = _vStyle(v);
+    // Its children in order, the boxes a script put in it among them: each
+    // goes with it, the same node.
+    var holdsBoxes = (v.boxes || []).some(function(b) { return _vSlotOwner(b.item) === v; });
+    var kids = holdsBoxes || (v.kids && v.kids.some(_vIsElement)) ? _vWithBoxes(v, function() { return true; }) : null;
     _vRemove(v);
     if (v.objectName) {
         made.objectName = v.objectName;
     }
-    var kids = v.kids && v.kids.some(_vIsElement) ? v.kids.slice() : null;
     var text = kids ? "" : _vText(v);
     _itemMeta.delete(v);
     _itemMeta.set(made, m);
@@ -21114,8 +21121,9 @@ function _vToReal(v) {
     // a model's nodes would itself go back into a model it is no longer in.
     if (kids) {
         _insertChildren(made, kids.map(_vRunToItem), null);
-        // A box among them makes the element a line, a new item.
-        made = _gCurrent(made);
+        // A box among them makes the element a line, a new item: its record
+        // follows it on any page, the replaced map only on an open one.
+        made = _gCurrent(m.raw);
     }
     var keys = Object.keys(m.styles);
     for (var i = 0; i < keys.length; ++i) {
