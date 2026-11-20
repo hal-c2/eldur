@@ -779,7 +779,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
                     _ => None,
                 };
                 let outer_vh = std::mem::replace(&mut self.percent_of_vh, vh);
-                let of_parent = self.own_given == Given::Definite
+                let of_parent = matches!(self.own_given, Given::Definite | Given::Line)
                     && matches!(style.height, Size::Auto)
                     && !deco.needed();
                 let outer_of_parent = std::mem::replace(&mut self.percent_of_parent, of_parent);
@@ -810,7 +810,10 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 self.percent_of_vh = outer_vh;
                 self.percent_of_parent = outer_of_parent;
                 self.percent_fills = outer_fills_percent;
-                if of_parent
+                let grown = self.own_given == Given::Grown
+                    && matches!(style.height, Size::Auto)
+                    && !deco.needed();
+                if (of_parent || grown)
                     && !fills
                     && let Some(obj) = &mut column.obj
                 {
@@ -1626,6 +1629,14 @@ pub(crate) enum Given {
     Stretched,
     /// A parent stretches it to a height its content has no say in.
     Definite,
+    /// A flex row stretches it to its line's height, which its content can
+    /// still raise; its children's percentages resolve against that height
+    /// (css-flexbox §9.4 step 11).
+    Line,
+    /// A column grows it past its content (`flex-grow`) without a definite
+    /// height to grow into: its children's percentages stay `auto`, but they
+    /// stay at its top (css-flexbox §9.8).
+    Grown,
 }
 
 /// Where along one axis a lone item sits in its flex or grid container.

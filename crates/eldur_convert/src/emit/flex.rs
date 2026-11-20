@@ -329,11 +329,13 @@ impl Emitter<'_, '_> {
                     == Cross::Stretch;
                 match (stretches, line_definite) {
                     (true, true) => Given::Definite,
-                    (true, false) => Given::Stretched,
+                    (true, false) => Given::Line,
                     (false, _) => Given::Content,
                 }
             } else if child.style.flex_grow > 0.0 && own_definite {
                 Given::Definite
+            } else if child.style.flex_grow > 0.0 {
+                Given::Grown
             } else {
                 Given::Content
             };
