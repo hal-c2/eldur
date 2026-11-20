@@ -1446,16 +1446,8 @@ impl<'a> CascadeEngine<'a> {
             cascade_out,
         );
 
-        if style.display == Display::None {
-            return ElementStyle {
-                style,
-                before: None,
-                after: None,
-                placeholder: None,
-                marker: None,
-                first_letter: None,
-            };
-        }
+        // A `display: none` element keeps its pseudo-elements: a state or
+        // a script that shows it draws them (it has no box until then).
 
         // Pseudo-elements (`::before`, `::after`, `::placeholder`, `::marker`).
         let mut before_decls: Vec<(CascadeKey, &DeclValue)> = Vec::new();
