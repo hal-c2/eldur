@@ -221,6 +221,14 @@ fn a_box_the_page_appends_to_an_inline_element_goes_into_it() {
     page("boxes_into_inline");
 }
 
+// #6: appended with no reference node to a box with boxes after its text or
+// its lines, text, an inline element and a block go below those boxes; with
+// none after them, an inline element goes on the line.
+#[test]
+fn what_is_appended_after_a_box_s_boxes_goes_below_them() {
+    page("append_after_boxes");
+}
+
 // #6: a removed element's boxes come back with it, and a write to a text
 // beside a box keeps the box between its texts.
 #[test]

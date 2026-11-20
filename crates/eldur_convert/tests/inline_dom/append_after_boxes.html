@@ -1,0 +1,45 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif}p{margin:0}</style><script>
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
+function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?JSON.stringify(n.data):I(n)}).join(",")}
+function R(e){var r=e.getBoundingClientRect();return {l:Math.round(r.left),t:Math.round(r.top),r:Math.round(r.right),b:Math.round(r.bottom),w:Math.round(r.width),h:Math.round(r.height)}}
+function near(a,b){return Math.abs(a-b)<=3}
+</script></head><body>
+<div id="t1">text first<p id="t1p">a box</p></div>
+<div id="t2">text first<p id="t2p">a box</p></div>
+<div id="t3">text first<p id="t3p">a box</p></div>
+<div id="l1">some <b>bold</b> words<p id="l1p">a box</p></div>
+<div id="l2">some <b>bold</b> words<p id="l2p">a box</p></div>
+<div id="l3">some <b>bold</b> words<p id="l3p">a box</p></div>
+<div id="k1">some <input id="k1i" value="k" style="width:40px"> words<p id="k1p">a box</p></div>
+<div id="k2">some <input id="k2i" value="k" style="width:40px"> words<p id="k2p">a box</p></div>
+<div id="k3">some <input id="k3i" value="k" style="width:40px"> words<p id="k3p">a box</p></div>
+<div id="g1">plain</div>
+<div id="g2">some <b>bold</b> words</div>
+<div id="g3">some <input id="g3i" value="k" style="width:40px"> words</div>
+<script>
+// Appended without a reference node to a box with boxes after its text, its
+// rich text or its lines (an input among words), a Text node, an inline element and a block each go below those boxes.
+function grows(h,p,was){return R(h).h-was}
+[["t1","t1p"],["l1","l1p"],["k1","k1p"]].forEach(function(c){
+  var h=document.getElementById(c[0]),p=document.getElementById(c[1]),was=R(h).h;
+  h.appendChild(document.createTextNode("tail"));
+  L("text-"+c[0],N(h),JSON.stringify(h.textContent),near(grows(h,p,was),20));
+});
+[["t2","t2p"],["l2","l2p"],["k2","k2p"]].forEach(function(c){
+  var h=document.getElementById(c[0]),p=document.getElementById(c[1]),s=document.createElement("span");
+  s.id="s"+c[0];s.textContent="tail";h.appendChild(s);
+  L("inline-"+c[0],N(h),JSON.stringify(h.textContent),near(R(s).t-R(p).b,1),near(R(s).l,R(h).l),near(R(s).h,17));
+});
+[["t3","t3p"],["l3","l3p"],["k3","k3p"]].forEach(function(c){
+  var h=document.getElementById(c[0]),p=document.getElementById(c[1]),d=document.createElement("div");
+  d.id="d"+c[0];d.textContent="tail";h.appendChild(d);
+  L("block-"+c[0],N(h),JSON.stringify(h.textContent),near(R(d).t-R(p).b,0),near(R(d).l,R(h).l),near(R(d).h,20));
+});
+// With no box after them, an inline element goes on the text's own line.
+["g1","g2","g3"].forEach(function(id){
+  var h=document.getElementById(id),s=document.createElement("span"),was=R(h).h;
+  s.textContent="tail";h.appendChild(s);
+  L("on-line-"+id,N(h),near(R(s).t-R(h).t,1),near(R(h).h-was,0),R(s).l>R(h).l);
+});
+</script></body></html>
