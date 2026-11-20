@@ -313,6 +313,23 @@
     },
     "errors": []
   },
+  "loadtwice": {
+    "lines": [
+      "module runs",
+      "ready on window",
+      "ready capture on document",
+      "ready on document",
+      "ready on window",
+      "load fn 1",
+      "load object load",
+      "load fn 2",
+      "module load"
+    ],
+    "text": {
+      "out": "load 2"
+    },
+    "errors": []
+  },
   "readlater": {
     "lines": [
       "copy 2",

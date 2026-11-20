@@ -3827,6 +3827,31 @@ fn a_lifecycle_listener_is_the_value_at_the_call() {
     assert!(fire_ready < fire_load, "{js}");
 }
 
+/// A lifecycle listener's options are passed where the call runs, so the
+/// runtime can tell a listener added again (same callback and capture) from
+/// a capture listener of the same callback.
+#[test]
+fn a_lifecycle_listener_keeps_its_options() {
+    let resolver = FakeResolver::default();
+    let m = module_script(
+        "m.js",
+        "const h = () => console.log(\"a\");\nwindow.addEventListener(\"load\", h);\nwindow.addEventListener(\"load\", h, { capture: true });\ndocument.addEventListener(\"DOMContentLoaded\", h, true);\n",
+    );
+    let out = run_rewrite(&[m], &resolver);
+    let js = &out.page_js;
+    let run = function_body(js, "__eldur_run_m0");
+    let plain = run
+        .find("Eldur.queueListener(__eldur_load_listeners, Eldur.window, \"load\", __eldur_m0_h);")
+        .expect("load listener without options");
+    let capture = run
+        .find("Eldur.queueListener(__eldur_load_listeners, Eldur.window, \"load\", __eldur_m0_h, { capture: true });")
+        .expect("load listener with its options");
+    let ready = run
+        .find("Eldur.queueListener(__eldur_ready_listeners, Eldur.document, \"DOMContentLoaded\", __eldur_m0_h, true);")
+        .expect("ready listener with its capture flag");
+    assert!(plain < capture && capture < ready, "{js}");
+}
+
 /// Whatever runs at load, inside `__eldur_init` or a module's run function,
 /// only assigns: each top-level binding is declared at the top of page.js, so
 /// it is not local to the function. The rewrite asserts this in debug builds;
