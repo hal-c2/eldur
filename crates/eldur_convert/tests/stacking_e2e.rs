@@ -451,7 +451,7 @@ div { height: 40px; width: 200px }
 .hide { display: none }
 #p15 { height: 80px; overflow: hidden }
 #p15::after { content: ''; display: block; position: relative; z-index: 10; height: 20px; background: red }
-#v15 { transform: translate(20px, -40px) }
+#v15 { height: 20px; margin-bottom: 20px; transform: translate(20px, -40px) }
 #b16 { height: auto }
 #r16 { position: relative; z-index: 1; background: red }
 </style></head><body>
@@ -506,7 +506,9 @@ document.getElementById('p14').classList.add('hide');
 document.getElementById('c14').style.zIndex = '10';
 document.getElementById('p14').classList.remove('hide');
 // A kid that lifted its block lowered: the block's `::after` still lifts
-// it. And a raised block made taller moves what follows it.
+// it. `#v15` meets only the `::after`: a block that clips holds what it
+// lifts, and one item has one level, so its own background goes up too.
+// And a raised block made taller moves what follows it.
 document.getElementById('c15').style.zIndex = '-1';
 document.getElementById('r16').style.height = '80px';
 </script></body></html>"#;
@@ -537,8 +539,9 @@ const CONTEXTS_TEST: &str = r##"
         compare(front(page, 100, 1230), "c12", "its block's level taken away")
         compare(front(page, 100, 1350), "c13", "a raised block hidden and shown")
         compare(front(page, 100, 1470), "c14", "a level set under a block a class hides")
-        compare(front(page, 100, 1610), "p15", "its ::after lifts the block")
-        compare(front(page, 100, 1630), "v15")
+        compare(front(page, 100, 1610), "p15", "its ::after lifts the block over the box after it")
+        compare(front(page, 210, 1610), "v15")
+        compare(front(page, 100, 1630), "p15")
         compare(front(page, 100, 1780), "r16", "a raised block made taller")
         compare(front(page, 100, 1820), "n16", "moves what follows it")
     }
@@ -574,7 +577,8 @@ const CONTEXTS_UNSCRIPTED: &str = r##"
         compare(front(page, 100, 1350), "c13")
         compare(front(page, 100, 1470), "v14")
         compare(front(page, 100, 1610), "p15")
-        compare(front(page, 100, 1630), "v15")
+        compare(front(page, 210, 1610), "v15")
+        compare(front(page, 100, 1630), "p15")
         compare(front(page, 100, 1780), "n16")
         compare(front(page, 100, 1820), "")
     }
