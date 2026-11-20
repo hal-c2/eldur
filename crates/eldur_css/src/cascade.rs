@@ -758,19 +758,18 @@ pub(crate) fn sheet_custom_properties(
         .map(|(&node, _)| node)
         .collect();
     // Stripping a node's attribute reaches only it and what is under it, so
-    // nodes neither of which is under the other share one pass. That makes
-    // the passes as many as such nodes nest, not as many as there are.
-    let related =
-        |a: NodeId, b: NodeId| doc.ancestors(a).any(|x| x == b) || doc.ancestors(b).any(|x| x == a);
+    // nodes neither of which is under the other share one pass. A node's
+    // pass is the number of its ancestors that need one too: nodes at the
+    // same such depth are never under one another, and the passes are as
+    // many as such nodes nest, not as many as there are.
+    let needing: std::collections::HashSet<NodeId> = needs_pass.iter().copied().collect();
     let mut groups: Vec<Vec<NodeId>> = Vec::new();
     for node in needs_pass {
-        match groups
-            .iter_mut()
-            .find(|g| g.iter().all(|&other| !related(node, other)))
-        {
-            Some(group) => group.push(node),
-            None => groups.push(vec![node]),
+        let depth = doc.ancestors(node).filter(|a| needing.contains(a)).count();
+        if groups.len() <= depth {
+            groups.resize_with(depth + 1, Vec::new);
         }
+        groups[depth].push(node);
     }
     let mut stripped: BTreeMap<NodeId, BTreeMap<String, String>> = BTreeMap::new();
     for group in groups {
@@ -890,6 +889,22 @@ fn without_comments(style: &str) -> std::borrow::Cow<'_, str> {
                 quote = Some(c);
                 out.push(c);
             }
+            // An unquoted `url(` reads to its `)` as one token, comments and
+            // all: `url(/*)` names `/*` (CSS Syntax 3, 4.3.6).
+            (None, 'u' | 'U') if unquoted_url(&chars, &out) => {
+                out.push(c);
+                for _ in 0..3 {
+                    out.extend(chars.next());
+                }
+                while let Some(c) = chars.next() {
+                    out.push(c);
+                    match c {
+                        '\\' => out.extend(chars.next()),
+                        ')' => break,
+                        _ => {}
+                    }
+                }
+            }
             (None, '/') if chars.peek() == Some(&'*') => {
                 chars.next();
                 let mut last = ' ';
@@ -905,6 +920,26 @@ fn without_comments(style: &str) -> std::borrow::Cow<'_, str> {
         }
     }
     out.into()
+}
+
+/// Whether `chars`, just past a `u`, go on as an unquoted `url(` token: `rl(`
+/// in any case, then a first non-space that is not a quote, where the `u`
+/// starts a name rather than continuing one (`myurl(` is a function).
+fn unquoted_url(chars: &std::iter::Peekable<std::str::Chars<'_>>, before: &str) -> bool {
+    if before
+        .chars()
+        .next_back()
+        .is_some_and(|c| c.is_alphanumeric() || matches!(c, '-' | '_' | '\\') || !c.is_ascii())
+    {
+        return false;
+    }
+    let mut ahead = chars.clone();
+    let named = ahead
+        .by_ref()
+        .take(3)
+        .map(|c| c.to_ascii_lowercase())
+        .eq("rl(".chars());
+    named && !matches!(ahead.find(|c| !c.is_ascii_whitespace()), Some('"' | '\''))
 }
 
 /// `value` without a trailing `!important`, when it has one.

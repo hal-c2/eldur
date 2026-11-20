@@ -63,6 +63,16 @@ fn sibling_cards_share_one_pass() {
 }
 
 #[test]
+fn thousands_of_sibling_cards_still_share_one_pass() {
+    // Grouping by how many needing ancestors a node has keeps this
+    // O(n · depth); the pass count stays one however many siblings.
+    let (count, xs) = passes(&page(5000, false));
+    assert_eq!(count, 1);
+    assert_eq!(xs.len(), 5000);
+    assert!(xs.iter().all(|x| x.as_deref() == Some("none")));
+}
+
+#[test]
 fn a_pass_per_level_of_nesting() {
     let (count, xs) = passes(&page(50, true));
     assert_eq!(count, 2);
