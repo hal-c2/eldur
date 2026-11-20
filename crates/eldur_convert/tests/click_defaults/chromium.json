@@ -122,5 +122,13 @@
    "LC Next submit bt9",
    "LC Next dblclick in9 2"
   ]
+ },
+ {
+  "name": "press whose lostpointercapture swaps",
+  "log": [
+   "LC A mousedown cap 1",
+   "LC A mouseup cap 1",
+   "LC A lost makes Next"
+  ]
  }
 ]

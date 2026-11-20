@@ -60,6 +60,7 @@ const STEPS = [
   { name: "press whose move swaps", move: "#mv", click: "#mv" },
   { name: "move whose pointerover swaps", hover: "#ov" },
   { name: "double click whose first press swaps, on a button's text", dbl: "#in9" },
+  { name: "press whose lostpointercapture swaps", click: "#cap" },
 ];
 
 const { chromium } = await loadPlaywright();

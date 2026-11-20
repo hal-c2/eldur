@@ -205,6 +205,15 @@ TestCase {
         mouseDoubleClickSequence(host, p.x, p.y)
         finish(at)
     }
+
+    function test_12_press_whose_lostpointercapture_swaps() {
+        rest()
+        const at = pages()
+        console.log("LC -- press whose lostpointercapture swaps")
+        const p = middle(at.a, "cap")
+        mouseClick(host, p.x, p.y)
+        finish(at)
+    }
 }
 }
 "##;
