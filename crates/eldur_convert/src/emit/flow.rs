@@ -409,7 +409,22 @@ fn set_hidden_margin(obj: &mut Object, run: &HiddenRun, top: MarginSet, cases: O
     } else {
         gap(run.before, run.given)
     };
-    let shown: Vec<_> = run.boxes.iter().map(|(id, b)| (id, gap(*b, 0.0))).collect();
+    let shown: Vec<_> = run
+        .boxes
+        .iter()
+        .map(|(id, b)| {
+            let g = match run.box_cases.iter().find(|(c, _)| c == id) {
+                // Shown, it passes on what its own last blocks do.
+                Some((_, inner)) => match cases {
+                    Some(cases) => inner.meet(cases),
+                    None => inner.clone().joined(top),
+                }
+                .gap(0.0),
+                None => gap(*b, 0.0),
+            };
+            (id, g)
+        })
+        .collect();
     if shown.iter().all(|(_, g)| *g == otherwise) {
         set_top(obj, otherwise);
         return;

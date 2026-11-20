@@ -880,6 +880,7 @@ body { font: 16px/18px sans-serif; }
 <div>Box next</div>
 <details open><summary>Outer summary</summary><details open><summary>Nested summary</summary><p>Nested para</p></details></details>
 <div>Nested next</div>
+<details open><summary>Inside summary</summary><details open><summary>Inner summary</summary><p>Inner para</p></details><div>Inner next</div></details>
 <details><summary>Wrap summary</summary><p>Wrap para</p></details>
 <div class="f">Wrap float</div><p>Wrap text</p>
 <div style="clear: both"></div>
@@ -948,6 +949,16 @@ SUPPORT
         below(page, nestedPara, nestedNext, 16, "nested, open")
         click(page, "Nested summary")
         below(page, nestedSummary, nestedNext, 0, "nested, closed")
+
+        // Chromium: inside an open details, the block after an open nested
+        // one is past its paragraph's 16 px, and right under its summary
+        // once it closes.
+        const innerSummary = textOf(page, "Inner summary")
+        const innerNext = textOf(page, "Inner next")
+        verify(innerSummary && innerNext, "inner lines")
+        below(page, textOf(page, "Inner para"), innerNext, 16, "inner, open")
+        click(page, "Inner summary")
+        below(page, innerSummary, innerNext, 0, "inner, closed")
 
         // Chromium: closed, the float is right under the summary and the
         // text beside it 16 px lower; open, both are past the paragraph's
