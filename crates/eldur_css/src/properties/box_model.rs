@@ -48,6 +48,9 @@ pub(crate) fn parse_display(cvs: &[ComponentValue]) -> Result<Display, String> {
             "table-caption" => Ok(Display::TableCaption),
             "contents" => Ok(Display::Contents),
             "none" => Ok(Display::None),
+            // Ruby and MathML boxes are inline-level, and Eldur lays their
+            // content out as the inline flow they take for other content.
+            "ruby" | "math" | "ruby-text" => Ok(Display::Inline),
             _ => Err(format!("invalid display value '{single}'")),
         },
         multi if (2..=3).contains(&multi.len()) => parse_multi_keyword_display(multi),
@@ -67,7 +70,7 @@ fn parse_multi_keyword_display(words: &[String]) -> Result<Display, String> {
                     return Err("duplicate display-outside keyword".to_owned());
                 }
             }
-            "flow" | "flow-root" | "flex" | "grid" | "table" => {
+            "flow" | "flow-root" | "flex" | "grid" | "table" | "ruby" | "math" => {
                 if inside.replace(w.as_str()).is_some() {
                     return Err("duplicate display-inside keyword".to_owned());
                 }
@@ -88,6 +91,15 @@ fn parse_multi_keyword_display(words: &[String]) -> Result<Display, String> {
             return Ok(Display::ListItem);
         }
         return Err("list-item can only combine with flow or flow-root".to_owned());
+    }
+    // `block ruby` and `block math` are block boxes holding the inline flow
+    // Eldur lays ruby and MathML out as; `inline ruby` is plain `ruby`.
+    if let Some("ruby" | "math") = inside {
+        return match outside {
+            Some("block") => Ok(Display::Block),
+            Some("inline") => Ok(Display::Inline),
+            _ => Err("invalid multi-keyword display combination".to_owned()),
+        };
     }
 
     match (outside, inside) {

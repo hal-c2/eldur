@@ -269,6 +269,18 @@ fn box_model_and_border_shorthands() {
     assert_eq!(s.display, Display::InlineFlex);
     compute(&mut s, Longhand::Display, "flow-root", &ctx).expect("flow-root");
     assert_eq!(s.display, Display::FlowRoot);
+    // Ruby and math lay out as inline flow until they have their own layout.
+    for inline in ["ruby", "math", "ruby-text", "inline ruby", "math inline"] {
+        compute(&mut s, Longhand::Display, "block", &ctx).expect("block");
+        compute(&mut s, Longhand::Display, inline, &ctx).expect(inline);
+        assert_eq!(s.display, Display::Inline, "{inline}");
+    }
+    for block in ["block ruby", "math block"] {
+        compute(&mut s, Longhand::Display, "inline", &ctx).expect("inline");
+        compute(&mut s, Longhand::Display, block, &ctx).expect(block);
+        assert_eq!(s.display, Display::Block, "{block}");
+    }
+    assert!(compute(&mut s, Longhand::Display, "ruby math", &ctx).is_err());
 
     compute(&mut s, Longhand::Position, "-webkit-sticky", &ctx).expect("sticky");
     assert_eq!(s.position, Position::Sticky);
