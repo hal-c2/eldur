@@ -495,18 +495,17 @@ function importModule(namespace) {
     });
 }
 
-// `import()` of a module that runs at load: `state` says whether it has run or
-// what it threw. One that has run resolves to its namespace; otherwise the
-// promise settles once every script of the page has run, as a browser's
-// settles after the module's own script, rejecting with what it threw.
-function importEager(state, namespace) {
-    if (state.state === 1) {
+// `import()` of a module that runs at load. `run` runs it once and records on
+// itself whether it ran (1) or what it threw (2); it is null for a module with
+// no code to run. One that has run resolves to its namespace; otherwise the
+// promise settles once every script of the page has run, as a browser's settles
+// after the module's own script: `namespace` runs a module nothing has run yet
+// and throws what one threw.
+function importEager(run, namespace) {
+    if (run === null || run.state === 1) {
         return Promise.resolve(namespace());
     }
     return Promise.resolve().then(function() {
-        if (state.state === 2) {
-            throw state.error;
-        }
         return namespace();
     });
 }
@@ -8322,7 +8321,14 @@ function _ceBecome(raw, def) {
 
 // As a browser reports an exception thrown by a callback: the page goes on.
 function _ceReport(err) {
-    console.error("Uncaught " + String(err) + (err && err.stack ? "\n" + err.stack : ""));
+    var text;
+    try {
+        text = "Uncaught " + String(err) + (err && err.stack ? "\n" + err.stack : "");
+    } catch (formatError) {
+        // A value whose toString or stack getter throws is still reported.
+        text = "Uncaught exception (value could not be formatted)";
+    }
+    console.error(text);
 }
 
 function _ceCall(raw, method, args) {

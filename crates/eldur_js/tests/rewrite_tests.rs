@@ -807,9 +807,27 @@ const mul2 = double;
 const MathNs = { get UNIT() { return UNIT; }, get default() { return formatPx; }, get double() { return double; } };
 const VERSION = 1;
 
+function __eldur_run_m0() {
+    if (__eldur_run_m0.state === 2) throw __eldur_run_m0.error;
+    if (__eldur_run_m0.state) return;
+    __eldur_run_m0.state = 3;
+    try {
+        outText.text = fmt(mul2(3)) + ":" + MathNs.UNIT;
+    } catch (err) {
+        __eldur_run_m0.state = 2;
+        __eldur_run_m0.error = err;
+        throw err;
+    }
+    __eldur_run_m0.state = 1;
+}
+
 function __eldur_init(rootItem) {
     Eldur.init(rootItem || (typeof root !== "undefined" ? root : null));
-    outText.text = fmt(mul2(3)) + ":" + MathNs.UNIT;
+    try {
+        __eldur_run_m0();
+    } catch (err) {
+        Eldur.reportError(err);
+    }
 }
 "###);
 }
@@ -2841,11 +2859,12 @@ import("./missing.js");
         "{}",
         out.page_js
     );
-    // Through the module's record of whether it has run; the runtime makes
+    // Through the module's run function, which records whether it has run;
+    // null for one with nothing to run. The runtime makes
     // the page's own promise, which `instanceof Promise` on the page names.
     assert!(
         out.page_js
-            .contains("Eldur.importEager(__eldur_module_state_m0, __eldur_module_namespace)"),
+            .contains("Eldur.importEager(null, __eldur_module_namespace)"),
         "{}",
         out.page_js
     );
@@ -2865,7 +2884,7 @@ import("./missing.js");
     );
     assert!(
         out.page_js
-            .contains("Eldur.importEager(__eldur_module_state_m3, __eldur_module_namespace_2)")
+            .contains("Eldur.importEager(__eldur_run_m3, __eldur_module_namespace_2)")
             && out.page_js.contains("get late() { return late; }"),
         "{}",
         out.page_js
@@ -2904,7 +2923,7 @@ fn dynamic_import_of_a_module_that_imports_this_one_resolves_to_its_namespace() 
     assert!(!out.page_js.contains("dynamicImport"), "{}", out.page_js);
     assert!(
         out.page_js
-            .contains("Eldur.importEager(__eldur_module_state_m0, __eldur_module_namespace)"),
+            .contains("Eldur.importEager(__eldur_run_m0, __eldur_module_namespace)"),
         "{}",
         out.page_js
     );
@@ -2936,7 +2955,16 @@ fn a_lazily_imported_module_runs_at_its_own_place_on_the_page() {
     let out = run_rewrite(&[app, later, chunk], &resolver);
     let classic_at = out.page_js.find("console.log('classic')").expect("app.js");
     let later_at = out.page_js.find("console.log('later')").expect("later.js");
-    let chunk_at = out.page_js.find("console.log('chunk'").expect("chunk.js");
+    // Its code is in its run function, called at its place.
+    assert!(
+        out.page_js.contains("console.log('chunk'"),
+        "{}",
+        out.page_js
+    );
+    let chunk_at = out
+        .page_js
+        .find("try {\n        __eldur_run_m2();")
+        .expect("chunk.js");
     assert!(
         classic_at < later_at && later_at < chunk_at,
         "{}",
@@ -2944,7 +2972,7 @@ fn a_lazily_imported_module_runs_at_its_own_place_on_the_page() {
     );
     assert!(
         out.page_js
-            .contains("Eldur.importEager(__eldur_module_state_m2, __eldur_module_namespace)"),
+            .contains("Eldur.importEager(__eldur_run_m2, __eldur_module_namespace)"),
         "{}",
         out.page_js
     );
@@ -2985,9 +3013,23 @@ fn an_imported_module_runs_before_its_importer_and_a_lazy_one_on_its_first_impor
     );
     let out = run_rewrite(&[main, helper, decoy, chunk], &resolver);
     let init = out.page_js.find("function __eldur_init").expect("init");
-    let helper_at = out.page_js.rfind("console.log('helper')").expect("helper");
+    // Each runs in its own run function: main's runs helper's first, and the
+    // page runs main's at its place.
+    let helper_fn = out.page_js.find("function __eldur_run_m1()").expect("helper");
+    let helper_at = out.page_js.find("console.log('helper')").expect("helper");
+    let main_fn = out.page_js.find("function __eldur_run_m0()").expect("main");
+    let helper_call = main_fn + out.page_js[main_fn..].find("__eldur_run_m1();").expect("call");
     let main_at = out.page_js.find("console.log('main'").expect("main");
-    assert!(init < helper_at && helper_at < main_at, "{}", out.page_js);
+    assert!(
+        helper_fn < helper_at && helper_at < main_fn && helper_call < main_at,
+        "{}",
+        out.page_js
+    );
+    assert!(
+        out.page_js[init..].contains("__eldur_run_m0();"),
+        "{}",
+        out.page_js
+    );
     assert!(!out.page_js.contains("'no'"), "{}", out.page_js);
     let run = out
         .page_js
@@ -3354,23 +3396,52 @@ fn a_lazy_modules_element_const_is_looked_up_when_it_runs() {
 fn an_eager_modules_error_stops_its_importers_only() {
     let resolver = FakeResolver::default();
     let first = module_script("first.js", "import(\"./boom.js\");\n");
-    let boom = module_script("boom.js", "export const x = 1;\nthrow new Error(\"boom\");\n");
-    let after = module_script("after.js", "import { x } from \"./boom.js\";\nconsole.log(x);\n");
+    let boom = module_script(
+        "boom.js",
+        "export const x = 1;\nthrow new Error(\"boom\");\n",
+    );
+    let after = module_script(
+        "after.js",
+        "import { x } from \"./boom.js\";\nconsole.log(x);\n",
+    );
     let out = run_rewrite(&[first, boom, after], &resolver);
     let js = &out.page_js;
-    let state = "__eldur_module_state_m1";
+    let run = "__eldur_run_m1";
     for expected in [
-        format!("var {state} = {{ state: 0, error: undefined }};"),
-        format!("Eldur.importEager({state}, "),
-        format!("{state}.state = 2;\n        {state}.error = err;"),
-        format!("if ({state}.state === 2) throw {state}.error;"),
-        format!("if ({state}.state === 2) Eldur.reportError({state}.error);"),
-        "if (__eldur_module_state_m2.state === 2) Eldur.reportError(__eldur_module_state_m2.error);".to_string(),
+        format!("Eldur.importEager({run}, "),
+        format!("function {run}() {{\n    if ({run}.state === 2) throw {run}.error;\n    if ({run}.state) return;\n    {run}.state = 3;"),
+        format!("{run}.state = 2;\n        {run}.error = err;"),
+        format!("try {{\n        {run}();\n    }} catch (err) {{\n        Eldur.reportError(err);\n    }}"),
+        "try {\n        __eldur_run_m2();\n    } catch (err) {\n        Eldur.reportError(err);\n    }".to_string(),
     ] {
         assert!(js.contains(&expected), "{expected}\n{js}");
     }
-    let thrown = js.find("throw new Error(\"boom\")").expect("boom");
-    let logged = js.find("console.log(x)").expect("after");
-    let check = js.find(&format!("if ({state}.state === 2) throw")).expect("check");
-    assert!(thrown < check && check < logged, "{js}");
+    // Its importer runs it first, and never runs again once it has thrown.
+    let importer = js.find("function __eldur_run_m2()").expect("after");
+    let call = importer + js[importer..].find(&format!("{run}();")).expect("call");
+    let logged = js.find("console.log(x)").expect("logged");
+    assert!(call < logged, "{js}");
+}
+
+#[test]
+fn a_throwing_module_fails_every_module_of_its_cycle() {
+    let resolver = FakeResolver::default();
+    let ca = module_script(
+        "ca.js",
+        "import { b } from \"./cb.js\";\nconsole.log(b);\nthrow new Error(\"ca\");\n",
+    );
+    let cb = module_script(
+        "cb.js",
+        "import \"./ca.js\";\nexport const b = \"b\";\nconsole.log(\"cb\");\n",
+    );
+    let out = run_rewrite(&[ca, cb], &resolver);
+    let js = &out.page_js;
+    let ca_run = js.find("function __eldur_run_m0()").expect("ca");
+    let marked = ca_run
+        + js[ca_run..]
+            .find("__eldur_run_m1.state = 2; __eldur_run_m1.error = err;")
+            .expect("cb failed with ca");
+    let rethrown = ca_run + js[ca_run..].find("throw err;").expect("rethrown");
+    assert!(marked < rethrown, "{js}");
+    assert!(js.contains("function __eldur_run_m1()"), "{js}");
 }
