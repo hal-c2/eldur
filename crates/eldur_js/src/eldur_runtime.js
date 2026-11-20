@@ -7662,6 +7662,7 @@ function _setStyleAt(item, prop, value) {
     var name = rawName.indexOf("--") === 0 ? rawName : _kebabToCamel(rawName);
     if (name === "display") {
         str = _displayWritten(str);
+        _gNoteVarDisplay(raw, str);
     }
     m.styles[name] = str;
     if (rawName !== name) {
@@ -8158,9 +8159,19 @@ function _ownVars(raw) {
         if (own === null) {
             continue;
         }
-        var env = Object.assign({}, vars, own);
-        var next = Object.assign({}, vars);
+        // What a sibling's `var()` sees: CSS-wide keywords already applied,
+        // `initial` the guaranteed-invalid value its fallback replaces.
+        var env = Object.assign({}, vars);
         var names = Object.keys(own);
+        for (var e = 0; e < names.length; ++e) {
+            var kw = own[names[e]];
+            if (kw === "initial") {
+                delete env[names[e]];
+            } else if (kw !== "inherit" && kw !== "unset" && kw !== "revert") {
+                env[names[e]] = kw;
+            }
+        }
+        var next = Object.assign({}, vars);
         for (var n = 0; n < names.length; ++n) {
             var k = names[n];
             var written = own[k];
@@ -8179,27 +8190,65 @@ function _ownVars(raw) {
     return vars;
 }
 
+// The boxes whose script-written `display` takes a `var()`: only they follow
+// a custom property a script sets with no cascade, so a page that writes
+// `--x` on each pointer move but no such display checks nothing (#85).
+var _gVarDisplays = new Set();
+
+// Notes whether the element's script-written display now takes a `var()`.
+function _gNoteVarDisplay(raw, display) {
+    if (typeof display === "string" && /var\(/i.test(display)) {
+        _gVarDisplays.add(raw);
+    } else {
+        _gVarDisplays.delete(raw);
+    }
+}
+
+// Whether `raw` is `scope` or sits under it, by the logical tree `_ownVars`
+// takes custom properties along, wrappers it steps over included.
+function _gUnderVars(raw, scope) {
+    for (var at = raw, steps = 0; at && typeof at === "object" && steps < 256; ++steps) {
+        if (at === scope) {
+            return true;
+        }
+        var up = _logicalParent(at);
+        for (var q = at.parent; q && q !== up && typeof q === "object"; q = q.parent) {
+            if (q === scope) {
+                return true;
+            }
+        }
+        at = up === at ? null : up;
+    }
+    return false;
+}
+
 // With no cascade, a custom property a script sets is not a style the
 // boxes recompute from: each box under `raw` whose script-written display
 // takes a `var()` is shown or hidden again by what it now resolves to.
+// Returns how many boxes it checked.
 function _varDisplaysFollow(raw) {
-    var stack = [raw];
-    for (var seen = 0; stack.length > 0 && seen < 100000; ++seen) {
-        var at = stack.pop();
-        if (!at || typeof at !== "object") {
+    if (_gVarDisplays.size === 0) {
+        return 0;
+    }
+    var checked = 0;
+    var tracked = Array.from(_gVarDisplays);
+    for (var i = 0; i < tracked.length; ++i) {
+        var at = tracked[i];
+        var m = at && typeof at === "object" ? _meta(at) : null;
+        // Cleared or replaced since, or gone: no longer one to follow.
+        if (!m || typeof at.visible !== "boolean"
+            || !Object.prototype.hasOwnProperty.call(m.styles, "display")
+            || !/var\(/i.test(m.styles.display)) {
+            _gVarDisplays.delete(at);
             continue;
         }
-        var m = _meta(at);
-        if (!at.__eldurInline && typeof at.visible === "boolean"
-            && Object.prototype.hasOwnProperty.call(m.styles, "display")
-            && /var\(/i.test(m.styles.display)) {
-            _setShown(at, !_displayHides(at, m.styles.display));
+        if (!_gUnderVars(at, raw)) {
+            continue;
         }
-        var kids = _rawElementChildren(at) || [];
-        for (var i = 0; i < kids.length; ++i) {
-            stack.push(kids[i]);
-        }
+        ++checked;
+        _setShown(at, !_displayHides(at, m.styles.display));
     }
+    return checked;
 }
 
 // Whether the element's own declaration says `display: none`. The
@@ -15985,6 +16034,8 @@ function _vSetStyle(v, prop, value) {
     var m = _meta(v);
     var name = String(prop);
     var str = value === null || value === undefined ? "" : String(value);
+    // A replacement can set or drop custom properties as well as a write.
+    var varsMoved = name === "cssText";
     if (name === "cssText") {
         m.styles = {};
         _vParseCss(m, str);
@@ -15998,9 +16049,10 @@ function _vSetStyle(v, prop, value) {
         } else {
             m.styles[camel] = str;
         }
-        if (camel.indexOf("--") === 0 && !_gHasCascade()) {
-            _varDisplaysFollow(v);
-        }
+        varsMoved = camel.indexOf("--") === 0;
+    }
+    if (varsMoved && !_gHasCascade()) {
+        _varDisplaysFollow(v);
     }
     _vChanged(v.model);
 }
