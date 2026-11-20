@@ -77,10 +77,12 @@ struct PageBuffers {
     pure_top_vars: HashMap<String, PureKind>,
     handler_fns: Vec<String>,
     init_stmts: Vec<String>,
-    dcl_stmts: Vec<String>,
-    /// The page's `load` listeners, an array each top-level listener is
-    /// pushed to where its script or module adds it, so their order is the
-    /// order they were added as the page ran; called once it has loaded.
+    /// The page's `DOMContentLoaded` listeners, an array each top-level
+    /// listener is pushed to where its script or module adds it, with the
+    /// callback's value at that point; called in that order once every script
+    /// has run.
+    ready_queue: Option<String>,
+    /// The same for `load`, called after them.
     load_queue: Option<String>,
     /// The variable holding `window.onload`'s value, set where each
     /// assignment to it runs, and the function that calls it from the load
@@ -1230,9 +1232,11 @@ impl<'a> PageBuilder<'a> {
         debug_assert_no_top_declaration(&self.out.init_stmts);
         let mut all_init_lines: Vec<String> = Vec::new();
         all_init_lines.extend(self.out.init_stmts);
-        all_init_lines.extend(self.out.dcl_stmts);
-        if let Some(queue) = &self.out.load_queue {
-            all_init_lines.push(format!("Eldur.fireLoad({queue});"));
+        for queue in [&self.out.ready_queue, &self.out.load_queue]
+            .into_iter()
+            .flatten()
+        {
+            all_init_lines.push(format!("Eldur.fireListeners({queue});"));
         }
 
         let init_function = if all_init_lines.is_empty() {
@@ -1933,13 +1937,22 @@ impl PageBuffers {
 
     /// The page's `load` listener array, declared on first use.
     fn load_queue(&mut self, shared: &mut SharedRewriteState) -> String {
-        if let Some(queue) = &self.load_queue {
-            return queue.clone();
+        if self.load_queue.is_none() {
+            let queue = shared.alloc_fn_name("__eldur_load_listeners");
+            self.top_decls.push(format!("var {queue} = [];"));
+            self.load_queue = Some(queue);
         }
-        let queue = shared.alloc_fn_name("__eldur_load_listeners");
-        self.top_decls.push(format!("var {queue} = [];"));
-        self.load_queue = Some(queue.clone());
-        queue
+        self.load_queue.clone().unwrap_or_default()
+    }
+
+    /// The page's `DOMContentLoaded` listener array, declared on first use.
+    fn ready_queue(&mut self, shared: &mut SharedRewriteState) -> String {
+        if self.ready_queue.is_none() {
+            let queue = shared.alloc_fn_name("__eldur_ready_listeners");
+            self.top_decls.push(format!("var {queue} = [];"));
+            self.ready_queue = Some(queue);
+        }
+        self.ready_queue.clone().unwrap_or_default()
     }
 
     fn try_handle_special_top_expr<'b>(
@@ -1970,25 +1983,18 @@ impl PageBuffers {
                     "Eldur.window"
                 };
                 let cb_str = lowerer.rewrite_listener_callback_expr(cb, None);
-                let mut invoke = format_lifecycle_invocation(cb, &cb_str, &ev, target_js);
-                if ev == "load" {
-                    // Added where it runs: one its script or module never
-                    // reaches is not heard, and the order is the order added.
-                    let queue = self.load_queue(lowerer.shared);
-                    self.init_stmts.push(format!(
-                        "{queue}.push(function () {{\n{}\n}});",
-                        indent_block(&invoke, 4)
-                    ));
-                    return true;
-                }
-                if self.in_eager_module {
-                    // Its module can throw first, or never run at all.
-                    let reached = lowerer.shared.alloc_fn_name("__eldur_reached");
-                    self.top_decls.push(format!("var {reached} = false;"));
-                    self.init_stmts.push(format!("{reached} = true;"));
-                    invoke = format!("if ({reached}) {{\n{}\n}}", indent_block(&invoke, 4));
-                }
-                self.dcl_stmts.push(invoke);
+                // Added where the call runs, with the callback's value there,
+                // as a browser adds it: one its script or module never reaches
+                // is not heard, a name assigned later still calls what it held,
+                // and the order is the order added.
+                let queue = if ev == "load" {
+                    self.load_queue(lowerer.shared)
+                } else {
+                    self.ready_queue(lowerer.shared)
+                };
+                self.init_stmts.push(format!(
+                    "Eldur.queueListener({queue}, {target_js}, {ev:?}, {cb_str});"
+                ));
                 return true;
             }
 
@@ -2868,19 +2874,6 @@ fn extract_once_option(arg: Option<&Argument<'_>>) -> bool {
         }
         ObjectPropertyKind::SpreadProperty(_) => false,
     })
-}
-
-fn format_lifecycle_invocation(
-    cb_ast: &Expression<'_>,
-    cb_str: &str,
-    event_name: &str,
-    target_js: &str,
-) -> String {
-    if matches!(unwrap_parens(cb_ast), Expression::Identifier(_)) {
-        format!("{cb_str}(Eldur.event({event_name:?}, {target_js}, null));")
-    } else {
-        format!("({cb_str})(Eldur.event({event_name:?}, {target_js}, null));")
-    }
 }
 
 /// Whether `name`, from a declaration this rewriter emitted, is a name alone

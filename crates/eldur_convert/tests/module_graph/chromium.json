@@ -301,6 +301,18 @@
     },
     "errors": []
   },
+  "loadvalue": {
+    "lines": [
+      "module runs",
+      "ready a",
+      "load a",
+      "module load a"
+    ],
+    "text": {
+      "out": "a"
+    },
+    "errors": []
+  },
   "readlater": {
     "lines": [
       "copy 2",

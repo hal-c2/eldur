@@ -496,6 +496,19 @@ fn a_window_onload_set_again_after_null_is_heard_last() {
     assert_eq!(run("onloadreset", &read), wanted("onloadreset", &read));
 }
 
+/// A classic script and a module each add a `DOMContentLoaded` or `load`
+/// listener by name, then assign another function to the name. A browser takes
+/// the listener's value at the `addEventListener` call, so the first function
+/// is called.
+#[test]
+fn a_lifecycle_listener_is_the_value_it_had_when_added() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("loadvalue", &read), wanted("loadvalue", &read));
+}
+
 /// `source.js` pushes to an array before copying it, and defines a getter
 /// that throws before destructuring the object it is on. Each initializer
 /// sees what ran before it: the copy has two items and the destructuring

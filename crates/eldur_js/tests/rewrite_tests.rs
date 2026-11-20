@@ -385,6 +385,7 @@ const APP_NAME = "Demo";
 let counter = 0;
 let saved;
 let a, b;
+var __eldur_ready_listeners = [];
 var __eldur_load_listeners = [];
 var __eldur_window_onload = null;
 function __eldur_call_window_onload() {
@@ -400,20 +401,19 @@ function __eldur_init(rootItem) {
     Eldur.init(rootItem || (typeof root !== "undefined" ? root : null));
     saved = Eldur.localStorage.getItem("saved") ?? "none";
     ({ a, b } = parsePair(saved));
+    Eldur.queueListener(__eldur_ready_listeners, Eldur.document, "DOMContentLoaded", () => {
+        counter += 1;
+    });
     __eldur_window_onload = Eldur.setOnload(__eldur_load_listeners, __eldur_call_window_onload, function() {
         counter += 100;
     });
-    __eldur_load_listeners.push(function () {
-        onReady(Eldur.event("load", Eldur.window, null));
-    });
+    Eldur.queueListener(__eldur_load_listeners, Eldur.window, "load", onReady);
     __eldur_window_onload = Eldur.setOnload(__eldur_load_listeners, __eldur_call_window_onload, function() {
         outLabel.text = APP_NAME + ":" + counter;
     });
     console.log("top-level tail", a, b);
-    (() => {
-        counter += 1;
-    })(Eldur.event("DOMContentLoaded", Eldur.document, null));
-    Eldur.fireLoad(__eldur_load_listeners);
+    Eldur.fireListeners(__eldur_ready_listeners);
+    Eldur.fireListeners(__eldur_load_listeners);
 }
 "###);
 }
@@ -3752,7 +3752,7 @@ fn window_onload_is_set_where_it_runs() {
 }
 
 /// A `load` listener and `window.onload` each take their place among the
-/// `load` listeners where they run: the listener is pushed where its module
+/// `load` listeners where they run: the listener is queued where its module
 /// adds it, and each assignment goes through `Eldur.setOnload`, which adds the
 /// handler at the end, keeps its place while replaced, and takes it out on
 /// `null`. Nothing is put in place at conversion.
@@ -3781,7 +3781,7 @@ fn load_listeners_take_their_place_where_they_run() {
     );
     let run1 = function_body(js, "__eldur_run_m1");
     assert!(
-        run1.contains("__eldur_load_listeners.push(function () {"),
+        run1.contains("Eldur.queueListener(__eldur_load_listeners, Eldur.window, \"load\", () =>"),
         "{js}"
     );
     let run2 = function_body(js, "__eldur_run_m2");
@@ -3790,10 +3790,41 @@ fn load_listeners_take_their_place_where_they_run() {
     let init = function_body(js, "__eldur_init");
     assert!(
         init.trim_end()
-            .ends_with("Eldur.fireLoad(__eldur_load_listeners);"),
+            .ends_with("Eldur.fireListeners(__eldur_load_listeners);"),
         "{js}"
     );
     assert!(!init.contains("__eldur_window_onload"), "{js}");
+}
+
+/// A `DOMContentLoaded` or `load` listener given by name is the value the
+/// name holds where `addEventListener` runs, as a browser takes it, so a later
+/// assignment to the name changes nothing.
+#[test]
+fn a_lifecycle_listener_is_the_value_at_the_call() {
+    let resolver = FakeResolver::default();
+    let m = module_script(
+        "m.js",
+        "let h = () => console.log(\"a\");\nwindow.addEventListener(\"load\", h);\ndocument.addEventListener(\"DOMContentLoaded\", h);\nh = () => console.log(\"b\");\n",
+    );
+    let out = run_rewrite(&[m], &resolver);
+    let js = &out.page_js;
+    let run = function_body(js, "__eldur_run_m0");
+    let load = run
+        .find("Eldur.queueListener(__eldur_load_listeners, Eldur.window, \"load\", __eldur_m0_h);")
+        .expect("load listener queued with its value");
+    let ready = run
+        .find("Eldur.queueListener(__eldur_ready_listeners, Eldur.document, \"DOMContentLoaded\", __eldur_m0_h);")
+        .expect("ready listener queued with its value");
+    let reassigned = run.find("__eldur_m0_h = () =>").expect("reassigned");
+    assert!(load < reassigned && ready < reassigned, "{js}");
+    let init = function_body(js, "__eldur_init");
+    let fire_ready = init
+        .find("Eldur.fireListeners(__eldur_ready_listeners);")
+        .expect("ready fired");
+    let fire_load = init
+        .find("Eldur.fireListeners(__eldur_load_listeners);")
+        .expect("load fired");
+    assert!(fire_ready < fire_load, "{js}");
 }
 
 /// Whatever runs at load, inside `__eldur_init` or a module's run function,
