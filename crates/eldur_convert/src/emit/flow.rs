@@ -805,7 +805,11 @@ impl Emitter<'_, '_> {
                         Some(above) => above.meet(&cases).set_on(&mut obj),
                         None => cases.joined(before).set_on(&mut obj),
                     }
-                } else if let Some(above) = &pending_cases {
+                } else if strut.is_none()
+                    && let Some(above) = &pending_cases
+                {
+                    // The item before passes on what its last shown block's
+                    // bottom margin is; a line box between keeps it a number.
                     above.clone().joined(emitted.top).set_on(&mut obj);
                 } else {
                     self.set_margin(&mut obj, "Layout.topMargin", pending.value());
@@ -867,7 +871,12 @@ impl Emitter<'_, '_> {
                     hidden.before_cases = pending_cases
                         .clone()
                         .map(|c| c.joined(emitted.top).joined(emitted.bottom));
-                    hidden.given = given.value().max(0.0);
+                    // Escaping, its top margin is the parent's.
+                    hidden.given = if hidden.escaping {
+                        0.0
+                    } else {
+                        given.value().max(0.0)
+                    };
                     hidden.push(shown, emitted.bottom);
                     before_hidden = None;
                 }
@@ -929,8 +938,13 @@ impl Emitter<'_, '_> {
             last = tail;
         }
         let mut escaped_bottom_cases = None;
+        // What passes on as the last blocks show or hide: the bottom margin
+        // of the last one shown, or what came before them all. A column all
+        // of whose blocks can hide lets its margins escape through the top.
         let escaped_bottom = if bottom_open {
-            escaped_bottom_cases = if hidden.boxes.is_empty() {
+            escaped_bottom_cases = if escapes_through {
+                None
+            } else if hidden.boxes.is_empty() {
                 pending_cases.clone()
             } else {
                 Escape::after_run(&hidden)
