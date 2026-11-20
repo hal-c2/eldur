@@ -225,6 +225,7 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
         emitter.writes_z_index = scripts.analysis.writes_z_index;
         emitter.script_hides = scripts.display_writes();
         emitter.rules_hide.clone_from(&scripts.rules_hide);
+        emitter.sheet_vars.clone_from(&scripts.sheet_vars);
         emitter.cascade_rules = scripts.analysis.needs_cascade();
         // Rows a script makes are sized by the same solver, table or no table.
         emitter.has_table = scripts.analysis.open_elements
@@ -1463,6 +1464,7 @@ impl Dynamic<'_, '_> {
             emitter.writes_z_index = scripts.analysis.writes_z_index;
             emitter.script_hides = scripts.display_writes();
             emitter.rules_hide.clone_from(&scripts.rules_hide);
+            emitter.sheet_vars.clone_from(&scripts.sheet_vars);
             emitter.gains.clone_from(&scripts.gains.nodes);
             emitter.live_tables.clone_from(&scripts.live_tables);
             emitter.gains_any_empty = scripts.gains.any_empty;

@@ -565,6 +565,58 @@ const CASES: &[Case] = &[
   if (!s.style.display) { s.style.display = 'var(--d)'; } else { w.style.setProperty('--d', w.style.getPropertyValue('--d') ? '' : 'block'); }",
         back: &[],
     },
+    // `initial` makes a custom property guaranteed-invalid, so one that
+    // reads it takes its fallback (#85).
+    Case {
+        name: "variable_initial_fallback",
+        body: r#"<style>p{margin:0;height:20px}</style>
+<div id="w" style="--a:initial;--b:var(--a, none)"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const s = document.getElementById('shy');
+  s.style.display = s.style.display ? '' : 'var(--b, block)';",
+        back: &[],
+    },
+    // A rule declaring the custom property on the child holds against an
+    // ancestor's later write, though both had the same value as loaded.
+    Case {
+        name: "variable_declared_on_child",
+        body: r#"<style>p{margin:0;height:20px}#w{--d:block}#in{--d:block}</style>
+<div id="w"><div id="in"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 48.0],
+        toggle: "const s = document.getElementById('shy'); const w = document.getElementById('w');
+  if (!s.style.display) { s.style.display = 'var(--d)'; w.style.setProperty('--d', 'none'); } else { s.style.display = ''; w.style.removeProperty('--d'); }",
+        back: &[],
+    },
+    // The stylesheet's value comes back once a script removes the `style`
+    // attribute's.
+    Case {
+        name: "sheet_variable_under_attribute",
+        body: r#"<style>p{margin:0;height:20px}#w{--d:none}</style>
+<div id="w" style="--d:block"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const s = document.getElementById('shy'); const w = document.getElementById('w');
+  if (!s.style.display) { s.style.display = 'var(--d)'; w.style.removeProperty('--d'); } else { s.style.display = ''; w.style.setProperty('--d', 'block'); }",
+        back: &[],
+    },
+    // A `;` and a name inside a string in the `style` attribute are part of
+    // a value, not a declaration of their own.
+    Case {
+        name: "attribute_string_holds_a_name",
+        body: r#"<style>p{margin:0;height:20px}#w{--d:none}</style>
+<div id="w" style='--note:"x;--d:1"'><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const s = document.getElementById('shy');
+  s.style.display = s.style.display ? '' : 'var(--d)';",
+        back: &[],
+    },
     // `ruby` and `math` are valid displays that win over the `none` before
     // them: an inline box once `hidden` is removed. A script hiding an
     // inline box alone in its line isn't followed yet (as with `inline`),
@@ -1125,6 +1177,26 @@ fn a_variable_display_reads_a_stylesheet_custom_property() {
 #[test]
 fn a_scripts_custom_property_wins_over_the_stylesheets_until_removed() {
     run(case("sheet_variable_overridden"));
+}
+
+#[test]
+fn an_initial_custom_property_gives_way_to_the_fallback() {
+    run(case("variable_initial_fallback"));
+}
+
+#[test]
+fn a_custom_property_a_rule_declares_on_the_child_holds_against_the_ancestors_write() {
+    run(case("variable_declared_on_child"));
+}
+
+#[test]
+fn the_stylesheets_custom_property_comes_back_once_the_attributes_is_removed() {
+    run(case("sheet_variable_under_attribute"));
+}
+
+#[test]
+fn a_name_inside_a_string_in_the_style_attribute_declares_nothing() {
+    run(case("attribute_string_holds_a_name"));
 }
 
 #[test]

@@ -218,6 +218,9 @@ pub(crate) struct Emitter<'a, 'd> {
     /// what they hold: they stay in their block, as a block raised out in
     /// one world and not in another leaves the worlds no common shape.
     restacks: HashSet<NodeId>,
+    /// What the stylesheets declare on the elements whose `var()` display a
+    /// script may write and their ancestors (`Scripts::sheet_vars`).
+    pub sheet_vars: HashMap<NodeId, BTreeMap<String, Option<String>>>,
     /// The page holds the rule table: the runtime computes styles of its own.
     pub cascade_rules: bool,
     /// The boxes a script may put block children in.
@@ -346,6 +349,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             hideable_ids: HashSet::new(),
             rules_hide: HashSet::new(),
             restacks: HashSet::new(),
+            sheet_vars: HashMap::new(),
             cascade_rules: false,
             gains: HashSet::new(),
             live_tables: HashSet::new(),
@@ -1534,8 +1538,9 @@ impl<'a, 'd> Emitter<'a, 'd> {
     /// `var()` display a script may write, or on one of its ancestors, and
     /// those of the inline elements between it and its parent's item: what
     /// its computed ones have that that parent's don't, `None` for one it
-    /// drops. Those its own `style` attribute declares are left to the
-    /// runtime, which sees a script change them (#51).
+    /// drops, and those a rule declares on it whatever they inherit. Its own
+    /// `style` attribute's go to the runtime, which sees a script change
+    /// them, over the rules' (#51).
     fn sheet_variables(&self, node: NodeId) -> Option<BTreeMap<String, Option<String>>> {
         if self.script_hides.is_empty()
             || !self
@@ -1561,17 +1566,11 @@ impl<'a, 'd> Emitter<'a, 'd> {
         let parent = up
             .and_then(|p| self.styles.computed(p))
             .map_or(&empty, |p| &p.style.custom_properties);
-        let inline: HashSet<String> = self
+        let inline = self
             .doc
             .element(node)
             .and_then(|e| e.attr("style"))
-            .map(|s| {
-                s.split(';')
-                    .filter_map(|d| d.split_once(':'))
-                    .map(|(name, _)| name.trim().to_owned())
-                    .filter(|name| name.starts_with("--"))
-                    .collect()
-            })
+            .map(eldur_css::style_attribute_custom_names)
             .unwrap_or_default();
         let mut vars: BTreeMap<String, Option<String>> = own
             .iter()
@@ -1584,6 +1583,12 @@ impl<'a, 'd> Emitter<'a, 'd> {
                 .filter(|k| !own.contains_key(*k) && !inline.contains(*k))
                 .map(|k| (k.clone(), None)),
         );
+        // What a rule declares on it holds against an ancestor's later
+        // write though it matched the ancestor's value as loaded, and stays
+        // under its `style` attribute's for a script's `removeProperty`.
+        if let Some(declared) = self.sheet_vars.get(&node) {
+            vars.extend(declared.iter().map(|(k, v)| (k.clone(), v.clone())));
+        }
         (!vars.is_empty()).then_some(vars)
     }
 
