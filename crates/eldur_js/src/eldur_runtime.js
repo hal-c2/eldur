@@ -16679,7 +16679,7 @@ function _inInstall() {
         page: _root, overlay: null, held: 0, last: null, pressed: false, hoverP: null, hoverM: null,
         downTarget: {}, noMouse: false, count: 0, countButton: -1, countAt: null, countTime: 0,
         capture: null, captureNext: null, defaults: [], scrolled: null, restoreFocus: null,
-        restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusMoves: 0, focusShift: false, focusPending: null, untold: [], shiftTo: null, change: null, overridden: null, away: false, seenActive: false,
+        restoreScroll: [], later: [], keysSeen: {}, keysLater: false, focused: null, focusMoves: 0, focusShift: false, focusPending: null, untold: [], shiftTo: null, change: null, overridden: null, away: false, seenActive: false, windowHas: false,
         spaceDown: null, typing: null, popovers: [], radioLast: {}, focusProbe: null
     };
     _inLayers.set(_root, _in);
@@ -16716,9 +16716,17 @@ function _inInstall() {
     // The layer this probe is for, which a later page's `_in` is not.
     var layer = _in;
     layer.seenActive = probe.active;
+    layer.windowHas = probe.active;
     probe.activeChanged.connect(function() {
+        // A page that loads into its window hears no focus of the window's.
+        var first = !layer.seenActive;
         if (probe.active) {
             layer.seenActive = true;
+        }
+        if (first) {
+            layer.windowHas = probe.active;
+        } else if (_in === layer && !_pageGone()) {
+            _inWindowFocus(probe.active);
         }
     });
     _in.focused = null;
@@ -18042,6 +18050,16 @@ function _inPlaceBefore(a, b) {
     return a[0] < b[0] || (a[0] === b[0] && a[1] < b[1]);
 }
 
+// The window itself hears it lost or got the focus, once for each change:
+// after what had the focus heard its blur, and before it hears its focus again.
+function _inWindowFocus(active) {
+    if (!_in || _in.windowHas === active) {
+        return;
+    }
+    _in.windowHas = active;
+    _dispatchDynamic(window, active ? "focus" : "blur", null);
+}
+
 function _inWindowActive() {
     var probe = _in.focusProbe;
     // The window's own, not the probe's binding to it: that one hears of a
@@ -18159,6 +18177,12 @@ function _inFocusChanged() {
     var back = _in.away && active;
     if (back) {
         _in.away = false;
+        // The window hears it has the focus before what had it does.
+        var layer = _in;
+        _inWindowFocus(true);
+        if (_pageGone() || _in !== layer) {
+            return;
+        }
         if (now === _in.focused && now) {
             _inFocusEvents(now, null, "focus", "focusin");
             return;
@@ -18188,7 +18212,11 @@ function _inFocusChanged() {
     // blurred, as the page no longer has the focus.
     if (!now && was && !active) {
         _in.away = true;
+        var left = _in;
         _inFocusEvents(was, null, "blur", "focusout");
+        if (!_pageGone() && _in === left) {
+            _inWindowFocus(false);
+        }
         return;
     }
     // Qt gave the focus back elsewhere: what had it heard of its blur already.
