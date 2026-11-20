@@ -7,6 +7,13 @@ function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?
 <div id="blk">block</div>
 <input id="f" value="v" style="width:60px">
 <p id="q">one <span id="r">two<i id="rm">o</i></span><b id="ra"> three</b></p>
+<form id="fm"><p><span id="fs">a </span></p></form>
+<p id="ep"><span id="sp">x <em id="em">y</em> z</span></p>
+<p id="op"><span id="so">t</span></p>
+<p id="dp"><span id="sd">u </span>!</p>
+<p id="ip"><span id="si">w</span></p>
+<div id="fx" style="width:120px">fixed</div>
+<p id="fp">in <span id="fy">here</span></p>
 <script>
 // Boxes a script appends to an inline element go into that element: an atomic
 // box sits on its line after its text, a block splits the line around it.
@@ -25,4 +32,36 @@ var r=document.getElementById("r"),rm=document.getElementById("rm"),ra=document.
 r.append(blk);
 var q=document.getElementById("q"),kr=R(blk),rr=R(rm),qr=R(q),tr=R(ra);
 L("block",I(blk.parentNode),N(r),kr.t>=rr.b-3,near(kr.l,qr.l),tr.t>=kr.b-3,JSON.stringify(q.textContent));
+// Moved out again, the block is as wide as any block.
+document.body.append(blk);
+kr=R(blk);qr=R(q);
+L("out",I(blk.parentNode),near(kr.r-kr.l,qr.r-qr.l),JSON.stringify(q.textContent));
+// A field in an inline element is in that element's form.
+var fq=document.createElement("input");fq.name="q";fq.value="1";document.getElementById("fs").append(fq);
+L("form",fq.form===document.getElementById("fm"),new FormData(document.getElementById("fm")).get("q"));
+// In an element in an inline element, on the same line.
+function W(e){return e.getBoundingClientRect().width>100}
+var e2=document.createElement("input");document.getElementById("em").append(e2);
+L("nested",I(e2.parentNode),W(e2),near(R(e2).t,R(document.getElementById("ep")).t)||R(e2).t<R(document.getElementById("ep")).b);
+// Its text gone, the element still holds the box.
+var so=document.getElementById("so"),e3=document.createElement("input");so.append(e3);so.removeChild(so.firstChild);
+L("box-only",I(e3.parentNode),so.childNodes.length,W(e3),I(so.parentNode));
+// Not drawn while its element is not, and back in its place after.
+var sd=document.getElementById("sd"),e4=document.createElement("input");sd.append(e4);sd.style.display="none";
+L("hidden",e4.getBoundingClientRect().width,I(e4.parentNode),JSON.stringify(document.getElementById("dp").innerText));
+sd.style.display="";
+L("shown",W(e4),N(sd),R(e4).l<R(document.getElementById("dp")).r-8);
+// Its siblings are the element's nodes.
+var si=document.getElementById("si"),e5=document.createElement("input");si.append(e5);e5.after("B");e5.before("A");
+L("box-siblings",N(si),JSON.stringify(si.textContent));
+e5.replaceWith("C");
+L("box-replaced",N(si),JSON.stringify(si.textContent),e5.parentNode===null);
+// A block of a set width keeps it, in the line and out of it.
+var fx=document.getElementById("fx");document.getElementById("fy").append(fx);
+L("fixed-in",Math.round(R(fx).r-R(fx).l),I(fx.parentNode));
+document.body.append(fx);
+L("fixed-out",Math.round(R(fx).r-R(fx).l),I(fx.parentNode));
+// It sizes as any block from then on.
+document.body.style.width="300px";
+L("out-narrow",Math.round(R(blk).r-R(blk).l));
 </script></body></html>

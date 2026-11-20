@@ -13,8 +13,19 @@
  "boxes_into_inline": {
   "log": [
    "LC made s \"in\",m,made true true true",
-   "LC input s \"in\",m,made,f true true v 3",
-   "LC block r \"two\",rm,blk true true true \"one twooblock three\""
+   "LC input s \"in\",m,made,f true true v 10",
+   "LC block r \"two\",rm,blk true true true \"one twooblock three\"",
+   "LC out BODY true \"one twoo three\"",
+   "LC form true 1",
+   "LC nested em true true",
+   "LC box-only so 1 true op",
+   "LC hidden 0 sd \"!\"",
+   "LC shown true \"u \",INPUT true",
+   "LC box-siblings \"w\",\"A\",INPUT,\"B\" \"wAB\"",
+   "LC box-replaced \"w\",\"A\",\"C\",\"B\" \"wACB\" true",
+   "LC fixed-in 120 fy",
+   "LC fixed-out 120 BODY",
+   "LC out-narrow 300"
   ],
   "clicks": []
  },
@@ -26,7 +37,16 @@
    "LC removed 0 null \"\" null \"Save\"",
    "LC back \"Back\" \"Back\" true",
    "LC append \"Save\",\"!\" true true",
-   "LC later \"Load?\" \"Load?\""
+   "LC later \"Load?\" \"Load?\"",
+   "LC whole \"New\" \"New\" true true",
+   "LC same false false \"Save\"",
+   "LC hidden-first \"SSave!\" \"Save!\"",
+   "LC hidden-left \"Ctrlx\" \"x\"",
+   "LC after \"A\",\"-\",\"B\" \"A-B\"",
+   "LC replace-with \"A\",\"+\",\"B\" \"A+B\"",
+   "LC self \"A\",\"B\"",
+   "LC self-replace \"A\",\"B\" \"AB\"",
+   "LC fragment 0 \"\" 1 \"Save\""
   ],
   "clicks": []
  },
@@ -232,7 +252,8 @@
    "LC markup 1 3 #text true true true \"x\"",
    "LC markup-data \"yz\" \"yz\" yz \"yz\"",
    "LC markup-h <span>yz</span>",
-   "LC em \"v\",\"u\" \"twovu\" two<em>vu</em>"
+   "LC em \"v\",\"u\" \"twovu\" two<em>vu</em>",
+   "LC kept true \"new\" \"vnew\""
   ],
   "clicks": []
  },
@@ -839,7 +860,8 @@
    "LC p one <em>e</em><span>s</span><button>B</button> 4 \"one esB\"",
    "LC q two<button>C</button><span>t</span> 3 \"twoCt\"",
    "LC r three<span>u</span><input> 3 \"threeu\" <span id=\"r\">three<span>u</span><input></span>",
-   "LC field true"
+   "LC field true",
+   "LC moved <p>AB</p><p>C</p>"
   ],
   "clicks": []
  },

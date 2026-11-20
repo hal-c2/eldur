@@ -7,6 +7,13 @@ function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?
 <button id="c">Save</button>
 <button id="d">Save</button>
 <button id="e">Save</button>
+<button id="f">Save</button>
+<button id="g">Save</button>
+<button id="h"><kbd style="display:none">S</kbd>Save</button>
+<button id="k">Save<kbd style="display:none">Ctrl</kbd></button>
+<button id="ba">A</button>
+<button id="bs">A</button>
+<button id="bf">Save</button>
 <script>
 // A text-only button holds its text as a Text node, as every element does.
 var b=document.getElementById("b"),t=b.firstChild;
@@ -28,4 +35,30 @@ L("append",N(e),tail.parentNode===e,e.firstChild.nextSibling===tail);
 tail.data="?";
 e.firstChild.data="Load";
 L("later",JSON.stringify(e.textContent),JSON.stringify(e.innerText));
+// Its text written whole, the button has new nodes; the old ones are no longer its.
+var f=document.getElementById("f"),ft=f.firstChild;
+f.textContent="New";
+ft.data="x";
+L("whole",JSON.stringify(f.textContent),JSON.stringify(f.innerText),ft.parentNode===null,f.firstChild!==ft);
+var g=document.getElementById("g"),gt=g.firstChild;
+g.textContent="Save";
+L("same",g.firstChild!==gt,gt.parentNode===null,JSON.stringify(g.textContent));
+// What it holds but does not draw stays where it is.
+var h=document.getElementById("h");
+h.appendChild(document.createTextNode("!"));
+L("hidden-first",JSON.stringify(h.textContent),JSON.stringify(h.innerText));
+var k=document.getElementById("k");
+k.removeChild(k.firstChild);
+k.appendChild(document.createTextNode("x"));
+L("hidden-left",JSON.stringify(k.textContent),JSON.stringify(k.innerText));
+// Its nodes' siblings are each other; one put by or for itself stays.
+var ba=document.getElementById("ba");ba.firstChild.after("B");ba.lastChild.before("-");
+L("after",N(ba),JSON.stringify(ba.textContent));
+ba.childNodes[1].replaceWith("+");
+L("replace-with",N(ba),JSON.stringify(ba.innerText));
+var bs=document.getElementById("bs");bs.appendChild(document.createTextNode("B"));var A=bs.firstChild;bs.insertBefore(A,A);
+L("self",N(bs));bs.replaceChild(A,A);L("self-replace",N(bs),JSON.stringify(bs.innerText));
+// One that goes into a fragment leaves the button.
+var bf=document.getElementById("bf"),fr=document.createDocumentFragment();fr.appendChild(bf.firstChild);
+L("fragment",bf.childNodes.length,JSON.stringify(bf.textContent),fr.childNodes.length,JSON.stringify(fr.textContent));
 </script></body></html>

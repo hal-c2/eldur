@@ -203,10 +203,16 @@ fn a_buttons_text_content_is_its_dom_text_not_what_it_draws() {
     page("button_text");
 }
 
-// #8: a text-only button holds its text as a Text node.
+// #8: a text-only button holds its text as a Text node. Its text written
+// whole, a write through a node it had leaves the label ("New") alone.
 #[test]
 fn a_text_only_buttons_text_is_a_node_it_draws() {
-    page_drawing("button_nodes", &["Saved", "Hi Save", "Back", "Load?"]);
+    page_drawing(
+        "button_nodes",
+        &[
+            "Saved", "Hi Save", "Back", "Load?", "New", "Save", "Save!", "x", "A+B", "AB",
+        ],
+    );
 }
 
 // #6: a control or block the page made goes into the inline element.
