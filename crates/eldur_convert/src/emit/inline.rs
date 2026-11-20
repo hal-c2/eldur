@@ -300,10 +300,14 @@ enum Piece<'b, 'a> {
 /// The level a span that makes a stacking context lifts its block by, for
 /// a box in it with a level, as `stack_above_flow` has a block's: its own
 /// `z-index` over the flow, or over the flow and no higher at `auto`. One
-/// under 0 stays in the flow, as a block's does.
+/// under 0 stays in the flow, as a block's does. The span is the one in the
+/// world being emitted, so a level a class gives it counts.
+///
+/// The level is one over the span's own; at `i32::MAX` it stays there, tied
+/// with a box at one under, and tree order puts the later one over.
 fn context_level(span: &ComputedStyle) -> Option<i32> {
     match span.z_index {
-        Some(z) if crate::boxes::is_containing_block(span) => (z >= 0).then_some(z + 1),
+        Some(z) if crate::boxes::is_containing_block(span) => (z >= 0).then(|| z.saturating_add(1)),
         _ => Some(1),
     }
 }
