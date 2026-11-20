@@ -83,7 +83,11 @@ var Promise = (function() {
     }
 
     function schedule(p, w) {
-        // A reaction is for the page that asked for it, whoever settles the promise.
+        // A reaction is for the page that asked for it, whoever settles the
+        // promise. One with no handler runs no script: it only passes the
+        // value on to the promise `then` made, which a page still up may hold,
+        // so it runs even when the page that asked has gone.
+        var passes = typeof (p._state === FULFILLED ? w.onFulfilled : w.onRejected) !== "function";
         _microEnqueue(function() {
             var handler = p._state === FULFILLED ? w.onFulfilled : w.onRejected;
             if (typeof handler !== "function") {
@@ -98,7 +102,7 @@ var Promise = (function() {
                 return;
             }
             w.resolve(result);
-        }, w.page);
+        }, passes ? null : w.page);
     }
 
     function resolver(p) {
@@ -127,14 +131,27 @@ var Promise = (function() {
                     return;
                 }
                 if (typeof then === "function") {
+                    // Taking on one of these promises' outcome runs no script:
+                    // the promise it settles may be held by a page still up.
+                    var own = value instanceof Promise && then === Promise.prototype.then;
                     _microEnqueue(function() {
                         var inner = resolver(p);
+                        if (own) {
+                            var w = { onFulfilled: inner.resolve, onRejected: inner.reject,
+                                resolve: function() {}, reject: function() {}, page: null };
+                            if (value._state === PENDING) {
+                                value._waiting.push(w);
+                            } else {
+                                schedule(value, w);
+                            }
+                            return;
+                        }
                         try {
                             then.call(value, inner.resolve, inner.reject);
                         } catch (err) {
                             inner.reject(err);
                         }
-                    });
+                    }, own ? null : undefined);
                     return;
                 }
             }
@@ -1358,7 +1375,11 @@ function _asPage(page, fn, self, args) {
         return undefined;
     }
     var top = _root;
-    var topIn = _in;
+    // The cascade's pending work is each page's own: what the page on top
+    // has pending waits for it, and what this page's callback leaves it settles
+    // before the page on top is back, under this page's rules.
+    var topDirty = _gDirty;
+    _gDirty = false;
     // Kept where a nested swap, and `_pageGone`, look for it.
     _pageCaches.set(top, _pageCacheSave());
     _pageCaches.delete(page);
@@ -1371,6 +1392,11 @@ function _asPage(page, fn, self, args) {
         // A page the callback made over this one is the document now, and
         // `init` kept this page's state.
         if (_root === page) {
+            try {
+                _gSettle();
+            } catch (err) {
+                console.error(err && err.stack ? err.stack : err);
+            }
             var mine = _pageCacheSave();
             // The history stayed where the page on top has it: this page is
             // still on its own entry.
@@ -1388,7 +1414,10 @@ function _asPage(page, fn, self, args) {
                 _windowListeners = _freshListeners();
             }
             _root = top;
-            _in = topIn;
+            _gDirty = topDirty || _gDirty;
+            // Its layer as it is now: an event on it during the callback may
+            // have made its first.
+            _in = _inLayers.get(top) || null;
             // Gone meanwhile, it gives the document to the page under it.
             _pageGone();
         }
@@ -10128,8 +10157,9 @@ function _ioEntry(io, target) {
 function _dispatchDynamic(raw, type, qtEv) {
     var page = _pageOf(raw);
     // A covered root's own `resize` or `scroll` is no event of its document:
-    // the host moved a page that is not up.
-    if (page === _root || page === raw && _ROOT_HEARS[type] === true) {
+    // the host moved a page that is not up. Its other events (`message`,
+    // `hashchange`, …) are its own, heard in its document.
+    if (page === _root || page === raw && (type === "resize" || type === "scroll")) {
         return _dispatchOnPage(raw, type, qtEv);
     }
     // A gone page's node hears nothing, and nothing was cancelled.
