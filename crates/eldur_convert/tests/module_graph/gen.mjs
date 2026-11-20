@@ -73,6 +73,7 @@ const out = {
   onloadreset: await record("onloadreset", ["out"]),
   loadvalue: await record("loadvalue", ["out"]),
   loadtwice: await record("loadtwice", ["out"]),
+  loadoptions: await record("loadoptions", ["out"]),
   readlater: await record("readlater", ["out"]),
 };
 await browser.close();

@@ -525,6 +525,21 @@ fn a_listener_added_twice_is_heard_once() {
     assert_eq!(run("loadtwice", &read), wanted("loadtwice", &read));
 }
 
+/// `addEventListener` reads its options (`capture`, `once`, `passive`,
+/// `signal`, each once, in that order) before it looks at the callback, so an
+/// options object's getters run for a `null` callback too: in a classic
+/// script, an eager module and a lazy one. A `load` listener whose `signal`
+/// aborted before the call is not added, and one whose `signal` aborts in a
+/// `DOMContentLoaded` listener is taken out.
+#[test]
+fn a_listener_reads_its_options_first() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("loadoptions", &read), wanted("loadoptions", &read));
+}
+
 /// `source.js` pushes to an array before copying it, and defines a getter
 /// that throws before destructuring the object it is on. Each initializer
 /// sees what ran before it: the copy has two items and the destructuring
