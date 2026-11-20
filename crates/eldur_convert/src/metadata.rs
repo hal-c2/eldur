@@ -747,3 +747,64 @@ mod tests {
         );
     }
 }
+
+/// Guards an element's own reads of `parent.` (`Math.min(150, parent.width)`,
+/// `parent.width * 0.5`): the runtime moves an element by setting its parent
+/// to null first, and a created element has none until it is appended, so an
+/// unguarded read throws `Cannot read property 'width' of null`.
+/// The fallback holds only while there is no parent; the binding comes back
+/// with the next one.
+pub(crate) fn guard_parent_reads(obj: &mut Object) {
+    let element = obj
+        .members
+        .iter()
+        .any(|m| matches!(m, Member::PropertyDecl { name, .. } if name == "eldurTag"));
+    for m in &mut obj.members {
+        match m {
+            Member::Property { name, value } if element => guard_value(name, value),
+            Member::PropertyDecl {
+                ty,
+                value: Some(value),
+                ..
+            } if element && matches!(ty.as_str(), "real" | "int" | "double") => {
+                guard_value("width", value);
+            }
+            Member::Child(child) => guard_parent_reads(child),
+            _ => {}
+        }
+    }
+}
+
+fn guard_value(name: &str, value: &mut Value) {
+    let Value::Expr(e) = value else { return };
+    if !reads_parent(e) || e.starts_with("parent ?") || e.starts_with("parent &&") {
+        return;
+    }
+    let fallback = if name.starts_with("anchors.") {
+        "undefined"
+    } else if is_number(name) {
+        "0"
+    } else {
+        return;
+    };
+    *e = format!("parent ? ({e}) : {fallback}");
+}
+
+/// Geometry the emitter binds to the parent; each takes a number.
+fn is_number(name: &str) -> bool {
+    matches!(name, "x" | "y" | "z" | "width" | "height")
+        || name
+            .strip_prefix("Layout.")
+            .is_some_and(|p| p.ends_with("Width") || p.ends_with("Height") || p.ends_with("Margin"))
+}
+
+/// A `parent.` that starts a member read, not one inside `x.parent.`
+/// or `myparent.`.
+fn reads_parent(e: &str) -> bool {
+    e.match_indices("parent.").any(|(i, _)| {
+        e[..i]
+            .chars()
+            .next_back()
+            .is_none_or(|c| !(c.is_alphanumeric() || c == '_' || c == '.' || c == '$'))
+    })
+}
