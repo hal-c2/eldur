@@ -72,6 +72,30 @@ fn rules_hide_names_the_boxes_an_author_rule_keeps_hidden() {
 }
 
 #[test]
+fn a_display_name_with_a_comment_in_it_is_cleared_too() {
+    // `display/**/:none` declares `display`, so clearing it leaves
+    // `color: red;` for the selector to read (Chromium 158).
+    let page = r#"<!DOCTYPE html>
+<style>
+  [style*="display"] { display: none; }
+  [style*="/*"] { display: none; }
+</style>
+<div id="cmt" style="display/**/:none;color:/* c */red">a</div>
+<div id="kept" style="color:red /* display */">b</div>
+"#;
+    let doc = Document::parse(page);
+    let viewport = Viewport::default();
+    let (sheets, _) = collect_stylesheets(&doc, &mut NoSheets, &viewport);
+    let id = |name: &str| doc.element_by_id(name).expect(name);
+    let nodes: BTreeSet<_> = [id("cmt"), id("kept")].into();
+    // `#kept` declares no display, so its attribute stays as written.
+    assert_eq!(
+        rules_hide(&doc, &sheets, &viewport, &nodes),
+        [id("kept")].into()
+    );
+}
+
+#[test]
 fn a_variable_display_hides_when_it_resolves_to_none() {
     let none: BTreeMap<String, String> = [("--d".to_owned(), "none".to_owned())].into();
     let block: BTreeMap<String, String> = [("--d".to_owned(), "block".to_owned())].into();
