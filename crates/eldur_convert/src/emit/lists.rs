@@ -15,7 +15,8 @@ use super::decoration::border_width;
 use super::units::{ROOT_ID, color, fmt_number, length_expr, number, round};
 use super::{Emitter, FLICKABLE_ID, hint};
 use crate::boxes::{
-    self, BoxKind, Content, LayoutBox, Marker, MarkerKind, describe, is_out_of_flow, node_line,
+    self, BoxKind, Content, Inline, LayoutBox, Marker, MarkerKind, describe, is_out_of_flow,
+    node_line,
 };
 
 /// Measured in Chromium (10px image, 16px font): an image's right edge is
@@ -846,6 +847,33 @@ pub(super) fn rises(style: &ComputedStyle) -> bool {
 /// which a frame as tall as the box would leave no room for.
 pub(super) fn rises_in_flow(style: &ComputedStyle) -> bool {
     style.position == Position::Relative && style.z_index.is_none_or(|z| z >= 0)
+}
+
+/// Whether a box at `auto` holds a box with a level of its own, through
+/// boxes that make no stacking context. Such a box can't rise in flow as
+/// one host: CSS paints the held box at its level and the rest of the box
+/// in the positioned layer, and one host has one level.
+pub(super) fn holds_level(b: &LayoutBox<'_>) -> bool {
+    fn inline(i: &Inline<'_>) -> bool {
+        match i {
+            Inline::Span(s) => {
+                s.style.z_index.is_some()
+                    || (!boxes::is_context_at_auto(s.style) && s.children.iter().any(inline))
+            }
+            Inline::Atomic(b) => b.style.z_index.is_some() || holds_level(b),
+            Inline::Text(_) | Inline::LineBreak => false,
+        }
+    }
+    if boxes::is_context_at_auto(&b.style) {
+        return false;
+    }
+    match &b.content {
+        Content::Blocks(kids) => kids
+            .iter()
+            .any(|k| k.style.z_index.is_some() || holds_level(k)),
+        Content::Inline(items) => items.iter().any(inline),
+        Content::Empty => false,
+    }
 }
 
 /// Whether a box paints in its stop's positioned layer, or a column would
