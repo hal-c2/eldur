@@ -6276,7 +6276,11 @@ function _setTextAt(item, value) {
     }
     // A value that cannot be a string replaces nothing, so the nodes' text stays.
     var str = value === null || value === undefined ? "" : String(value);
-    _domTextStale(raw);
+    // A button's own Text node redraws the button's text with what it holds
+    // but does not draw kept (`_btnDraw`); only a write to the button is whole.
+    if (!(raw.vtext && raw.btnOf)) {
+        _domTextStale(raw);
+    }
     if (raw.__eldurInline) {
         _vSetText(raw, str);
         return;
@@ -11664,8 +11668,46 @@ function _inlineBecomesLines(raw) {
 // text put in it leaves. One drawing markup a script gave it (`innerHTML`)
 // holds no nodes (Known gap): its text is the markup, not a node's.
 function _drawsOwnText(raw) {
+    return _isTextButton(raw) && !_meta(raw).btnMarkup;
+}
+
+function _isTextButton(raw) {
     return _nodeTag(raw) === "button" && typeof raw.text === "string" && raw.background !== undefined && typeof raw.clicked === "function"
-        && Boolean(raw.contentItem) && typeof raw.contentItem.text === "string" && !_meta(raw).btnMarkup;
+        && Boolean(raw.contentItem) && typeof raw.contentItem.text === "string";
+}
+
+// Text appended or prepended to a button drawing markup: it goes on the
+// markup's end, escaped, so it draws literally as Chromium draws a Text node.
+function _takesMarkupText(raw, nodes, ref, going) {
+    return nodes.length > 0 && nodes.every(_isTextNode) && !ref && !going
+        && _isTextButton(raw) && Boolean(_meta(raw).btnMarkup);
+}
+
+function _putMarkupText(raw, nodes, atStart) {
+    var add = nodes.map(getText).join("");
+    nodes.forEach(function(n) {
+        if (n.btnOf) {
+            _btnTakeOut(n);
+        } else if (n.__eldurInline ? n.vparent || n.model : n.parent) {
+            _takeOut(n);
+        }
+    });
+    function put(to, what) { return atStart ? what + to : to + what; }
+    var m = _meta(raw);
+    if (typeof raw.eldurDomText === "string" && !m.ownText) {
+        raw.eldurDomText = put(raw.eldurDomText, add);
+    }
+    if (typeof raw.eldurContentName === "string") {
+        raw.eldurContentName = put(raw.eldurContentName, add);
+    }
+    var own = put(_pseudoOwn(raw, raw.text), add);
+    m.explicitText = own;
+    var label = raw.contentItem;
+    var markup = label && label.textFormat === 4 ? label.text : null;
+    raw.text = _pseudoWrapped(raw, own);
+    if (markup !== null) {
+        label.text = _pseudoWrapped(raw, put(_pseudoOwn(raw, markup), _vEscapeText(add)));
+    }
 }
 
 // The button's Text nodes, made from what it draws when first asked for, and
@@ -11833,6 +11875,10 @@ function _insertChildren(raw, nodes, ref, going, atStart) {
     if (nodes.length > 0 && nodes.every(_isTextNode) && _drawsOwnText(raw)
         && (!ref || ref.btnOf === raw) && (!going || going.btnOf === raw)) {
         _putDrawnText(raw, nodes, atStart, ref, going);
+        return;
+    }
+    if (_takesMarkupText(raw, nodes, ref, going)) {
+        _putMarkupText(raw, nodes, atStart);
         return;
     }
     if (going && nodes.indexOf(going) !== -1) {
@@ -16956,7 +17002,7 @@ function _vPutRuns(line, models, runs, base, model) {
         // converter wrote is right only until a run changes.
         _vRender(m);
     });
-    _vParkSlots(line, runs.slots);
+    _vParkSlots(line, runs.slots, models.concat(made));
     if (runs.slots.length > 0) {
         _vPlaceSlots(line, made, runs.slots);
     }
@@ -17020,7 +17066,7 @@ function _vPlaceSlots(line, made, slots) {
 // A box a script put into an element the line no longer draws (one now
 // `display: none`) leaves the line, still that element's: it comes back, in
 // its place, when the element is drawn again.
-function _vParkSlots(line, slots) {
+function _vParkSlots(line, slots, group) {
     Array.from(line.children).forEach(function(kid) {
         var item = _vSlottedSelf(kid) ? kid
             : kid.children && kid.children.length === 1 && _vSlottedSelf(kid.children[0]) ? kid.children[0] : null;
@@ -17028,6 +17074,14 @@ function _vParkSlots(line, slots) {
             return;
         }
         var m = _meta(item);
+        // A box of another group's run on this line is that group's to place:
+        // this render did not ask for it. One whose element left the line, or
+        // was hidden out of this group, is parked as before.
+        var owner = m.vSlotOf;
+        var ownModel = owner && owner.model;
+        if (ownModel && ownModel.text && ownModel.text.parent === line && group.indexOf(ownModel) === -1) {
+            return;
+        }
         m.vHeldBy = m.vSlotOf;
         _layoutChanged(line);
         kid.parent = null;
@@ -17447,13 +17501,14 @@ function _vMetrics(text) {
 // The boxes on `v`'s line that are `v`'s in the page.
 function _vCutBoxes(v) {
     var line = v.model.text.parent;
-    if (v.eldurKey === undefined || !line || typeof line.firstBaseline !== "number") {
+    if (!line || typeof line.firstBaseline !== "number") {
         return [];
     }
     var boxes = [];
     Array.from(line.children).forEach(function(kid) {
         var box = kid.eldurInlineOwner !== undefined ? kid : kid.children && kid.children[0];
-        if (box && box.eldurInlineOwner === v.eldurKey && box.visible) {
+        // A slotted box needs no key; a keyed one must not match a box with none.
+        if (v.eldurKey !== undefined && box && box.eldurInlineOwner === v.eldurKey && box.visible) {
             boxes.push(kid);
         } else if (_vSlotted(kid) && _vSlotOwner(_vLineBox(kid)) === v && _vLineBox(kid).visible) {
             boxes.push(kid);
@@ -20338,15 +20393,22 @@ function _isDisabled(raw) {
     if (getAttribute(raw, "disabled") !== null) {
         return true;
     }
-    var from = raw;
-    for (var at = _gParent(raw); at; at = _gParent(at)) {
+    // Its DOM ancestors, as `_inFormOf` walks them: one in an inline element
+    // is in that element's fieldset. The walk may pass through a line's own
+    // items, so the first legend counts wherever it is on the way up.
+    var path = [raw];
+    for (var at = _logicalParent(raw); at && path.indexOf(at) === -1 && path.length < 256; at = _logicalParent(at)) {
         if (_nodeTag(at) === "fieldset" && getAttribute(at, "disabled") !== null) {
-            var legend = _rawElementChildren(at).filter(function(k) { return _nodeTag(k) === "legend"; })[0];
-            if (legend !== from) {
+            // A legend the fieldset draws as its title is not among its
+            // element children; the one the walk came up through is it then.
+            var from = path[path.length - 1];
+            var legend = _rawElementChildren(at).filter(function(k) { return _nodeTag(k) === "legend"; })[0]
+                || (_nodeTag(from) === "legend" ? from : null);
+            if (!legend || path.indexOf(legend) === -1) {
                 return true;
             }
         }
-        from = at;
+        path.push(at);
     }
     return false;
 }
@@ -21508,6 +21570,11 @@ function _vHostOf(raw, nodes, ref) {
     if (!_vHasRules() && !raw.__eldurInline) {
         return null;
     }
+    // A button's own Text node is in no line of text: what goes beside it goes
+    // into the button as its children do.
+    if (ref && ref.btnOf) {
+        return null;
+    }
     if (ref && ref.__eldurInline && nodes.every(function(n) { return n.__eldurInline || _vStaysInline(n, raw, ref); })) {
         return ref.vparent || ref.model;
     }
@@ -21567,7 +21634,7 @@ function _vCarryModel(raw, old, nodes) {
 // `true` when the nodes went into a line of text, in place of `going` if given.
 function _vTryInsert(raw, nodes, ref, going) {
     // A button drawing its text keeps its Text nodes itself.
-    if (nodes.length > 0 && nodes.every(_isTextNode) && _drawsOwnText(raw)) {
+    if (nodes.length > 0 && nodes.every(_isTextNode) && _drawsOwnText(raw) || _takesMarkupText(raw, nodes, ref, going)) {
         return false;
     }
     var host = _vHostOf(raw, nodes, ref);
