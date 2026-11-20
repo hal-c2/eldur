@@ -103,6 +103,13 @@ TestCase {
         mouseClick(host, p.x, p.y)
     }
 
+    // A person's press: the event loop turns while it is held.
+    function held(p) {
+        mousePress(host, p.x, p.y)
+        wait(50)
+        mouseRelease(host, p.x, p.y)
+    }
+
     function finish(at) {
         tryVerify(function() { return at.next !== null && settled(at) }, 1000, "A was never swapped out")
     }
@@ -244,9 +251,76 @@ TestCase {
         finish(at)
     }
 
+    function test_15_capture_passed_on_whose_lostpointercapture_swaps() {
+        rest()
+        const at = pages()
+        console.log("LC -- capture passed on whose lostpointercapture swaps")
+        const p = middle(at.a, "xc")
+        mousePress(host, p.x, p.y)
+        mouseMove(host, p.x + 1, p.y)
+        mouseRelease(host, p.x + 1, p.y)
+        finish(at)
+    }
+
+    function test_16_label_whose_fields_focus_swaps() {
+        rest()
+        const at = pages()
+        console.log("LC -- label whose field's focus swaps")
+        const p = middle(at.a, "lab8")
+        mouseClick(host, p.x, p.y)
+        finish(at)
+    }
+
+    // As test_05: the second press is handed to Next, which looks up the
+    // label's control itself.
+    function test_17_double_click_whose_second_press_comes_before_the_first_click_ran_on_a_label_for_a_div() {
+        rest()
+        const at = pages()
+        console.log("LC -- double click whose second press comes before the first click ran, on a label for a div")
+        const p = middle(at.a, "lab10")
+        mouseDoubleClickSequence(host, p.x, p.y)
+        finish(at)
+    }
+
+    // As test_13 for Text's own link activation, the other way the converter
+    // follows a link, with the press held across turns of the event loop: Next
+    // stays shielded until the release Qt still gives A's text has run.
+    function test_18_press_in_a_paragraph_of_links_whose_mousedown_swaps() {
+        rest()
+        const at = pages()
+        console.log("LC -- press in a paragraph of links whose mousedown swaps")
+        const p = middle(at.a, "tp")
+        held(p)
+        finish(at)
+    }
+
+    // As test_18 for a link's TapHandler: the first way the converter follows one.
+    function test_19_press_in_a_link_whose_mousedown_swaps() {
+        rest()
+        const at = pages()
+        console.log("LC -- press in a link whose mousedown swaps")
+        const p = middle(at.a, "dn2")
+        held(p)
+        finish(at)
+    }
+
+    // Ljós only, like test_21: Chromium's renderer stops answering when a
+    // frame goes inside a light dismiss's beforetoggle, so there is nothing
+    // to record. With the swap a task later it logs mouseup, beforetoggle,
+    // click, all in the release; a swap there is test_14's, whose click is
+    // neither page's.
+    function test_20_press_whose_light_dismissed_popover_swaps() {
+        rest()
+        const at = pages()
+        console.log("LC -- press whose light-dismissed popover swaps")
+        const p = middle(at.a, "pp")
+        mouseClick(host, p.x, p.y)
+        finish(at)
+    }
+
     // As test_08 with Next in another window: the release is in A's window,
     // where no page is the document, so it is no page's.
-    function test_15_press_whose_mousedown_swaps_to_another_window() {
+    function test_21_press_whose_mousedown_swaps_to_another_window() {
         rest()
         const at = pages(true)
         console.log("LC -- press whose mousedown swaps to another window")
@@ -331,6 +405,15 @@ fn a_press_does_nothing_more_once_its_page_is_gone() {
     // Chromium has no counterpart: a window there is a document of its own,
     // so no press is ever handed across windows. Ljós's pages share one
     // runtime, whose document can be in another window than the press.
+    // Chromium cannot run test_20 (see there); its log is test_14's rule.
+    for line in [
+        "LC -- press whose light-dismissed popover swaps",
+        "LC A mousedown pp 1",
+        "LC A mouseup pp 1",
+        "LC A dismiss makes Next",
+    ] {
+        wanted.push(line.to_owned());
+    }
     wanted.push("LC -- press whose mousedown swaps to another window".to_owned());
     if logged != wanted {
         problems.push(format!(

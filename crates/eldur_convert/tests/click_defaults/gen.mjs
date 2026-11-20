@@ -63,6 +63,13 @@ const STEPS = [
   { name: "press whose lostpointercapture swaps", click: "#cap" },
   { name: "press in a link whose lostpointercapture swaps", click: "#cap2" },
   { name: "press in a link whose mouseup swaps", click: "#up2" },
+  // No "press whose light-dismissed popover swaps" (#pp): Chromium hangs when
+  // a frame goes inside a light dismiss, so click_defaults_e2e.rs gives it.
+  { name: "capture passed on whose lostpointercapture swaps", drag: "#xc" },
+  { name: "label whose field's focus swaps", click: "#lab8" },
+  { name: "double click whose second press comes before the first click ran, on a label for a div", dbl: "#lab10" },
+  { name: "press in a paragraph of links whose mousedown swaps", click: "#tp" },
+  { name: "press in a link whose mousedown swaps", click: "#dn2" },
 ];
 
 const { chromium } = await loadPlaywright();
@@ -87,7 +94,7 @@ for (const step of STEPS) {
   const r = await a.evaluate((s) => {
     const b = document.querySelector(s).getBoundingClientRect();
     return { x: b.left + b.width / 2, y: b.top + b.height / 2 };
-  }, step.click || step.dbl || step.hover || step.onward);
+  }, step.click || step.dbl || step.hover || step.onward || step.drag);
   if (step.onward) {
     // Chromium has no move inside a press: a move of its own between the
     // presses, a pixel on, which still counts the second press as 2.
@@ -108,6 +115,12 @@ for (const step of STEPS) {
     await tab.evaluate(() => window.swapped);
     await tab.mouse.move(r.x + 5, r.y);
     await tab.mouse.move(400, r.y);
+  } else if (step.drag) {
+    // A move inside the press, a pixel on, between its press and release.
+    await tab.mouse.move(r.x, r.y);
+    await tab.mouse.down();
+    await tab.mouse.move(r.x + 1, r.y);
+    await tab.mouse.up();
   } else if (step.click) await tab.mouse.click(r.x, r.y);
   else if (step.dbl) await tab.mouse.dblclick(r.x, r.y);
   await tab.waitForTimeout(200);
