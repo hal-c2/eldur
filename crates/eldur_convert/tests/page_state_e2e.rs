@@ -972,3 +972,199 @@ fn a_covered_page_renumbers_its_items() {
     }
     assert!(problems.is_empty(), "{}", problems.join("\n  "));
 }
+
+// A page with another made over it. What the covered page's own script set
+// going (a timer, the frame, promise job and observers it asks for in turn, a
+// listener the host dispatches at) means that page's own document: its lookups
+// find its nodes, and what it makes goes into its body. The page on top still
+// finds only its own. A timer of the covered page that went is dropped: it has
+// no document left, and is none of the top page's.
+const UNDER: &str = r##"<!doctype html><html><head><meta charset="utf-8"></head><body>
+<p id="under">under</p>
+<ul id="ulist"><li>one</li></ul>
+<script>
+function L(){console.log("CD "+[].slice.call(arguments).join(" "))}
+function look(when) {
+  var mine = document.getElementById("under");
+  var body = document.body;
+  var made = document.createElement("span");
+  made.id = "made-" + when;
+  made.textContent = "made by " + when + " ";
+  body.appendChild(made);
+  L(when,
+    mine ? mine.textContent : "null",
+    document.getElementById("over") ? "sees-over" : "no-over",
+    document.querySelector("#under") === mine ? "query-mine" : "query-other",
+    body && mine && body.contains(mine) ? "own-body" : "other-body",
+    document.querySelector("#made-" + when) === made ? "made-found" : "made-lost");
+}
+document.getElementById("under").addEventListener("ping", function() { look("listener"); });
+setTimeout(function() {
+  look("timer");
+  requestAnimationFrame(function() { look("frame"); });
+  Promise.resolve().then(function() { look("job"); });
+  new MutationObserver(function() { look("observer"); })
+    .observe(document.getElementById("ulist"), { childList: true });
+  document.getElementById("ulist").appendChild(document.createElement("li"));
+  var sized = new ResizeObserver(function() { sized.disconnect(); look("resize"); });
+  sized.observe(document.getElementById("under"));
+  var seen = new IntersectionObserver(function() { seen.disconnect(); look("intersect"); });
+  seen.observe(document.getElementById("under"));
+}, 300);
+setTimeout(function() { look("late"); }, 1500);
+</script>
+</body></html>"##;
+
+const OVER: &str = r##"<!doctype html><html><head><meta charset="utf-8"></head><body>
+<p id="over">over</p>
+<script>
+function L(){console.log("CD "+[].slice.call(arguments).join(" "))}
+L("over up");
+setTimeout(function() {
+  var made = ["timer", "frame", "job", "observer"].filter(function(w) {
+    return document.getElementById("made-" + w);
+  });
+  L("over",
+    document.getElementById("over") ? "own" : "lost",
+    document.getElementById("under") || document.querySelector("#under") ? "sees-under" : "no-under",
+    document.body.contains(document.getElementById("over")) ? "own-body" : "other-body",
+    made.length === 0 ? "none-made" : "made " + made.join(","));
+}, 700);
+setTimeout(function() {
+  L("over after", document.getElementById("made-late") ? "made late" : "none-made");
+}, 1800);
+</script>
+</body></html>"##;
+
+const COVERED_TEST: &str = r##"
+import QtQuick
+import QtTest
+import "eldur_runtime.js" as R
+
+Item {
+    id: host
+    width: 800
+    height: 600
+
+TestCase {
+    name: "CoveredDocument"
+    when: windowShown
+
+    function make(file) {
+        const component = Qt.createComponent(file)
+        verify(component.status === Component.Ready, component.errorString())
+        const page = createTemporaryObject(component, host, { width: 800, height: 600 })
+        waitForRendering(page)
+        return page
+    }
+    function named(item, name) {
+        if (item.objectName === name) {
+            return item
+        }
+        for (let i = 0; i < item.children.length; ++i) {
+            const found = named(item.children[i], name)
+            if (found) {
+                return found
+            }
+        }
+        return null
+    }
+    function test_covered_page_document() {
+        const under = make("Under.qml")
+        make("Over.qml")
+        wait(1000)
+        // The host tells the covered page's element: no script of that page runs then.
+        R.wrap(named(under, "under")).dispatchEvent(new R.Event("ping"))
+        wait(100)
+        // Its late timer is still queued when it goes.
+        under.destroy()
+        wait(1000)
+    }
+}
+}
+"##;
+
+#[test]
+fn a_covered_pages_own_callbacks_see_its_document() {
+    if support::no_qt() {
+        return;
+    }
+    let options = Options {
+        root: RootKind::Item,
+        ..Options::default()
+    };
+    let dir = std::env::temp_dir().join(format!("eldur-covered-document-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    for (at, (name, html)) in [("Under", UNDER), ("Over", OVER)].into_iter().enumerate() {
+        let out = eldur_convert::convert(
+            &Input {
+                html: html.to_owned(),
+                url: format!("{}/index.html", name.to_lowercase()),
+            },
+            &options,
+            &mut NoResources,
+        );
+        let script = format!("{}_page.js", name.to_lowercase());
+        for file in &out.files {
+            let path = file.path.to_string_lossy();
+            let contents = String::from_utf8_lossy(&file.contents);
+            match path.as_ref() {
+                "Main.qml" => std::fs::write(
+                    dir.join(format!("{name}.qml")),
+                    contents
+                        .replace("\"page.js\"", &format!("\"{script}\""))
+                        .replace("Main.qml", &format!("{name}.qml")),
+                ),
+                "page.js" => std::fs::write(dir.join(&script), &file.contents),
+                // The pages share the first one's runtime file, and so its state.
+                _ if at == 0 => std::fs::write(dir.join(&file.path), &file.contents),
+                _ => Ok(()),
+            }
+            .expect("write page");
+        }
+    }
+    std::fs::write(dir.join("tst_covered_document.qml"), COVERED_TEST).expect("write test");
+    let output = support::qmltestrunner()
+        .args(["-platform", "offscreen", "-input"])
+        .arg(dir.join("tst_covered_document.qml"))
+        .env("QT_FORCE_STDERR_LOGGING", "1")
+        .output()
+        .expect("run qmltestrunner");
+    let text = format!(
+        "{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
+    std::fs::remove_dir_all(&dir).expect("remove temp dir");
+    let mut problems: Vec<String> = support::problem_lines(&text, |l| {
+        l.contains("FAIL!") || l.contains("Warning:") || l.contains("QWARN") || l.contains("Error:")
+    });
+    if !output.status.success() {
+        problems.push(format!("qmltestrunner exited with {}", output.status));
+    }
+    let logged: Vec<_> = text
+        .lines()
+        .filter_map(|l| l.find("CD ").map(|at| &l[at..]))
+        .collect();
+    let mine = "under no-over query-mine own-body made-found";
+    let want = [
+        "CD over up".to_owned(),
+        format!("CD timer {mine}"),
+        format!("CD job {mine}"),
+        format!("CD observer {mine}"),
+        format!("CD frame {mine}"),
+        format!("CD resize {mine}"),
+        format!("CD intersect {mine}"),
+        "CD over own no-under own-body none-made".to_owned(),
+        format!("CD listener {mine}"),
+        "CD over after none-made".to_owned(),
+    ];
+    if logged != want {
+        problems.push(format!(
+            "logged\n    {}\n  wanted\n    {}",
+            logged.join("\n    "),
+            want.join("\n    ")
+        ));
+    }
+    assert!(problems.is_empty(), "{}", problems.join("\n  "));
+}
