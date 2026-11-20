@@ -18150,10 +18150,30 @@ function _inUp(bit, scene, mods) {
     });
 }
 
-// `Qt.callLater` keeps one of each function, and closures of one count as one.
+// `Qt.callLater` keeps one of each function, and closures of one count as one,
+// so one flush goes over each page that has work waiting, in that page: a
+// covered page's callback queues in its own input layer, which is swapped out
+// again by the time the flush runs.
+var _inLaterPages = [];
+
 function _inLater(run) {
     _in.later.push(run);
-    Qt.callLater(_inFlushLater);
+    if (_inLaterPages.indexOf(_root) === -1) {
+        _inLaterPages.push(_root);
+    }
+    Qt.callLater(_inFlushLaterPages);
+}
+
+function _inFlushLaterPages() {
+    var pages = _inLaterPages;
+    _inLaterPages = [];
+    pages.forEach(function(page) {
+        try {
+            _asPage(page, _inFlushLater);
+        } catch (err) {
+            console.error(err && err.stack ? err.stack : err);
+        }
+    });
 }
 
 function _inFlushLater() {

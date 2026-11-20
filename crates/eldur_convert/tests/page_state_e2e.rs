@@ -1035,6 +1035,12 @@ under.addEventListener("ping", function() {
   setTimeout(function() {
     history.pushState({ under: 1 }, "", "#under");
     L("pushed", history.length, JSON.stringify(history.state), location.hash);
+    // A dialog's `close` comes after `close()` returns, in this page.
+    var dialog = document.createElement("dialog");
+    document.body.appendChild(dialog);
+    dialog.addEventListener("close", function() { look("close"); });
+    dialog.show();
+    dialog.close();
   }, 0);
 });
 // Its window's own event, sent at its root while it is covered.
@@ -1228,6 +1234,8 @@ fn a_covered_pages_own_callbacks_see_its_document() {
     // Its window's own event, and the promise it chained on, which the page
     // on top settles once it is gone.
     let hash = format!("CD hash {mine}");
+    // A dialog's `close` its covered timer asked for, in its own document.
+    let close = format!("CD close {mine}");
     let after = [
         "CD check own no-under own-body none-made",
         listener.as_str(),
@@ -1236,6 +1244,7 @@ fn a_covered_pages_own_callbacks_see_its_document() {
         // on top is on, and the page on top is on it afterwards; back() takes
         // it to its own entry.
         r##"CD pushed 2 {"under":1} #under"##,
+        close.as_str(),
         "CD after own no-under own-body none-made",
         r##"CD history 2 {"under":1} -"##,
         "CD back 2 null -",
