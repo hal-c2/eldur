@@ -4,7 +4,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::sync::OnceLock;
 
-use eldur_dom::{Document, Element, NodeId};
+use eldur_dom::{Document, Element, LocalName, NodeId, QualName, ns};
 
 use crate::media::MediaQueryList;
 use crate::parse::{
@@ -659,8 +659,8 @@ pub(crate) fn compute_styles_walking(
 }
 
 /// The `nodes` whose `display` is still `none` with their own `style`
-/// attribute's `display` and their `hidden` attribute taken away: what the
-/// stylesheets alone make of their own `display`.
+/// attribute's `display` (its text too) and their `hidden` attribute taken
+/// away: what the stylesheets alone make of their own `display`.
 pub(crate) fn rules_hide(
     doc: &Document,
     sheets: &[Stylesheet],
@@ -675,6 +675,16 @@ pub(crate) fn rules_hide(
     for &node in nodes {
         // Only elements have attributes; anything else stays as it is.
         let _ = doc.remove_attribute(node, "hidden");
+        // The attribute reads as a script's cleared display leaves it, so a
+        // selector on its text sees what the page's would.
+        if let Some(style) = doc
+            .element(node)
+            .and_then(|e| e.attr("style"))
+            .map(without_display)
+        {
+            let name = QualName::new(None, ns!(), LocalName::from("style"));
+            let _ = doc.set_attribute(node, name, style);
+        }
     }
     let mut prepared = prepare(&doc, sheets, viewport);
     for &node in nodes {
@@ -695,6 +705,41 @@ pub(crate) fn rules_hide(
                 .is_some_and(|s| s.style.display == Display::None)
         })
         .collect()
+}
+
+/// `style` without its `display` declarations, the others as written.
+fn without_display(style: &str) -> String {
+    let mut parts = Vec::new();
+    let (mut depth, mut quote, mut start) = (0_i32, None::<char>, 0);
+    let mut chars = style.char_indices();
+    while let Some((i, c)) = chars.next() {
+        match (quote, c) {
+            (_, '\\') => {
+                chars.next();
+            }
+            (Some(q), c) if c == q => quote = None,
+            (Some(_), _) => {}
+            (None, '"' | '\'') => quote = Some(c),
+            (None, '(') => depth += 1,
+            (None, ')') => depth -= 1,
+            (None, ';') if depth <= 0 => {
+                parts.push(&style[start..i]);
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    parts.push(&style[start..]);
+    parts
+        .into_iter()
+        .map(str::trim)
+        .filter(|p| {
+            !p.is_empty()
+                && p.split_once(':')
+                    .is_none_or(|(name, _)| !name.trim().eq_ignore_ascii_case("display"))
+        })
+        .collect::<Vec<_>>()
+        .join("; ")
 }
 
 fn declares_display(decl: &ParsedDecl) -> bool {
