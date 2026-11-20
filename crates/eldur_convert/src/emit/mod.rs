@@ -1263,7 +1263,8 @@ impl<'a, 'd> Emitter<'a, 'd> {
         };
         let own = match style.z_index {
             // `z-index: 0` is still over what is not positioned.
-            Some(z) if stacks && z >= 0 => Some(z + 1),
+            // At `i32::MAX` it stays there, as `context_level` does.
+            Some(z) if stacks && z >= 0 => Some(z.saturating_add(1)),
             // Under its parent in Qt, as it is not in CSS: it stays in the flow.
             Some(_) if stacks => Some(0),
             _ => None,
