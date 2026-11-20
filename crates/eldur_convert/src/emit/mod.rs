@@ -221,6 +221,12 @@ pub(crate) struct Emitter<'a, 'd> {
     /// What the stylesheets declare on the elements whose `var()` display a
     /// script may write and their ancestors (`Scripts::sheet_vars`).
     pub sheet_vars: HashMap<NodeId, BTreeMap<String, Option<String>>>,
+    /// Of those, the elements a class or state may make a stacking context
+    /// or not.
+    restack_contexts: HashSet<NodeId>,
+    /// Inline elements with no item of their own whose classes bind on a
+    /// box they hold (`dynamic::carried_marker`).
+    carried: HashSet<NodeId>,
     /// The page holds the rule table: the runtime computes styles of its own.
     pub cascade_rules: bool,
     /// The boxes a script may put block children in.
@@ -353,6 +359,8 @@ impl<'a, 'd> Emitter<'a, 'd> {
             rules_hide: HashSet::new(),
             restacks: HashSet::new(),
             sheet_vars: HashMap::new(),
+            restack_contexts: HashSet::new(),
+            carried: HashSet::new(),
             cascade_rules: false,
             gains: HashSet::new(),
             live_tables: HashSet::new(),

@@ -13,10 +13,10 @@ use eldur_css::{
 use eldur_dom::NodeId;
 use eldur_qml::{Member, Object, Value};
 
-use super::{Emitter, Level};
 use super::controls::{line_box, normal_line, text_scale};
 use super::decoration::{border_width, is_visible};
 use super::units::{fmt_number, number, round};
+use super::{Emitter, Level};
 use crate::boxes::{BoxKind, Inline, LayoutBox, Span, node_line};
 
 /// The layouter, written beside `Main.qml` when anything may use it.
@@ -293,8 +293,14 @@ enum Piece<'b, 'a> {
     /// A run of text between boxes, its spans kept.
     Run(Vec<Inline<'a>>),
     /// A box, with the innermost element around it that has its own node,
-    /// and the outermost one that makes a stacking context.
-    Atomic(&'b LayoutBox<'a>, Option<NodeId>, Option<&'b ComputedStyle>),
+    /// the outermost one that makes a stacking context, and the elements
+    /// around it, outermost first.
+    Atomic(
+        &'b LayoutBox<'a>,
+        Option<NodeId>,
+        Option<&'b ComputedStyle>,
+        Vec<NodeId>,
+    ),
 }
 
 /// The level a span that makes a stacking context lifts its block by, for
@@ -325,7 +331,8 @@ fn pieces<'b, 'a>(
                     .iter()
                     .find(|span| super::flow::is_context(span.style))
                     .map(|span| span.style);
-                out.push(Piece::Atomic(b, owner, kept));
+                let around = chain.iter().filter_map(|span| span.node).collect();
+                out.push(Piece::Atomic(b, owner, kept, around));
             }
             Inline::Span(span)
                 if has_atomic(&span.children)
@@ -682,7 +689,7 @@ impl Emitter<'_, '_> {
             // A generated box is not a child `all_inline` sees, but the element
             // around it reaches across it all the same: the runtime finds the
             // box by the element's key.
-            if let Piece::Atomic(_, Some(owner), _) = piece {
+            if let Piece::Atomic(_, Some(owner), ..) = piece {
                 self.cut_nodes.insert(*owner);
             }
             if let Piece::Run(items) = piece {
@@ -791,7 +798,7 @@ impl Emitter<'_, '_> {
                     }
                     flow.push_child(text);
                 }
-                Piece::Atomic(a, owner, kept) => {
+                Piece::Atomic(a, owner, kept, around) => {
                     let before = self.above_flow.take();
                     let part = self.atomic(a, decoration, &flow_id);
                     // A span that makes a stacking context keeps a level the
@@ -856,6 +863,18 @@ impl Emitter<'_, '_> {
                             placed
                                 .members
                                 .push(Member::Comment(super::dynamic::marker(link)));
+                        }
+                    }
+                    // An element around it a class may make a stacking
+                    // context or not decides its lift, and has no item of
+                    // its own: the class binds on the first box it holds.
+                    if self.markers {
+                        for &span in around.iter().filter(|n| self.restack_contexts.contains(n)) {
+                            if self.carried.insert(span) {
+                                placed
+                                    .members
+                                    .push(Member::Comment(super::dynamic::carried_marker(span)));
+                            }
                         }
                     }
                     if self.options.source_comments
