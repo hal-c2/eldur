@@ -6447,6 +6447,9 @@ function _setStyleAt(item, prop, value) {
         return;
     }
     var name = rawName.indexOf("--") === 0 ? rawName : _kebabToCamel(rawName);
+    if (name === "display") {
+        str = _displayWritten(str);
+    }
     m.styles[name] = str;
     if (rawName !== name) {
         m.styles[rawName] = str;
@@ -6472,6 +6475,9 @@ function _setStyleAt(item, prop, value) {
             if (_gHasCascade()) {
                 ++_gGen;
                 _gShowAsRules(raw);
+            } else if (str === "" && raw.eldurRulesHide === true) {
+                // A stylesheet rule hides it with its own `display` gone.
+                _setShown(raw, false);
             } else if (str === "" && raw.eldurStyleHides === true) {
                 // The converter hid the box for its own `style` attribute,
                 // with nothing to bind back to: with that cleared, only the
@@ -6481,7 +6487,7 @@ function _setStyleAt(item, prop, value) {
                 _layoutChanged(raw.parent);
                 _inlineRelease(raw, raw, "visible");
             } else {
-                _setShown(raw, str !== "none");
+                _setShown(raw, !_displayHides(raw, str));
                 _gShownInline(raw, str === "inline");
             }
         }
@@ -6618,9 +6624,12 @@ function _shownByAttribute(raw, hidden) {
         _gShowAsRules(raw);
     } else if (hidden) {
         _setShown(raw, false);
-    } else if (_ownDisplay(raw, _meta(raw)) === "none") {
+    } else if (_ownHides(raw, _meta(raw))) {
         // The element's own declaration, its `style` attribute's part too,
         // still hides it.
+        _setShown(raw, false);
+    } else if (raw.eldurRulesHide === true && _ownDisplay(raw, _meta(raw)) === "") {
+        // With no `display` of its own, a stylesheet rule still hides it.
         _setShown(raw, false);
     } else {
         // Nothing here but the page's item says it is hidden, and the attribute
@@ -6735,14 +6744,31 @@ function _parseDecls(text) {
 // The element's style declaration as el.style holds it: the style
 // attribute's properties where they were, as scripts have since set them,
 // then what scripts added, in the order they added it.
+// A property the attribute repeats is there once, where its last valid
+// declaration is, with the value that wins and its priority.
 function _styleDecls(raw, m) {
     var out = [];
     var seen = {};
     var attr = raw && typeof raw.eldurStyle === "string" ? _parseDecls(raw.eldurStyle) : [];
+    var last = {};
+    for (var l = 0; l < attr.length; ++l) {
+        if (_winningDecl([attr[l]], attr[l][0])) {
+            last[attr[l][0]] = l;
+        }
+    }
     for (var i = 0; i < attr.length; ++i) {
         var k = attr[i][0];
+        if (last[k] !== i) {
+            continue;
+        }
         var camel = k.indexOf("--") === 0 ? k : _kebabToCamel(k);
-        var v = Object.prototype.hasOwnProperty.call(m.styles, camel) ? m.styles[camel] : attr[i][1];
+        var v;
+        if (Object.prototype.hasOwnProperty.call(m.styles, camel)) {
+            v = m.styles[camel];
+        } else {
+            var won = _winningDecl(attr, k);
+            v = won.value + (won.important ? " !important" : "");
+        }
         seen[k] = true;
         if (v !== "") {
             out.push([k, v]);
@@ -6761,9 +6787,9 @@ function _styleDecls(raw, m) {
 
 // The keywords eldur_css's `parse_display` takes, so the runtime and the
 // converter agree on which declaration wins (`eldurStyleHides`).
-var _DISPLAY_ONE = /^(none|contents|block|inline|flow|flow-root|flex|grid|table|list-item|inline-block|inline-flex|inline-grid|inline-table|table-row-group|table-header-group|table-footer-group|table-row|table-cell|table-column-group|table-column|table-caption|inherit|initial|unset|revert|revert-layer)$/;
+var _DISPLAY_ONE = /^(none|contents|block|inline|flow|flow-root|flex|grid|table|list-item|ruby|math|ruby-text|inline-block|inline-flex|inline-grid|inline-table|table-row-group|table-header-group|table-footer-group|table-row|table-cell|table-column-group|table-column|table-caption|inherit|initial|unset|revert|revert-layer)$/;
 var _DISPLAY_OUTSIDE = /^(block|inline)$/;
-var _DISPLAY_INSIDE = /^(flow|flow-root|flex|grid|table)$/;
+var _DISPLAY_INSIDE = /^(flow|flow-root|flex|grid|table|ruby|math)$/;
 
 // A single keyword, or at most one outside and one inside keyword and
 // `list-item`, as CSS Display 3 allows: `list-item` goes with a flow inside
@@ -6792,6 +6818,94 @@ function _validDisplay(v) {
         return inside === "" || inside === "flow" || inside === "flow-root";
     }
     return outside !== "" && inside !== "";
+}
+
+// A valid `display` as CSSOM serializes it: the shortest form that says the
+// same, `flow` as `block` and `inline flow-root` as `inline-block`.
+function _serializeDisplay(v) {
+    if (_DISPLAY_ONE.test(v)) {
+        return v === "flow" ? "block" : v;
+    }
+    var words = v.split(" ");
+    var outside = "";
+    var inside = "";
+    var listItem = false;
+    for (var i = 0; i < words.length; ++i) {
+        if (_DISPLAY_OUTSIDE.test(words[i])) {
+            outside = words[i];
+        } else if (_DISPLAY_INSIDE.test(words[i])) {
+            inside = words[i];
+        } else {
+            listItem = true;
+        }
+    }
+    var inline = outside === "inline";
+    if (listItem) {
+        var root = inside === "flow-root";
+        return (inline ? "inline " : "") + (root ? "flow-root " : "") + "list-item";
+    }
+    if (inside === "flow") {
+        return outside;
+    }
+    if (inside === "flow-root") {
+        return inline ? "inline-block" : "flow-root";
+    }
+    if (inside === "ruby" || inside === "math") {
+        return inline ? inside : "block " + inside;
+    }
+    return inline ? "inline-" + inside : inside;
+}
+
+// What `style.display` holds after a script writes `str`: a valid value as
+// CSSOM serializes it, anything else as written.
+function _displayWritten(str) {
+    var v = str.trim();
+    if (v === "" || /var\(/i.test(v)) {
+        return v;
+    }
+    v = _unescapeIdent(v).toLowerCase().replace(/\s+/g, " ");
+    return _validDisplay(v) ? _serializeDisplay(v) : str;
+}
+
+// Whether a `display` of `value` on the element hides it. A `var()` takes the
+// custom properties the element's and its ancestors' own declarations give.
+function _displayHides(raw, value) {
+    if (!/var\(/i.test(value)) {
+        return value === "none";
+    }
+    var got = _gSubstitute(value, _ownVars(raw), []);
+    return got !== null && got.trim().toLowerCase() === "none";
+}
+
+// The custom properties the element and its ancestors declare themselves,
+// the nearest winning.
+function _ownVars(raw) {
+    var vars = {};
+    for (var at = raw, depth = 0; at && depth < 256; at = _gParent(at), ++depth) {
+        if (typeof at !== "object" || at.__eldurInline) {
+            break;
+        }
+        var decls = _styleDecls(at, _meta(at));
+        for (var i = 0; i < decls.length; ++i) {
+            var k = decls[i][0];
+            if (k.indexOf("--") === 0 && vars[k] === undefined) {
+                vars[k] = String(decls[i][1]).replace(/!\s*important\s*$/i, "").trim();
+            }
+        }
+    }
+    return vars;
+}
+
+// Whether the element's own declaration says `display: none`. The
+// attribute's own `var()` display takes what the converter resolved
+// (`eldurStyleHides`), stylesheet custom properties too.
+function _ownHides(raw, m) {
+    var own = _ownDisplay(raw, m);
+    if (/var\(/i.test(own) && !Object.prototype.hasOwnProperty.call(m.styles, "display")
+        && typeof raw.eldurStyleHides === "boolean") {
+        return raw.eldurStyleHides;
+    }
+    return _displayHides(raw, own);
 }
 
 // `v` with its CSS escapes decoded, as the tokenizer reads an identifier.
@@ -6829,6 +6943,7 @@ function _winningDecl(decls, name) {
                 if (!_validDisplay(v)) {
                     continue;
                 }
+                v = _serializeDisplay(v);
             }
         }
         if (bang || !(won && won.important)) {

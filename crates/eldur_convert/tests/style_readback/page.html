@@ -1,0 +1,38 @@
+<!doctype html>
+<html><body>
+<div id="a" style="color:red;color:blue">A</div>
+<div id="b" style="color:red;width:5px;color:blue">B</div>
+<div id="c" style="color:red!important;width:5px;color:blue">C</div>
+<div id="d" style="display:none;color:red;display:block">D</div>
+<div id="e" style="display:none;display:bogus">E</div>
+<div id="f" style="display:flow;display:flow">F</div>
+<div id="g" style="--x:1;--x:2">G</div>
+<div id="h" style="COLOR:blue">H</div>
+<div id="k">K</div>
+<script>
+const log = (s) => console.log("RB " + s);
+for (const id of ["a", "b", "c", "d", "e", "f", "g"]) {
+  log(id + " " + document.getElementById(id).style.cssText);
+}
+const c = document.getElementById("c");
+c.style.color = "green";
+log("c written " + c.style.cssText);
+const h = document.getElementById("h");
+h.style.width = "7px";
+log("h " + h.style.cssText);
+log("f display " + document.getElementById("f").style.display);
+const k = document.getElementById("k");
+for (const v of ["flow", "block flow", "inline flow", "block flow-root",
+    "inline flow-root", "ruby", "inline ruby", "block ruby", "ruby block",
+    "math", "inline math", "block math", "ruby-text", "list-item block",
+    "flow list-item", "inline list-item", "list-item flow-root",
+    "inline flow-root list-item", "block table", "inline flex", "grid block",
+    "FLOW", " Flow "]) {
+  k.style.display = v;
+  log("k [" + v + "] " + k.style.display);
+}
+const done = document.createElement("div");
+done.id = "rbdone";
+document.body.appendChild(done);
+</script>
+</body></html>
