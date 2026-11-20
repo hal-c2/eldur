@@ -1410,7 +1410,8 @@ impl Dynamic<'_, '_> {
                 ),
             );
         }
-        let joint = (counting.len() > 1 && counting.len() <= 9).then(|| Vec::from_iter(counting));
+        let joint = (counting.len() > 1 && counting.len() <= 9)
+            .then(|| counting.into_iter().collect::<Vec<u16>>());
         for deps in self
             .found
             .elements
