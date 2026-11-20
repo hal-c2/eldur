@@ -20987,7 +20987,6 @@ function _vFromCreated(raw) {
         }
         return leaf;
     }
-    var tag = m.createdTag;
     // A copy: a child made a node leaves the item, and the list with it.
     var kidSource = Array.prototype.slice.call((m.flow ? m.flow.children : raw.children) || []);
     var kids = [];
@@ -21013,15 +21012,24 @@ function _vFromCreated(raw) {
         var ch = kidSource[i];
         var chTag = _meta(ch).createdTag;
         // What `_vInsert` would slot stays a box (`_vAsNode`): a control or
-        // an image, or an element of the page's own: the same item, its value
-        // and state with it.
+        // an image, or a box of the page's own: the same item, its value and
+        // state with it. An inline element of the page's own is a node, as
+        // the made ones are, and wraps with the line.
         if (chTag && !_V_STAYS_BOX.test(chTag)) {
             kids.push(_vFromCreated(ch));
+        } else if (!chTag && _vPageInline(ch, raw)) {
+            kids.push(_vFromPage(ch));
         } else if (chTag || !_isInternalHelperNode(ch)) {
             kids.push({ stayBox: ch });
         }
     }
-    var v = _vElement(tag, [], null, null);
+    return _vTakeOver(raw, m, kids);
+}
+
+// The node `raw` is from now on, holding `kids`: the script's element, its
+// attributes and listeners with it.
+function _vTakeOver(raw, m, kids, fromPage) {
+    var v = _vElement(m.createdTag, [], null, null);
     _itemMeta.delete(v);
     _itemMeta.delete(raw);
     _itemMeta.set(v, m);
@@ -21061,10 +21069,52 @@ function _vFromCreated(raw) {
     if (raw.parent) {
         raw.parent = null;
     }
-    if (typeof raw.destroy === "function") {
+    // The page's item is its component's, its bindings reaching into its
+    // children: out of the page, it is drawn nowhere.
+    if (fromPage) {
+        raw.visible = false;
+    } else if (typeof raw.destroy === "function") {
         raw.destroy();
     }
     return v;
+}
+
+// An inline element of the page's own that is an item (a flex item, say), not
+// a node of a line: once in `into`, CSS makes it inline again.
+function _vPageInline(raw, into) {
+    var tag = typeof raw.eldurTag === "string" ? raw.eldurTag : "";
+    if (tag === "" || tag === "#text" || tag === "br" || tag === "wbr" || !_vInlineTag(tag) || _isLines(raw)) {
+        return false;
+    }
+    return !_gHasCascade() || _gStyleInto(raw, into, null).display === "inline";
+}
+
+// The node `_vPageInline` says it is: its text and inline elements nodes with
+// it, a box among them still a box.
+function _vFromPage(raw) {
+    var m = _meta(raw);
+    // Its own text, which it draws, is a node of it from now on.
+    var own = _findTextChild(raw);
+    if (own && own.text !== "" && !_vModelOf(own)) {
+        _vEnsureModel(own);
+    }
+    var kids = _rawChildNodes(raw).map(function(n) {
+        if (n.__eldurInline) {
+            if (n.vparent || n.model) {
+                _vRemove(n);
+            }
+            return n;
+        }
+        if (_meta(n).createdTag && !_V_STAYS_BOX.test(_meta(n).createdTag)) {
+            return _vFromCreated(n);
+        }
+        if (_vPageInline(n, raw)) {
+            return _vFromPage(n);
+        }
+        return { stayBox: n };
+    });
+    m.createdTag = raw.eldurTag;
+    return _vTakeOver(raw, m, kids, true);
 }
 
 // A node going where only real items are laid out.
