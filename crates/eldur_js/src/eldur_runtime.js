@@ -6638,9 +6638,12 @@ function _zPage(raw) {
         || typeof raw.z !== "number";
 }
 
-// Without the rules, the converter gave a box whose level a class or state
-// changes a binding over those. A level written over it stays live too: at
-// what the box holds now, which the kids' own bindings keep current.
+// The converter gave a box whose level a class or state changes a binding
+// over those. A level written over it stays live too: at what the box holds
+// now, which the kids' own bindings keep current, as a class that raises a
+// kid later moves only that kid's binding. Only on a page the runtime lays
+// out does each pass paint every box's level (`_gPaintBox`), so a plain
+// write there is the one the next pass would make.
 function _zLevelOf(x) {
     var own = _zOwn(x);
     if (own !== null) {
@@ -6650,7 +6653,7 @@ function _zLevelOf(x) {
 }
 
 function _zSetLevel(x, value) {
-    if (_zStyled(x)) {
+    if (_gActive()) {
         x.z = value;
     } else {
         x.z = Qt.binding(function() { return _zLevelOf(x); });
@@ -6659,7 +6662,7 @@ function _zSetLevel(x, value) {
 
 // The item that took `box` out to its stop's column stands at its lift.
 function _zSetHost(host, box, value) {
-    if (_zStyled(box)) {
+    if (_gActive()) {
         host.z = value;
     } else {
         host.z = Qt.binding(function() {
