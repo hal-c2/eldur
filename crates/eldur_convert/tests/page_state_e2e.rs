@@ -1028,7 +1028,15 @@ under.addEventListener("go", function() {
   // top holds what that `then` made, and settles it after this page is gone.
   window.chained = new Promise(function(settle) { window.settleChained = settle; }).then();
 });
-under.addEventListener("ping", function() { look("listener"); });
+under.addEventListener("ping", function() {
+  look("listener");
+  // A covered timer moves the one history: its entry goes after the one the
+  // page on top is on.
+  setTimeout(function() {
+    history.pushState({ under: 1 }, "", "#under");
+    L("pushed", history.length, JSON.stringify(history.state), location.hash);
+  }, 0);
+});
 // Its window's own event, sent at its root while it is covered.
 window.addEventListener("hashchange", function() { look("hash"); });
 under.addEventListener("arm", function() { setTimeout(function() { look("late"); }, 300); });
@@ -1053,6 +1061,11 @@ var over = document.getElementById("over");
 over.addEventListener("check", check);
 over.addEventListener("after", function(e) {
   check(e);
+  // The page on top is on the entry the covered page pushed, with its own
+  // address, and back on its own entry from there.
+  L("history", history.length, JSON.stringify(history.state), location.hash || "-");
+  history.back();
+  L("back", history.length, JSON.stringify(history.state), location.hash || "-");
   window.chained.then(function(v) { L("chained", v.v); });
   window.settleChained({ v: "settled" });
 });
@@ -1213,7 +1226,13 @@ fn a_covered_pages_own_callbacks_see_its_document() {
         "CD check own no-under own-body none-made",
         listener.as_str(),
         hash.as_str(),
+        // The covered timer's pushState puts its entry after the one the page
+        // on top is on, and the page on top is on it afterwards; back() takes
+        // it to its own entry.
+        r##"CD pushed 2 {"under":1} #under"##,
         "CD after own no-under own-body none-made",
+        r##"CD history 2 {"under":1} -"##,
+        "CD back 2 null -",
         "CD chained settled",
         "CD intervals 0",
     ];
