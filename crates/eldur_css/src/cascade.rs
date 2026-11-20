@@ -680,7 +680,7 @@ pub(crate) fn rules_hide(
         if let Some(style) = doc
             .element(node)
             .and_then(|e| e.attr("style"))
-            .map(without_display)
+            .and_then(without_display)
         {
             let name = QualName::new(None, ns!(), LocalName::from("style"));
             let _ = doc.set_attribute(node, name, style);
@@ -707,8 +707,120 @@ pub(crate) fn rules_hide(
         .collect()
 }
 
-/// `style` without its `display` declarations, the others as written.
-fn without_display(style: &str) -> String {
+/// The custom properties an author or UA rule declares on each of `nodes`,
+/// as the stylesheets alone make them: with each node's own `style`
+/// attribute's custom properties taken away, so what a script's
+/// `removeProperty` falls back to. `None` for one that computes to the
+/// guaranteed-invalid value (`initial`). Inherited ones aren't named: they
+/// follow the parent's.
+pub(crate) fn sheet_custom_properties(
+    doc: &Document,
+    sheets: &[Stylesheet],
+    viewport: &Viewport,
+    computed: &StyleMap,
+    nodes: &BTreeSet<NodeId>,
+) -> BTreeMap<NodeId, BTreeMap<String, Option<String>>> {
+    if nodes.is_empty() {
+        return BTreeMap::new();
+    }
+    let _memo = properties::ParseMemo::enter();
+    let mut prepared = prepare(doc, sheets, viewport);
+    let match_ctx = MatchContext { doc, dynamic: None };
+    let declared: BTreeMap<NodeId, BTreeSet<String>> = nodes
+        .iter()
+        .filter_map(|&node| {
+            let names = prepared.engine.rule_custom_names(node, &match_ctx);
+            (!names.is_empty()).then_some((node, names))
+        })
+        .collect();
+    if declared.is_empty() {
+        return BTreeMap::new();
+    }
+    // Another pass only when a style attribute overrides what a rule says.
+    let mut stripped = false;
+    for &node in declared.keys() {
+        if let Some(decls) = prepared.engine.inline_styles.get_mut(node.index()) {
+            let before = decls.len();
+            decls.retain(|d| !matches!(d.value, DeclValue::Custom { .. }));
+            stripped |= decls.len() != before;
+        }
+    }
+    let base = stripped.then(|| prepared.engine.base_pass());
+    declared
+        .into_iter()
+        .map(|(node, names)| {
+            let i = node.index();
+            let custom = match &base {
+                Some(base) => base
+                    .styles
+                    .get(i)
+                    .and_then(Option::as_ref)
+                    .or_else(|| base.hidden.get(i).and_then(Option::as_ref))
+                    .map(|s| &s.style.custom_properties),
+                None => computed.computed(node).map(|s| &s.style.custom_properties),
+            };
+            let values = names
+                .into_iter()
+                .map(|name| {
+                    let value = custom.and_then(|c| c.get(&name)).cloned();
+                    (name, value)
+                })
+                .collect();
+            (node, values)
+        })
+        .collect()
+}
+
+/// `style` as clearing its `display` leaves it: unchanged when it declares
+/// none, else the rest as CSSOM serializes a declaration block, each
+/// `name: value;` and the important ones last (measured in Chromium 158:
+/// `display: none; color: red;` reads `color: red;`). Values stay as
+/// written, so one CSSOM would normalize (`0` as `0px`) can still differ.
+fn without_display(style: &str) -> Option<String> {
+    let parts = declaration_parts(style);
+    fn named<'a>(p: &&'a str) -> Option<(&'a str, &'a str)> {
+        p.split_once(':')
+            .map(|(name, value)| (name.trim(), value.trim()))
+    }
+    if !parts
+        .iter()
+        .filter_map(named)
+        .any(|(name, _)| name.eq_ignore_ascii_case("display"))
+    {
+        return None;
+    }
+    let mut normal = Vec::new();
+    let mut important = Vec::new();
+    for (name, value) in parts.iter().filter_map(named) {
+        if name.eq_ignore_ascii_case("display") || value.is_empty() {
+            continue;
+        }
+        let name = if name.starts_with("--") {
+            name.to_owned()
+        } else {
+            name.to_ascii_lowercase()
+        };
+        match strip_important(value) {
+            Some(v) => important.push(format!("{name}: {v} !important;")),
+            None => normal.push(format!("{name}: {value};")),
+        }
+    }
+    normal.extend(important);
+    Some(normal.join(" "))
+}
+
+/// `value` without a trailing `!important`, when it has one.
+fn strip_important(value: &str) -> Option<&str> {
+    let bang = value.rfind('!')?;
+    value[bang + 1..]
+        .trim()
+        .eq_ignore_ascii_case("important")
+        .then(|| value[..bang].trim_end())
+}
+
+/// The declarations of a `style` attribute, split where CSS splits them: at
+/// a `;` outside strings, escapes and parentheses (`url(a;b)`).
+fn declaration_parts(style: &str) -> Vec<&str> {
     let mut parts = Vec::new();
     let (mut depth, mut quote, mut start) = (0_i32, None::<char>, 0);
     let mut chars = style.char_indices();
@@ -723,23 +835,15 @@ fn without_display(style: &str) -> String {
             (None, '(') => depth += 1,
             (None, ')') => depth -= 1,
             (None, ';') if depth <= 0 => {
-                parts.push(&style[start..i]);
+                parts.push(style[start..i].trim());
                 start = i + 1;
             }
             _ => {}
         }
     }
-    parts.push(&style[start..]);
+    parts.push(style[start..].trim());
+    parts.retain(|p| !p.is_empty());
     parts
-        .into_iter()
-        .map(str::trim)
-        .filter(|p| {
-            !p.is_empty()
-                && p.split_once(':')
-                    .is_none_or(|(name, _)| !name.trim().eq_ignore_ascii_case("display"))
-        })
-        .collect::<Vec<_>>()
-        .join("; ")
 }
 
 fn declares_display(decl: &ParsedDecl) -> bool {
@@ -919,6 +1023,31 @@ pub(crate) fn prepare<'a>(
 }
 
 impl CascadeEngine<'_> {
+    /// The custom properties the rules matching `node` declare, its
+    /// `style` attribute's left out.
+    fn rule_custom_names(&self, node: NodeId, match_ctx: &MatchContext<'_>) -> BTreeSet<String> {
+        let mut names = BTreeSet::new();
+        let Some(elem) = self.doc.element(node) else {
+            return names;
+        };
+        let bloom = self.ancestor_blooms[node.index()] | self.dynamic_bloom;
+        self.element_rules.for_each_candidate_with(
+            elem,
+            bloom,
+            self.extra_classes(node),
+            |sel, rule| {
+                if matches_selector(sel, node, match_ctx) {
+                    for decl in rule.declarations {
+                        if let DeclValue::Custom { name, .. } = &decl.value {
+                            names.insert(name.clone());
+                        }
+                    }
+                }
+            },
+        );
+        names
+    }
+
     fn extra_classes(&self, node: NodeId) -> &[String] {
         self.dynamic_classes
             .get(node.index())
