@@ -43,6 +43,15 @@ input[type="hidden" i] {
     display: none;
 }
 
+/* §15.3.5 Bidirectional text */
+[dir="ltr" i] {
+    direction: ltr;
+}
+
+[dir="rtl" i] {
+    direction: rtl;
+}
+
 /* §15.3.2 The page & §15.3.6 Flow / sectioning blocks */
 html, body {
     display: block;
