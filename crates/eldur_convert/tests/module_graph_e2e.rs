@@ -509,6 +509,22 @@ fn a_lifecycle_listener_is_the_value_it_had_when_added() {
     assert_eq!(run("loadvalue", &read), wanted("loadvalue", &read));
 }
 
+/// `first.js` adds the same function, and the same `handleEvent` object, to
+/// `load` twice, and the function a third and fourth time as a capture
+/// listener; a module adds its arrow twice. A browser keeps one listener per
+/// target, type, callback and capture, so each is called once and the capture
+/// one once more. A `load` listener on `document` is never called, and the
+/// `DOMContentLoaded` listeners run window capture, document capture, document,
+/// then window.
+#[test]
+fn a_listener_added_twice_is_heard_once() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("loadtwice", &read), wanted("loadtwice", &read));
+}
+
 /// `source.js` pushes to an array before copying it, and defines a getter
 /// that throws before destructuring the object it is on. Each initializer
 /// sees what ran before it: the copy has two items and the destructuring

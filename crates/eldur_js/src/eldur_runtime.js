@@ -537,28 +537,58 @@ function setOnload(listeners, call, value) {
 // A top-level `DOMContentLoaded` or `load` listener, added where the
 // `addEventListener` call runs. The callback is the value it had there, as a
 // browser takes it: a function is called on `target`, an object has its
-// `handleEvent` called, and `null` adds nothing.
-function queueListener(listeners, target, type, callback) {
+// `handleEvent` called, and `null` adds nothing. As in a browser, a callback
+// already added with the same target and capture is not added again, and a
+// `load` listener on `document` is never called, since `load` is dispatched at
+// `window` alone.
+function queueListener(listeners, target, type, callback, options) {
     if (callback === null || callback === undefined) {
         return;
     }
-    listeners.push(function() {
+    var capture = typeof options === "boolean" ? options
+        : options !== null && typeof options === "object" && !!options.capture;
+    for (var i = 0; i < listeners.length; ++i) {
+        var added = listeners[i];
+        if (added.target === target && added.callback === callback && added.capture === capture) {
+            return;
+        }
+    }
+    if (type === "load" && target !== window) {
+        return;
+    }
+    var call = function() {
         var e = event(type, target, null);
         if (typeof callback === "function") {
             callback.call(target, e);
         } else {
             callback.handleEvent(e);
         }
-    });
+    };
+    call.target = target;
+    call.callback = callback;
+    call.capture = capture;
+    // `DOMContentLoaded` goes from `window` down to `document` and back up:
+    // window's capture listeners, then document's (capture first, as at a
+    // target), then window's others. `load` is heard at `window` alone, in the
+    // order added.
+    call.phase = type === "load" ? 0 : target === window ? (capture ? 0 : 3) : (capture ? 1 : 2);
+    listeners.push(call);
 }
 
-// The page's `DOMContentLoaded` or `load` listeners, in the order they were
-// added. One that throws is reported and the next is still called, as a
-// browser dispatches.
+// The page's `DOMContentLoaded` or `load` listeners, by phase and then in the
+// order they were added. One that throws is reported and the next is still
+// called, as a browser dispatches.
 function fireListeners(listeners) {
+    var order = [];
     for (var i = 0; i < listeners.length; ++i) {
+        order.push(i);
+    }
+    order.sort(function(a, b) {
+        return ((listeners[a].phase || 0) - (listeners[b].phase || 0)) || (a - b);
+    });
+    for (var k = 0; k < order.length; ++k) {
         try {
-            listeners[i]();
+            listeners[order[k]]();
         } catch (err) {
             reportError(err);
         }

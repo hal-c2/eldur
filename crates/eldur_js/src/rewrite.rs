@@ -1983,6 +1983,14 @@ impl PageBuffers {
                     "Eldur.window"
                 };
                 let cb_str = lowerer.rewrite_listener_callback_expr(cb, None);
+                // The options are read where the call runs too: their
+                // `capture` tells a listener added again from a new one.
+                let options = call
+                    .arguments
+                    .get(2)
+                    .and_then(|a| a.as_expression())
+                    .map(|o| format!(", {}", lowerer.rewrite_listener_callback_expr(o, None)))
+                    .unwrap_or_default();
                 // Added where the call runs, with the callback's value there,
                 // as a browser adds it: one its script or module never reaches
                 // is not heard, a name assigned later still calls what it held,
@@ -1993,7 +2001,7 @@ impl PageBuffers {
                     self.ready_queue(lowerer.shared)
                 };
                 self.init_stmts.push(format!(
-                    "Eldur.queueListener({queue}, {target_js}, {ev:?}, {cb_str});"
+                    "Eldur.queueListener({queue}, {target_js}, {ev:?}, {cb_str}{options});"
                 ));
                 return true;
             }
