@@ -999,17 +999,108 @@ const INLINE_LEVEL_TEST: &str = r##"
 
 #[test]
 fn a_level_a_class_gives_an_inline_box_lifts_it_over_a_later_box() {
+    let page = inline_level_page(INLINE_BLOCK, "<span id=ix></span>", RELATIVE, LATER_AT_1);
+    run(&page, &with_test(INLINE_LEVEL_TEST), "inline-level", false);
+}
+
+/// The same, with `#ix` in a span that makes no stacking context: the
+/// level lifts through it as through a block at `auto`.
+#[test]
+fn a_level_a_class_gives_an_inline_box_in_a_plain_span_lifts_it() {
+    let page = inline_level_page(
+        INLINE_BLOCK,
+        "<span id=wx><span id=ix></span></span>",
+        RELATIVE,
+        LATER_AT_1,
+    );
+    run(
+        &page,
+        &with_test(INLINE_LEVEL_TEST),
+        "inline-level-span",
+        false,
+    );
+}
+
+/// The same, with `#ix` in a span that makes a stacking context. The
+/// context keeps the level in: Chromium paints `#lx` over `#ix` (5,70),
+/// whether the span is a box (`inline-block`) or not.
+const CONTEXT_SPAN_TEST: &str = r##"
+    function test_a_span_that_makes_a_context_keeps_the_level_in() {
+        compare(front(page, 5, 70), "lx", "the later box is over the inline box")
+        compare(front(page, 5, 50), "ix")
+        compare(front(page, 30, 50), "rx")
+        compare(front(page, 150, 50), "bx")
+        compare(front(page, 75, 30), "ox")
+        compare(front(page, 150, 30), "ax")
+        compare(front(page, 30, 70), "lx")
+        compare(front(page, 150, 90), "lx")
+    }
+}
+}
+"##;
+
+#[test]
+fn a_span_that_makes_a_context_keeps_the_level_a_class_gives_in() {
+    for (name, wrapper) in [
+        ("context-span", "opacity: .9"),
+        (
+            "context-inline-block",
+            "display: inline-block; vertical-align: top; opacity: .9",
+        ),
+    ] {
+        let page = inline_level_page(
+            INLINE_BLOCK,
+            &format!("<span id=wx style=\"{wrapper}\"><span id=ix></span></span>"),
+            RELATIVE,
+            LATER_AT_1,
+        );
+        run(&page, &with_test(CONTEXT_SPAN_TEST), name, false);
+    }
+}
+
+/// The inline-block in a static box (`#rx`) and a static box after (`#lx`):
+/// nothing after `#bx` paints later, so only the level a class gives `#ix`
+/// sends `#ox` to the stop, where Chromium has it, under `#ix` (5,50).
+/// `#bx` lifts with that level ("Overlays of different ancestors"), so it
+/// and `#rx` come over `#ox` (30,50; 75,50), where Chromium paints them
+/// under; those points are not checked.
+const SENT_TEST: &str = r##"
+    function test_a_level_a_class_gives_an_inline_box_sends_an_earlier_overlay_under_it() {
+        compare(front(page, 5, 50), "ix", "the inline box is over the earlier block's overlay")
+        compare(front(page, 5, 70), "ix")
+        compare(front(page, 5, 30), "ox")
+        compare(front(page, 30, 70), "rx")
+        compare(front(page, 75, 70), "bx")
+        compare(front(page, 150, 30), "ax")
+        compare(front(page, 150, 90), "lx")
+    }
+}
+}
+"##;
+
+#[test]
+fn a_level_a_class_gives_an_inline_box_sends_an_earlier_overlay_under_it() {
+    let page = inline_level_page(
+        INLINE_BLOCK,
+        "<span id=ix></span>",
+        "#rx { width: 50px; background: red }",
+        "#lx { background: gray }",
+    );
+    run(&page, &with_test(SENT_TEST), "inline-level-sent", false);
+}
+
+const INLINE_BLOCK: &str = "#ix { display: inline-block; position: relative; width: 10px; height: 40px; vertical-align: top; background: purple }";
+const RELATIVE: &str = "#rx { position: relative; width: 50px; background: red }";
+const LATER_AT_1: &str = "#lx { position: relative; z-index: 1; top: -20px; background: gray }";
+
+/// `HELD` with `kid` in `#rx`, a box after `#bx` (`#lx`), and a class that
+/// gives `#ix` a level.
+fn inline_level_page(ix: &str, kid: &str, rx: &str, lx: &str) -> String {
     let page = HELD
-        .replace(
-            "#rx { position: relative; width: 50px; background: red }",
-            "#rx { position: relative; width: 50px; background: red }\n\
-             #ix { display: inline-block; position: relative; width: 10px; height: 40px; vertical-align: top; background: purple }\n\
-             #lx { position: relative; z-index: 1; top: -20px; background: gray }\n\
-             .up { z-index: 3 }",
-        )
+        .replace(RELATIVE, &format!("{rx}\n{ix}\n{lx}\n.up {{ z-index: 3 }}"))
         .replace(
             "<div id=rx></div></div>",
-            "<div id=rx><span id=ix></span></div></div><div id=lx></div>",
+            &format!("<div id=rx>{kid}</div></div><div id=lx></div>"),
         )
         .replace(
             "var rx = document.getElementById('rx');",
@@ -1019,7 +1110,8 @@ fn a_level_a_class_gives_an_inline_box_lifts_it_over_a_later_box() {
         );
     assert_eq!(page.matches("id=ix").count(), 1);
     assert_eq!(page.matches("id=lx").count(), 1);
-    run(&page, &with_test(INLINE_LEVEL_TEST), "inline-level", false);
+    assert_eq!(page.matches(".up").count(), 1);
+    page
 }
 
 /// A float the runtime lays out (`#fm`, which a script makes) and one it
