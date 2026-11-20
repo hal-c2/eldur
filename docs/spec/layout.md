@@ -679,6 +679,7 @@ An inline box that is absolute does not split its line. Its `y` is the top of th
 | Stacking across containing blocks | Approx | `z` orders siblings only. A positioned box's overlay stays under the initial block's boxes, whatever its `z-index` (warning). |
 | A class switching `position` between static and absolute | Not done | `dynamic-form` warning: worlds must share a shape, so it keeps its first form. |
 | Overlays of different ancestors | Approx | Raising the ancestors orders them by those ancestors. A box inside a `z-index` context with a lower `z` than an outer overlay is right; two contexts crossing at several depths are not reordered. |
+| A positioned `::before`/`::after` with a level in a block that clips | Approx | The clip makes the block one item with one `z`, so the level that lifts the pseudo box lifts the block's own background too: a later box that Chromium paints over the block's flow but under the pseudo box is painted under both. `stacking_e2e` CONTEXTS row 15 checks only the point the later box shares with the pseudo box. |
 | A static `getElementById` or `querySelector` with a literal | Approx | Resolved at compile time to the item, so it still finds a box the script removed. A computed id goes through the runtime and is right. |
 | A static box moved under another parent by a script | Approx | It keeps the containing block it was emitted in. |
 | `id` selectors on a created box | Not done | The script sets the id, which the template's cascade cannot predict. A class works. |
