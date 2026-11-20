@@ -19,7 +19,7 @@ body { margin: 0 }
 <div class=r id=a style="min-height:100px"><div id=a1><div class=k id=a1k></div></div><div class=s id=a2></div></div>
 <div class=r id=b style="height:100px"><div id=b1><div class=k id=b1k></div></div><div class=s id=b2></div></div>
 <div class=r id=f style="height:50%"><div id=f1><div class=k id=f1k></div></div><div class=s id=f2></div></div>
-<div class=c id=c style="min-height:200px"><div id=c1 style="flex-grow:1"><div class=k id=c1k></div></div><div class=s id=c2></div></div>
+<div class=c id=c style="min-height:200px"><div id=c1 style="flex-grow:1"><div class=k id=c1k></div><div id=c1m style="height:10px;width:20px"></div></div><div class=s id=c2></div></div>
 <div class=c id=d style="height:200px"><div id=d1 style="flex-grow:1"><div class=k id=d1k></div></div><div class=s id=d2></div></div>
 <div class=c id=e style="height:50%"><div id=e1 style="flex-grow:1"><div class=k id=e1k></div></div><div class=s id=e2></div></div>
 <script>var named = Array.from(document.querySelectorAll('[id]'));</script>
@@ -65,11 +65,11 @@ TestCase {
         check("b1k", 0, 110, 40, 50)
         check("f1k", 0, 220, 40, 15)
     }
-    // A column's min-height alone does not: the child stays 0 high.
+    // A column's min-height alone does not: the child stays 0 high, and
+    // the children stay at the top of the item the column grew.
     function test_column_min_height_is_not_definite() {
-        const k = findChild(page, "c1k")
-        verify(k, "c1k")
-        compare(k.height, 0)
+        check("c1k", 0, 260, 40, 0)
+        check("c1m", 0, 260, 20, 10)
         check("d1k", 0, 470, 40, 85)
     }
 
@@ -84,7 +84,7 @@ body { margin: 0 }
 .k { height: 50%; background: #00c; width: 40px }
 .s { height: 30px; background: #0c0 }
 </style></head><body>
-<div class=r id=g><div id=g1><div class=k id=g1k></div></div><div class=s id=g2></div></div>
+<div class=r id=g><div id=g1><div class=k id=g1k></div><div id=g1m style="height:10px;width:20px"></div></div><div class=s id=g2></div></div>
 <div class=r id=h style="height:50%;min-height:40px"><div id=h1><div class=k id=h1k></div></div><div class=s id=h2></div></div>
 <script>var named = Array.from(document.querySelectorAll('[id]'));</script>
 </body></html>"#;
@@ -123,6 +123,12 @@ TestCase {
 
     function test_min_height_row_is_definite() {
         check("h1k", 0, 40, 40, 20)
+    }
+    // An auto-high row's stretched item is definite once its line is sized
+    // (css-flexbox §9.4 step 11), and its children stay at its top.
+    function test_auto_row_items_are_definite_once_the_line_is_sized() {
+        check("g1k", 0, 0, 40, 15)
+        check("g1m", 0, 15, 20, 10)
     }
 
 }
