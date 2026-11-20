@@ -1961,8 +1961,8 @@ fn border_strips(styles: &[Box<ComputedStyle>]) -> Option<[bool; 4]> {
 /// one combination and not in another, which a single shape can't hold.
 enum Restacks {
     No,
-    /// The box rises in some combinations (`position: relative` at a
-    /// level over 0), and in the others not.
+    /// The box rises in some combinations (`rises_in_flow`), and in the
+    /// others not.
     Box,
     /// And the boxes in it: it is a stacking context in some combinations
     /// and not in others, which decides whether what it holds may rise past
@@ -1976,9 +1976,7 @@ fn restacks(styles: &[Box<ComputedStyle>]) -> Restacks {
     let gone = |s: &ComputedStyle| {
         s.display == Display::None || s.visibility == eldur_css::Visibility::Collapse
     };
-    let rises = |s: &ComputedStyle| {
-        s.position == eldur_css::Position::Relative && s.z_index.is_some_and(|z| z > 0)
-    };
+    let rises = super::lists::rises_in_flow;
     if styles.iter().any(|s| {
         s.z_index.is_some() != first.z_index.is_some()
             || s.position != first.position

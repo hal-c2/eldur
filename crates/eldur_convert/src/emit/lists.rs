@@ -836,6 +836,38 @@ pub(super) fn rises(style: &ComputedStyle) -> bool {
         || style.opacity < 1.0
 }
 
+/// Whether a block in flow can rise out of its block to its stop's column
+/// (`risen_host`) when an overlay before it went there: relative, at
+/// `auto` or a level not under 0. A sticky box sticks within its own block,
+/// which a frame as tall as the box would leave no room for.
+pub(super) fn rises_in_flow(style: &ComputedStyle) -> bool {
+    style.position == Position::Relative && style.z_index.is_none_or(|z| z >= 0)
+}
+
+/// Whether a box paints in its stop's positioned layer, or a column would
+/// send something it holds there: an overlay, or a block that rises in
+/// flow, through blocks that are no stop and clip nothing (`enter_stop`).
+/// Chromium paints those over the flow of every block before them, so an
+/// overlay before has to leave its block too, else that block's lift puts
+/// it over them.
+pub(super) fn paints_later(b: &LayoutBox<'_>) -> bool {
+    rises(&b.style) || holds_layer(b)
+}
+
+fn holds_layer(b: &LayoutBox<'_>) -> bool {
+    let style = &*b.style;
+    let keeps = b.kind == BoxKind::Block
+        && style.position == Position::Static
+        && style.z_index.is_none()
+        && !boxes::is_context_at_auto(style)
+        && style.overflow_x == eldur_css::Overflow::Visible
+        && style.overflow_y == eldur_css::Overflow::Visible;
+    keeps
+        && matches!(&b.content, Content::Blocks(kids) if kids.iter().any(|k| {
+            is_out_of_flow(&k.style) || rises_in_flow(&k.style) || holds_layer(k)
+        }))
+}
+
 /// The box a `position: absolute` or `fixed` descendant is placed against.
 pub(super) struct ContainingBlock {
     node: Option<NodeId>,

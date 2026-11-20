@@ -7,7 +7,7 @@
 //! that collapse through are dropped.
 
 use eldur_css::{
-    BoxSizing, Clear, ComputedStyle, Display, Float, Length, LengthAuto, Position, Size, TextAlign,
+    BoxSizing, Clear, ComputedStyle, Display, Float, Length, LengthAuto, Size, TextAlign,
     TextDecorationLine, Visibility,
 };
 use eldur_qml::{Member, Object, Value};
@@ -421,23 +421,29 @@ impl Emitter<'_, '_> {
         // go too when a box before them rises: else the stop's column
         // and the initial block would split what CSS orders as one layer.
         let mut others_rise = later_rises.clone();
+        // And a block after one that sent what it holds there: what rises
+        // in it paints over that, as it follows it in the positioned layer.
+        let mut after_sent = later_rises.clone();
         if stop.is_some() && !self.writes_z_index {
             let mut any = false;
             for (i, c) in children.iter().enumerate().rev() {
                 later_rises[i] = any;
-                any = any || super::lists::rises(&c.style);
+                any = any || super::lists::paints_later(c);
             }
             let mut any = false;
+            let mut sent = false;
             for (i, c) in children.iter().enumerate() {
                 others_rise[i] = any || later_rises[i];
-                any = any || super::lists::rises(&c.style);
+                after_sent[i] = sent;
+                any = any || super::lists::paints_later(c);
+                sent = sent || (later_rises[i] && super::lists::paints_later(c));
             }
         }
         let mut rest = children;
         while let Some(child) = rest.first() {
             if let Some(stop) = stop {
                 let i = children.len() - rest.len();
-                self.hoist_into = later_rises[i].then_some(stop);
+                self.hoist_into = (later_rises[i] || after_sent[i]).then_some(stop);
                 self.icb_hoist_into = others_rise[i].then_some(stop);
             }
             if is_out_of_flow(&child.style) {
@@ -545,10 +551,7 @@ impl Emitter<'_, '_> {
                 && !collapsed
                 && !child.node.is_some_and(|n| self.script_hides.contains(&n))
                 && !child.node.is_some_and(|n| self.restacks.contains(&n))
-                // A sticky box sticks within its own block, which a frame
-                // as tall as the box would leave no room for.
-                && child.style.position == Position::Relative
-                && child.style.z_index.is_some_and(|z| z > 0);
+                && super::lists::rises_in_flow(&child.style);
             self.rise_out = rise;
             let emitted = self.block(child, decoration);
             if emitted.collapse_through {

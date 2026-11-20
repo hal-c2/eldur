@@ -658,7 +658,10 @@ impl<'a, 'd> Emitter<'a, 'd> {
         let stop = page
             || ((boxes::is_containing_block(style) || layout_item) && style.z_index.is_some())
             || boxes::is_context_at_auto(style);
+        // A block that rises keeps its overlays: they paint over it, and
+        // its host goes to the stop's column after theirs.
         let keeps = !stop
+            && !self.rising
             && column_child
             && b.kind == BoxKind::Block
             && style.overflow_x == Overflow::Visible
