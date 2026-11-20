@@ -90,7 +90,8 @@ TestCase {
     readonly property var painted: ["b", "c", "d", "f", "i", "j", "l", "m", "o", "p", "t", "u", "w", "vd", "src", "mv", "vs", "rm", "gone", "vr",
         "c1", "o1", "c2", "o2", "c3", "o3", "hv", "o4", "fc", "o5", "c6", "o6", "c7", "o7", "e8", "o8", "c9", "o9", "c10", "d10", "o10", "n11",
         "k1", "v1", "k2", "v2", "k3", "v3", "k4", "v4", "k5", "m5", "v5",
-        "c1", "v1", "c2", "v2", "c3", "v3", "c4", "e4", "v4", "e5", "v5", "a6", "a7", "h8", "a8", "h9", "h10", "c11", "v11", "c12", "v12", "c13", "v13", "c14", "v14", "p15", "v15", "r16", "n16",
+        "c1", "v1", "c2", "v2", "c3", "v3", "c4", "e4", "v4", "e5", "v5", "a6", "a7", "h8", "a8", "h9", "h10", "c11", "v11", "c12", "v12", "c13", "v13", "c14", "v14", "p15", "v15",
+        "at", "rt", "nt",
         "p1", "p2", "r2", "a2",
         "b3", "b4", "da", "db", "k6", "n6", "v6",
         "g1", "g2", "mq", "oq", "pq", "ax", "ox", "bx", "rx", "fa", "ff", "fc", "fv"]
@@ -452,8 +453,6 @@ div { height: 40px; width: 200px }
 #p15 { height: 80px; overflow: hidden }
 #p15::after { content: ''; display: block; position: relative; z-index: 10; height: 20px; background: red }
 #v15 { height: 20px; margin-bottom: 20px; transform: translate(20px, -40px) }
-#b16 { height: auto }
-#r16 { position: relative; z-index: 1; background: red }
 </style></head><body>
 <div id=t1 class=tf><div id=c1 class=in></div></div><div id=v1 class=over></div>
 <div class=gap></div>
@@ -484,10 +483,8 @@ div { height: 40px; width: 200px }
 <div id=p14 class=rel><div id=c14 class=in></div></div><div id=v14 class=over></div>
 <div class=gap></div>
 <div id=p15><div id=c15 class="in up"></div></div><div id=v15 class=over></div>
-<div class=gap></div>
-<div id=b16><div id=r16></div><div id=n16></div></div>
 <script>
-var named = ['t1','c1','v1','t2','c2','v2','t3','c3','v3','p4','c4','e4','v4','p5','e5','f5','v5','h6','a6','v6','o7','h7','a7','v7','h8','a8','h9','h10','p11','c11','v11','p12','c12','v12','a13','c13','v13','p14','c14','v14','p15','c15','v15','b16','r16','n16'].map(function (id) { return document.getElementById(id); });
+var named = ['t1','c1','v1','t2','c2','v2','t3','c3','v3','p4','c4','e4','v4','p5','e5','f5','v5','h6','a6','v6','o7','h7','a7','v7','h8','a8','h9','h10','p11','c11','v11','p12','c12','v12','a13','c13','v13','p14','c14','v14','p15','c15','v15'].map(function (id) { return document.getElementById(id); });
 // A box raised inside a transformed box at `auto`, which keeps it in; a
 // box that lifted its block hidden.
 document.getElementById('c1').style.zIndex = '10';
@@ -508,9 +505,7 @@ document.getElementById('p14').classList.remove('hide');
 // A kid that lifted its block lowered: the block's `::after` still lifts
 // it. `#v15` meets only the `::after`: a block that clips holds what it
 // lifts, and one item has one level, so its own background goes up too.
-// And a raised block made taller moves what follows it.
 document.getElementById('c15').style.zIndex = '-1';
-document.getElementById('r16').style.height = '80px';
 </script></body></html>"#;
 
 /// Chromium's fronts.
@@ -542,8 +537,6 @@ const CONTEXTS_TEST: &str = r##"
         compare(front(page, 100, 1610), "p15", "its ::after lifts the block over the box after it")
         compare(front(page, 210, 1610), "v15")
         compare(front(page, 100, 1630), "p15")
-        compare(front(page, 100, 1780), "r16", "a raised block made taller")
-        compare(front(page, 100, 1820), "n16", "moves what follows it")
     }
 }
 }
@@ -579,8 +572,6 @@ const CONTEXTS_UNSCRIPTED: &str = r##"
         compare(front(page, 100, 1610), "p15")
         compare(front(page, 210, 1610), "v15")
         compare(front(page, 100, 1630), "p15")
-        compare(front(page, 100, 1780), "n16")
-        compare(front(page, 100, 1820), "")
     }
 }
 }
@@ -721,6 +712,71 @@ fn the_contexts_rules_levels_match_chromium() {
         &unscripted(CONTEXTS, "// A box raised"),
         &with_test(CONTEXTS_UNSCRIPTED),
         "contexts-unscripted",
+        false,
+    );
+}
+
+/// A raised block a script makes taller (`#rt`), risen to its stop's column
+/// after the hoisted `#at`: what follows it in its block moves down, and it
+/// stays over that. A `height` write opens the page, so the runtime lays the
+/// block out; on its own page, so CONTEXTS stays the converter's.
+const TALLER: &str = r#"<!doctype html><html><head><style>
+body { margin: 0 }
+div { height: 40px; width: 200px }
+.gap { height: 40px }
+.ab { position: absolute; left: 0; top: 0; width: 50px; background: green }
+#ht { position: relative; margin-left: 40px }
+#bt { height: auto }
+#rt { position: relative; z-index: 1; background: red }
+</style></head><body>
+<div id=ht><div id=at class=ab></div></div>
+<div class=gap></div>
+<div id=bt><div id=rt></div><div id=nt></div></div>
+<script>
+var named = ['ht','at','bt','rt','nt'].map(function (id) { return document.getElementById(id); });
+// A raised block made taller moves what follows it.
+document.getElementById('rt').style.height = '80px';
+</script></body></html>"#;
+
+/// Chromium's fronts.
+const TALLER_TEST: &str = r##"
+    function test_levels_follow_what_the_boxes_hold() {
+        compare(front(page, 60, 20), "at")
+        compare(front(page, 100, 100), "rt")
+        compare(front(page, 100, 140), "rt", "a raised block made taller")
+        compare(front(page, 100, 180), "nt", "moves what follows it")
+        compare(front(page, 100, 220), "")
+    }
+}
+}
+"##;
+
+/// With no script, Chromium's fronts are the block at its own height.
+const TALLER_UNSCRIPTED: &str = r##"
+    function test_levels_follow_what_the_boxes_hold() {
+        compare(front(page, 60, 20), "at")
+        compare(front(page, 100, 100), "rt")
+        compare(front(page, 100, 140), "nt")
+        compare(front(page, 100, 180), "")
+    }
+}
+}
+"##;
+
+#[test]
+fn a_raised_block_a_script_makes_taller_moves_what_follows_it() {
+    let out = convert_str(TALLER, &Options::default());
+    let qml = out.main_qml().expect("Main.qml");
+    assert!(qml.contains("eldurRisen: true"), "#rt does not rise\n{qml}");
+    run(TALLER, &with_test(TALLER_TEST), "taller", false);
+}
+
+#[test]
+fn a_raised_blocks_rules_height_matches_chromium() {
+    run(
+        &unscripted(TALLER, "// A raised block made"),
+        &with_test(TALLER_UNSCRIPTED),
+        "taller-unscripted",
         false,
     );
 }
