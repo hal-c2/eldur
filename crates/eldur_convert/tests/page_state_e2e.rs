@@ -1072,6 +1072,10 @@ over.addEventListener("after", function(e) {
   L("history", history.length, JSON.stringify(history.state), location.hash || "-");
   history.back();
   L("back", history.length, JSON.stringify(history.state), location.hash || "-");
+  // Forward is on the covered page's entry again, and the page on top keeps
+  // its own address.
+  history.forward();
+  L("forward", history.length, JSON.stringify(history.state), location.hash || "-");
   // A value whose lookup throws in a proxy's trap: the reaction before the
   // handler's still lets the handler's be queued.
   var proxied = new Promise(function(settle) { window.settleProxied = settle; });
@@ -1248,6 +1252,7 @@ fn a_covered_pages_own_callbacks_see_its_document() {
         "CD after own no-under own-body none-made",
         r##"CD history 2 {"under":1} -"##,
         "CD back 2 null -",
+        r##"CD forward 2 {"under":1} -"##,
         "CD proxied object",
         "CD chained settled",
         "CD intervals 0",

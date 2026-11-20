@@ -832,7 +832,7 @@ function init(rootItem, baseUrl, documentUrl) {
         _updateLocationFromHref(docUrl, false);
         // The entry the page opened on is at its address: `back()` to it goes there.
         var opened = _historyEntries[_historyIndex];
-        _historyEntries[_historyIndex] = { state: opened.state, url: _locState.href };
+        _historyEntries[_historyIndex] = { state: opened.state, url: _locState.href, page: _root };
     }
     // The layer belongs to the page it was made on, and may have gone with it.
     _in = _inLayers.get(_root) || null;
@@ -1307,7 +1307,7 @@ function _pageCacheSave() {
         explicitBaseUrl: _explicitBaseUrl, explicitDocumentUrl: _explicitDocumentUrl, loc: loc,
         // The history is shared, but the entry the page is on holds its
         // address, which the next page's `init` writes over.
-        entryIndex: _historyIndex, entryUrl: _historyEntries[_historyIndex].url,
+        entryIndex: _historyIndex, entryUrl: _historyEntries[_historyIndex].url, entryPage: _root,
         warnedMissingTemplates: _warnedMissingTemplates, componentProbeCache: _componentProbeCache,
         pseudoRules: _pseudoRules, pseudoShown: _pseudoShown, counterRules: _counterRules,
         tableHosts: _tableHosts, pseudoBoxItems: _pseudoBoxItems, pseudoBoxKnown: _pseudoBoxKnown,
@@ -1332,7 +1332,7 @@ function _pageCacheLoad(c, keepHistory) {
     }
     var entry = keepHistory ? undefined : _historyEntries[c.entryIndex];
     if (entry) {
-        _historyEntries[c.entryIndex] = { state: entry.state, url: c.entryUrl };
+        _historyEntries[c.entryIndex] = { state: entry.state, url: c.entryUrl, page: c.entryPage };
         // And the page is on that entry again: what the gone page pushed stays
         // after it, to go forward to, but `state` and `back()` are this page's.
         _historyIndex = c.entryIndex;
@@ -1433,6 +1433,7 @@ function _asPage(page, fn, self, args) {
             if (_historyEntries[_historyIndex] === entryWas) {
                 mine.entryIndex = kept.entryIndex;
                 mine.entryUrl = kept.entryUrl;
+                mine.entryPage = kept.entryPage;
             }
             _pageCaches.set(page, mine);
             var back = _pageCaches.get(top);
@@ -2402,13 +2403,26 @@ var location = {
 var _historyEntries = [{ state: null, url: "" }];
 var _historyIndex = 0;
 
+// Each entry is the page's that made it, as a frame's in a browser's one
+// history: the address a page is at is that of its latest entry up to the
+// one the history is on, never another page's.
+function _historyUrlFor(page, upTo) {
+    for (var i = upTo; i >= 0; i--) {
+        var e = _historyEntries[i];
+        if (e && e.url && e.page === page) {
+            return e.url;
+        }
+    }
+    return "";
+}
+
 var history = {
     get length() { return _historyEntries.length; },
     get state() { return _historyEntries[_historyIndex].state; },
     pushState: function(state, _unused, url) {
         var resolvedUrl = (url !== undefined && url !== null) ? _resolveUrl(String(url)) : _locState.href;
         _historyEntries = _historyEntries.slice(0, _historyIndex + 1);
-        _historyEntries.push({ state: state, url: resolvedUrl });
+        _historyEntries.push({ state: state, url: resolvedUrl, page: _root });
         _historyIndex = _historyEntries.length - 1;
         if (url !== undefined && url !== null) {
             _updateLocationFromHref(resolvedUrl, false);
@@ -2416,7 +2430,7 @@ var history = {
     },
     replaceState: function(state, _unused, url) {
         var resolvedUrl = (url !== undefined && url !== null) ? _resolveUrl(String(url)) : _locState.href;
-        _historyEntries[_historyIndex] = { state: state, url: resolvedUrl };
+        _historyEntries[_historyIndex] = { state: state, url: resolvedUrl, page: _root };
         if (url !== undefined && url !== null) {
             _updateLocationFromHref(resolvedUrl, false);
         }
@@ -2437,8 +2451,9 @@ var history = {
             _historyIndex = nextIdx;
         }
         var current = _historyEntries[_historyIndex];
-        if (current && current.url) {
-            _updateLocationFromHref(current.url, false);
+        var url = _historyUrlFor(_root, _historyIndex);
+        if (url) {
+            _updateLocationFromHref(url, false);
         }
         if (_root) {
             var popEv = Event("popstate", { bubbles: false, cancelable: false });
