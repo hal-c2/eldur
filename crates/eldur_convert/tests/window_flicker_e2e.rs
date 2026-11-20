@@ -9,27 +9,31 @@
 //!
 //! A script that moves the focus while the window is away moves the page's
 //! active element at once. What it moved to hears of the focus when the
-//! window is back, and what had it hears no second blur.
+//! window is back, and what had it hears no second blur. A field it moved
+//! from hears its `change` then, and a link in a line moves as any element.
 
 mod support;
 
 use eldur_convert::{Input, NoResources, Options, RootKind};
 
-const PAGE: &str = r#"<!doctype html><html><head><meta charset="utf-8"></head><body>
+const PAGE: &str = r##"<!doctype html><html><head><meta charset="utf-8"></head><body>
 <button id="b">b</button>
 <button id="c">c</button>
+<input id="t">
+<p>a line with <a href="#l" id="l">a link</a> in it</p>
 <script>
 function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
-["b", "c"].forEach(function(id) {
+["b", "c", "t", "l"].forEach(function(id) {
   var el = document.getElementById(id);
   ["focus", "focusin", "blur", "focusout"].forEach(function(type) {
     el.addEventListener(type, function() { L(id, type, "has", document.hasFocus()); });
   });
 });
+document.getElementById("t").addEventListener("change", function() { L("t change has", document.hasFocus()); });
 window.addEventListener("blur", function() { L("window blur"); });
 window.addEventListener("focus", function() { L("window focus"); });
 </script>
-</body></html>"#;
+</body></html>"##;
 
 const TEST: &str = r##"
 import QtQuick
@@ -94,6 +98,44 @@ TestCase {
         console.log("LC done")
     }
 
+    function test_field_left_by_a_script_while_away() {
+        const component = Qt.createComponent("Main.qml")
+        verify(component.status === Component.Ready, component.errorString())
+        const page = createTemporaryObject(component, host, { width: 800, height: 600 })
+        waitForRendering(page)
+        mouseClick(element(page, "t"))
+        wait(50)
+        keyClick(Qt.Key_X)
+        wait(50)
+        const layer = Eldur._in
+        verify(layer && layer.focusProbe, "no input layer")
+        const real = layer.focusProbe
+        verify(real.held, "nothing holds the focus")
+        const c = element(page, "c")
+        const win = { active: true }
+        const probe = { held: real.held, active: true, window: win }
+        layer.focusProbe = probe
+        function report(active, held) {
+            probe.held = held
+            win.active = active
+            probe.active = active
+            Eldur._inFocusChanged()
+        }
+        console.log("LC away")
+        report(false, null)
+        console.log("LC script focuses c")
+        Eldur.document.getElementById("c").focus()
+        console.log("LC active " + Eldur.document.activeElement.id)
+        wait(50)
+        console.log("LC Qt reports c while away")
+        report(false, c)
+        console.log("LC back")
+        report(true, c)
+        wait(100)
+        console.log("LC active " + Eldur.document.activeElement.id)
+        layer.focusProbe = real
+        console.log("LC done")
+    }
     function test_focus_moved_by_a_script_while_away() {
         const component = Qt.createComponent("Main.qml")
         verify(component.status === Component.Ready, component.errorString())
@@ -130,6 +172,43 @@ TestCase {
         layer.focusProbe = real
         console.log("LC done")
     }
+    function test_link_in_a_line_focused_by_a_script_while_away() {
+        const component = Qt.createComponent("Main.qml")
+        verify(component.status === Component.Ready, component.errorString())
+        const page = createTemporaryObject(component, host, { width: 800, height: 600 })
+        waitForRendering(page)
+        mouseClick(element(page, "b"))
+        wait(50)
+        const layer = Eldur._in
+        verify(layer && layer.focusProbe, "no input layer")
+        const real = layer.focusProbe
+        verify(real.held, "nothing holds the focus")
+        const c = Eldur._inInlineHolder(Eldur._unwrap(Eldur.document.getElementById("l")))
+        verify(c, "no holder for the link")
+        const win = { active: true }
+        const probe = { held: real.held, active: true, window: win }
+        layer.focusProbe = probe
+        function report(active, held) {
+            probe.held = held
+            win.active = active
+            probe.active = active
+            Eldur._inFocusChanged()
+        }
+        console.log("LC away")
+        report(false, null)
+        console.log("LC script focuses l")
+        Eldur.document.getElementById("l").focus()
+        console.log("LC active " + Eldur.document.activeElement.id)
+        wait(50)
+        console.log("LC Qt reports l while away")
+        report(false, c)
+        console.log("LC back")
+        report(true, c)
+        wait(100)
+        console.log("LC active " + Eldur.document.activeElement.id)
+        layer.focusProbe = real
+        console.log("LC done")
+    }
 }
 }
 "##;
@@ -148,6 +227,22 @@ const WANT: &[&str] = &[
     "LC b focus has true",
     "LC b focusin has true",
     "LC done",
+    "LC t focus has true",
+    "LC t focusin has true",
+    "LC away",
+    "LC t blur has false",
+    "LC t focusout has false",
+    "LC window blur",
+    "LC script focuses c",
+    "LC t change has false",
+    "LC active c",
+    "LC Qt reports c while away",
+    "LC back",
+    "LC window focus",
+    "LC c focus has true",
+    "LC c focusin has true",
+    "LC active c",
+    "LC done",
     "LC b focus has true",
     "LC b focusin has true",
     "LC away",
@@ -162,6 +257,21 @@ const WANT: &[&str] = &[
     "LC c focus has true",
     "LC c focusin has true",
     "LC active c",
+    "LC done",
+    "LC b focus has true",
+    "LC b focusin has true",
+    "LC away",
+    "LC b blur has false",
+    "LC b focusout has false",
+    "LC window blur",
+    "LC script focuses l",
+    "LC active l",
+    "LC Qt reports l while away",
+    "LC back",
+    "LC window focus",
+    "LC l focus has true",
+    "LC l focusin has true",
+    "LC active l",
     "LC done",
 ];
 
