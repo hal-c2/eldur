@@ -3556,3 +3556,57 @@ fn an_initializer_that_cannot_throw_stays_hoisted() {
     );
     assert!(js.contains("const __eldur_m0_big = 2n * 3n;"), "{js}");
 }
+
+/// Whatever runs at load, inside `__eldur_init` or a module's run function,
+/// only assigns: each top-level binding is declared at the top of page.js, so
+/// it is not local to the function. The rewrite asserts this in debug builds;
+/// this page has every kind of top-level declaration, run where it can throw.
+#[test]
+fn no_declaration_is_local_to_the_code_run_at_load() {
+    let resolver = FakeResolver::default();
+    let decls = "var v = f();\nlet l = f();\nconst c = f();\nconst { d } = f();\nlet [e] = f();\nvar { g } = f(), [h] = f();\nfunction fn1() {}\nfunction* gen() {}\nasync function af() {}\nclass K { static s = f(); }\nlet u;\nfor (let i = 0; i < 1; i++) { const inner = i; }\nif (v) { let scoped = 1; }\n";
+    let module = module_script(
+        "m.js",
+        &format!(
+            "function f() {{ return [1]; }}\n{decls}export const ex = f();\nexport let el = f();\nexport class EK {{ static s = f(); }}\nexport default f();\n"
+        ),
+    );
+    let lazy = module_script(
+        "lazy.js",
+        &format!("function f() {{ return [1]; }}\n{decls}export const lx = f();\n"),
+    );
+    let importer = module_script("i.js", "import(\"./lazy.js\");\n");
+    let classic = ScriptInput {
+        source: format!("function f() {{ return [1]; }}\n{decls}"),
+        name: "classic.js".to_string(),
+        kind: ScriptKind::Classic,
+        line_offset: 1,
+        imports: Vec::new(),
+    };
+    let out = run_rewrite(&[module, importer, lazy, classic], &resolver);
+    let js = &out.page_js;
+    for name in ["__eldur_run_m0", "__eldur_init"] {
+        let at = js
+            .find(&format!("function {name}("))
+            .unwrap_or_else(|| panic!("{name}:\n{js}"));
+        let body = &js[at..at + js[at..].find("\n}\n").expect("end")];
+        for line in body.lines() {
+            let t = line.trim_start();
+            let depth = line.len() - t.len();
+            // The function's own statements, and those of its `try`.
+            if depth == 4 || depth == 8 {
+                for kw in [
+                    "var ",
+                    "let ",
+                    "const ",
+                    "function ",
+                    "function*",
+                    "async function",
+                    "class ",
+                ] {
+                    assert!(!t.starts_with(kw), "{name} declares `{t}`:\n{js}");
+                }
+            }
+        }
+    }
+}
