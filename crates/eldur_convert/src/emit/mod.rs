@@ -1681,6 +1681,8 @@ fn auto_height_is_zero(k: &LayoutBox<'_>) -> bool {
         eldur_css::LengthAuto::Length(l) => l.as_px() == Some(0.0),
     };
     has_percent_height(k)
+        // A replaced element is as high as its picture or control.
+        && k.kind != BoxKind::Replaced
         && matches!(k.content, Content::Empty)
         && s.padding.top.as_px() == Some(0.0)
         && s.padding.bottom.as_px() == Some(0.0)
