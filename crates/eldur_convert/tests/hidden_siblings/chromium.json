@@ -402,6 +402,145 @@
    }
   ]
  },
+ "nested initial": {
+  "markers": [
+   "1.",
+   "2.",
+   "3."
+  ],
+  "tops": [
+   {
+    "text": "a",
+    "shown": true,
+    "top": 8
+   },
+   {
+    "text": "y",
+    "shown": false,
+    "top": 0
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 28
+   },
+   {
+    "text": "x",
+    "shown": false,
+    "top": 0
+   },
+   {
+    "text": "c",
+    "shown": true,
+    "top": 48
+   }
+  ]
+ },
+ "nested hover": {
+  "markers": [
+   "1.",
+   "2.",
+   "3.",
+   "4.",
+   "5."
+  ],
+  "tops": [
+   {
+    "text": "a",
+    "shown": true,
+    "top": 8
+   },
+   {
+    "text": "y",
+    "shown": true,
+    "top": 28
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 48
+   },
+   {
+    "text": "x",
+    "shown": true,
+    "top": 68
+   },
+   {
+    "text": "c",
+    "shown": true,
+    "top": 88
+   }
+  ]
+ },
+ "nested over b": {
+  "markers": [
+   "1.",
+   "2.",
+   "3.",
+   "4."
+  ],
+  "tops": [
+   {
+    "text": "a",
+    "shown": true,
+    "top": 8
+   },
+   {
+    "text": "y",
+    "shown": false,
+    "top": 0
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 28
+   },
+   {
+    "text": "x",
+    "shown": true,
+    "top": 48
+   },
+   {
+    "text": "c",
+    "shown": true,
+    "top": 68
+   }
+  ]
+ },
+ "nested left": {
+  "markers": [
+   "1.",
+   "2.",
+   "3."
+  ],
+  "tops": [
+   {
+    "text": "a",
+    "shown": true,
+    "top": 8
+   },
+   {
+    "text": "y",
+    "shown": false,
+    "top": 0
+   },
+   {
+    "text": "b",
+    "shown": true,
+    "top": 28
+   },
+   {
+    "text": "x",
+    "shown": false,
+    "top": 0
+   },
+   {
+    "text": "c",
+    "shown": true,
+    "top": 48
+   }
+  ]
+ },
  "margin initial": {
   "markers": [],
   "tops": [

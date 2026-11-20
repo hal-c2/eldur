@@ -8,6 +8,8 @@
 //   `::before` show, and shows its own, only while shown;
 // - `joint.html`: two items shown by different states, so the items after
 //   both are numbered by how many of the two show at once;
+// - `nested.html`: the same where one of the two is a counted `<p>` inside a
+//   hidden block, which hides and shows it with itself;
 // - `margin.html`: a block whose margins collapse with the next one's only
 //   while shown.
 //

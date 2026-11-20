@@ -19,7 +19,8 @@ use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 use eldur_css::{
     BorderCollapse, ComputedStyle, Condition, ConditionalStyles, Display, ElementConditional,
-    LengthPercentage, PseudoState, Rgba, Shadow, Structural, StyleMap, Stylesheet, TransformFn,
+    LengthPercentage, ListStyleType, PseudoState, Rgba, Shadow, Structural, StyleMap, Stylesheet,
+    TransformFn,
 };
 use eldur_dom::{Document, Element, NodeId};
 use eldur_js::ElementRef;
@@ -37,6 +38,8 @@ use crate::scripts::Scripts;
 
 /// More worlds than this are left out (each is a full emission).
 const MAX_WORLDS: usize = 512;
+/// The most conditions one binding tests: 2^12 leaves.
+const MAX_ORDER: usize = 12;
 /// A container scripts change with more element children than this keeps
 /// its children's document positions (each position is a condition).
 const MAX_POSITIONED: usize = 32;
@@ -1376,56 +1379,88 @@ impl Dynamic<'_, '_> {
     /// Every combination of flipped conditions some element depends on,
     /// the document's (none flipped) first.
     ///
-    /// Hideable elements that number or count are one group as well: a
+    /// Hideable elements that number or count make groups as well: a
     /// sibling's marker or `counter()` depends on how many of them show at
-    /// once, which no single element's own combinations cover.
+    /// once, which no single element's own combinations cover. Each
+    /// numbered list is a group, and the page's counters one more.
     fn worlds(
         &mut self,
         excluded: &BTreeSet<u16>,
         shown: &HashMap<NodeId, Display>,
     ) -> Vec<Vec<u16>> {
-        let mut set: BTreeSet<(usize, Vec<u16>)> = BTreeSet::new();
-        set.insert((0, Vec::new()));
-        let mut counting: BTreeSet<u16> = BTreeSet::new();
-        for e in &self.found.elements {
-            if shown.contains_key(&e.node)
-                && e.by_mask.iter().any(|s| {
-                    s.display == Display::ListItem
-                        || !s.counter_reset.is_empty()
-                        || !s.counter_increment.is_empty()
-                        || !s.counter_set.is_empty()
-                })
-            {
-                counting.extend(e.depends_on.iter().filter(|c| !excluded.contains(c)));
-            }
-        }
-        // 2^9 is MAX_WORLDS; more would be cut anyway.
-        if counting.len() > 9 {
-            self.diags.warning(
-                "css",
-                None,
-                format!(
-                    "{} classes and states show or hide numbered elements; a marker or counter is right only while one of them differs from the document",
-                    counting.len()
-                ),
-            );
-        }
-        let joint = (counting.len() > 1 && counting.len() <= 9)
-            .then(|| counting.into_iter().collect::<Vec<u16>>());
-        for deps in self
+        let counts = |s: &ComputedStyle| {
+            !s.counter_reset.is_empty()
+                || !s.counter_increment.is_empty()
+                || !s.counter_set.is_empty()
+        };
+        let numbered = |s: &ComputedStyle| {
+            s.display == Display::ListItem
+                && !matches!(
+                    s.list_style_type,
+                    ListStyleType::Disc
+                        | ListStyleType::Circle
+                        | ListStyleType::Square
+                        | ListStyleType::DisclosureClosed
+                        | ListStyleType::DisclosureOpen
+                        | ListStyleType::None
+                )
+        };
+        let by_node: HashMap<NodeId, &[Box<ComputedStyle>]> = self
             .found
             .elements
             .iter()
-            .map(|e| {
-                e.depends_on
-                    .iter()
-                    .copied()
-                    .filter(|c| !excluded.contains(c))
-                    .collect::<Vec<u16>>()
-            })
-            .chain(joint)
-        {
-            for mask in 0..1usize << deps.len() {
+            .map(|e| (e.node, e.by_mask.as_slice()))
+            .collect();
+        let doc = self.cx.doc;
+        let styles = self.cx.styles;
+        // A list item's number counts only its siblings, so each list is a
+        // group of its own, and only when its markers show numbers. A
+        // counter is page-wide: one group, which takes in the blocks that
+        // hide a counting element with themselves too.
+        let mut groups: BTreeMap<Option<usize>, BTreeSet<u16>> = BTreeMap::new();
+        for e in &self.found.elements {
+            let Some(&display) = shown.get(&e.node) else {
+                continue;
+            };
+            let deps = e
+                .depends_on
+                .iter()
+                .copied()
+                .filter(|c| !excluded.contains(c));
+            if doc.descendants(e.node).any(|d| {
+                styles.computed(d).is_some_and(|s| counts(&s.style))
+                    || by_node.get(&d).is_some_and(|m| m.iter().any(|s| counts(s)))
+            }) {
+                groups.entry(None).or_default().extend(deps.clone());
+            }
+            if display == Display::ListItem
+                && let Some(list) = doc.parent_element(e.node)
+                && (e.by_mask.iter().any(|s| numbered(s))
+                    || doc
+                        .children(list)
+                        .any(|c| styles.computed(c).is_some_and(|s| numbered(&s.style))))
+            {
+                groups.entry(Some(list.index())).or_default().extend(deps);
+            }
+        }
+        let mut joint: Vec<Vec<u16>> = Vec::new();
+        for group in groups.into_values().filter(|g| g.len() > 1) {
+            // 2^9 is MAX_WORLDS; more would be cut anyway.
+            if group.len() > 9 {
+                self.diags.warning(
+                    "css",
+                    None,
+                    format!(
+                        "{} classes and states show or hide numbered elements; a marker or counter is right only while one of them differs from the document",
+                        group.len()
+                    ),
+                );
+            } else {
+                joint.push(group.into_iter().collect());
+            }
+        }
+        fn subsets(deps: &[u16]) -> impl Iterator<Item = (usize, Vec<u16>)> + '_ {
+            (0..1usize << deps.len()).map(move |mask| {
                 let mut w: Vec<u16> = deps
                     .iter()
                     .enumerate()
@@ -1433,20 +1468,41 @@ impl Dynamic<'_, '_> {
                     .map(|(_, c)| *c)
                     .collect();
                 w.sort_unstable();
-                set.insert((w.len(), w));
-            }
+                (w.len(), w)
+            })
         }
-        if set.len() > MAX_WORLDS {
+        // The joint groups' worlds come first, after the document's, so the
+        // cut below drops one only when the groups alone are too many.
+        let mut first: BTreeSet<(usize, Vec<u16>)> = BTreeSet::from([(0, Vec::new())]);
+        for j in &joint {
+            first.extend(subsets(j));
+        }
+        let mut rest: BTreeSet<(usize, Vec<u16>)> = BTreeSet::new();
+        for e in &self.found.elements {
+            let deps: Vec<u16> = e
+                .depends_on
+                .iter()
+                .copied()
+                .filter(|c| !excluded.contains(c))
+                .collect();
+            rest.extend(subsets(&deps).filter(|w| !first.contains(w)));
+        }
+        let total = first.len() + rest.len();
+        if total > MAX_WORLDS {
             self.diags.warning(
                 "css",
                 None,
                 format!(
-                    "classes and states combine in {} ways; only {MAX_WORLDS} are converted",
-                    set.len()
+                    "classes and states combine in {total} ways; only {MAX_WORLDS} are converted"
                 ),
             );
         }
-        set.into_iter().take(MAX_WORLDS).map(|(_, w)| w).collect()
+        first
+            .into_iter()
+            .chain(rest)
+            .take(MAX_WORLDS)
+            .map(|(_, w)| w)
+            .collect()
     }
 
     fn emit_world(
@@ -1651,6 +1707,19 @@ impl Dynamic<'_, '_> {
                 }
             }
         };
+        // Each leaf is one combination of `order`; past MAX_ORDER the
+        // binding would be larger than the worlds it was read from.
+        if order.len() > MAX_ORDER {
+            self.diags.warning(
+                "css",
+                line,
+                format!(
+                    "{prop} depends on {} classes and states at once; it keeps the document's value",
+                    order.len()
+                ),
+            );
+            return None;
+        }
         let mut leaves: HashMap<Vec<u16>, Option<String>> = HashMap::new();
         for mask in 0..1usize << order.len() {
             let mut flipped: Vec<u16> = order
