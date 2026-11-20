@@ -18,6 +18,7 @@ const CHROMIUM: &str = include_str!("click_defaults/chromium.json");
 const TEST: &str = r##"
 import QtQuick
 import QtTest
+import "eldur_runtime.js" as Eldur
 
 Item {
     id: host
@@ -35,10 +36,11 @@ TestCase {
         const a = createTemporaryObject(component, host, { width: 800, height: 600 })
         waitForRendering(a)
         a.forceActiveFocus()
-        const at = { a: a, next: null }
+        const at = { a: a, next: null, layers: [Eldur._in] }
         a.titleChanged.connect(function() {
             if (a.title === "Next" && !at.next) {
                 at.next = createTemporaryObject(Qt.createComponent("Next.qml"), host, { width: 800, height: 600 })
+                at.layers.push(Eldur._in)
             }
         })
         return at
@@ -65,17 +67,22 @@ TestCase {
         return e.mapToItem(host, e.width / 2, e.height / 2)
     }
 
+    // Whether every click a release queued on either page has run: its
+    // defaults and dblclick run inside it, so the press is done.
+    function settled(at) {
+        return at.layers.every(function(layer) { return layer.later.length === 0 })
+    }
+
     // A double click as a person makes one: what the first press's release
     // queued has run when the second comes, as it has in a browser.
-    function twice(p) {
+    function twice(at, p) {
         mouseClick(host, p.x, p.y)
-        wait(20)
+        tryVerify(function() { return settled(at) }, 1000, "the first press's click never ran")
         mouseClick(host, p.x, p.y)
     }
 
     function finish(at) {
-        wait(200)
-        verify(at.next !== null, "A was never swapped out")
+        tryVerify(function() { return at.next !== null && settled(at) }, 1000, "A was never swapped out")
     }
 
     function test_1_label_in_a_link() {
@@ -90,7 +97,7 @@ TestCase {
         const at = pages()
         console.log("LC -- double click whose second press swaps")
         const p = middle(at.a, "lab2")
-        twice(p)
+        twice(at, p)
         finish(at)
     }
 
@@ -98,7 +105,15 @@ TestCase {
         const at = pages()
         console.log("LC -- double click whose first press swaps")
         const p = middle(at.a, "lab3")
-        twice(p)
+        twice(at, p)
+        finish(at)
+    }
+
+    function test_4_double_click_whose_second_press_swaps_from_a_promise() {
+        const at = pages()
+        console.log("LC -- double click whose second press swaps from a promise")
+        const p = middle(at.a, "lab4")
+        twice(at, p)
         finish(at)
     }
 }

@@ -17414,10 +17414,12 @@ function _inPointedOn(page) {
         if (_pageGone() || _root !== page || !_in) {
             return;
         }
-        var layer = _in;
         // Nothing the mouse does overtakes the click of the release before it.
+        // That click may make another page the document, even one that hands
+        // it back to this page before it ends: the event is none of either's.
+        var own = _inStillOwn();
         _inFlushLater();
-        if (_in === layer) {
+        if (own()) {
             _inPointed(scene, buttons, modifiers);
         }
     };
@@ -17735,18 +17737,25 @@ function _inClickOn(target, bit, button, count, scene, mods, moved) {
         return;
     }
     var ev = _inClickEvent(target, scene, mods, count);
-    // A user's click: its promises run after each listener, as a press's do.
-    // One of them may make another page the document, which the rest of this
-    // click is none of.
+    // A user's click: its promises run after each listener, as a press's do,
+    // the listeners of its defaults and its dblclick too. One of them may make
+    // another page the document, which the rest of this click is none of.
     var native = _micro.native;
     _micro.native = true;
+    try {
+        _inClickRun(target, ev, defaults, scene, mods, count);
+    } finally {
+        _micro.native = native;
+    }
+}
+
+function _inClickRun(target, ev, defaults, scene, mods, count) {
     var own = _inStillOwn();
     if (typeof target.clicked === "function") {
         _clickedControlWith(target, ev, own);
     } else {
         _dispatchDynamic(target, "click", ev);
     }
-    _micro.native = native;
     if (!own()) {
         return;
     }

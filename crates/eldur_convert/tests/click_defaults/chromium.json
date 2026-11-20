@@ -31,5 +31,17 @@
    "LC Next click box3 2",
    "LC Next dblclick lab3 2"
   ]
+ },
+ {
+  "name": "double click whose second press swaps from a promise",
+  "log": [
+   "LC A mousedown lab4 1",
+   "LC A mouseup lab4 1",
+   "LC A click lab4 1",
+   "LC A click box4 1",
+   "LC A mousedown lab4 2",
+   "LC A mouseup lab4 2",
+   "LC A click lab4 2"
+  ]
  }
 ]

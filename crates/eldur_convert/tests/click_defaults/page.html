@@ -11,6 +11,8 @@ input { display: block; margin: 0 }
 <input type="checkbox" id="box2">
 <label id="lab3" for="box3">first</label>
 <input type="checkbox" id="box3">
+<label id="lab4" for="box4">later</label>
+<input type="checkbox" id="box4">
 <script>
 // The host makes page Next when this one's title says so.
 var name = document.title;
@@ -29,5 +31,11 @@ document.getElementById("box2").addEventListener("click", function() { if (name 
 document.getElementById("lab2").addEventListener("dblclick", function(e) { L("lab2 own dblclick", e.detail); });
 // And on its first: the second press is the new page's.
 document.getElementById("box3").addEventListener("click", function() { if (name === "A") document.title = "Next"; });
+// A swap that waits for the microtasks after the box's listener is still in
+// the press: the dblclick after it is neither page's.
+var late = 0;
+document.getElementById("box4").addEventListener("click", function() {
+  if (name === "A" && ++late === 2) Promise.resolve().then(function() { document.title = "Next"; });
+});
 </script>
 </body></html>

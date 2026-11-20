@@ -43,6 +43,7 @@ const STEPS = [
   { name: "label in a link", click: "#lab" },
   { name: "double click whose second press swaps", dbl: "#lab2" },
   { name: "double click whose first press swaps", dbl: "#lab3" },
+  { name: "double click whose second press swaps from a promise", dbl: "#lab4" },
 ];
 
 const { chromium } = await loadPlaywright();
