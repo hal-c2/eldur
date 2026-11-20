@@ -6501,7 +6501,27 @@ var _zUnseen = [];
 function _zUnseenAdd(raw) {
     if (raw.visible === false && _zUnseen.indexOf(raw) === -1) {
         _zUnseen.push(raw);
+        _zSeenWhenShown(raw);
     }
+}
+
+// What shows it may be a binding (a class's `visible`), which calls no
+// `_zShowing`: Qt tells each item when its ancestors show it, so it waits
+// for that, once.
+function _zSeenWhenShown(raw) {
+    var meta = _meta(raw);
+    if (meta.zSeenWait) {
+        return;
+    }
+    meta.zSeenWait = function() {
+        if (raw.visible !== true) {
+            return;
+        }
+        raw.visibleChanged.disconnect(meta.zSeenWait);
+        meta.zSeenWait = null;
+        _zSeen();
+    };
+    raw.visibleChanged.connect(meta.zSeenWait);
 }
 
 function _zSeen() {
