@@ -1,7 +1,7 @@
 <!doctype html><html><head><meta charset="utf-8"><title>NAME</title>
 <style>
 body { margin: 0; font: 16px sans-serif }
-#wrap, label, #mv { display: block; width: 200px; height: 40px }
+#wrap, label, #mv, #ov { display: block; width: 200px; height: 40px }
 input { display: block; margin: 0 }
 </style>
 </head><body>
@@ -13,7 +13,10 @@ input { display: block; margin: 0 }
 <input type="checkbox" id="box3">
 <label id="lab4" for="box4">later</label>
 <input type="checkbox" id="box4">
+<label id="lab5" for="box5">quick</label>
+<input type="checkbox" id="box5">
 <div id="mv">moved</div>
+<div id="ov">over</div>
 <script>
 // The host makes page Next when this one's title says so.
 var name = document.title;
@@ -43,5 +46,14 @@ var moved = 0;
 document.getElementById("mv").addEventListener("mousemove", function() {
   if (name === "A" && !moved++) { L("move swaps"); document.title = "Next"; }
 });
+// As box3, with the second press already there when the first click runs.
+document.getElementById("box5").addEventListener("click", function() { if (name === "A") document.title = "Next"; });
+// A move whose first boundary event makes Next: the rest of it is neither
+// page's, and Next's hover starts at the next move, from nothing.
+var ov = document.getElementById("ov");
+["pointerover", "pointerenter", "pointerout", "pointerleave", "mouseover", "mouseenter", "mouseout", "mouseleave"].forEach(function(type) {
+  ov.addEventListener(type, function(e) { L(type, e.target.id); });
+});
+ov.addEventListener("pointerover", function() { if (name === "A") { L("over swaps"); document.title = "Next"; } });
 </script>
 </body></html>

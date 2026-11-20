@@ -44,6 +44,9 @@ const STEPS = [
   { name: "double click whose second press swaps", dbl: "#lab2" },
   { name: "double click whose first press swaps", dbl: "#lab3" },
   { name: "double click whose second press swaps from a promise", dbl: "#lab4" },
+  { name: "double click whose second press comes before the first click ran", dbl: "#lab5" },
+  { name: "press whose move swaps", move: "#mv", click: "#mv" },
+  { name: "move whose pointerover swaps", hover: "#ov" },
 ];
 
 const { chromium } = await loadPlaywright();
@@ -68,8 +71,19 @@ for (const step of STEPS) {
   const r = await a.evaluate((s) => {
     const b = document.querySelector(s).getBoundingClientRect();
     return { x: b.left + b.width / 2, y: b.top + b.height / 2 };
-  }, step.click || step.dbl);
-  if (step.click) await tab.mouse.click(r.x, r.y);
+  }, step.click || step.dbl || step.hover);
+  if (step.move) {
+    // A move of its own: its listener makes Next, and the press after it is Next's.
+    await tab.mouse.move(r.x, r.y);
+    await tab.evaluate(() => window.swapped);
+  }
+  if (step.hover) {
+    // Onto the element, a little further on it, then off it to nothing.
+    await tab.mouse.move(r.x, r.y);
+    await tab.evaluate(() => window.swapped);
+    await tab.mouse.move(r.x + 5, r.y);
+    await tab.mouse.move(400, r.y);
+  } else if (step.click) await tab.mouse.click(r.x, r.y);
   else await tab.mouse.dblclick(r.x, r.y);
   await tab.waitForTimeout(200);
   await catchUp(tab);
