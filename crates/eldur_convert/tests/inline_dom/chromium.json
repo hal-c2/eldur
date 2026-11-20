@@ -1,4 +1,21 @@
 {
+ "append_after_boxes": {
+  "log": [
+   "LC text-t1 \"text first\",t1p,\"tail\" \"text firsta boxtail\" true",
+   "LC text-l1 \"some \",B,\" words\",l1p,\"tail\" \"some bold wordsa boxtail\" true",
+   "LC text-k1 \"some \",k1i,\" words\",k1p,\"tail\" \"some  wordsa boxtail\" true",
+   "LC inline-t2 \"text first\",t2p,st2 \"text firsta boxtail\" true true true",
+   "LC inline-l2 \"some \",B,\" words\",l2p,sl2 \"some bold wordsa boxtail\" true true true",
+   "LC inline-k2 \"some \",k2i,\" words\",k2p,sk2 \"some  wordsa boxtail\" true true true",
+   "LC block-t3 \"text first\",t3p,dt3 \"text firsta boxtail\" true true true",
+   "LC block-l3 \"some \",B,\" words\",l3p,dl3 \"some bold wordsa boxtail\" true true true",
+   "LC block-k3 \"some \",k3i,\" words\",k3p,dk3 \"some  wordsa boxtail\" true true true",
+   "LC on-line-g1 \"plain\",SPAN true true true",
+   "LC on-line-g2 \"some \",B,\" words\",SPAN true true true",
+   "LC on-line-g3 \"some \",g3i,\" words\",SPAN true true true"
+  ],
+  "clicks": []
+ },
  "beside_model": {
   "log": [
    "LC plain inline \"onex\" one<em>x</em>",
