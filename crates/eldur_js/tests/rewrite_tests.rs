@@ -3015,10 +3015,16 @@ fn an_imported_module_runs_before_its_importer_and_a_lazy_one_on_its_first_impor
     let init = out.page_js.find("function __eldur_init").expect("init");
     // Each runs in its own run function: main's runs helper's first, and the
     // page runs main's at its place.
-    let helper_fn = out.page_js.find("function __eldur_run_m1()").expect("helper");
+    let helper_fn = out
+        .page_js
+        .find("function __eldur_run_m1()")
+        .expect("helper");
     let helper_at = out.page_js.find("console.log('helper')").expect("helper");
     let main_fn = out.page_js.find("function __eldur_run_m0()").expect("main");
-    let helper_call = main_fn + out.page_js[main_fn..].find("__eldur_run_m1();").expect("call");
+    let helper_call = main_fn
+        + out.page_js[main_fn..]
+            .find("__eldur_run_m1();")
+            .expect("call");
     let main_at = out.page_js.find("console.log('main'").expect("main");
     assert!(
         helper_fn < helper_at && helper_at < main_fn && helper_call < main_at,
