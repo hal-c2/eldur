@@ -1382,7 +1382,7 @@ impl Dynamic<'_, '_> {
     /// once, which no single element's own combinations cover. Each
     /// numbered list is a group, and the page's counters one more. A group
     /// is added only when all its worlds fit beside the elements' own, the
-    /// smallest groups first.
+    /// one that adds the fewest new worlds first.
     fn worlds(
         &mut self,
         excluded: &BTreeSet<u16>,
@@ -1478,35 +1478,56 @@ impl Dynamic<'_, '_> {
             );
         }
         // A group goes in whole or not at all: a part of its worlds would
-        // number some combinations and not others. The smallest go first,
-        // so one large list cannot leave out several small ones; groups of
-        // one size keep page order.
-        let mut groups: Vec<Vec<u16>> = groups
+        // number some combinations and not others. Each step takes the
+        // group that adds the fewest worlds not yet in the set and still
+        // fits, so a large group the elements' own worlds mostly cover
+        // goes before smaller ones that cost more; ties keep page order.
+        let (groups, too_large): (Vec<Vec<u16>>, Vec<Vec<u16>>) = groups
             .into_values()
             .filter(|g| g.len() > 1)
             .map(|g| g.into_iter().collect())
-            .collect();
-        groups.sort_by_key(Vec::len);
-        for group in groups {
             // 2^10 is past MAX_WORLDS on its own.
-            let fits = group.len() <= 9 && {
-                let new: Vec<_> = subsets(&group).filter(|w| !set.contains(w)).collect();
-                let fits = set.len() + new.len() <= MAX_WORLDS;
-                if fits {
-                    set.extend(new);
+            .partition(|g: &Vec<u16>| g.len() <= 9);
+        let mut left_out = too_large;
+        // A world's flipped conditions, keyed by how many there are.
+        type World = (usize, Vec<u16>);
+        let fresh = |set: &BTreeSet<World>, g: &[u16]| -> Vec<World> {
+            subsets(g).filter(|w| !set.contains(w)).collect()
+        };
+        // Page order, each group with the worlds it would add.
+        let mut pending: Vec<(Vec<u16>, Vec<World>)> = groups
+            .into_iter()
+            .map(|g| {
+                let new = fresh(&set, &g);
+                (g, new)
+            })
+            .collect();
+        while let Some(i) = pending
+            .iter()
+            .enumerate()
+            .filter(|(_, (_, new))| set.len() + new.len() <= MAX_WORLDS)
+            .min_by_key(|(i, (_, new))| (new.len(), *i))
+            .map(|(i, _)| i)
+        {
+            let (added, new) = pending.remove(i);
+            set.extend(new);
+            // Only a group that shares a condition gains worlds from it.
+            for (g, new) in &mut pending {
+                if g.iter().any(|c| added.binary_search(c).is_ok()) {
+                    *new = fresh(&set, g);
                 }
-                fits
-            };
-            if !fits {
-                self.diags.warning(
-                    "css",
-                    None,
-                    format!(
-                        "{} classes and states show or hide numbered elements; a marker or counter is right only while one of them differs from the document",
-                        group.len()
-                    ),
-                );
             }
+        }
+        left_out.extend(pending.into_iter().map(|(g, _)| g));
+        for group in left_out {
+            self.diags.warning(
+                "css",
+                None,
+                format!(
+                    "{} classes and states show or hide numbered elements; a marker or counter is right only while one of them differs from the document",
+                    group.len()
+                ),
+            );
         }
         set.into_iter().take(MAX_WORLDS).map(|(_, w)| w).collect()
     }
