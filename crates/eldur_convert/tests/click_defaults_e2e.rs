@@ -368,11 +368,12 @@ TestCase {
     }
 
     // As test_23, but the host destroys A while the press is held, after its
-    // mousedown. A's destruction queues on Next what a lost press's release
-    // leaves there, A's link default; the focus leaving A's items is what tells
-    // the runtime A is gone, with that queued. It runs under the shield of the
-    // press it came with, which drops it. The release reaches no one, and
-    // Next's own tap is one click.
+    // mousedown. The host's own handler on A's destruction queues A's link
+    // default on Next; the focus leaving A's items is what tells the runtime A
+    // is gone, with that queued. It runs under the shield of the press it came
+    // with, which drops it. No release can queue it there: one that reaches
+    // A's items drops their default as it runs (test_25), and after A is gone
+    // the release reaches no one. Next's own tap is one click.
     function test_24_press_whose_page_goes_while_it_is_held() {
         rest()
         const at = pages()
@@ -387,6 +388,23 @@ TestCase {
         })
         at.a.destroy()
         wait(50)
+        mouseRelease(host, p.x, p.y)
+        tryVerify(function() { return settled(at) }, 1000, "the release never settled")
+        tapped(p)
+        tryVerify(function() { return at.next.title === "Next" && settled(at) }, 1000, "the tap never ran")
+    }
+    // A's items hear the release of the press they held in the turn the host
+    // destroys A, before the runtime has noticed A is gone. Their link's tap
+    // runs then, on Next's turn, and Next has no press of its own: A's link
+    // default is dropped, not queued, and Next's own tap is one click.
+    function test_25_press_released_in_the_turn_its_page_is_destroyed() {
+        rest()
+        const at = pages()
+        console.log("LC -- press released in the turn its page is destroyed")
+        const p = middle(at.a, "dn2")
+        mousePress(host, p.x, p.y)
+        tryVerify(function() { return at.next !== null && settled(at) }, 1000, "A was never swapped out")
+        at.a.destroy()
         mouseRelease(host, p.x, p.y)
         tryVerify(function() { return settled(at) }, 1000, "the release never settled")
         tapped(p)
@@ -494,6 +512,15 @@ fn a_press_does_nothing_more_once_its_page_is_gone() {
     for line in [
         "LC -- press whose page goes while it is held",
         "LC A down makes Next",
+        "LC Next click dn2 0",
+        "LC Next hashchange #dngo",
+    ] {
+        wanted.push(line.to_owned());
+    }
+    for line in [
+        "LC -- press released in the turn its page is destroyed",
+        "LC A down makes Next",
+        "LC Next mouseup dn2 0",
         "LC Next click dn2 0",
         "LC Next hashchange #dngo",
     ] {
