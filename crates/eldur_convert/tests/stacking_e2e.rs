@@ -94,7 +94,7 @@ TestCase {
         "at", "rt", "nt",
         "p1", "p2", "r2", "a2",
         "b3", "b4", "da", "db", "k6", "n6", "v6",
-        "g1", "g2", "mq", "oq", "pq", "ax", "ox", "bx", "rx", "qx", "gx", "fa", "ff", "fc", "fv"]
+        "g1", "g2", "mq", "oq", "pq", "ax", "ox", "bx", "rx", "qx", "gx", "ix", "lx", "fa", "ff", "fc", "fv"]
 
     // The painted box nearest the front at a point, in Qt Quick's paint
     // order: the children over an item from the last level down, then the
@@ -972,6 +972,54 @@ fn a_level_a_class_gives_inside_a_context_does_not_keep_its_box_from_rising() {
         );
     assert_ne!(page, HELD);
     run(&page, &with_test(CONTAINED_TEST), "contained", false);
+}
+
+/// The same blocks, with an inline-block (`#ix`) in the later block's
+/// relative box that a class gives a level, and a box at 1 (`#lx`) over the
+/// lower half of that block. Chromium paints `#ix` over `#lx` and `#rx`
+/// over `#ox` in tree order; without the class `#lx` is over `#ix` too.
+/// To lift `#ix` the converter raises its ancestors, as it does for a level
+/// `#ix` has from the start or for a block in its place ("Overlays of
+/// different ancestors", docs/spec/layout.md), so `#bx` and the rest of
+/// `#rx` come over `#ox` (75,50) and `#lx` (30,70; 75,70), where Chromium
+/// paints them under; those points are not checked.
+const INLINE_LEVEL_TEST: &str = r##"
+    function test_a_level_a_class_gives_an_inline_box_lifts_it_over_a_later_box() {
+        compare(front(page, 5, 70), "ix", "the inline box is over the later box")
+        compare(front(page, 5, 50), "ix")
+        compare(front(page, 30, 50), "rx", "and over the earlier block's overlay")
+        compare(front(page, 150, 50), "bx")
+        compare(front(page, 75, 30), "ox")
+        compare(front(page, 150, 30), "ax")
+        compare(front(page, 150, 90), "lx")
+    }
+}
+}
+"##;
+
+#[test]
+fn a_level_a_class_gives_an_inline_box_lifts_it_over_a_later_box() {
+    let page = HELD
+        .replace(
+            "#rx { position: relative; width: 50px; background: red }",
+            "#rx { position: relative; width: 50px; background: red }\n\
+             #ix { display: inline-block; position: relative; width: 10px; height: 40px; vertical-align: top; background: purple }\n\
+             #lx { position: relative; z-index: 1; top: -20px; background: gray }\n\
+             .up { z-index: 3 }",
+        )
+        .replace(
+            "<div id=rx></div></div>",
+            "<div id=rx><span id=ix></span></div></div><div id=lx></div>",
+        )
+        .replace(
+            "var rx = document.getElementById('rx');",
+            "var rx = document.getElementById('rx');\n\
+             var lx = document.getElementById('lx');\n\
+             document.getElementById('ix').classList.add('up');",
+        );
+    assert_eq!(page.matches("id=ix").count(), 1);
+    assert_eq!(page.matches("id=lx").count(), 1);
+    run(&page, &with_test(INLINE_LEVEL_TEST), "inline-level", false);
 }
 
 /// A float the runtime lays out (`#fm`, which a script makes) and one it
