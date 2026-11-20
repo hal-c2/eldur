@@ -6604,7 +6604,8 @@ function _zSetSlot(raw) {
 
 // The highest lift of what a box holds, 0 for none.
 function _zInside(raw) {
-    var kids = _rawKids(raw, false, false, false);
+    // A `::before` or `::after` box lifts its element as a child does.
+    var kids = _rawKids(raw, false, true, false);
     var top = 0;
     for (var i = 0; i < kids.length; ++i) {
         if (_zHost(kids[i])) {
@@ -6968,7 +6969,10 @@ function _setStyleAt(item, prop, value) {
 // A layout writes `width` and `height` itself and reads only what it is told
 // through `Layout`; the cascade's passes do not paint a template's control.
 function _inlineInLayout(raw) {
-    if (!raw.parent || !_gIsLayout(raw.parent)) {
+    // A risen box is laid out by the slot it left in the flow, which took
+    // its sizes (`risen_host`).
+    var item = raw.eldurSlot && raw.eldurSlot.eldurRisen === true ? raw.eldurSlot : raw;
+    if (!item.parent || !_gIsLayout(item.parent)) {
         return;
     }
     var m = _meta(raw);
@@ -6977,7 +6981,7 @@ function _inlineInLayout(raw) {
     var down = parseFloat(m.styles.height);
     var wide = (raw.leftPadding || 0) + (raw.rightPadding || 0);
     var tall = (raw.topPadding || 0) + (raw.bottomPadding || 0);
-    _gMarginTool().size(raw, isNaN(across) ? -1 : across + (boxed ? 0 : wide),
+    _gMarginTool().size(item, isNaN(across) ? -1 : across + (boxed ? 0 : wide),
         isNaN(down) ? -1 : down + (boxed ? 0 : tall));
 }
 
@@ -23472,7 +23476,8 @@ function _gPlaceFloats(floats, side, innerW, innerH, x, top, prior) {
         kid.x = x + at + ml;
         kid.y = top + lineTop + mt;
         // Painted over the blocks beside it, under positioned boxes (CSS 2.2 Appendix E).
-        if (ks["z-index"] === "auto" && ks.position === "static") {
+        // The least it is at: what it holds may have lifted it higher.
+        if (ks["z-index"] === "auto" && ks.position === "static" && !(kid.z > 0.5)) {
             _gSet(kid, "z", 0.5);
         }
         from = Math.min(from, x + at);
