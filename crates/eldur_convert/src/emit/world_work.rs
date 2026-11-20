@@ -168,6 +168,46 @@ fn a_full_group_leaves_room_for_other_conditions() {
     assert!(warned, "no warning: {:?}", out.diagnostics);
 }
 
+#[test]
+fn small_groups_fit_before_a_large_one() {
+    // A list of eight hover-shown items (2^8 worlds) first, then 38 lists
+    // of three (2^3 each): 522 worlds in all, past MAX_WORLDS. Taken in
+    // page order, the large group fits and the last three small ones do
+    // not; taken smallest first, only the large one is left out, and 38
+    // lists number right instead of 36.
+    let list = |prefix: &str, n: usize| -> (String, String) {
+        let items: String = (0..n)
+            .map(|i| format!("<li class={prefix}a{i}>a</li><li class={prefix}h{i}>h</li>"))
+            .collect();
+        let rules: String = (0..n)
+            .map(|i| {
+                format!(
+                    ".{prefix}h{i}{{display:none}} .{prefix}a{i}:hover + .{prefix}h{i}{{display:list-item}} "
+                )
+            })
+            .collect();
+        (format!("<ol>{items}<li>c</li></ol>"), rules)
+    };
+    let (mut lists, mut rules) = list("big", 8);
+    for k in 0..38 {
+        let (l, r) = list(&format!("s{k}"), 3);
+        lists.push_str(&l);
+        rules.push_str(&r);
+    }
+    let page = format!("<!DOCTYPE html><style>{rules}</style>{lists}");
+    let out = convert_str(&page, &Options::default());
+    let left_out: Vec<String> = out
+        .diagnostics
+        .iter()
+        .map(ToString::to_string)
+        .filter(|d| d.contains("classes and states show or hide numbered elements"))
+        .collect();
+    assert!(
+        left_out.len() == 1 && left_out[0].contains(" 8 classes"),
+        "{left_out:?}"
+    );
+}
+
 /// A table of `cells` cells, four to a row, each recoloured by its own
 /// `:hover`, with borders `collapse` or `separate`.
 fn table_hovers(cells: usize, borders: &str) -> String {
