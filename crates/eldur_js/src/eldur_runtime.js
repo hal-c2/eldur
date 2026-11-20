@@ -16851,6 +16851,9 @@ function _vSlotIn(c, raw, ref, refBox) {
     if (_isCreatedElement(raw) && c.model && _isConnected(_vHostElement(c.model) || c)) {
         _connectSubtree(raw);
         raw = m.raw || raw;
+    } else if (_isCreatedElement(raw)) {
+        // It takes that form when its element goes on the page (`_vFormHeld`).
+        m.vUnformed = true;
     }
     var style = _gHasCascade() ? (++_gGen, _gStyle(raw)) : null;
     m.vSlotBlock = style ? !_gInlineLevel(style) && style.display !== "none" : _IT_BLOCK.test(_nodeTag(raw));
@@ -20435,8 +20438,33 @@ function _vTryInsert(raw, nodes, ref, going) {
     if (!host) {
         return false;
     }
+    if (raw.__eldurInline ? raw.model && _isConnected(_vHostElement(raw.model)) : _isConnected(raw)) {
+        _vFormHeld(nodes);
+    }
     _vPut(host, nodes, ref, going);
     return true;
+}
+
+// A box made while its inline element was off the page takes the form the
+// converter wrote for it once the element goes on the page, before a line
+// places it.
+function _vFormHeld(nodes) {
+    (function walk(list) {
+        list.forEach(function(v) {
+            if (!v || !v.__eldurInline) {
+                return;
+            }
+            (v.boxes || []).forEach(function(b) {
+                var m = _itemMeta.get(b.item);
+                if (m && m.vUnformed && _vSlotOwner(b.item) === v) {
+                    m.vUnformed = false;
+                    _connectSubtree(b.item);
+                    b.item = m.raw || b.item;
+                }
+            });
+            walk(v.kids || []);
+        });
+    })(nodes);
 }
 
 // `_insertChildren` for a line of text: a custom element that moves, or that
