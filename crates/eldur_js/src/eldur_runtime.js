@@ -10388,8 +10388,13 @@ function _coerceNode(nodeOrString) {
     return _unwrap(document.createTextNode(String(nodeOrString)));
 }
 
+// Set while an element rebuilt as another item carries its nodes over: they
+// are not moving, and the lines they were on go with the old item.
+var _vCarrying = 0;
+
 function _forRealItems(nodes) {
-    return nodes.map(function(n) { return n.__eldurInline ? _vToReal(n) : n; });
+    var moving = _vCarrying === 0;
+    return nodes.map(function(n) { return n.__eldurInline ? _vToReal(n, moving) : n; });
 }
 
 function _expandInsertRawNodes(nodes) {
@@ -11829,7 +11834,12 @@ function _swapRawItemCarried(oldRaw, component, fallbackQmlSrc) {
     if (childElements.length > 0 && !(carried && _vCarryModel(next, carried, childElements))
         && !(onlyText && _vTryInsert(next, childElements, null))) {
         // Before the template's trailing spacers, renumbered.
-        _insertChildren(next, childElements, null);
+        ++_vCarrying;
+        try {
+            _insertChildren(next, childElements, null);
+        } finally {
+            --_vCarrying;
+        }
     }
     // A pseudo-element's box goes with the element, unless its new form has one.
     pseudoBoxes.forEach(function(box) {
@@ -19984,14 +19994,18 @@ function _vFromPageRun(run) {
     return out;
 }
 
-// A node going where only real items are laid out.
-function _vToReal(v) {
+// A node going where only real items are laid out. `moving` is a script
+// putting it there; otherwise the line it was on is being made into items
+// and already let it go.
+function _vToReal(v, moving) {
     if (v.btnOf) {
         _btnTakeOut(v);
     }
     if (v.vtext) {
         // It leaves the text that drew it, as an element leaves its line.
-        _vRemove(v);
+        if (moving) {
+            _vRemove(v);
+        }
         var plain = _unwrap(document.createTextNode(v.data));
         var said = _itemMeta.get(v);
         if (said && said.wrapper) {
