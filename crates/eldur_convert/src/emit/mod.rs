@@ -1673,7 +1673,10 @@ fn has_percent_height(k: &LayoutBox<'_>) -> bool {
 /// takes no height at all. A margin adds to its resolved height, so a
 /// `height: 100%` child with one would outgrow the line it resolves against
 /// on every rearrange. A `min-height` only sets a floor, which the line
-/// settles at, so it may stay.
+/// settles at, so it may stay. A replaced element (an `img` or a control)
+/// may stay too: its picture or control doesn't feed the line's height in Qt,
+/// so resolving it against the line loops no more than an empty box does,
+/// and keeps its percentage siblings resolving as in Chromium.
 fn auto_height_is_zero(k: &LayoutBox<'_>) -> bool {
     let s = &k.style;
     let no_margin = |m: &eldur_css::LengthAuto| match m {
@@ -1681,8 +1684,6 @@ fn auto_height_is_zero(k: &LayoutBox<'_>) -> bool {
         eldur_css::LengthAuto::Length(l) => l.as_px() == Some(0.0),
     };
     has_percent_height(k)
-        // A replaced element is as high as its picture or control.
-        && k.kind != BoxKind::Replaced
         && matches!(k.content, Content::Empty)
         && s.padding.top.as_px() == Some(0.0)
         && s.padding.bottom.as_px() == Some(0.0)
