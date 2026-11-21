@@ -68,7 +68,7 @@ ApplicationWindow {
                 Layout.fillWidth: true
                 Layout.maximumWidth: Number.POSITIVE_INFINITY
                 Layout.topMargin: 32
-                Layout.bottomMargin: 32
+                Layout.bottomMargin: row.visible ? 0 : 32
 
                 // <div class="app">
                 Rectangle {

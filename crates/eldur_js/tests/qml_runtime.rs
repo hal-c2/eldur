@@ -2597,6 +2597,316 @@ function verify() {
     );
 }
 
+/// Markup a script inserts has attribute names without case, as the HTML
+/// parser reads them, except SVG's camel-cased ones inside an `<svg>`: they
+/// keep their case, so `getAttribute("viewBox")` finds what the markup wrote.
+/// Markup set into an element inside an `<svg>` is SVG content too, as the
+/// fragment parser takes it from the element it goes into, and a
+/// `<foreignObject>`'s content is HTML again.
+#[test]
+fn qml6_inserted_markup_lowers_attribute_names_but_keeps_svg_camel_case() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("box", 1, "box", TargetKind::Box);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verify() {
+    const box = document.getElementById("box");
+    box.innerHTML = '<P TITLE="Tip">x</P>'
+        + '<svg VIEWBOX="0 0 10 10" preserveaspectratio="none" Width="10">'
+        + '<linearGradient gradientUnits="userSpaceOnUse"></linearGradient>'
+        + '<foreignObject><div viewBox="html"></div></foreignObject></svg>';
+    const p = box.children[0];
+    const svg = box.children[1];
+    const gradient = svg.children[0];
+    const foreign = svg.children[1];
+    const div = foreign.children[0];
+    const inserted = [
+        p.getAttribute("title"),
+        svg.getAttribute("viewBox"),
+        svg.getAttribute("preserveAspectRatio"),
+        svg.getAttribute("width"),
+        gradient.getAttribute("gradientUnits"),
+        div.getAttribute("viewbox"),
+    ];
+    gradient.insertAdjacentHTML("afterend", '<radialGradient gradientTransform="t"></radialGradient>');
+    const radial = svg.children[1].getAttribute("gradientTransform");
+    foreign.innerHTML = '<div viewBox="fo"></div>';
+    const inForeign = foreign.children[0].getAttribute("viewbox");
+    gradient.outerHTML = '<clipPath clipPathUnits="objectBoundingBox"></clipPath>';
+    const clip = svg.children[0].getAttribute("clipPathUnits");
+    svg.innerHTML = '<rect pathLength="5"></rect>';
+    const rect = svg.children[0].getAttribute("pathLength");
+    return inserted.concat([radial, inForeign, clip, rect]).join("|");
+}
+"##,
+        r#"Item {
+    id: root
+    Column { id: box; objectName: "box" }
+    Component.onCompleted: {
+        (Page.__eldur_init || Eldur.init)(root);
+        console.log("ELDUR_OK_SVG_CASE", Page.verify());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains(
+            "ELDUR_OK_SVG_CASE Tip|0 0 10 10|none|10|userSpaceOnUse|html|t|fo|objectBoundingBox|5"
+        ),
+        "{output}"
+    );
+}
+
+/// An HTML element in SVG markup a script inserts leaves the SVG as the HTML
+/// parser takes it out: in a page's own content a `<p>`, `<div>`, `<b>`, a
+/// `<font>` with a color, face or size, and the rest close the SVG elements
+/// open around them up to the nearest HTML element or `<foreignObject>`,
+/// `<desc>` or `<title>`, and what follows goes on in it. Markup set into an
+/// SVG element by `innerHTML`, `insertAdjacentHTML` or `outerHTML` has nothing
+/// of its own to close, so such an element is an HTML child of the SVG one.
+/// A `<font>` breaks out by its attribute names alone: one whose `title`
+/// mentions a size stays SVG. The expected string is Chromium 158's, for the
+/// same script run through Playwright: `svg:` marks an element that kept
+/// `viewBox` in its case, as only SVG ones do.
+#[test]
+fn qml6_html_elements_in_inserted_svg_markup_break_out_as_chromium_parses_them() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("box", 1, "box", TargetKind::Box);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verify() {
+    const box = document.getElementById("box");
+    const v = ' viewBox="v"';
+    const show = n => (n.getAttribute("viewbox") === null ? "svg:" : "")
+        + n.tagName.toLowerCase()
+        + (n.children.length ? "[" + Array.from(n.children).map(show).join(",") + "]" : "");
+    const made = markup => {
+        const d = document.createElement("div");
+        box.appendChild(d);
+        d.innerHTML = markup;
+        return d;
+    };
+    const a = made('<svg' + v + '><circle' + v + '></circle><g' + v + '><p' + v + '>para</p></g>'
+        + '<rect' + v + '></rect></svg>after');
+    const b = made('<svg' + v + '></svg>');
+    b.children[0].innerHTML = '<circle' + v + '></circle><p' + v + '>x</p><b' + v + '>y</b>';
+    const c = made('<svg' + v + '><g' + v + '></g></svg>');
+    c.children[0].children[0].insertAdjacentHTML("beforeend", '<div' + v + '>z</div>');
+    const d = made('<svg' + v + '><rect' + v + '></rect></svg>');
+    d.children[0].children[0].outerHTML = '<span' + v + '>w</span>';
+    const e = made('<svg' + v + '><foreignObject' + v + '><p' + v + '>f</p></foreignObject>'
+        + '<font color="red"' + v + '>c</font><font' + v + '>k</font></svg>');
+    const f = made('<svg' + v + '><desc' + v + '><p' + v + '>d</p></desc></svg><p' + v + '>q</p>');
+    const g = made('<svg' + v + '><font' + v + '>n</font></svg>');
+    const h = made('<svg' + v + '><font title="pick a size here"' + v + '>t</font>'
+        + '<font size=3' + v + '>u</font></svg>');
+    return [a, b, c, d, e, f, g, h].map(x => Array.from(x.children).map(show).join(",")).join(" ")
+        + " " + a.children[1].textContent + "|" + a.textContent;
+}
+"##,
+        r#"Item {
+    id: root
+    Column { id: box; objectName: "box" }
+    Component.onCompleted: {
+        (Page.__eldur_init || Eldur.init)(root);
+        console.log("ELDUR_OK_BREAKOUT", Page.verify());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains(
+            "ELDUR_OK_BREAKOUT svg:svg[svg:circle,svg:g],p,rect svg:svg[svg:circle,p,b] \
+             svg:svg[svg:g[div]] svg:svg[span] svg:svg[svg:foreignobject[p]],font,font \
+             svg:svg[svg:desc[p]],p svg:svg[svg:font] svg:svg[svg:font],font para|paraafter"
+        ),
+        "{output}"
+    );
+}
+
+/// A quoted attribute value in markup a script inserts runs to its closing
+/// quote, `>` and `<` included, and an unclosed one to the end of the markup,
+/// taking its tag with it, as in the HTML tokenizer's attribute-value states.
+/// An end tag the markup cuts off still ends its element, and an element
+/// whose end tag never comes holds the rest. So `<font title="size>x` is
+/// gone, not a `<font>` with a size that leaves the SVG, and `title="<p>"`
+/// opens no paragraph. The expected string is Chromium 158's, for the same
+/// script run through Playwright; `svg:` marks an element without `viewBox`.
+#[test]
+fn qml6_quoted_attribute_values_in_inserted_markup_run_as_chromium_tokenizes_them() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("box", 1, "box", TargetKind::Box);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verify() {
+    const box = document.getElementById("box");
+    const v = ' viewBox="v"';
+    const show = n => (n.getAttribute("viewbox") === null ? "svg:" : "")
+        + n.tagName.toLowerCase()
+        + (n.children.length ? "[" + Array.from(n.children).map(show).join(",") + "]" : "");
+    const made = markup => {
+        const d = document.createElement("div");
+        box.appendChild(d);
+        d.innerHTML = markup;
+        return d;
+    };
+    const cases = {
+        i: '<svg' + v + '><font title="size>x',
+        j: '<svg' + v + '><font title="a>b" size=3' + v + '>u</font></svg>',
+        k: "<svg" + v + "><font title='size>x</font></svg><p>q</p>",
+        l: '<svg' + v + '><font size=3' + v + '>u</font',
+        m: '<div title="a>b"' + v + '>w</div>',
+        n: '<svg' + v + '><font title=size>x</font></svg>',
+        o: '<svg' + v + '><g' + v + ' title="<p>"></g></svg>',
+    };
+    return Object.entries(cases).map(([k, m]) => {
+        const d = made(m);
+        const titled = d.querySelector("[title]");
+        return k + "=" + Array.from(d.children).map(show).join(",")
+            + " text=" + JSON.stringify(d.textContent)
+            + (titled ? " title=" + JSON.stringify(titled.getAttribute("title")) : "");
+    }).join(" ; ");
+}
+"##,
+        r#"Item {
+    id: root
+    Column { id: box; objectName: "box" }
+    Component.onCompleted: {
+        (Page.__eldur_init || Eldur.init)(root);
+        console.log("ELDUR_OK_QUOTES", Page.verify());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains(
+            "ELDUR_OK_QUOTES i=svg:svg text=\"\" ; \
+             j=svg:svg,font text=\"u\" title=\"a>b\" ; \
+             k=svg:svg text=\"\" ; \
+             l=svg:svg,font text=\"u\" ; \
+             m=div text=\"w\" title=\"a>b\" ; \
+             n=svg:svg[svg:font] text=\"x\" title=\"size\" ; \
+             o=svg:svg[svg:g] text=\"\" title=\"<p>\""
+        ),
+        "{output}"
+    );
+}
+
+/// The content of a raw-text or RCDATA element in markup a script inserts is
+/// text up to the element's own end tag, as the HTML tokenizer reads it, so
+/// a `<b` in a script, a style or a textarea is no tag and the `<p>` after it
+/// is kept. Only `</tag` followed by a space, `/` or `>` ends it, and only
+/// once its `>` comes; a textarea's and a title's references are decoded.
+/// The expected string is Chromium 1254's (headless shell, `--dump-dom`) for
+/// the same cases.
+#[test]
+fn qml6_raw_text_in_inserted_markup_ends_only_at_its_own_end_tag() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("box", 1, "box", TargetKind::Box);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verify() {
+    const box = document.getElementById("box");
+    const show = n => n.tagName.toLowerCase() + JSON.stringify(n.textContent);
+    const cases = {
+        a: '<textarea>He said "x<y"</textarea><p>after</p>',
+        b: '<style>a<b{}</style><p>after</p>',
+        c: '<script>if(a<b)x()</' + 'script><p>after</p>',
+        d: '<title>a<b &amp; c</title><p>q</p>',
+        e: '<textarea>a</TEXTAREA ><p>q</p>',
+        f: '<xmp>a<b>c</b></xmp><p>q</p>',
+        g: '<textarea>a</textareax></textarea><p>q</p>',
+        h: '<style>x</style',
+        // One newline right after <textarea> is dropped.
+        y: '<textarea>\nfoo</textarea>',
+        // The outer element's end tag written inside raw text does not end it.
+        z: '<div><textarea>s="</div>"</textarea></div><p>after</p>',
+        w: '<div><style>p</div>{}</style>x</div><p>q</p>',
+        // In an <svg> the raw-text names are elements, and may close themselves.
+        v: '<div><svg><title/></svg></div><p>after</p>',
+        u: '<div><svg><style>s</style><title>t</title></svg></div><p>after</p>',
+        t: '<div><svg><title/></svg><textarea></div></textarea></div><p>q</p>',
+    };
+    // Markup set into an <svg>: an HTML element that breaks out of SVG
+    // holds raw text again, and an SVG end tag written in it closes nothing.
+    const inSvg = {
+        s1: '<g><p><style>a</g>b</style></p></g>',
+        s3: '<g><p><textarea>x</g></textarea></p></g><rect/>',
+    };
+    const shown = d => Array.from(d.children).map(show).join(",");
+    return Object.entries(cases).map(([k, m]) => {
+        const d = document.createElement("div");
+        box.appendChild(d);
+        // innerHTML refuses <script> and <style> outright, so every case
+        // goes through insertAdjacentHTML, and innerHTML is held to the
+        // same result for the ones it takes.
+        d.insertAdjacentHTML("beforeend", m);
+        let got = shown(d);
+        if (!/<(script|style)/i.test(m)) {
+            const e = document.createElement("div");
+            box.appendChild(e);
+            e.innerHTML = m;
+            if (shown(e) !== got) got += " innerHTML=" + shown(e);
+        }
+        return k + "=" + got;
+    }).concat(Object.entries(inSvg).map(([k, m]) => {
+        const d = document.createElement("div");
+        box.appendChild(d);
+        d.innerHTML = "<svg></svg>";
+        d.children[0].insertAdjacentHTML("beforeend", m);
+        return k + "=" + shown(d.children[0]);
+    })).join(" ; ");
+}
+"##,
+        r#"Item {
+    id: root
+    Column { id: box; objectName: "box" }
+    Component.onCompleted: {
+        (Page.__eldur_init || Eldur.init)(root);
+        console.log("ELDUR_OK_RAW", Page.verify());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains(
+            "ELDUR_OK_RAW a=textarea\"He said \\\"x<y\\\"\",p\"after\" ; \
+             b=style\"a<b{}\",p\"after\" ; \
+             c=script\"if(a<b)x()\",p\"after\" ; \
+             d=title\"a<b & c\",p\"q\" ; \
+             e=textarea\"a\",p\"q\" ; \
+             f=xmp\"a<b>c</b>\",p\"q\" ; \
+             g=textarea\"a</textareax>\",p\"q\" ; \
+             h=style\"x</style\" ; \
+             y=textarea\"foo\" ; \
+             z=div\"s=\\\"</div>\\\"\",p\"after\" ; \
+             w=div\"p</div>{}x\",p\"q\" ; \
+             v=div\"\",p\"after\" ; \
+             u=div\"st\",p\"after\" ; \
+             t=div\"</div>\",p\"q\" ; \
+             s1=g\"\",p\"a</g>b\" ; \
+             s3=g\"\",p\"x</g>\",rect\"\""
+        ),
+        "{output}"
+    );
+}
+
 #[test]
 fn qml6_anchor_href_resolves_against_document_base_and_preserves_raw_attribute() {
     if !has_binary("qml6") {

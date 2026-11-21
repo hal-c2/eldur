@@ -853,6 +853,96 @@ TestCase {
 }
 "##;
 
+// A rule names an attribute the script writes, but for a value it never
+// writes: `.never` is counted as a block the scheme could hide, so it gets
+// an id and its margins become cases on its `visible`. It never hides, so
+// every block keeps Chromium's places at load and after each toggle:
+// 16, 50, 84, 118 for 18 px lines and 16 px margins.
+const NEVER_PAGE: &str = r##"<!doctype html>
+<style>
+:root[data-theme='sepia'] .never { display: none; }
+</style>
+<script>document.documentElement.dataset.theme = 'light';</script>
+<p class="never">Top</p>
+<p>First</p>
+<p class="never">Middle</p>
+<p>Next</p>
+<button id="t">Toggle</button>
+<script>
+document.getElementById('t').addEventListener('click', () => {
+  const r = document.documentElement;
+  r.dataset.theme = r.dataset.theme === 'light' ? 'dark' : 'light';
+});
+</script>
+"##;
+
+const NEVER_TEST: &str = r##"
+import QtQuick
+import QtTest
+
+Item {
+    id: host
+    width: 800
+    height: 600
+
+TestCase {
+    name: "RootSchemeNever"
+    when: windowShown
+
+    function find(item, test) {
+        if (test(item))
+            return item
+        for (const child of item.children) {
+            const got = find(child, test)
+            if (got)
+                return got
+        }
+        return null
+    }
+
+    function textOf(page, words) {
+        return find(page, i => i.text !== undefined && i.font !== undefined && String(i.text).indexOf(words) >= 0)
+    }
+
+    function pageY(page, item) {
+        return item.mapToItem(page, 0, 0).y
+    }
+
+    function places(page, lines, step) {
+        for (const line of lines)
+            verify(line.visible, step + ": " + line.text + " is hidden")
+        let y = pageY(page, lines[0])
+        compare(y, 16, step + ": Top is at " + y)
+        for (let i = 1; i < lines.length; ++i) {
+            const gap = pageY(page, lines[i]) - pageY(page, lines[i - 1])
+            compare(gap, lines[i - 1].height + 16,
+                    step + ": " + lines[i].text + " is " + gap + " px below a line "
+                    + lines[i - 1].height + " px tall")
+        }
+    }
+
+    function test_margins_hold() {
+        const component = Qt.createComponent("Main.qml")
+        verify(component.status === Component.Ready, component.errorString())
+        const page = createTemporaryObject(component, host, { width: 800, height: 600 })
+        waitForRendering(page)
+        wait(50)
+        const lines = ["Top", "First", "Middle", "Next"].map(w => textOf(page, w))
+        for (let i = 0; i < lines.length; ++i)
+            verify(lines[i] !== null, "no line " + i)
+        const button = find(page, i => i.eldurTag === "button" && i.text === "Toggle")
+        verify(button !== null, "no #t")
+        places(page, lines, "load")
+        for (const step of ["dark", "light"]) {
+            mouseClick(button)
+            wait(100)
+            places(page, lines, step)
+        }
+    }
+}
+}
+"##;
+
 #[test]
 fn a_root_attribute_repaints_inherited_text() {
     run(PAGE, TEST, "eldur-root-scheme");
@@ -876,6 +966,11 @@ fn a_script_made_open_details_is_not_folded() {
 #[test]
 fn a_root_attribute_holds_under_a_hidden_block() {
     run(SLOT_PAGE, SLOT_TEST, "eldur-root-scheme-slot");
+}
+
+#[test]
+fn a_block_a_written_attribute_could_hide_keeps_its_margins() {
+    run(NEVER_PAGE, NEVER_TEST, "eldur-root-scheme-never");
 }
 
 fn run(page: &str, test: &str, name: &str) {

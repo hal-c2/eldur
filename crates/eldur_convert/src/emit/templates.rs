@@ -1104,12 +1104,41 @@ pub(crate) fn add(
 
     // The registry, exact contexts first since the first entry of a key wins.
     let mut keys: BTreeMap<String, usize> = BTreeMap::new();
-    let mut order: Vec<String> = Vec::new();
+    let mut order: Vec<(usize, String)> = Vec::new();
     let mut counts: HashMap<usize, usize> = HashMap::new();
     let mut capped: BTreeSet<usize> = BTreeSet::new();
     let mut shadows: HashMap<usize, BTreeSet<usize>> = HashMap::new();
     let mut keyed: Vec<usize> = (0..insts.len()).collect();
     keyed.sort_by_key(|&i| matches!(insts[i].context, Context::Any));
+    let rank: HashMap<usize, usize> = keyed.iter().enumerate().map(|(r, &i)| (i, r)).collect();
+    // Where two probes share a key, one probed with phrasing elements inside
+    // wins it over one probed with text alone: the runtime makes the same
+    // template for both, and a text-only one has no lines for an element to
+    // sit on (#63: `<p><em>…</em></p>` made by `innerHTML` beside a `<p>`
+    // given `textContent`). Its lines still take direct text. A probe holding
+    // a block has no lines at all, so it never wins over a text one. The
+    // registry keeps the probes' order.
+    //
+    // A probe made inside another is keyed under the templates its parent's
+    // key went to, which are known once every probe one level up has had
+    // its key: probes go level by level, parents first.
+    let depth = |mut i: usize| {
+        let mut d = 0usize;
+        while let Context::Probe(p) = insts[i].context {
+            if d > insts.len() {
+                break;
+            }
+            d += 1;
+            i = p;
+        }
+        d
+    };
+    keyed.sort_by_key(|&i| {
+        let node = insts[i].node;
+        let lines = doc.element_children(node).next().is_some()
+            && crate::boxes::only_phrasing_inside(&doc, &styles, node);
+        (depth(i), matches!(insts[i].context, Context::Any), !lines)
+    });
     for i in keyed {
         let Some(k) = template_of[i] else {
             continue;
@@ -1186,9 +1215,11 @@ pub(crate) fn add(
                 *count += 1;
             }
             keys.insert(key.clone(), k);
-            order.push(key);
+            order.push((rank[&i], key));
         }
     }
+    order.sort_by_key(|(r, _)| *r);
+    let order: Vec<String> = order.into_iter().map(|(_, key)| key).collect();
     for e in capped {
         diags.warning(
             "css",

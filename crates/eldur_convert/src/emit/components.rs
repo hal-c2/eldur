@@ -10,6 +10,10 @@ use crate::OutputFile;
 struct Component {
     name: &'static str,
     files: &'static [(&'static str, &'static [u8])],
+    /// The element the runtime makes this component for, when it makes it
+    /// for one only: the runtime's text holds every component it can make, so
+    /// a page that can never have that element is spared the file.
+    only_for: Option<&'static str>,
 }
 
 const COMPONENTS: &[Component] = &[
@@ -19,10 +23,12 @@ const COMPONENTS: &[Component] = &[
             "EldurBackgroundLayer.qml",
             super::ELDUR_BACKGROUND_LAYER_QML.as_bytes(),
         )],
+        only_for: None,
     },
     Component {
         name: "EldurBorder",
         files: &[("EldurBorder.qml", super::ELDUR_BORDER_QML.as_bytes())],
+        only_for: None,
     },
     Component {
         name: "EldurDisclosure",
@@ -30,6 +36,7 @@ const COMPONENTS: &[Component] = &[
             "EldurDisclosure.qml",
             super::ELDUR_DISCLOSURE_QML.as_bytes(),
         )],
+        only_for: Some("summary"),
     },
     Component {
         name: "EldurFilter",
@@ -37,26 +44,32 @@ const COMPONENTS: &[Component] = &[
             ("EldurFilter.qml", super::ELDUR_FILTER_QML.as_bytes()),
             ("eldur_filter.frag.qsb", super::ELDUR_FILTER_QSB),
         ],
+        only_for: None,
     },
     Component {
         name: "EldurFlow",
         files: &[("EldurFlow.qml", super::flex::ELDUR_FLOW_QML.as_bytes())],
+        only_for: None,
     },
     Component {
         name: "EldurInlineBox",
         files: &[("EldurInlineBox.qml", super::ELDUR_INLINE_BOX_QML.as_bytes())],
+        only_for: None,
     },
     Component {
         name: "EldurLines",
         files: &[("EldurLines.qml", super::ELDUR_LINES_QML.as_bytes())],
+        only_for: None,
     },
     Component {
         name: "EldurRoundClip",
         files: &[("EldurRoundClip.qml", super::ELDUR_ROUND_CLIP_QML.as_bytes())],
+        only_for: None,
     },
     Component {
         name: "EldurRun",
         files: &[("EldurRun.qml", super::ELDUR_RUN_QML.as_bytes())],
+        only_for: None,
     },
     Component {
         name: "EldurScrollInput",
@@ -64,18 +77,22 @@ const COMPONENTS: &[Component] = &[
             "EldurScrollInput.qml",
             super::ELDUR_SCROLL_INPUT_QML.as_bytes(),
         )],
+        only_for: None,
     },
     Component {
         name: "EldurScroller",
         files: &[("EldurScroller.qml", super::ELDUR_SCROLLER_QML.as_bytes())],
+        only_for: None,
     },
     Component {
         name: "EldurSticky",
         files: &[("EldurSticky.qml", super::ELDUR_STICKY_QML.as_bytes())],
+        only_for: None,
     },
     Component {
         name: "EldurTextLines",
         files: &[("EldurTextLines.qml", super::ELDUR_TEXT_LINES_QML.as_bytes())],
+        only_for: None,
     },
     Component {
         name: "EldurTextShadow",
@@ -83,6 +100,7 @@ const COMPONENTS: &[Component] = &[
             "EldurTextShadow.qml",
             super::ELDUR_TEXT_SHADOW_QML.as_bytes(),
         )],
+        only_for: None,
     },
 ];
 
@@ -118,7 +136,13 @@ fn makes(text: &str, name: &str) -> bool {
 
 /// The component files `main` and `runtime` (empty for a page without
 /// scripts) make, with those the components themselves make, sorted by name.
-pub(crate) fn components(main: &str, runtime: &str) -> Vec<OutputFile> {
+/// `can_make` says whether the page can come to hold an element of a tag,
+/// which decides the components the runtime makes only for that element.
+pub(crate) fn components(
+    main: &str,
+    runtime: &str,
+    can_make: impl Fn(&str) -> bool,
+) -> Vec<OutputFile> {
     let mut chosen = vec![false; COMPONENTS.len()];
     let mut grew = true;
     while grew {
@@ -132,7 +156,9 @@ pub(crate) fn components(main: &str, runtime: &str) -> Vec<OutputFile> {
                     path.ends_with(".qml") && makes(&String::from_utf8_lossy(bytes), component.name)
                 })
             });
-            if makes(main, component.name) || makes(runtime, component.name) || by_shipped {
+            let by_runtime =
+                makes(runtime, component.name) && component.only_for.is_none_or(&can_make);
+            if makes(main, component.name) || by_runtime || by_shipped {
                 chosen[at] = true;
                 grew = true;
             }
@@ -160,14 +186,24 @@ mod tests {
 
     #[test]
     fn a_page_gets_the_components_it_makes() {
-        let files = components("Item { EldurLines { EldurRun { } } }", "");
+        let files = components("Item { EldurLines { EldurRun { } } }", "", |_| true);
         assert_eq!(names(&files), ["EldurLines.qml", "EldurRun.qml"]);
     }
 
     #[test]
     fn a_scroller_brings_its_input() {
-        let files = components("", "Qt.createComponent(\"EldurScroller.qml\")");
+        let files = components("", "Qt.createComponent(\"EldurScroller.qml\")", |_| true);
         assert_eq!(names(&files), ["EldurScrollInput.qml", "EldurScroller.qml"]);
+    }
+
+    #[test]
+    fn a_component_made_for_one_element_waits_for_a_page_that_can_have_it() {
+        let runtime = "Qt.createQmlObject(\"import QtQuick; EldurDisclosure { }\")";
+        assert!(components("", runtime, |_| false).is_empty());
+        let files = components("", runtime, |tag| tag == "summary");
+        assert_eq!(names(&files), ["EldurDisclosure.qml"]);
+        let files = components("Item { EldurDisclosure { } }", runtime, |_| false);
+        assert_eq!(names(&files), ["EldurDisclosure.qml"]);
     }
 
     #[test]
@@ -175,12 +211,13 @@ mod tests {
         let files = components(
             "",
             "Qt.createQmlObject(\"import QtQuick; EldurFilter { \" + x)",
+            |_| true,
         );
         assert_eq!(names(&files), ["EldurFilter.qml", "eldur_filter.frag.qsb"]);
     }
 
     #[test]
     fn nothing_made_is_nothing_shipped() {
-        assert!(components("Item { Text { text: \"EldurLines\" } }", "").is_empty());
+        assert!(components("Item { Text { text: \"EldurLines\" } }", "", |_| true).is_empty());
     }
 }

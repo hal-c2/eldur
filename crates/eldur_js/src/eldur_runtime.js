@@ -1161,26 +1161,152 @@ function _dropHelper(obj) {
     }
 }
 
-// A `<details>` shows its summary, and the rest when open.
+// A `<details>` shows its summary, and the rest when open. One a script
+// makes is set up once it is in the document, open as its `open` attribute
+// says (#63): the converter's `eldurOpen` is only on the page's own.
 function _setUpDetails(raw) {
-    var kids = _rawElementChildren(raw);
-    var summary = kids.filter(function(k) { return _nodeTag(k) === "summary"; })[0];
-    _detailsShow(raw, raw.eldurOpen === true);
+    var open = raw.eldurOpen === true || getAttribute(raw, "open") !== null;
+    _detailsShow(raw, open);
     // Open from the start is a toggle too, once the page's scripts have run.
-    if (raw.eldurOpen === true) {
+    if (open) {
         Qt.callLater(function() {
             dispatchEvent(wrap(raw), new Event("toggle"));
         });
     }
-    if (summary) {
-        wrap(summary).addEventListener("click", function(ev) {
-            // Last on its element, and the page's listeners further up have yet to
-            // run: the toggle waits for what they say.
-            summary.forceActiveFocus();
-            _afterThisDispatch(ev, function() {
-                wrap(raw).open = !_meta(raw).detailsOpen;
-            });
+}
+
+function _detailsSummary(raw) {
+    return _rawElementChildren(raw).filter(function(k) { return _nodeTag(k) === "summary"; })[0];
+}
+
+// Its first summary opens and closes it, whichever summary that is now.
+function _detailsWire(summary) {
+    var m = _meta(summary);
+    if (m.detailsWired) {
+        return;
+    }
+    m.detailsWired = true;
+    wrap(summary).addEventListener("click", function(ev) {
+        // A restyle may have made it another item, which took the listener.
+        var now = m.raw || summary;
+        if (!_detailsToggles(now) || _detailsControlInside(ev.target, now)) {
+            return;
+        }
+        // A virtual one has no item of its own to focus.
+        if (typeof now.forceActiveFocus === "function") {
+            now.forceActiveFocus();
+        } else {
+            focus(now);
+        }
+        // Last on its element, and the page's listeners further up have yet to
+        // run: the toggle waits for what they say, and is for the summary
+        // the details has once they are done.
+        _afterThisDispatch(ev, function() {
+            var then = m.raw || summary;
+            if (_detailsToggles(then)) {
+                var at = _elementParent(then);
+                wrap(at).open = !_meta(at).detailsOpen;
+            }
         });
+    });
+}
+
+function _detailsToggles(summary) {
+    var at = _elementParent(summary);
+    return Boolean(at) && _nodeTag(at) === "details" && _detailsSummary(at) === summary;
+}
+
+// A click on a control or link in the summary activates that, not the summary
+// too (HTML §4.11.1: the summary's activation is for a click on itself).
+function _detailsControlInside(target, summary) {
+    var n = target ? _unwrap(target) : null;
+    while (n && n !== summary) {
+        var tag = _nodeTag(n);
+        if (_isLink(n) || tag === "button" || tag === "input" || tag === "select" || tag === "textarea") {
+            return true;
+        }
+        n = _elementParent(n);
+    }
+    return false;
+}
+
+// What a script puts in the document, held by records as `_ceHold` holds
+// nodes, since an element its new place restyles is made another item.
+// The set-up `<details>` they leave are held too, to be folded again.
+function _detailsHold(nodes) {
+    var held = nodes.map(function(n) {
+        var m = _itemMeta.get(n);
+        return m && m.raw === n ? m : n;
+    });
+    held.left = [];
+    nodes.forEach(function(n) {
+        var up = _isQObject(n) && !n.__eldurInline ? _elementParent(n) : null;
+        if (up && _detailsSetUp(up) && held.left.indexOf(up) === -1) {
+            held.left.push(up);
+        }
+    });
+    return held;
+}
+
+function _detailsSetUp(raw) {
+    return _nodeTag(raw) === "details" && _itemMeta.has(raw) && _meta(raw).detailsOpen !== undefined;
+}
+
+// What a `<details>` held before a script took it away or put it elsewhere
+// shows as its own state says, and the fold is redone over what is left.
+function _detailsLeft(from, nodes, to) {
+    for (var i = 0; i < from.length; ++i) {
+        if (from[i] !== to) {
+            _detailsShow(from[i], _meta(from[i]).detailsOpen);
+        }
+    }
+    if (from.length === 0 || (to && _detailsSetUp(to))) {
+        return;
+    }
+    for (var k = 0; k < nodes.length; ++k) {
+        var raw = _ceNow(nodes[k]);
+        if (raw && raw.visible === false && _isQObject(raw) && !raw.__eldurInline && _detailsOwnShown(raw)) {
+            raw.visible = true;
+        }
+        if (raw && _itemMeta.has(raw)) {
+            _meta(raw).detailsFolded = false;
+        }
+    }
+}
+
+// After `held` went into `parent`: each `<details>` among them is set up, and
+// what went into a set-up one is folded with the rest while it is closed.
+function _detailsInserted(parent, held) {
+    _detailsLeft(held.left || [], held, parent);
+    // The whole of it again: a summary put first makes the one before it
+    // content, folded while closed and no longer the toggle.
+    if (_detailsSetUp(parent)) {
+        _detailsShow(parent, _meta(parent).detailsOpen);
+    }
+    for (var i = 0; i < held.length; ++i) {
+        _detailsSetUpUnder(_ceNow(held[i]), true);
+    }
+}
+
+function _detailsSetUpUnder(raw, top) {
+    if (!raw || raw.__eldurInline || !_isQObject(raw) || (top && !_isConnected(raw))) {
+        return;
+    }
+    if (_nodeTag(raw) === "details" && _meta(raw).detailsOpen === undefined) {
+        _setUpDetails(raw);
+    }
+    var kids = _rawElementChildren(raw);
+    for (var i = 0; i < kids.length; ++i) {
+        _detailsSetUpUnder(kids[i], false);
+    }
+}
+
+// The attribute is the state (HTML §4.11.1): a script writing it opens or
+// closes a set-up `<details>` as `open` does.
+function _detailsAttributeWritten(raw, open) {
+    var now = _meta(raw).detailsOpen;
+    if (now !== undefined && now !== open && _nodeTag(raw) === "details") {
+        wrap(raw).open = open;
     }
 }
 
@@ -1191,24 +1317,122 @@ function _afterThisDispatch(ev, run) {
 
 function _detailsShow(raw, open) {
     _meta(raw).detailsOpen = open;
+    // Its presence is the state: a value a script gave it stays.
     if (open) {
-        setAttribute(raw, "open", "");
+        if (getAttribute(raw, "open") === null) {
+            setAttribute(raw, "open", "");
+        }
     } else {
         removeAttribute(raw, "open");
     }
     if (_gHasCascade()) {
         _gTouch(raw);
     }
+    // Only its first summary stays out of the fold (HTML §4.11.1). Each shows
+    // as itself says otherwise: `hidden` and `display: none` still hide it.
+    // Only what changes is written, so a binding the converter wrote stays.
+    // Under a hidden ancestor an item reads hidden whatever it was told, so
+    // there the fold is written anyway.
     var seenSummary = false;
-    _rawElementChildren(raw).forEach(function(kid) {
-        if (_nodeTag(kid) !== "summary") {
-            kid.visible = open && _gStyleAllowsShow(kid);
-        } else if (!seenSummary) {
+    _detailsKids(raw).forEach(function(kid) {
+        var summary = _nodeTag(kid) === "summary" && !seenSummary;
+        var own = _detailsOwnShown(kid);
+        var shown = (open || summary) && own;
+        _meta(kid).detailsFolded = own && !shown;
+        if (kid.visible !== shown || (own && !shown && kid.parent && kid.parent.visible === false)) {
+            kid.visible = shown;
+        }
+        if (summary) {
             seenSummary = true;
-            _detailsTurnMarker(kid, open);
+            _detailsMark(kid, open);
+            _detailsWire(kid);
         }
     });
     _layoutChanged(raw);
+}
+
+// Its element children, and the text a script put in it: layout moves that
+// text into anonymous lines, where element children leave it out.
+function _detailsKids(raw) {
+    var kids = _rawElementChildren(raw);
+    _rawKids(raw, true).forEach(function(kid) {
+        if (kids.indexOf(kid) < 0 && _isQObject(kid) && !kid.__eldurInline && _meta(kid).createdTag === "#text") {
+            kids.push(kid);
+        }
+    });
+    return kids;
+}
+
+// Whether it shows of itself. A page's own `hidden` is in its item alone, as
+// `visible: false`, so what the fold hid is marked to tell the two apart.
+// Under a hidden ancestor every item reads hidden: what it read last stands.
+function _detailsOwnShown(kid) {
+    var m = _meta(kid);
+    var hidden = getAttribute(kid, "hidden") !== null;
+    if (hidden) {
+        return false;
+    }
+    if (m.explicitHidden !== undefined || m.createdTag || m.styles.display !== undefined
+        || typeof kid.eldurStyle === "string") {
+        hidden = m.explicitHidden === true;
+    } else if (kid.parent && kid.parent.visible === false) {
+        hidden = m.detailsOwnHidden === true;
+    } else {
+        hidden = !m.detailsFolded && kid.visible === false;
+        m.detailsOwnHidden = hidden;
+    }
+    return !hidden && _ownDisplay(kid, m) !== "none" && _gStyleAllowsShow(kid);
+}
+
+// A details' first summary shows the marker turned as it is open. A form the
+// converter made has one unless its rules took it away; the form an open page
+// makes for a summary a script made has none (#74), so it is given one, as the
+// converter's: the triangle on the first line's baseline and that line moved in
+// by its width.
+function _detailsMark(summary, open) {
+    if (_detailsTurnMarker(summary, open) || !_meta(summary).createdTag) {
+        return;
+    }
+    // The marker is a list item's: a rule making it a block takes it away.
+    var display = _gHasCascade() ? _gStyle(summary).display : _ownDisplay(summary, _meta(summary));
+    if (display && display !== "list-item") {
+        return;
+    }
+    var text = _detailsFirstText(summary);
+    if (!text) {
+        return;
+    }
+    var marker = Qt.createQmlObject("import QtQuick; import \".\"; EldurDisclosure {"
+        + " color: parent.color; em: parent.font.pixelSize;"
+        + " y: Math.round(parent.baselineOffset) - height }", text, Qt.resolvedUrl("eldur_disclosure"));
+    marker.open = open;
+    text.lineLaidOut.connect(function(line) {
+        // A handler moves a fixed line's leading; it goes back to the top.
+        if (text.lineHeightMode === 1) { // Text.FixedHeight
+            line.y = line.number * text.lineHeight;
+        }
+        if (line.number === 0) {
+            line.x += marker.width;
+            line.width -= marker.width;
+        }
+    });
+    text.forceLayout();
+}
+
+// The Text that draws the first line: an empty one is a box's placeholder,
+// hidden while it is empty.
+function _detailsFirstText(item) {
+    if (typeof item.text === "string" && item.text !== "" && item.lineLaidOut !== undefined) {
+        return item;
+    }
+    var kids = item.children || [];
+    for (var i = 0; i < kids.length; ++i) {
+        var got = _detailsFirstText(kids[i]);
+        if (got) {
+            return got;
+        }
+    }
+    return null;
 }
 
 // It hangs off whichever item holds the summary's first line.
@@ -5325,6 +5549,7 @@ function _takeOut(raw) {
     }
     _gTouch();
     var zFrom = _zLeaving([raw]);
+    var from = _elementParent(raw);
     var box = raw.eldurBox || raw;
     var place = _slotOf(box) || box;
     if (place.parent) {
@@ -5335,6 +5560,10 @@ function _takeOut(raw) {
         box.parent = null;
     }
     _zLeft(zFrom);
+    // Its first summary gone, the next one is the toggle.
+    if (from && _detailsSetUp(from)) {
+        _detailsShow(from, _meta(from).detailsOpen);
+    }
 }
 
 // Sets whether a node shows of itself. A box painted away from its DOM parent
@@ -5944,6 +6173,15 @@ function getText(item) {
     // its nodes' text is kept beside until a script writes it.
     if (typeof raw.eldurDomText === "string" && !_meta(raw).ownText) {
         return raw.eldurDomText;
+    }
+    // A created element whose children could not become a line (a host with
+    // no EldurLines) holds them as items of its Text: its text is theirs too,
+    // as its child nodes say.
+    if (typeof raw.text === "string" && _meta(raw).createdTag && _isPlainTextItem(raw)
+            && _rawKids(raw, true).length > 0) {
+        // Text with no model of its own is no node among them: it comes first.
+        var bare = _vOwnModel(raw) || _vCreatedTextModel(raw) ? "" : _pseudoOwn(raw, raw.text);
+        return bare + _rawChildNodes(raw).map(getText).join("");
     }
     if (typeof raw.text === "string") {
         return _pseudoOwn(raw, raw.text);
@@ -6721,11 +6959,13 @@ function _replaceWithMarkup(raw, str) {
         _detachNode(old[i]);
     }
     _wsEnd(raw).length = 0;
-    var parsed = _parseHtmlFragmentNodes(str);
+    var parsed = _parseHtmlFragmentNodes(str, _svgContext(raw));
     var nodes = _expandInsertRawNodes(parsed);
     var held = _ceHold(nodes);
+    var placed = _detailsHold(nodes);
     _insertRawNodesBefore(_appendTarget(raw), nodes, null);
     _ceInserted(held);
+    _detailsInserted(raw, placed);
     _wsGiven(raw, "wsEnd", parsed.wsEnd);
 }
 
@@ -7980,6 +8220,8 @@ function _setAttributeAt(item, attrName, attrValue) {
         raw.enabled = false;
     } else if (name === "hidden" && typeof raw.visible === "boolean") {
         _shownByAttribute(raw, true);
+    } else if (name === "open") {
+        _detailsAttributeWritten(raw, true);
     } else if (name === "readonly" && typeof raw.readOnly === "boolean") {
         raw.readOnly = true;
     } else if (name === "value") {
@@ -8098,6 +8340,8 @@ function _removeAttributeAt(item, attrName) {
         // `el.hidden` reads false again.
         m.explicitHidden = false;
         _shownByAttribute(raw, false);
+    } else if (name === "open") {
+        _detailsAttributeWritten(raw, false);
     } else if (name === "readonly" && typeof raw.readOnly === "boolean") {
         raw.readOnly = false;
     } else if (name === "class") {
@@ -11684,9 +11928,10 @@ function _lineToJoin(raw, nodes, ref) {
         return { lines: ref.parent, ref: ref };
     }
     var boxes = nodes.some(function(n) { return !_isTextNode(n) && !_vStaysInline(n, raw, ref); });
-    // A box inside a created inline element: the element becomes the line.
+    // A box inside a created inline element: the element becomes the line,
+    // where the host has the line's component (a host of its own may not).
     if (_meta(raw).createdTag && _isPlainTextItem(raw)) {
-        return boxes ? { lines: _inlineBecomesLines(raw), ref: ref } : null;
+        return boxes && _linesAvailable() ? { lines: _inlineBecomesLines(raw), ref: ref } : null;
     }
     if (raw.contentItem || _meta(raw).tableGrid || _TABLE_PARTS[_nodeTag(raw)]) {
         return null;
@@ -12122,6 +12367,7 @@ function _insertChildren(raw, nodes, ref, going, atStart) {
     }
     // A box that moves leaves its old place without being taken out.
     var zFrom = _zLeaving(nodes);
+    var placed = _detailsHold(nodes);
     _insertChildrenAt(raw, nodes, ref);
     _zLeft(zFrom);
     _zEntered(nodes);
@@ -12130,6 +12376,7 @@ function _insertChildren(raw, nodes, ref, going, atStart) {
     }
     _ceLeft(leaving);
     _ceInserted(held);
+    _detailsInserted(raw, placed);
 }
 
 function _insertChildrenAt(raw, nodes, ref) {
@@ -12901,6 +13148,11 @@ function _swapRawItemCarried(oldRaw, component, fallbackQmlSrc) {
         scrollArea(next);
     }
     _connectControls(next);
+    // A restyled first summary is a new form: it needs its marker again.
+    var at = _nodeTag(next) === "summary" ? _elementParent(next) : null;
+    if (at && _detailsSetUp(at) && _detailsSummary(at) === next) {
+        _detailsMark(next, _meta(at).detailsOpen);
+    }
 
     return next;
 }
@@ -13122,17 +13374,51 @@ function _unescapeHtmlText(str) {
         .replace(/&amp;/g, "&");
 }
 
-function _applyAttrsFromHtml(el, attrStr) {
+// The HTML parser lowers every attribute name, then gives these back their
+// case on an element in the SVG namespace ("adjust SVG attributes").
+var _SVG_ATTR_CASE = (function() {
+    var names = "attributeName attributeType baseFrequency baseProfile calcMode clipPathUnits "
+        + "diffuseConstant edgeMode filterUnits glyphRef gradientTransform gradientUnits "
+        + "kernelMatrix kernelUnitLength keyPoints keySplines keyTimes lengthAdjust "
+        + "limitingConeAngle markerHeight markerUnits markerWidth maskContentUnits maskUnits "
+        + "numOctaves pathLength patternContentUnits patternTransform patternUnits pointsAtX "
+        + "pointsAtY pointsAtZ preserveAlpha preserveAspectRatio primitiveUnits refX refY "
+        + "repeatCount repeatDur requiredExtensions requiredFeatures specularConstant "
+        + "specularExponent spreadMethod startOffset stdDeviation stitchTiles surfaceScale "
+        + "systemLanguage tableValues targetX targetY textLength viewBox viewTarget "
+        + "xChannelSelector yChannelSelector zoomAndPan";
+    var map = {};
+    names.split(" ").forEach(function(n) { map[n.toLowerCase()] = n; });
+    return map;
+})();
+
+// One attribute of a start tag: its name, then its value quoted either way or
+// bare, so a name-like word inside a quoted value is part of that value. A
+// quoted value runs to its closing quote, or to the end of the tag's text when
+// there is none, as in the HTML tokenizer's attribute-value states.
+var _HTML_ATTR = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)(?:\s*=\s*(?:"([^"]*)(?:"|$)|'([^']*)(?:'|$)|([^\s"'=<>`]+)))?/g;
+
+// What follows a tag's name up to its `>`: a `>` or `<` inside a quoted value
+// is part of the value, and an unclosed quote runs to the end of the markup.
+// Each tag pattern ends in `(>|$)`: a tag the markup ends inside of matches
+// with an empty last group, and the HTML parser drops such a tag.
+var _TAG_REST = "(?:[^>\"'=]|=\\s*\"[^\"]*(?:\"|$)|=\\s*'[^']*(?:'|$)|=|[\"'])*";
+// Elements whose content the HTML tokenizer reads as text up to their own
+// end tag (its RAWTEXT, script-data and PLAINTEXT states), and those of them
+// whose character references it still decodes (RCDATA).
+var _RAW_TEXT_TAGS = { script: true, style: true, xmp: true, iframe: true, noembed: true, noframes: true, plaintext: true, textarea: true, title: true };
+var _RCDATA_TAGS = { textarea: true, title: true };
+
+function _applyAttrsFromHtml(el, attrStr, svg) {
     if (!attrStr) {
         return;
     }
-    var re = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+    var re = new RegExp(_HTML_ATTR.source, "g");
     var match;
     while ((match = re.exec(attrStr)) !== null) {
-        var name = match[1];
         var val = match[2] !== undefined ? match[2] : (match[3] !== undefined ? match[3] : (match[4] !== undefined ? match[4] : ""));
         val = _unescapeHtmlText(val);
-        var lower = name.toLowerCase();
+        var lower = match[1].toLowerCase();
         if (lower === "id") {
             el.id = val;
         } else if (lower === "class") {
@@ -13143,21 +13429,152 @@ function _applyAttrsFromHtml(el, attrStr) {
             el.type = val;
             el.setAttribute("type", val);
         } else {
-            el.setAttribute(name, val);
+            // HTML attribute names have no case: `<DETAILS OPEN>` is open.
+            // An SVG one written in camel case keeps it: `viewBox`.
+            el.setAttribute(svg && _SVG_ATTR_CASE[lower] || lower, val);
         }
     }
 }
 
 var _HTML_INLINE = /^(a|abbr|b|bdi|bdo|cite|code|data|dfn|em|i|kbd|mark|q|s|samp|small|span|strong|sub|sup|time|u|var)$/i;
 
-function _parseHtmlFragmentNodes(html) {
+// Whether markup set into `raw` is SVG content, as the fragment parser takes
+// it from the context element: an `<svg>` or an element inside one, unless a
+// `<foreignObject>` between them makes its content HTML again.
+function _svgContext(raw) {
+    for (var node = raw, depth = 0; node && depth < 256; node = _logicalParent(node), ++depth) {
+        var tag = _nodeTag(node);
+        if (tag === "foreignobject") {
+            return false;
+        }
+        if (tag === "svg") {
+            return true;
+        }
+    }
+    return false;
+}
+
+// HTML start tags that leave SVG content, as the HTML parser's rules for
+// foreign content take them out of it. A `<font>` leaves it only with a color,
+// face or size.
+var _SVG_BREAKOUT = /^(b|big|blockquote|body|br|center|code|dd|div|dl|dt|em|embed|h[1-6]|head|hr|i|img|li|listing|menu|meta|nobr|ol|p|pre|ruby|s|small|span|strong|strike|sub|sup|table|tt|u|ul|var)$/;
+
+function _breaksOutOfSvg(tag, attrStr) {
+    if (_SVG_BREAKOUT.test(tag)) {
+        return true;
+    }
+    if (tag !== "font" || !attrStr) {
+        return false;
+    }
+    var re = new RegExp(_HTML_ATTR.source, "g");
+    var match;
+    while ((match = re.exec(attrStr)) !== null) {
+        if (/^(color|face|size)$/i.test(match[1])) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// SVG elements whose content is HTML again: the HTML integration points.
+var _SVG_HTML_POINTS = { foreignobject: true, desc: true, title: true };
+
+var _VOID_TAGS = { area: true, base: true, br: true, col: true, embed: true, hr: true, img: true, input: true, link: true, meta: true, source: true, track: true, wbr: true };
+
+// The markup with what the HTML parser does to an HTML element in SVG content
+// written out: the SVG elements open around it close before it, up to the
+// nearest HTML element or integration point, and their own end tags after it
+// are dropped. Markup set into an SVG element (`inSvg`) has nothing of its own
+// to close there, so such an element stays in place, and the fragment parser
+// makes it an HTML one. Markup with no such element comes back as it was.
+function _closeSvgBeforeHtml(src, inSvg) {
+    if (!inSvg && !/<svg/i.test(src)) {
+        return src;
+    }
+    var tagRe = new RegExp("<(\\/?)([a-zA-Z][a-zA-Z0-9-]*)(\\s" + _TAG_REST + ")?\\s*(\\/?)(>|$)", "g");
+    var open = [];
+    var dropped = {};
+    var out = "";
+    var last = 0;
+    var m;
+    while ((m = tagRe.exec(src)) !== null) {
+        if (m[5] === "") {
+            break;
+        }
+        var tag = m[2].toLowerCase();
+        if (m[1] === "/") {
+            var at = open.length - 1;
+            while (at >= 0 && open[at].tag !== tag) {
+                --at;
+            }
+            if (at >= 0) {
+                open.length = at;
+            } else if (dropped[tag]) {
+                dropped[tag] -= 1;
+                out += src.slice(last, m.index);
+                last = tagRe.lastIndex;
+            }
+            continue;
+        }
+        var top = open.length > 0 ? open[open.length - 1] : null;
+        var foreign = top ? top.svg && !_SVG_HTML_POINTS[top.tag] : Boolean(inSvg);
+        if (foreign && _breaksOutOfSvg(tag, m[3])) {
+            var closing = "";
+            while (open.length > 0 && open[open.length - 1].svg && !_SVG_HTML_POINTS[open[open.length - 1].tag]) {
+                var gone = open.pop().tag;
+                closing += "</" + gone + ">";
+                dropped[gone] = (dropped[gone] || 0) + 1;
+            }
+            out += src.slice(last, m.index) + closing;
+            last = m.index;
+            foreign = false;
+        }
+        // Raw text in HTML holds no tags: an SVG end tag written in it closes
+        // nothing.
+        if (!foreign && _RAW_TEXT_TAGS[tag] === true) {
+            tagRe.lastIndex = _rawTextEnd(src, tag, tagRe.lastIndex)[1];
+            continue;
+        }
+        if (m[4] === "/" || _VOID_TAGS[tag]) {
+            continue;
+        }
+        open.push({ tag: tag, svg: tag === "svg" || foreign });
+    }
+    return last === 0 && out === "" ? src : out + src.slice(last);
+}
+
+// `inSvg`: the markup is set into an `<svg>` or an SVG element inside one,
+// outside a `<foreignObject>`.
+function _parseHtmlFragmentNodes(html, inSvg) {
     var src = String(html === null || html === undefined ? "" : html);
+    return _parseFragment(_closeSvgBeforeHtml(src, inSvg), inSvg);
+}
+
+// Where the content of raw-text element `tag` opened before `from` ends, and
+// where the markup after it starts: its own end tag ends it only once that
+// tag's `>` comes, and `<plaintext>` holds the rest of the markup.
+function _rawTextEnd(src, tag, from) {
+    if (tag !== "plaintext") {
+        var endRe = new RegExp("</" + tag + "(?=[\\s/>])", "ig");
+        endRe.lastIndex = from;
+        var endTag = endRe.exec(src);
+        var endGt = endTag ? src.indexOf(">", endRe.lastIndex) : -1;
+        if (endGt !== -1) {
+            return [endTag.index, endGt + 1];
+        }
+    }
+    return [src.length, src.length];
+}
+
+// `inSvg`: the markup is the content of an SVG element outside an integration
+// point, with the SVG elements an HTML one leaves already closed.
+function _parseFragment(src, inSvg) {
     var nodes = [];
     var gap = "";
     var lastTag = "";
     var pos = 0;
-    var tagOpenRe = /<([a-zA-Z][a-zA-Z0-9-]*)(\s[^>]*)?\s*(\/?)>/g;
-    var voidTags = { area: true, base: true, br: true, col: true, embed: true, hr: true, img: true, input: true, link: true, meta: true, source: true, track: true, wbr: true };
+    var tagOpenRe = new RegExp("<([a-zA-Z][a-zA-Z0-9-]*)(\\s" + _TAG_REST + ")?\\s*(\\/?)(>|$)", "g");
+    var voidTags = _VOID_TAGS;
 
     while (pos < src.length) {
         tagOpenRe.lastIndex = pos;
@@ -13182,12 +13599,16 @@ function _parseHtmlFragmentNodes(html) {
                 gap = lead;
             }
         }
+        if (m[4] === "") {
+            break;
+        }
         lastTag = m[1];
         var tag = m[1].toLowerCase();
         var attrStr = m[2] || "";
         var selfClosing = m[3] === "/" || Boolean(voidTags[tag]);
         var el = document.createElement(tag);
-        _applyAttrsFromHtml(el, attrStr);
+        var svg = tag === "svg" || (Boolean(inSvg) && !_breaksOutOfSvg(tag, attrStr));
+        _applyAttrsFromHtml(el, attrStr, svg);
         _wsGiven(_unwrap(el), "ws", gap);
         gap = "";
 
@@ -13197,15 +13618,63 @@ function _parseHtmlFragmentNodes(html) {
             pos = afterOpen;
             continue;
         }
+        // In HTML a raw-text element's content has no tags, so a `<b` in it
+        // (`if(a<b)`) is text: only its own end tag ends it, and only once its
+        // `>` comes. In SVG the same names are elements like any other.
+        if (!svg && _RAW_TEXT_TAGS[tag] === true) {
+            var rawEnd = _rawTextEnd(src, tag, afterOpen);
+            var rawText = src.slice(afterOpen, rawEnd[0]);
+            // The parser drops one newline right after `<textarea>`.
+            if (tag === "textarea") {
+                rawText = rawText.replace(/^\r?\n/, "");
+            }
+            if (rawText) {
+                el.textContent = _RCDATA_TAGS[tag] === true ? _unescapeHtmlText(rawText) : rawText;
+            }
+            nodes.push(el);
+            pos = rawEnd[1];
+            continue;
+        }
         // Find matching closing tag for `tag`
         var depth = 1;
         var scanPos = afterOpen;
-        var tokenRe = new RegExp("<(/?)" + tag + "\\b[^>]*>", "gi");
+        // Every tag is read whole, so one written inside another's quoted
+        // value is not taken for an end tag.
+        var tokenRe = new RegExp("<(/?)([a-zA-Z][a-zA-Z0-9-]*)" + _TAG_REST + "(?:>|$)", "g");
         tokenRe.lastIndex = scanPos;
         var tok;
         var closeStart = -1;
         var closeEnd = -1;
+        // The scan's namespace: an `<svg>` inside enters SVG, where the
+        // raw-text names are ordinary elements, and its integration points
+        // go back to HTML.
+        var kidsSvg = svg && !_SVG_HTML_POINTS[tag];
+        var spaces = [];
         while ((tok = tokenRe.exec(src)) !== null) {
+            var tokTag = tok[2].toLowerCase();
+            var inSvgNow = spaces.length > 0 ? spaces[spaces.length - 1].svg : kidsSvg;
+            if (tok[1] === "/") {
+                if (spaces.length > 0 && spaces[spaces.length - 1].tag === tokTag) {
+                    spaces.pop();
+                }
+            } else if (!inSvgNow && _RAW_TEXT_TAGS[tokTag] === true) {
+                // A raw-text element inside holds no tags, so an end tag of
+                // this element written in it (`<textarea></div></textarea>`)
+                // is text.
+                tokenRe.lastIndex = _rawTextEnd(src, tokTag, tokenRe.lastIndex)[1];
+                continue;
+            } else if (tok[0].slice(-2) !== "/>") {
+                if (tokTag === "svg") {
+                    spaces.push({ tag: tokTag, svg: true });
+                } else if (inSvgNow && (_SVG_HTML_POINTS[tokTag] || _breaksOutOfSvg(tokTag, tok[0]))) {
+                    // An integration point, or an HTML element the child
+                    // parse also takes out of SVG.
+                    spaces.push({ tag: tokTag, svg: false });
+                }
+            }
+            if (tokTag !== tag) {
+                continue;
+            }
             var fullTok = tok[0];
             if (tok[1] === "/") {
                 depth -= 1;
@@ -13219,16 +13688,13 @@ function _parseHtmlFragmentNodes(html) {
             }
         }
         if (closeStart === -1) {
-            var rest = src.slice(afterOpen);
-            if (rest) {
-                el.textContent = _unescapeHtmlText(rest);
-            }
-            nodes.push(el);
-            break;
+            // No end tag: the element holds the rest of the markup.
+            closeStart = src.length;
+            closeEnd = src.length;
         }
         var inner = src.slice(afterOpen, closeStart);
         if (/<[a-zA-Z]/.test(inner)) {
-            var childWrappers = _parseHtmlFragmentNodes(inner);
+            var childWrappers = _parseFragment(inner, svg && !_SVG_HTML_POINTS[tag]);
             _wsGiven(_unwrap(el), "wsEnd", childWrappers.wsEnd);
             for (var c = 0; c < childWrappers.length; ++c) {
                 el.appendChild(childWrappers[c]);
@@ -13623,17 +14089,29 @@ function wrap(rawItem) {
         set innerText(v) { setText(rawItem, v); },
         get outerHTML() { return _serializeElement(rawItem); },
         set outerHTML(v) {
-            this.replaceWith.apply(this, _parseHtmlFragmentNodes(v));
+            var parent = _logicalParent(rawItem);
+            this.replaceWith.apply(this, _parseHtmlFragmentNodes(v, Boolean(parent) && _svgContext(parent)));
         },
         get content() { return _templateContent(rawItem); },
         get open() {
-            return _nodeTag(rawItem) === "details" ? m.detailsOpen === true : getAttribute(rawItem, "open") !== null;
+            return _nodeTag(rawItem) === "details" && m.detailsOpen !== undefined
+                ? m.detailsOpen === true : getAttribute(rawItem, "open") !== null;
         },
         set open(v) {
             if (_nodeTag(rawItem) !== "details") {
                 return;
             }
             var next = Boolean(v);
+            // Not in the document yet: the attribute is all it has, and is
+            // what sets it up once it is (`_detailsInserted`).
+            if (m.detailsOpen === undefined) {
+                if (next) {
+                    setAttribute(rawItem, "open", "");
+                } else {
+                    removeAttribute(rawItem, "open");
+                }
+                return;
+            }
             if (next === (m.detailsOpen === true)) {
                 return;
             }
@@ -14578,7 +15056,8 @@ function wrap(rawItem) {
         },
         insertAdjacentHTML: function(position, html) {
             var pos = String(position).toLowerCase();
-            var parsed = _parseHtmlFragmentNodes(html);
+            var context = pos === "beforebegin" || pos === "afterend" ? _logicalParent(rawItem) : rawItem;
+            var parsed = _parseHtmlFragmentNodes(html, Boolean(context) && _svgContext(context));
             if (parsed.length === 0) {
                 return;
             }
@@ -24789,7 +25268,7 @@ function _gLayOutRun(group, s, innerW, x, y, cut) {
             continue;
         }
         var ks = _gStyle(kid);
-        if (ks.display === "none") {
+        if (ks.display === "none" || _gFoldedAway(kid)) {
             _gHide(kid);
             continue;
         }
@@ -25005,7 +25484,7 @@ function _gLayoutFlow(raw, s, e, innerW, autoH, innerH) {
         }
         var kid = group.kid;
         var ks = _gStyle(kid);
-        if (ks.display === "none") {
+        if (ks.display === "none" || _gFoldedAway(kid)) {
             _gHide(kid);
             continue;
         }
@@ -25125,6 +25604,10 @@ function _gPlaceFloats(floats, side, innerW, innerH, x, top, prior) {
     }
     floats.forEach(function(kid) {
         var ks = _gStyle(kid);
+        if (_gFoldedAway(kid)) {
+            _gHide(kid);
+            return;
+        }
         kid.visible = true;
         var ke = _gEdges(kid, ks, innerW);
         // A float's `auto` margins are zero.
@@ -25239,7 +25722,7 @@ function _gLayoutFlex(raw, s, e, innerW, innerH) {
     var kids = _gKids(raw);
     for (var i = 0; i < kids.length; ++i) {
         var ks = _gStyle(kids[i]);
-        if (ks.display === "none") {
+        if (ks.display === "none" || _gFoldedAway(kids[i])) {
             _gHide(kids[i]);
             continue;
         }
@@ -25422,7 +25905,7 @@ function _gLayoutGrid(raw, s, e, innerW, innerH) {
     var all = _gKids(raw);
     for (var i = 0; i < all.length; ++i) {
         var ks = _gStyle(all[i]);
-        if (ks.display === "none") {
+        if (ks.display === "none" || _gFoldedAway(all[i])) {
             _gHide(all[i]);
         } else if (!_gOutOfFlow(ks)) {
             all[i].visible = true;
@@ -29364,14 +29847,15 @@ function _gVariantSupports(raw, name) {
 
 // Shows or hides an item as the rules now say. The converter's binding answers
 // for all it knows; only where it disagrees does something hold over it.
-// A closed disclosure folds every child but its summary away, whatever the
-// cascade says; `_detailsShow` reads the cascade when it opens. Only one the
-// runtime closed has folded anything: a `<details>` a script makes never went
-// through `_detailsShow`, so its children are on screen and follow the rules.
+// A closed disclosure folds every child but its first summary away, whatever
+// the cascade says; `_detailsShow` reads the cascade when it opens. Only one
+// the runtime closed has folded anything: a `<details>` a script makes is set
+// up by `_detailsShow` once it is in the document, and until then its
+// children are on screen and follow the rules.
 function _gFoldedAway(raw) {
     var up = _elementParent(raw);
     return Boolean(up) && _nodeTag(up) === "details" && _meta(up).detailsOpen === false
-        && _nodeTag(raw) !== "summary";
+        && _detailsSummary(up) !== raw;
 }
 
 // An out-of-flow box a layer above the page paints: a slot stands for it
