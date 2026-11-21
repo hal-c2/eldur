@@ -5394,7 +5394,14 @@ function verify() {
     // reads back.
     hiddenBox.style.opacity = "0.6";
     const rewritten = getComputedStyle(hiddenBox).opacity;
-    return [before, getComputedStyle(box).opacity, uneven, hidden, rewritten].join(" ");
+    // Clearing it goes back to the declared one, and so does a box whose
+    // only write is its visibility.
+    hiddenBox.style.opacity = "";
+    const cleared = getComputedStyle(hiddenBox).opacity;
+    hiddenBox.style.visibility = "visible";
+    const visible = getComputedStyle(hiddenBox).opacity;
+    hiddenBox.style.visibility = "";
+    return [before, getComputedStyle(box).opacity, uneven, hidden, rewritten, cleared, visible].join(" ");
 }
 "##,
         r#"Item {
@@ -5429,7 +5436,7 @@ function verify() {
 }"#,
     );
     assert!(
-        output.contains("ELDUR_OK_FADE 0.8 0.6 0.75 0.75 0.6 0.30 0"),
+        output.contains("ELDUR_OK_FADE 0.8 0.6 0.75 0.75 0.6 0.75 0.75 0.30 0"),
         "{output}"
     );
 }
