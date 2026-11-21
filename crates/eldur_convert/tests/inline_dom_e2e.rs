@@ -8,7 +8,8 @@
 //! `node crates/eldur_convert/tests/inline_dom/gen.mjs`. A QML warning or an
 //! uncaught script error fails the page. A page may also name texts it must
 //! draw, in order: what each visible `Text` shows once the script and clicks
-//! are done.
+//! are done; and, for an element (by id), texts drawn inside it and texts
+//! it must not draw.
 
 mod support;
 
@@ -29,15 +30,76 @@ TestCase {
     name: "InlineDom"
     when: windowShown
 
-    function drawnIn(item) {
+    function drawnIn(item, under) {
         if (!item.visible || item.opacity === 0) {
             return
         }
+        const names = item.objectName ? under.concat([item.objectName]) : under
         if (item.lineCount !== undefined && typeof item.text === "string" && item.text !== "") {
-            console.log("DRAWN " + item.text.replace(/<[^>]*>/g, ""))
+            const text = item.text.replace(/<[^>]*>/g, "")
+            console.log("DRAWN " + text)
+            for (const name of names) {
+                console.log("DRAWNIN " + name + " " + text)
+            }
         }
         for (let i = 0; i < item.children.length; ++i) {
-            drawnIn(item.children[i])
+            drawnIn(item.children[i], names)
+        }
+    }
+
+    // Where a run on a line draws its first ink, from the left of its own box.
+    function inkIn(item, under, img) {
+        if (!item.visible || item.opacity === 0) {
+            return
+        }
+        const names = item.objectName ? under.concat([item.objectName]) : under
+        if (names.length > 0 && item.lineCount !== undefined && typeof item.text === "string"
+                && item.text !== "" && item.parent && typeof item.parent.firstBaseline === "number") {
+            const at = item.mapToItem(host, 0, 0)
+            const x0 = Math.round(at.x), y0 = Math.round(at.y)
+            const w = Math.min(Math.round(item.width), img.width - x0), h = Math.min(Math.round(item.height), img.height - y0)
+            let left = -1
+            for (let x = 0; x < w && left < 0; ++x) {
+                for (let y = 0; y < h; ++y) {
+                    const c = img.pixel(x0 + x, y0 + y)
+                    if ((c.r + c.g + c.b) / 3 < 0.5) {
+                        left = x
+                        break
+                    }
+                }
+            }
+            console.log("INKIN " + names[names.length - 1] + " " + left + " " + item.text)
+        }
+        // A run that wraps on a line: where each of its lines draws ink in the
+        // line's box, in the page's pixels.
+        if (item.lineCount > 1 && typeof item.text === "string" && item.parent
+                && typeof item.parent.firstBaseline === "number") {
+            const box = item.parent.mapToItem(host, 0, 0)
+            const top = item.mapToItem(host, 0, 0)
+            const bx = Math.max(0, Math.round(box.x)), bw = Math.min(Math.round(item.parent.width), img.width - bx)
+            const band = item.height / item.lineCount
+            for (let i = 0; i < item.lineCount; ++i) {
+                // The middle of its band: a taller box on the line reaches into
+                // the band's edges.
+                const y0 = Math.round(top.y + (i + 0.25) * band), y1 = Math.min(Math.round(top.y + (i + 0.75) * band), img.height)
+                let left = -1, right = -1
+                for (let x = bx; x < bx + bw; ++x) {
+                    for (let y = y0; y < y1; ++y) {
+                        const c = img.pixel(x, y)
+                        if ((c.r + c.g + c.b) / 3 < 0.5) {
+                            if (left < 0) {
+                                left = x
+                            }
+                            right = x + 1
+                            break
+                        }
+                    }
+                }
+                console.log("INKLINE " + i + " " + left + " " + right + " " + item.text)
+            }
+        }
+        for (let i = 0; i < item.children.length; ++i) {
+            inkIn(item.children[i], names, img)
         }
     }
 
@@ -56,14 +118,30 @@ TestCase {
             wait(50)
         }
         waitForRendering(page)
-        drawnIn(page)
+        drawnIn(page, [])
+        inkIn(page, [], grabImage(host))
     }
 }
 }
 "##;
 
+/// What one element draws: texts it must draw, in order, and texts it must not.
+type Within<'a> = (&'a str, &'a [&'a str], &'a [&'a str]);
+
+/// A wrapped run's text and Chromium's box for each of its lines, left and
+/// right (`<body data-ink>`).
+type Ink = (String, Vec<(i64, i64)>);
+
 /// Runs one page; `Err` has what went wrong.
-fn run(name: &str, html: &str, want: &[&str], clicks: &str, drawn: &[&str]) -> Result<(), String> {
+fn run(
+    name: &str,
+    html: &str,
+    want: &[&str],
+    clicks: &str,
+    drawn: &[&str],
+    within: &[Within],
+    ink: &[Ink],
+) -> Result<(), String> {
     if support::no_qt() {
         return Ok(());
     }
@@ -123,6 +201,81 @@ fn run(name: &str, html: &str, want: &[&str], clicks: &str, drawn: &[&str]) -> R
             }
         }
     }
+    for (id, must, never) in within {
+        let prefix = format!("DRAWNIN {id} ");
+        let drew_in: Vec<_> = text
+            .lines()
+            .filter_map(|l| l.find(&prefix).map(|at| &l[at + prefix.len()..]))
+            .collect();
+        let mut from = 0;
+        for want in *must {
+            match drew_in[from..].iter().position(|d| d == want) {
+                Some(at) => from += at + 1,
+                None => {
+                    problems.push(format!(
+                        "#{id} draws no {want:?} in order; drew {drew_in:?}"
+                    ));
+                    break;
+                }
+            }
+        }
+        for not in *never {
+            if drew_in.iter().any(|d| d.contains(not)) {
+                problems.push(format!("#{id} draws {not:?}; drew {drew_in:?}"));
+            }
+        }
+        // Chromium draws each run in its own box. A run whose glyphs Qt
+        // aligns in a wider layout draws over its neighbour while its box
+        // is in place, so this reads the pixels.
+        let ink = format!("INKIN {id} ");
+        for l in text.lines() {
+            let Some(at) = l.find(&ink) else { continue };
+            let (left, run) = l[at + ink.len()..].split_once(' ').unwrap_or(("-1", ""));
+            let left: i32 = left.parse().unwrap_or(-1);
+            if !run.starts_with(char::is_whitespace) && left > 2 {
+                problems.push(format!(
+                    "#{id} draws {run:?} {left} px into its box, over what comes before"
+                ));
+            }
+            // No ink at all in its box: the run drew outside it (or not at
+            // all), which the text checks above cannot see.
+            if !run.trim().is_empty() && left < 0 {
+                problems.push(format!("#{id} draws no ink for {run:?} in its box"));
+            }
+        }
+    }
+    // Each line after a wrapped run's first is placed by its paragraph's
+    // alignment alone; its ink lies in Chromium's box for it. The first
+    // shares its row with what comes before, and its box ends in a space.
+    for (run, lines) in ink {
+        let drew: Vec<(usize, i64, i64)> = text
+            .lines()
+            .filter_map(|l| {
+                let rest = &l[l.find("INKLINE ")? + 8..];
+                let mut parts = rest.splitn(4, ' ');
+                let i = parts.next()?.parse().ok()?;
+                let left = parts.next()?.parse().ok()?;
+                let right = parts.next()?.parse().ok()?;
+                (parts.next()? == run).then_some((i, left, right))
+            })
+            .collect();
+        if drew.len() != lines.len() {
+            problems.push(format!(
+                "{run:?} draws {} lines, Chromium {}: {drew:?}",
+                drew.len(),
+                lines.len()
+            ));
+            continue;
+        }
+        for &(i, left, right) in drew.iter().skip(1) {
+            let (want_left, want_right) = lines[i];
+            if (left - want_left).abs() > 3 || (right - want_right).abs() > 3 {
+                problems.push(format!(
+                    "line {i} of {run:?} draws ink from {left} to {right}; Chromium's box is {want_left} to {want_right}"
+                ));
+            }
+        }
+    }
     if problems.is_empty() {
         Ok(())
     } else {
@@ -136,6 +289,12 @@ fn page(name: &str) {
 
 /// `page`, and the page draws `drawn` in that order, others between allowed.
 fn page_drawing(name: &str, drawn: &[&str]) {
+    page_drawing_within(name, drawn, &[]);
+}
+
+/// `page_drawing`, and each element named in `within` draws what it says
+/// inside it, and nothing it rules out.
+fn page_drawing_within(name: &str, drawn: &[&str], within: &[Within]) {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/inline_dom");
     let chromium: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(dir.join("chromium.json")).expect("json"))
@@ -157,7 +316,23 @@ fn page_drawing(name: &str, drawn: &[&str]) {
         })
         .collect();
     let clicks = format!("[{}]", clicks.join(","));
-    if let Err(e) = run(name, &html, &want, &clicks, drawn) {
+    let ink: Vec<Ink> = chromium[name]["ink"]
+        .as_array()
+        .map(|runs| {
+            runs.iter()
+                .map(|r| {
+                    let lines = r["lines"].as_array().expect("lines").iter();
+                    let lines = lines
+                        .map(|l| (l[0].as_i64().expect("left"), l[1].as_i64().expect("right")));
+                    (
+                        r["text"].as_str().expect("text").to_owned(),
+                        lines.collect(),
+                    )
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    if let Err(e) = run(name, &html, &want, &clicks, drawn, within, &ink) {
         panic!("{e}");
     }
 }
@@ -379,4 +554,102 @@ fn change_comes_only_when_the_text_changed() {
 #[test]
 fn a_scripted_click_bubbles() {
     page("ev_scripted");
+}
+
+// #23: what the drive drew differently from Chromium: a span before a
+// button's text, an emptied button, whitespace runs, markup in a button, a
+// disabled fieldset's legend, a line after a paragraph, a span moved to the
+// body; then a button given markup and text in turn, a button's own Text
+// appended to it again, and long text put in a legend.
+#[test]
+fn the_drives_drawn_gaps_match_chromium() {
+    let words = "word ".repeat(30);
+    let after_box = words.as_str();
+    let after_text = format!("w {}", words.trim_end());
+    page_drawing(
+        "drawn_gaps",
+        &[
+            "GoSave",
+            "g bold ",
+            "Go",
+            " now",
+            "l ",
+            "one",
+            "yz",
+            "DDD",
+            "B2",
+            "Save",
+            &after_text,
+            "v ",
+            after_box,
+            "end",
+            "moved",
+        ],
+    );
+}
+
+// A legend's own width, min-width and max-width hold in a narrower fieldset;
+// with none it wraps at the fieldset's content width.
+#[test]
+fn a_legend_keeps_its_width_bounds_as_chromium_does() {
+    page_drawing(
+        "legend_sizes",
+        &[
+            "Wide",
+            "Min",
+            "Max legend text",
+            "Both",
+            "a long legend that wraps",
+        ],
+    );
+}
+
+#[test]
+fn a_wrapped_run_on_an_aligned_line_draws_where_chromium_does() {
+    // A run's own `text-align` is not used on a line (`_gPaintText`); the
+    // line places each of its lines, centred or right-aligned.
+    page_drawing(
+        "centred_runs",
+        &[
+            "alpha beta gamma delta epsilon zeta eta theta",
+            "one two three four five six seven eight",
+        ],
+    );
+}
+
+#[test]
+fn a_buttons_line_holds_its_text_nodes_as_chromium_does() {
+    // `after`, a deep copy and a prepend read a button's line by its nodes,
+    // Text ones too, and its hidden text keeps its place once its neighbours
+    // left.
+    page_drawing_within(
+        "button_line_nodes",
+        &["Go", "!", " on", "X", "B", "Save later"],
+        &[
+            ("la", &["Go", "!", " on"], &[]),
+            ("lh", &["X", "B"], &["H"]),
+            ("bpre", &["Save later"], &["K"]),
+        ],
+    );
+}
+
+#[test]
+fn a_button_holding_lines_keeps_them_as_chromium_does() {
+    // What a button holds but does not draw stays undrawn once it holds lines.
+    page_drawing_within(
+        "button_lines",
+        &["A", "x", "Go", " many words that wrap", "Go", " on"],
+        &[
+            ("bh", &["x"], &["hidden"]),
+            ("bm", &["B", "A"], &["H"]),
+            ("bk", &["y", "Save", "x"], &["K"]),
+            ("bp", &["y", "B", "x", "A"], &["K"]),
+            ("bb", &["AC"], &["B"]),
+            ("bs", &["Sip"], &["a"]),
+            ("bg", &["Z"], &["Go"]),
+            ("bw", &["Save ", " later", "!"], &["K"]),
+            ("cbx", &["Go", " many words that wrap"], &[]),
+            ("pc", &["Go", " on"], &[]),
+        ],
+    );
 }

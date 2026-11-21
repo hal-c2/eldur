@@ -1,0 +1,28 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif} #bpre{white-space:pre}</style><script>
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
+function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?JSON.stringify(n.data):I(n)}).join(",")}
+document.addEventListener("DOMContentLoaded",function(){
+var byId=function(s){return document.getElementById(s)};
+// Text put after an element on a button's line goes before the Text node
+// that follows it.
+var la=byId("la");la.innerHTML="<b>Go</b> on";la.firstElementChild.after("!");
+L("after-element",N(la),JSON.stringify(la.textContent));
+// A deep copy of a button holding lines copies its Text nodes too.
+var lc=byId("lc");lc.innerHTML="<b>Go</b> on";var cc=lc.cloneNode(true);cc.id="lcc";
+L("clone-lines",N(cc),JSON.stringify(cc.textContent));
+// Hidden text whose nodes have all left stays where it was: before what
+// was put in after it, after what is put ahead of everything.
+var lh=byId("lh"),ha=lh.firstChild,hb=document.createElement("span");hb.textContent="B";lh.append(hb);ha.remove();
+var hx=document.createElement("span");hx.textContent="X";lh.prepend(hx);
+L("hidden-unanchored",JSON.stringify(lh.textContent));
+// A button that keeps its spaces keeps them in its nodes and draws them.
+var bp=byId("bpre");L("pre-split",JSON.stringify([bp.firstChild.nodeValue,bp.lastChild.nodeValue]));
+bp.lastChild.nodeValue=" later";L("pre-set",JSON.stringify(bp.textContent));
+});
+</script></head><body>
+<p id="pa"><button id="la">x</button></p>
+<p id="pc"><button id="lc">x</button></p>
+<p id="ph"><button id="lh">A<kbd style="display:none">H</kbd></button></p>
+<p id="pp"><button id="bpre">Save <kbd style="display:none">K</kbd> now</button></p>
+</body></html>

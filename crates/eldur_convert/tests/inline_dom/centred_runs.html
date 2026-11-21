@@ -1,0 +1,14 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif} p{width:240px;text-align:center;margin:4px 0} #r{text-align:right}</style><script>
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+// A script's span after a box on a centred (or right-aligned) line wraps: each
+// of its lines is placed by the paragraph's alignment, its second too.
+document.addEventListener("DOMContentLoaded",function(){
+var byId=function(s){return document.getElementById(s)};
+var w=document.createElement("span");w.id="w";w.textContent="alpha beta gamma delta epsilon zeta eta theta";byId("c").append(w);
+var wr=document.createElement("span");wr.id="wr";wr.textContent="one two three four five six seven eight";byId("r").append(wr);
+L("made",JSON.stringify(byId("c").textContent),JSON.stringify(byId("r").textContent));
+});
+</script></head><body data-ink="#w #wr">
+<p id="c"><input size="3"></p>
+<p id="r"><input size="2"></p>
+</body></html>

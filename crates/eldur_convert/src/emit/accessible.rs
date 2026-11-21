@@ -35,6 +35,87 @@ pub(crate) fn content_text(
     text_of(doc, styles, node, skip, reading, false)
 }
 
+/// A button's text nodes as its `textContent` holds them, split where what
+/// is drawn meets what is not: `[hidden, drawn, hidden, …, drawn, hidden]`,
+/// whitespace collapsed as each reading collapses it. The runtime makes a
+/// Text node of each drawn run and keeps each hidden one between them, so it
+/// never has to find the split by matching strings. `None` when the drawn
+/// runs, collapsed, do not join to `drawn` or the whole to `dom` (a box that stands
+/// apart adds a space only the drawn text has).
+pub(crate) fn drawn_runs(
+    doc: &Document,
+    styles: &StyleMap,
+    node: NodeId,
+    drawn: &str,
+    dom: &str,
+) -> Option<Vec<String>> {
+    let mut raw: Vec<(bool, String)> = Vec::new();
+    runs_of(doc, styles, node, &mut raw);
+    // `[hidden, drawn, hidden, …]`, so run `i` is hidden when `i` is even.
+    let mut runs = vec![String::new()];
+    for (hidden, text) in raw {
+        if hidden != (runs.len() % 2 == 1) {
+            runs.push(String::new());
+        }
+        runs.last_mut().expect("one run").push_str(&text);
+    }
+    if runs.len() % 2 == 0 {
+        runs.push(String::new());
+    }
+    // Collapse the whole as `textContent` is collapsed; a space belongs to the
+    // run its first whitespace is in.
+    let mut chars: Vec<(char, usize)> = Vec::new();
+    let mut space: Option<usize> = None;
+    for (i, run) in runs.iter().enumerate() {
+        for c in run.chars() {
+            if c.is_ascii_whitespace() {
+                space.get_or_insert(i);
+            } else {
+                if let Some(at) = space.take()
+                    && !chars.is_empty()
+                {
+                    chars.push((' ', at));
+                }
+                chars.push((c, i));
+            }
+        }
+    }
+    let mut runs: Vec<String> = vec![String::new(); runs.len()];
+    for (c, i) in chars {
+        runs[i].push(c);
+    }
+    // Each node keeps its spaces, as in the DOM (`Save <kbd hidden>K</kbd>
+    // now` gives "Save " and " now"); the label collapses the two as it draws
+    // them, so the drawn runs join to the label once collapsed.
+    let shown: String = runs.iter().skip(1).step_by(2).map(String::as_str).collect();
+    let shown = shown.split_ascii_whitespace().collect::<Vec<_>>().join(" ");
+    (shown == drawn && runs.concat() == dom).then_some(runs)
+}
+
+/// `node`'s text, each piece marked hidden (`display: none`) or drawn.
+fn runs_of(doc: &Document, styles: &StyleMap, node: NodeId, out: &mut Vec<(bool, String)>) {
+    for child in doc.children(node) {
+        match &doc.node(child).data {
+            NodeData::Text(t) => out.push((false, t.clone())),
+            NodeData::Element(e) => {
+                let never = matches!(
+                    e.local_name(),
+                    "script" | "style" | "template" | "noscript" | "head" | "title"
+                );
+                let none = styles
+                    .computed(child)
+                    .is_some_and(|c| c.style.display == Display::None);
+                if never || none {
+                    out.push((true, doc.text_content(child)));
+                } else {
+                    runs_of(doc, styles, child, out);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
 /// The same, `traversal` when it is the content of an element
 /// `aria-labelledby` points at: a node in it does not follow its own
 /// `aria-labelledby` (step 2B), so a traversal never loops.

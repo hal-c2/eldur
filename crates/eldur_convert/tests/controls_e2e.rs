@@ -413,7 +413,10 @@ TestCase {
         wait(0)
         const label = under(mark, i => typeof i.text === "string" && i.text.indexOf("now") >= 0 && i !== mark)
         verify(label, "appended text drawn")
-        verify(label.text.indexOf("&lt;i&gt;") >= 0, "escaped: " + label.text)
+        // Literal either way: escaped in rich text, or as it is in plain text.
+        verify((label.textFormat !== Text.PlainText && label.text.indexOf("&lt;i&gt;") >= 0)
+               || (label.textFormat === Text.PlainText && label.text.indexOf("<i> now</i>") >= 0),
+               "literal: " + label.text)
         // An <input> is void: what a script puts in it is not drawn.
         const sub = find("sub")
         compare(sub.text, "Submit")

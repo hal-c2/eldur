@@ -67,6 +67,65 @@
   ],
   "clicks": []
  },
+ "button_line_nodes": {
+  "log": [
+   "LC after-element B,\"!\",\" on\" \"Go! on\"",
+   "LC clone-lines B,\" on\" \"Go on\"",
+   "LC hidden-unanchored \"XHB\"",
+   "LC pre-split [\"Save \",\" now\"]",
+   "LC pre-set \"Save K later\""
+  ],
+  "clicks": []
+ },
+ "button_lines": {
+  "log": [
+   "LC append-own \"A\",SPAN \"Ax\" true",
+   "LC hidden-kept \"Savehiddenx\"",
+   "LC hidden-left \"hiddenx\"",
+   "LC hidden-stays \"HBA\"",
+   "LC hidden-first \"yKSavex\"",
+   "LC hidden-between \"yKBxA\"",
+   "LC split-repeat [\"A\",\"B\"]",
+   "LC split-repeat-set \"ABC\"",
+   "LC split-letter [\"S\",\"ave\"]",
+   "LC split-letter-set \"Saip\"",
+   "LC split-same \"Go\"",
+   "LC split-same-set \"GoZ\"",
+   "LC split-space [\"Save \",\" now\"]",
+   "LC split-space-set \"Save K later\"",
+   "LC split-space-lines \"Save \" \"Save K later!\"",
+   "LC created-wrap true B,\" many words that wrap\"",
+   "LC created-empty true SPAN",
+   "LC swapped B,\" on\" \"Go on\" true true",
+   "LC moved-out false false",
+   "LC turned-in true",
+   "LC turned-out false false",
+   "LC focus mv",
+   "LC typed \"k\" true true",
+   "LC focus ti",
+   "LC typed \"j\""
+  ],
+  "clicks": [
+   {
+    "name": "#mv",
+    "x": 92.5,
+    "y": 199.09375
+   },
+   {
+    "name": "key:k",
+    "key": "k"
+   },
+   {
+    "name": "#ti",
+    "x": 92.5,
+    "y": 290.6875
+   },
+   {
+    "name": "key:j",
+    "key": "j"
+   }
+  ]
+ },
  "button_nodes": {
   "log": [
    "LC kids 1 3 \"Save\" true true null",
@@ -116,6 +175,40 @@
    {
     "name": "key:ArrowUp",
     "key": "ArrowUp"
+   }
+  ]
+ },
+ "centred_runs": {
+  "log": [
+   "LC made \"alpha beta gamma delta epsilon zeta eta theta\" \"one two three four five six seven eight\""
+  ],
+  "clicks": [],
+  "ink": [
+   {
+    "text": "alpha beta gamma delta epsilon zeta eta theta",
+    "lines": [
+     [
+      59,
+      230
+     ],
+     [
+      44,
+      196
+     ]
+    ]
+   },
+   {
+    "text": "one two three four five six seven eight",
+    "lines": [
+     [
+      58,
+      240
+     ],
+     [
+      158,
+      240
+     ]
+    ]
    }
   ]
  },
@@ -318,6 +411,24 @@
    "LC held i8 i8 true false",
    "LC gone null 0 o9 true \" c\"",
    "LC swap \"aXb\" 0 null null"
+  ],
+  "clicks": []
+ },
+ "drawn_gaps": {
+  "log": [
+   "LC span-before gs,\"Save\" \"GoSave\" true true true",
+   "LC emptied 0 true true",
+   "LC ws \"g \",wb,\" \",wi",
+   "LC markup gmb,\" now\" \"Go now\" gm \" now\" 21",
+   "LC legend gl false true true true",
+   "LC after-p sc \"\\n\" true",
+   "LC markup-text \"CCC\" \"CCC\" true",
+   "LC markup-content \"DDD\" \"DDD\" true",
+   "LC emptied-text \"B2\" \"B2\" true",
+   "LC self-append \"Save\" \"Save\" true true",
+   "LC wrap true true true true",
+   "LC wrap-box true true true true",
+   "LC to-body \"end \" true true"
   ],
   "clicks": []
  },
@@ -870,6 +981,16 @@
     "key": "Enter"
    }
   ]
+ },
+ "legend_sizes": {
+  "log": [
+   "LC width 304 20",
+   "LC min-width 304 20",
+   "LC max-width 54 true",
+   "LC width-max 54 20",
+   "LC auto 100 true"
+  ],
+  "clicks": []
  },
  "lookups": {
   "log": [

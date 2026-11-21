@@ -1,0 +1,74 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif} #cbx,#cex{color:rgb(0,0,200)} .pri{background:rgb(255,220,220)}</style><script>
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
+function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?JSON.stringify(n.data):I(n)}).join(",")}
+function R(e){var r=e.getBoundingClientRect();return {l:Math.round(r.left),t:Math.round(r.top),r:Math.round(r.right),b:Math.round(r.bottom),w:Math.round(r.width),h:Math.round(r.height)}}
+function near(a,b){return Math.abs(a-b)<=3}
+document.addEventListener("DOMContentLoaded",function(){
+var byId=function(s){return document.getElementById(s)};
+// A button's own text appended with an element is still one Text node.
+var ba=byId("ba"),sp=document.createElement("span");sp.textContent="x";ba.append(ba.firstChild,sp);
+L("append-own",N(ba),JSON.stringify(ba.textContent),near(R(ba).h,R(byId("bn")).h));
+// What a button holds but does not draw stays in its textContent once it
+// holds lines, where it was, also after the text before it leaves.
+var bh=byId("bh"),hx=document.createElement("span");hx.textContent="x";bh.append(hx);
+L("hidden-kept",JSON.stringify(bh.textContent));
+bh.firstChild.remove();
+L("hidden-left",JSON.stringify(bh.textContent));
+// It also stays there when the text it followed is put in again.
+var bm=byId("bm"),mb=document.createElement("span");mb.textContent="B";bm.append(mb);bm.append(bm.firstChild);
+L("hidden-stays",JSON.stringify(bm.textContent));
+// Hidden text before the first node stays before it when text is put ahead.
+var bk=byId("bk"),kx=document.createElement("span");kx.textContent="x";bk.append(kx);bk.prepend("y");
+L("hidden-first",JSON.stringify(bk.textContent));
+// Hidden text whose node before it is put in again stays before the node
+// that followed it, also once text is put ahead of everything.
+var bp=byId("bp"),px=document.createElement("span");px.textContent="x";bp.append(px);bp.append(bp.firstChild);bp.prepend("y");
+L("hidden-between",JSON.stringify(bp.textContent));
+// The split is where the nodes are, not where the text matches.
+function ends(b){return JSON.stringify([b.firstChild.nodeValue,b.lastChild.nodeValue]);}
+var bb=byId("bb"),bs=byId("bs"),bg=byId("bg");
+L("split-repeat",ends(bb));bb.lastChild.nodeValue="C";L("split-repeat-set",JSON.stringify(bb.textContent));
+L("split-letter",ends(bs));bs.lastChild.nodeValue="ip";L("split-letter-set",JSON.stringify(bs.textContent));
+L("split-same",JSON.stringify(bg.lastChild.nodeValue));bg.lastChild.nodeValue="Z";L("split-same-set",JSON.stringify(bg.textContent));
+// A node keeps the space before it, which the label collapses with the one
+// before the hidden element.
+var bw=byId("bw");L("split-space",ends(bw));bw.lastChild.nodeValue=" later";L("split-space-set",JSON.stringify(bw.textContent));
+var wx=document.createElement("span");wx.textContent="!";bw.append(wx);L("split-space-lines",JSON.stringify(bw.firstChild.nodeValue),JSON.stringify(bw.textContent));
+// A created button holding a line keeps the line's height when restyled.
+var pcd=document.createElement("div");byId("pc").append(pcd);
+var cb=document.createElement("button");cb.style.width="60px";pcd.append(cb);
+cb.innerHTML="<b>Go</b> many words that wrap";cb.id="cbx";
+L("created-wrap",R(cb).h>40,N(cb));
+var ce=document.createElement("button");pcd.append(ce);ce.append(document.createElement("span"));ce.id="cex";
+L("created-empty",R(ce).h<R(byId("bn")).h,N(ce));
+// A created button holding lines given a class that paints its background
+// (so it is made again, from another form) keeps them.
+var cs=document.createElement("button");byId("pc").append(cs);cs.innerHTML="<b>Go</b> on";cs.className="pri";pcd.append(cs);
+L("swapped",N(cs),JSON.stringify(cs.textContent),R(cs).w>40,R(cs).h<R(byId("bn")).h+3);
+// A control put in a disabled fieldset (whose legend holds a field, so each
+// control answers for itself) and moved out is enabled again.
+byId("dfsl").append(document.createElement("input"));
+var mv=document.createElement("input");mv.id="mv";byId("dfs").append(mv);byId("pm").append(mv);
+mv.addEventListener("focus",function(){L("focus",I(mv))});
+// Once the page has been painted again, the restyled buttons keep those heights.
+mv.addEventListener("input",function(){L("typed",JSON.stringify(mv.value),R(cb).h>40,R(ce).h<R(byId("bn")).h)});
+L("moved-out",mv.matches(":disabled"),mv.disabled);
+// A control already in a fieldset that turns disabled, then moved out, is
+// enabled again.
+byId("tfl").append(document.createElement("input"));
+var ti=byId("ti");byId("tfs").disabled=true;
+L("turned-in",ti.matches(":disabled"));
+byId("pm2").append(ti);
+L("turned-out",ti.matches(":disabled"),ti.disabled);
+ti.addEventListener("focus",function(){L("focus",I(ti))});
+ti.addEventListener("input",function(){L("typed",JSON.stringify(ti.value))});
+});
+</script></head><body data-clicks="#mv key:k #ti key:j">
+<p><button id="ba">A</button> <button id="bn">Save</button> <button id="bh">Save<kbd style="display:none">hidden</kbd></button> <button id="bm">A<kbd style="display:none">H</kbd></button> <button id="bk"><kbd style="display:none">K</kbd>Save</button> <button id="bp">A<kbd style="display:none">K</kbd>B</button> <button id="bb">A<kbd style="display:none">B</kbd>B</button> <button id="bs">S<kbd style="display:none">a</kbd>ave</button> <button id="bg"><kbd style="display:none">Go</kbd>Go</button> <button id="bw">Save <kbd style="display:none">K</kbd> now</button></p>
+<div id="pc"></div>
+<fieldset id="dfs" disabled><legend id="dfsl">off</legend></fieldset>
+<p id="pm"></p>
+<fieldset id="tfs"><legend id="tfl">on</legend><input id="ti"></fieldset>
+<p id="pm2"></p>
+</body></html>

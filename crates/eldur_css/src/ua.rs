@@ -381,6 +381,11 @@ input {
     background-color: white;
 }
 
+/* Chromium greys a disabled field's text; the standard leaves it to the UA. */
+input:disabled {
+    color: #545454;
+}
+
 textarea {
     font-family: monospace;
     border: 1px solid #767676;
