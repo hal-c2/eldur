@@ -5583,12 +5583,13 @@ Item {
         // Packed and unchanged, a settle only counts.
         walks("pack-settle", function() { R._packFlex(counted, false); }, 0);
         // The insert's search from the end, its one check that the new item
-        // is not a spacer, and the item moved out and back after its gap.
-        walks("pack-append", function() { R._insertInFlow(counted, [fresh()], null); }, 1 + 1 + 1);
+        // is not a spacer, and the item read, moved out and back after its
+        // gap.
+        walks("pack-append", function() { R._insertInFlow(counted, [fresh()], null); }, 1 + 1 + 3 * 1);
         // Before p1 the insert searches from the end to it and moves what
-        // follows; the pack checks the item, then moves it and what follows
-        // again, now with a gap after it.
-        walks("pack-insert", function() { R._insertInFlow(counted, [fresh()], item(counted, "p1")); }, 3 + 3 + 1 + 4);
+        // follows; the pack checks the item, then reads, detaches and
+        // reattaches it and what follows again, now with a gap after it.
+        walks("pack-insert", function() { R._insertInFlow(counted, [fresh()], item(counted, "p1")); }, 3 + 3 + 1 + 3 * 4);
         // Appends and inserts leave each kind of packing as a fresh pack would.
         [between, around, evenly, start, end, center].forEach(function(layout) {
             R._packFlex(layout, true);
