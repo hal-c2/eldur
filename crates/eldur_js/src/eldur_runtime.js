@@ -12838,6 +12838,22 @@ function _parseHtmlFragmentNodes(html, inSvg) {
     return _parseFragment(_closeSvgBeforeHtml(src, inSvg), inSvg);
 }
 
+// Where the content of raw-text element `tag` opened before `from` ends, and
+// where the markup after it starts: its own end tag ends it only once that
+// tag's `>` comes, and `<plaintext>` holds the rest of the markup.
+function _rawTextEnd(src, tag, from) {
+    if (tag !== "plaintext") {
+        var endRe = new RegExp("</" + tag + "(?=[\\s/>])", "ig");
+        endRe.lastIndex = from;
+        var endTag = endRe.exec(src);
+        var endGt = endTag ? src.indexOf(">", endRe.lastIndex) : -1;
+        if (endGt !== -1) {
+            return [endTag.index, endGt + 1];
+        }
+    }
+    return [src.length, src.length];
+}
+
 // `inSvg`: the markup is the content of an SVG element outside an integration
 // point, with the SVG elements an HTML one leaves already closed.
 function _parseFragment(src, inSvg) {
@@ -12894,24 +12910,17 @@ function _parseFragment(src, inSvg) {
         // (`if(a<b)`) is text: only its own end tag ends it, and only once its
         // `>` comes. In SVG the same names are elements like any other.
         if (!svg && _RAW_TEXT_TAGS[tag] === true) {
-            var rawEnd = src.length;
-            var rawNext = src.length;
-            if (tag !== "plaintext") {
-                var endRe = new RegExp("</" + tag + "(?=[\\s/>])", "ig");
-                endRe.lastIndex = afterOpen;
-                var endTag = endRe.exec(src);
-                var endGt = endTag ? src.indexOf(">", endRe.lastIndex) : -1;
-                if (endGt !== -1) {
-                    rawEnd = endTag.index;
-                    rawNext = endGt + 1;
-                }
+            var rawEnd = _rawTextEnd(src, tag, afterOpen);
+            var rawText = src.slice(afterOpen, rawEnd[0]);
+            // The parser drops one newline right after `<textarea>`.
+            if (tag === "textarea") {
+                rawText = rawText.replace(/^\r?\n/, "");
             }
-            var rawText = src.slice(afterOpen, rawEnd);
             if (rawText) {
                 el.textContent = _RCDATA_TAGS[tag] === true ? _unescapeHtmlText(rawText) : rawText;
             }
             nodes.push(el);
-            pos = rawNext;
+            pos = rawEnd[1];
             continue;
         }
         // Find matching closing tag for `tag`
@@ -12924,8 +12933,16 @@ function _parseFragment(src, inSvg) {
         var tok;
         var closeStart = -1;
         var closeEnd = -1;
+        var kidsSvg = svg && !_SVG_HTML_POINTS[tag];
         while ((tok = tokenRe.exec(src)) !== null) {
-            if (tok[2].toLowerCase() !== tag) {
+            var tokTag = tok[2].toLowerCase();
+            // A raw-text element inside holds no tags, so an end tag of this
+            // element written in it (`<textarea></div></textarea>`) is text.
+            if (tok[1] !== "/" && !kidsSvg && _RAW_TEXT_TAGS[tokTag] === true) {
+                tokenRe.lastIndex = _rawTextEnd(src, tokTag, tokenRe.lastIndex)[1];
+                continue;
+            }
+            if (tokTag !== tag) {
                 continue;
             }
             var fullTok = tok[0];

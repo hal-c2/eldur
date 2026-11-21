@@ -2833,6 +2833,11 @@ function verify() {
         f: '<xmp>a<b>c</b></xmp><p>q</p>',
         g: '<textarea>a</textareax></textarea><p>q</p>',
         h: '<style>x</style',
+        // One newline right after <textarea> is dropped.
+        y: '<textarea>\nfoo</textarea>',
+        // The outer element's end tag written inside raw text does not end it.
+        z: '<div><textarea>s="</div>"</textarea></div><p>after</p>',
+        w: '<div><style>p</div>{}</style>x</div><p>q</p>',
     };
     const shown = d => Array.from(d.children).map(show).join(",");
     return Object.entries(cases).map(([k, m]) => {
@@ -2872,7 +2877,10 @@ function verify() {
              e=textarea\"a\",p\"q\" ; \
              f=xmp\"a<b>c</b>\",p\"q\" ; \
              g=textarea\"a</textareax>\",p\"q\" ; \
-             h=style\"x</style\""
+             h=style\"x</style\" ; \
+             y=textarea\"foo\" ; \
+             z=div\"s=\\\"</div>\\\"\",p\"after\" ; \
+             w=div\"p</div>{}x\",p\"q\""
         ),
         "{output}"
     );
