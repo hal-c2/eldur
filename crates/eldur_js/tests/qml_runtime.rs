@@ -2838,6 +2838,10 @@ function verify() {
         // The outer element's end tag written inside raw text does not end it.
         z: '<div><textarea>s="</div>"</textarea></div><p>after</p>',
         w: '<div><style>p</div>{}</style>x</div><p>q</p>',
+        // In an <svg> the raw-text names are elements, and may close themselves.
+        v: '<div><svg><title/></svg></div><p>after</p>',
+        u: '<div><svg><style>s</style><title>t</title></svg></div><p>after</p>',
+        t: '<div><svg><title/></svg><textarea></div></textarea></div><p>q</p>',
     };
     const shown = d => Array.from(d.children).map(show).join(",");
     return Object.entries(cases).map(([k, m]) => {
@@ -2880,7 +2884,10 @@ function verify() {
              h=style\"x</style\" ; \
              y=textarea\"foo\" ; \
              z=div\"s=\\\"</div>\\\"\",p\"after\" ; \
-             w=div\"p</div>{}x\",p\"q\""
+             w=div\"p</div>{}x\",p\"q\" ; \
+             v=div\"\",p\"after\" ; \
+             u=div\"st\",p\"after\" ; \
+             t=div\"</div>\",p\"q\""
         ),
         "{output}"
     );

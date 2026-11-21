@@ -12933,14 +12933,30 @@ function _parseFragment(src, inSvg) {
         var tok;
         var closeStart = -1;
         var closeEnd = -1;
+        // The scan's namespace: an `<svg>` inside enters SVG, where the
+        // raw-text names are ordinary elements, and its integration points
+        // go back to HTML.
         var kidsSvg = svg && !_SVG_HTML_POINTS[tag];
+        var spaces = [];
         while ((tok = tokenRe.exec(src)) !== null) {
             var tokTag = tok[2].toLowerCase();
-            // A raw-text element inside holds no tags, so an end tag of this
-            // element written in it (`<textarea></div></textarea>`) is text.
-            if (tok[1] !== "/" && !kidsSvg && _RAW_TEXT_TAGS[tokTag] === true) {
+            var inSvgNow = spaces.length > 0 ? spaces[spaces.length - 1].svg : kidsSvg;
+            if (tok[1] === "/") {
+                if (spaces.length > 0 && spaces[spaces.length - 1].tag === tokTag) {
+                    spaces.pop();
+                }
+            } else if (!inSvgNow && _RAW_TEXT_TAGS[tokTag] === true) {
+                // A raw-text element inside holds no tags, so an end tag of
+                // this element written in it (`<textarea></div></textarea>`)
+                // is text.
                 tokenRe.lastIndex = _rawTextEnd(src, tokTag, tokenRe.lastIndex)[1];
                 continue;
+            } else if (tok[0].slice(-2) !== "/>") {
+                if (tokTag === "svg") {
+                    spaces.push({ tag: tokTag, svg: true });
+                } else if (inSvgNow && _SVG_HTML_POINTS[tokTag]) {
+                    spaces.push({ tag: tokTag, svg: false });
+                }
             }
             if (tokTag !== tag) {
                 continue;
