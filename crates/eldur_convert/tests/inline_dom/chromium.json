@@ -110,6 +110,7 @@
    "LC pre-set \"Save K later\"",
    "LC clone-hidden \"AHB\"",
    "LC clone-hidden-left \"AH\"",
+   "LC clone-hidden-read \"AHCB\"",
    "LC text-spaces \"A  B\"",
    "LC pre-normal-span \"Ax y\" \"Ax   y\"",
    "LC pre-model-leaf \"A  B\""

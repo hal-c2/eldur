@@ -26,6 +26,11 @@ var ah=byId("ah"),as=document.createElement("span");as.textContent="B";ah.append
 L("clone-hidden",JSON.stringify(ah.cloneNode(true).textContent));
 var ar=byId("ar"),rs=document.createElement("span");rs.textContent="B";ar.append(rs);rs.remove();
 L("clone-hidden-left",JSON.stringify(ar.cloneNode(true).textContent));
+// The copy's hidden text keeps its place once a layout read has gone by:
+// it is placed among the copied nodes as they are after every one is in.
+var cx=byId("cx"),xs=document.createElement("span");xs.textContent="B";cx.append(xs);
+var cxc=cx.cloneNode(true);byId("pcx").appendChild(cxc);cxc.getBoundingClientRect();
+L("clone-hidden-read",JSON.stringify(cxc.textContent));
 // A Text node's spaces are its own: the label collapses them as it draws.
 var ab=byId("ab");ab.appendChild(document.createTextNode("  B"));
 L("text-spaces",JSON.stringify(ab.textContent));
@@ -43,6 +48,7 @@ L("pre-model-leaf",JSON.stringify(pm.innerText));
 <p id="pah"><button id="ah">A<kbd style="display:none">H</kbd></button></p>
 <p id="par"><button id="ar">A<kbd style="display:none">H</kbd></button></p>
 <p id="pab"><button id="ab">A</button></p>
+<p id="pcx"><button id="cx">A<kbd style="display:none">H</kbd>C</button></p>
 <p id="ppn"><button id="pn" style="white-space:pre">A<span style="white-space:normal">x   y</span></button></p>
 <p id="ppd"><button id="pdeep" style="white-space:pre">A<span><span><span><span><span>x   y</span></span></span></span></span></button></p>
 <p id="ppm"><button id="pm" style="white-space:pre"><span>A  B</span></button></p>
