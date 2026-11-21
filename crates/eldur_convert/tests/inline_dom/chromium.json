@@ -75,11 +75,17 @@
    "LC pre-element true \"A      BC\"",
    "LC pre-line-element true \"X   YC\"",
    "LC nowrap-element true",
+   "LC pre-line-markup true true",
+   "LC white-space-later true true true \"X   YC\"",
    "LC quoted-gt \"Save\" a>b 1",
    "LC unquoted-apos \"Go\" it's",
    "LC unclosed-fast true \"Cut\" 1",
    "LC unclosed-value \"\" 0",
-   "LC unclosed-nested \"Z\" 2 B"
+   "LC unclosed-nested \"Z\" 2 B",
+   "LC many-lt-fast true L",
+   "LC many-runoff-fast true \"L\" 1",
+   "LC many-p-fast true L",
+   "LC private-use 41,e011,42,e000,43,e012,e013,e010,44 41,e011,42,e000,43,e012,e013,e010,44"
   ],
   "clicks": []
  },
