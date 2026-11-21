@@ -383,6 +383,68 @@ TestCase {
 }
 "##;
 
+/// Waits for `child` until `limit`, killing it then, and returns its output
+/// and whether it finished by itself. Both pipes are read while it runs: a
+/// child that writes more than a pipe holds would otherwise block on the
+/// write and look like a run that never ends.
+fn wait_draining(
+    mut child: std::process::Child,
+    limit: std::time::Duration,
+) -> (std::process::Output, bool) {
+    use std::io::Read;
+    fn drain(pipe: Option<impl Read + Send + 'static>) -> std::thread::JoinHandle<Vec<u8>> {
+        std::thread::spawn(move || {
+            let mut bytes = Vec::new();
+            if let Some(mut pipe) = pipe {
+                let _ = pipe.read_to_end(&mut bytes);
+            }
+            bytes
+        })
+    }
+    let stdout = drain(child.stdout.take());
+    let stderr = drain(child.stderr.take());
+    let deadline = std::time::Instant::now() + limit;
+    let mut finished = true;
+    let status = loop {
+        if let Some(status) = child.try_wait().expect("wait for the child") {
+            break status;
+        }
+        if std::time::Instant::now() > deadline {
+            finished = false;
+            child.kill().expect("kill the child");
+            break child.wait().expect("wait for the killed child");
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    };
+    let output = std::process::Output {
+        status,
+        stdout: stdout.join().expect("stdout reader"),
+        stderr: stderr.join().expect("stderr reader"),
+    };
+    (output, finished)
+}
+
+#[cfg(unix)]
+#[test]
+fn a_child_that_writes_more_than_a_pipe_holds_still_finishes() {
+    let child = std::process::Command::new("sh")
+        .args([
+            "-c",
+            "head -c 200000 /dev/zero; head -c 200000 /dev/zero >&2",
+        ])
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .expect("run sh");
+    let (output, finished) = wait_draining(child, std::time::Duration::from_secs(10));
+    assert!(finished, "the child blocked on a full pipe");
+    assert!(output.status.success());
+    assert_eq!(
+        (output.stdout.len(), output.stderr.len()),
+        (200_000, 200_000)
+    );
+}
+
 fn run(name: &str, page: &str, test: &str) -> String {
     let options = Options {
         root: RootKind::Item,
@@ -396,7 +458,7 @@ fn run(name: &str, page: &str, test: &str) -> String {
     }
     let qml = dir.join(format!("tst_{name}.qml"));
     std::fs::write(&qml, test).expect("write test");
-    let mut child = support::qmltestrunner()
+    let child = support::qmltestrunner()
         .args(["-platform", "offscreen", "-input"])
         .arg(&qml)
         .env("QT_FORCE_STDERR_LOGGING", "1")
@@ -406,17 +468,15 @@ fn run(name: &str, page: &str, test: &str) -> String {
         .expect("run qmltestrunner");
     // A layout that never settles keeps the runner busy forever; fail
     // instead of hanging the suite.
-    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(60);
-    while child.try_wait().expect("wait for qmltestrunner").is_none() {
-        if std::time::Instant::now() > deadline {
-            child.kill().expect("kill qmltestrunner");
-            let _ = child.wait();
-            let _ = std::fs::remove_dir_all(&dir);
-            panic!("{name}: qmltestrunner did not finish in 60 s; the layout never settles");
-        }
-        std::thread::sleep(std::time::Duration::from_millis(50));
+    let (output, finished) = wait_draining(child, std::time::Duration::from_secs(60));
+    if !finished {
+        let _ = std::fs::remove_dir_all(&dir);
+        panic!(
+            "{name}: qmltestrunner did not finish in 60 s; the layout never settles\n{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
     }
-    let output = child.wait_with_output().expect("qmltestrunner output");
     std::fs::remove_dir_all(&dir).expect("remove temp dir");
     let text = format!(
         "{}\n{}\n{}",
