@@ -2834,11 +2834,22 @@ function verify() {
         g: '<textarea>a</textareax></textarea><p>q</p>',
         h: '<style>x</style',
     };
+    const shown = d => Array.from(d.children).map(show).join(",");
     return Object.entries(cases).map(([k, m]) => {
         const d = document.createElement("div");
         box.appendChild(d);
-        d.innerHTML = m;
-        return k + "=" + Array.from(d.children).map(show).join(",");
+        // innerHTML refuses <script> and <style> outright, so every case
+        // goes through insertAdjacentHTML, and innerHTML is held to the
+        // same result for the ones it takes.
+        d.insertAdjacentHTML("beforeend", m);
+        let got = shown(d);
+        if (!/<(script|style)/i.test(m)) {
+            const e = document.createElement("div");
+            box.appendChild(e);
+            e.innerHTML = m;
+            if (shown(e) !== got) got += " innerHTML=" + shown(e);
+        }
+        return k + "=" + got;
     }).join(" ; ");
 }
 "##,
