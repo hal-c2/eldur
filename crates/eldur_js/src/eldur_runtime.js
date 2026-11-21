@@ -768,8 +768,9 @@ var _explicitDocumentUrl = "";
 var _itemMeta = new _ItemTable();
 
 // Items the runtime has stepped over: each child a walk of an element's
-// children visits (`_rawKids`), each key QV4 walks to find one in the item
-// table's Map, and each record `_adoptDestroyed` scans. A cost that
+// children visits (`_rawKids`, `_tableCaptions`, `_findTextChild`,
+// `_anonLinesOf`), each key QV4 walks to find one in the item table's Map, and each record a walk of the whole table
+// visits (`_adoptDestroyed`, `deleteWhere`, `forEach`). A cost that
 // grows with the page shows here exactly, where a clock only hints at it under
 // load. Tests read it; nothing else does.
 var _itemsWalked = 0;
@@ -918,6 +919,7 @@ _ItemTable.prototype.delete = function(key) {
 _ItemTable.prototype.deleteWhere = function(drop) {
     this._lastKey = null;
     var addresses = Object.keys(this._byAddress);
+    _itemsWalked += addresses.length;
     for (var i = 0; i < addresses.length; ++i) {
         var slot = this._byAddress[addresses[i]];
         if (drop(slot.value, slot.key)) {
@@ -927,12 +929,14 @@ _ItemTable.prototype.deleteWhere = function(drop) {
     }
     var others = this._others;
     var dropped = [];
+    _itemsWalked += others.size;
     others.forEach(function(value, key) {
         if (drop(value, key)) {
             dropped.push(key);
         }
     });
     for (var n = 0; n < dropped.length; ++n) {
+        _itemsWalked += others.size;
         others.delete(dropped[n]);
     }
 };
@@ -940,6 +944,7 @@ _ItemTable.prototype.deleteWhere = function(drop) {
 // Visits a snapshot, so `fn` may delete what it is shown.
 _ItemTable.prototype.forEach = function(fn) {
     var addresses = Object.keys(this._byAddress);
+    _itemsWalked += addresses.length + this._others.size;
     for (var i = 0; i < addresses.length; ++i) {
         var slot = this._byAddress[addresses[i]];
         if (slot) {
@@ -5451,6 +5456,7 @@ function _findTextChild(raw) {
         return null;
     }
     for (var i = 0; i < raw.children.length; ++i) {
+        ++_itemsWalked;
         var child = raw.children[i];
         if (_isPlainTextItem(child) && !child.objectName && !_meta(child).createdTag) {
             return child;
@@ -5667,6 +5673,7 @@ function _scriptElementChildren(raw) {
 function _tableCaptions(raw) {
     var out = [];
     if (_meta(raw).tableGrid && typeof raw.spacing === "number") {
+        _itemsWalked += raw.children.length;
         for (var i = 0; i < raw.children.length; ++i) {
             if (raw.children[i].eldurTag === "caption") {
                 out.push(raw.children[i]);
@@ -5686,6 +5693,7 @@ function _rawKids(raw, withText, withPseudo, asRuns) {
     var captions = raw ? _tableCaptions(raw) : [];
     if (captions.length > 0) {
         var below = container.children;
+        _itemsWalked += below.length;
         for (var bi = 0; bi < below.length; ++bi) {
             captions.push(below[bi]);
         }
@@ -5788,6 +5796,7 @@ function _rawKids(raw, withText, withPseudo, asRuns) {
     }
     // A flex or grid container's out-of-flow boxes wait beside its items.
     if (container !== raw && raw.children) {
+        _itemsWalked += raw.children.length;
         for (var c = 0; c < raw.children.length; ++c) {
             var corner = raw.children[c];
             if (corner.eldurBox && corner.eldurOrder !== undefined) {
@@ -11522,6 +11531,7 @@ function _anonLinesOf(raw) {
     }
     var kids = container ? container.children : null;
     for (var i = 0; kids && i < kids.length; ++i) {
+        ++_itemsWalked;
         if (_isLines(kids[i]) && _isAnonLines(kids[i])) {
             return kids[i];
         }

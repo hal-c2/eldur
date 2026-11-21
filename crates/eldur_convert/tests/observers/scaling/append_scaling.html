@@ -4,24 +4,23 @@
 // hal-c2/eldur#23: 300 appends to body took 8 s because each append walked
 // everything already there. A clock only hints at that, and a loaded machine
 // moves it, so the runtime counts instead: `Eldur._itemsWalked` is every child
-// its walks of an element's children visit and every key QV4 walks to find one
-// in a Map. Of 600 appends, none of the last ten may walk more than the most
-// one of the first ten did; an append that walks its siblings walks some 600
-// there and a few here. A script's text in the page sends each append through
-// the lines text takes, which once read every child of body too.
+// its walks of an element's children visit, every key QV4 walks to find one in
+// a Map, and every record a walk of its whole item table visits. That table is
+// swept each time its records double, so one append now and then walks them
+// all; on average 600 appends walk a few items each. An append that walks its
+// siblings walks some 300 each on average. A script's text in the page sends
+// each append through the lines text takes, which once read every child of body
+// too.
 function L(k){console.log("OB "+k)}
 document.getElementById("t").textContent = "rows below";
 function row(i) { var d = document.createElement("div"); d.textContent = "row " + i; document.body.appendChild(d); }
-var first = 0, last = 0;
+var start = Eldur._itemsWalked;
 for (var i = 0; i < 600; ++i) {
-  var before = Eldur._itemsWalked;
   row(i);
-  var walked = Eldur._itemsWalked - before;
-  if (i < 10) { first = Math.max(first, walked); }
-  if (i >= 590) { last = Math.max(last, walked); }
 }
-L(last <= first ? "appends walk no more at the 600th than at the first"
-  : "the last appends walk " + last + " items, the first " + first);
+var each = (Eldur._itemsWalked - start) / 600;
+L(each <= 10 ? "600 appends walk at most 10 items each on average"
+  : "600 appends walk " + each + " items each on average");
 L("rows " + document.querySelectorAll("div").length);
 var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
 </script></body></html>
