@@ -19,10 +19,23 @@ L("hidden-unanchored",JSON.stringify(lh.textContent));
 // A button that keeps its spaces keeps them in its nodes and draws them.
 var bp=byId("bpre");L("pre-split",JSON.stringify([bp.firstChild.nodeValue,bp.lastChild.nodeValue]));
 bp.lastChild.nodeValue=" later";L("pre-set",JSON.stringify(bp.textContent));
+// A deep copy keeps the hidden text a button holding lines holds, where it
+// was among the copied nodes: once an element was put in, and once the
+// element put in has left again.
+var ah=byId("ah"),as=document.createElement("span");as.textContent="B";ah.append(as);
+L("clone-hidden",JSON.stringify(ah.cloneNode(true).textContent));
+var ar=byId("ar"),rs=document.createElement("span");rs.textContent="B";ar.append(rs);rs.remove();
+L("clone-hidden-left",JSON.stringify(ar.cloneNode(true).textContent));
+// A Text node's spaces are its own: the label collapses them as it draws.
+var ab=byId("ab");ab.appendChild(document.createTextNode("  B"));
+L("text-spaces",JSON.stringify(ab.textContent));
 });
 </script></head><body>
 <p id="pa"><button id="la">x</button></p>
 <p id="pc"><button id="lc">x</button></p>
 <p id="ph"><button id="lh">A<kbd style="display:none">H</kbd></button></p>
 <p id="pp"><button id="bpre">Save <kbd style="display:none">K</kbd> now</button></p>
+<p id="pah"><button id="ah">A<kbd style="display:none">H</kbd></button></p>
+<p id="par"><button id="ar">A<kbd style="display:none">H</kbd></button></p>
+<p id="pab"><button id="ab">A</button></p>
 </body></html>

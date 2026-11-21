@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 
 use eldur_css::{
     BorderSide, BorderStyle, BoxSizing, ComputedStyle, Display, Length, Rgba, Size, StyleMap,
-    TextAlign, TextDecorationLine,
+    TextAlign, TextDecorationLine, WhiteSpace,
 };
 use eldur_dom::{Document, NodeId};
 use eldur_js::TargetKind;
@@ -1225,7 +1225,10 @@ impl Emitter<'_, '_> {
                     ),
                 );
             }
-            let drawn = accessible::content_text(self.doc, self.styles, node, None, Reading::Drawn);
+            // The label draws its spaces as the button's `white-space` says;
+            // a name read from it is collapsed whatever it draws.
+            let white = style.white_space;
+            let drawn = accessible::drawn_text(self.doc, self.styles, node, white);
             let read = accessible::content_text(self.doc, self.styles, node, None, Reading::Read);
             // A name read from content follows it: the runtime reads it again
             // when a script changes what the button holds. A button ARIA or a
@@ -1241,8 +1244,30 @@ impl Emitter<'_, '_> {
                 obj.set("Accessible.name", Value::expr("eldurContentName"));
             }
             // A script's `textContent` is every text node, hidden or apart,
-            // which `text` no longer is (the runtime reads this instead).
-            let dom = eldur_dom::collapse_whitespace(&self.doc.text_content(node));
+            // which `text` no longer is (the runtime reads this instead). One
+            // that draws its spaces reads them all, as in the DOM.
+            let whole = self.doc.text_content(node);
+            let dom = if white == WhiteSpace::Normal || white == WhiteSpace::NoWrap {
+                eldur_dom::collapse_whitespace(&whole)
+            } else {
+                whole
+            };
+            if white != WhiteSpace::Normal && white != WhiteSpace::NoWrap {
+                // On a page without a cascade the runtime has only this to
+                // draw its nodes by.
+                obj.members.push(Member::PropertyDecl {
+                    ty: "string".to_owned(),
+                    name: "eldurWhiteSpace".to_owned(),
+                    value: Some(Value::string(match white {
+                        WhiteSpace::Pre => "pre",
+                        WhiteSpace::PreWrap => "pre-wrap",
+                        WhiteSpace::PreLine => "pre-line",
+                        _ => "break-spaces",
+                    })),
+                    readonly: false,
+                    required: false,
+                });
+            }
             if dom != drawn {
                 obj.members.push(Member::PropertyDecl {
                     ty: "string".to_owned(),
@@ -1252,7 +1277,7 @@ impl Emitter<'_, '_> {
                     required: false,
                 });
                 if let Some(runs) =
-                    accessible::drawn_runs(self.doc, self.styles, node, &drawn, &dom)
+                    accessible::drawn_runs(self.doc, self.styles, node, &drawn, &dom, white)
                 {
                     obj.members.push(Member::PropertyDecl {
                         ty: "var".to_owned(),
@@ -1934,6 +1959,30 @@ mod tests {
         assert_eq!(q.matches("eldurDomText").count(), 1, "{q}");
         assert!(
             q.contains(r#"property var eldurDomRuns: ["", "Save", "Ctrl S"]"#),
+            "{q}"
+        );
+    }
+
+    #[test]
+    fn a_button_that_keeps_its_spaces_draws_and_splits_them() {
+        // Chromium draws "Save " and " now" as "Save  now" under `pre`; a
+        // `pre-line` button keeps only its line break.
+        let (q, _) = qml(
+            r#"<style>.p{white-space:pre}.l{white-space:pre-line}</style>
+               <button class=p>Save <kbd style="display:none">K</kbd> now</button>
+               <button class=l>A  B
+  C</button>"#,
+        );
+        assert!(q.contains(r#"text: "Save  now""#), "{q}");
+        assert!(
+            q.contains(r#"property var eldurDomRuns: ["", "Save ", "K", " now", ""]"#),
+            "{q}"
+        );
+        assert!(q.contains(r#"property string eldurWhiteSpace: "pre""#), "{q}");
+        assert!(q.contains(r#"text: "A B\nC""#), "{q}");
+        assert!(q.contains(r#"property string eldurDomText: "A  B\n  C""#), "{q}");
+        assert!(
+            q.contains(r#"property string eldurWhiteSpace: "pre-line""#),
             "{q}"
         );
     }

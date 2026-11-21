@@ -73,7 +73,10 @@
    "LC clone-lines B,\" on\" \"Go on\"",
    "LC hidden-unanchored \"XHB\"",
    "LC pre-split [\"Save \",\" now\"]",
-   "LC pre-set \"Save K later\""
+   "LC pre-set \"Save K later\"",
+   "LC clone-hidden \"AHB\"",
+   "LC clone-hidden-left \"AH\"",
+   "LC text-spaces \"A  B\""
   ],
   "clicks": []
  },

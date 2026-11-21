@@ -6360,6 +6360,12 @@ function getText(item) {
     if (typeof raw.eldurDomText === "string" && !_meta(raw).ownText) {
         return raw.eldurDomText;
     }
+    // Its Text nodes, while they are what it draws: the label collapses
+    // their spaces ("A" and "  B" draw "A B", and read "A  B").
+    var nodesOf = _meta(raw);
+    if (nodesOf.btnNodes && !nodesOf.btnMarkup && nodesOf.btnDrawn === raw.text) {
+        return _btnNodesText(raw);
+    }
     // A created element whose children could not become a line (a host with
     // no EldurLines) holds them as items of its Text: its text is theirs too,
     // as its child nodes say.
@@ -7127,6 +7133,45 @@ function _linesHiddenSettle(raw) {
         var at = places[i].at;
         return _hiddenRecord(hidden[i].text, kids.slice(0, at).reverse(), kids.slice(at));
     });
+}
+
+// A deep copy of a button holding lines (`src`, its `kids`) holds its hidden
+// text where it was among the copies of them (`copies`, now `clone`'s): as
+// hidden records once the copy holds lines too, else beside its Text nodes.
+function _btnCloneHidden(src, kids, clone, copies) {
+    var hidden = _meta(src).linesHidden;
+    if (!hidden || hidden.length === 0) {
+        return;
+    }
+    var places = [];
+    _linesHiddenText(hidden, kids, function() { return ""; }, places);
+    var order = hidden.map(function(h, i) { return i; }).sort(function(x, y) {
+        return places[x].at - places[y].at || places[x].turn - places[y].turn || x - y;
+    });
+    var cm = _meta(clone);
+    if (cm.btnLines) {
+        cm.linesHidden = order.map(function(i) {
+            var at = places[i].at;
+            return _hiddenRecord(hidden[i].text, copies.slice(0, at).reverse(), copies.slice(at));
+        });
+        return;
+    }
+    // Only Text nodes were copied, so the copy draws them as its own nodes,
+    // one for each, in order.
+    var leaves = _drawsOwnText(clone) ? _btnNodes(clone) : [];
+    order.forEach(function(i) {
+        var at = places[i].at;
+        if (at > 0 && leaves[at - 1]) {
+            leaves[at - 1].btnAfter = (leaves[at - 1].btnAfter || "") + hidden[i].text;
+        } else if (leaves.length > 0) {
+            leaves[0].btnBefore = (leaves[0].btnBefore || "") + hidden[i].text;
+        } else {
+            cm.btnHidden = (cm.btnHidden || "") + hidden[i].text;
+        }
+    });
+    if (leaves.length > 0) {
+        _btnDraw(clone);
+    }
 }
 
 // Every child of a box whose content is on lines goes, and the runs with
@@ -12735,7 +12780,7 @@ function _btnRuns(raw, dom, own, split) {
             runs.after.push(split[i + 1]);
             all += split[i] + split[i + 1];
         }
-        if (_btnDrawn(runs.texts.join("")) === own && all === dom) {
+        if (_btnDrawn(raw, runs.texts.join("")) === own && all === dom) {
             return runs;
         }
     }
@@ -12746,13 +12791,39 @@ function _btnRuns(raw, dom, own, split) {
     return { before: "", texts: [own], after: [""] };
 }
 
-// What a button's Text nodes draw: a run of spaces is one and the label's
-// ends have none. The nodes keep theirs, as a page's do. This collapses as
-// the converter's label and `eldurDomRuns` do, whatever the button's
-// `white-space` (Known gap: a `pre` button's label collapses its spaces), so
-// a split the converter made is always the one read here.
-function _btnDrawn(str) {
+// What a button's Text nodes draw, as its `white-space` says: a run of
+// spaces is one and the label's ends have none, `pre-line` keeps its line
+// breaks too, and `pre`, `pre-wrap` and `break-spaces` draw every space. The
+// nodes keep theirs, as a page's do. This collapses as the converter's label
+// and `eldurDomRuns` do, so a split the converter made is the one read here.
+function _btnDrawn(raw, str) {
+    var white = _btnWhiteSpace(raw);
+    if (white === "pre" || white === "pre-wrap" || white === "break-spaces") {
+        return str;
+    }
+    if (white === "pre-line") {
+        return str.replace(/[ \t\r\f]*\n[ \t\r\f]*/g, "\n").replace(/[ \t\r\f]+/g, " ").replace(/^ | $/g, "");
+    }
     return str.replace(/[ \t\n\r\f]+/g, " ").replace(/^ | $/g, "");
+}
+
+// The `white-space` a button's label draws by: the cascade's now, or on a
+// page without one the converter's (`eldurWhiteSpace`, set only when it
+// keeps spaces).
+function _btnWhiteSpace(raw) {
+    if (_gHasCascade()) {
+        return _gFreshStyle(raw)["white-space"];
+    }
+    return typeof raw.eldurWhiteSpace === "string" ? raw.eldurWhiteSpace : "normal";
+}
+
+// What a button's Text nodes hold, with what it holds but does not draw
+// between them: its `textContent`, spaces and all, which its label collapses.
+function _btnNodesText(raw) {
+    var m = _meta(raw);
+    return (m.btnHidden || "") + (m.btnNodes || []).map(function(leaf) {
+        return (leaf.btnBefore || "") + leaf.data + (leaf.btnAfter || "");
+    }).join("");
 }
 
 // The split `_btnRuns` reads, kept as a script changes what it holds.
@@ -12818,11 +12889,9 @@ function _btnTakeOut(leaf, staying) {
 
 function _btnDraw(raw) {
     var m = _meta(raw);
-    var own = _btnDrawn((m.btnNodes || []).map(function(leaf) { return leaf.data; }).join(""));
+    var own = _btnDrawn(raw, (m.btnNodes || []).map(function(leaf) { return leaf.data; }).join(""));
     if (typeof raw.eldurDomText === "string" && !m.ownText) {
-        raw.eldurDomText = (m.btnHidden || "") + (m.btnNodes || []).map(function(leaf) {
-            return (leaf.btnBefore || "") + leaf.data + (leaf.btnAfter || "");
-        }).join("");
+        raw.eldurDomText = _btnNodesText(raw);
         var split = [m.btnHidden || ""];
         (m.btnNodes || []).forEach(function(leaf) {
             split[split.length - 1] += leaf.btnBefore || "";
@@ -12831,7 +12900,8 @@ function _btnDraw(raw) {
         _btnSetRuns(raw, split);
     }
     if (typeof raw.eldurContentName === "string") {
-        raw.eldurContentName = own;
+        // A name is read collapsed, whatever the label draws.
+        raw.eldurContentName = own.replace(/[ \t\n\r\f]+/g, " ").replace(/^ | $/g, "");
     }
     m.explicitText = own;
     // A label drawing `innerHTML`'s markup draws the text literally.
@@ -15738,10 +15808,15 @@ function wrap(rawItem) {
                 setStyle(clone, stKeys[s], m.styles[stKeys[s]]);
             }
             if (Boolean(deep) && m.btnLines) {
-                // A button's line holds Text nodes beside its elements: each is copied, in order.
-                _rawChildNodes(rawItem).forEach(function(kid) {
-                    clone.appendChild(wrap(kid).cloneNode(true));
+                // A button's line holds Text nodes beside its elements: each is
+                // copied, in order, and what it holds but does not draw with them.
+                var kidsOf = _rawChildNodes(rawItem);
+                var copies = kidsOf.map(function(kid) {
+                    var copy = wrap(kid).cloneNode(true);
+                    clone.appendChild(copy);
+                    return _gCurrent(_unwrap(copy));
                 });
+                _btnCloneHidden(rawItem, kidsOf, _unwrap(clone), copies);
             } else if (Boolean(deep)) {
                 var kids = _rawElementChildren(rawItem);
                 if (kids.length > 0) {

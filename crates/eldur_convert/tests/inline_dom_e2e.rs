@@ -621,14 +621,16 @@ fn a_wrapped_run_on_an_aligned_line_draws_where_chromium_does() {
 fn a_buttons_line_holds_its_text_nodes_as_chromium_does() {
     // `after`, a deep copy and a prepend read a button's line by its nodes,
     // Text ones too, and its hidden text keeps its place once its neighbours
-    // left.
+    // left, in a copy too; a Text node's spaces are its own.
     page_drawing_within(
         "button_line_nodes",
-        &["Go", "!", " on", "X", "B", "Save later"],
+        &["Go", "!", " on", "X", "B", "Save  later", "A B"],
         &[
             ("la", &["Go", "!", " on"], &[]),
             ("lh", &["X", "B"], &["H"]),
-            ("bpre", &["Save later"], &["K"]),
+            // `white-space: pre` draws both nodes' spaces.
+            ("bpre", &["Save  later"], &["K"]),
+            ("ab", &["A B"], &[]),
         ],
     );
 }
