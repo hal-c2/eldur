@@ -4,7 +4,8 @@
 // lands on the middle of that element's first glyph run; `#id:tail` aims at the
 // element's last text node, `#id:start` at the first child's text and `#id:right`
 // at the empty end of the element's line. Each point is recorded, so the test
-// presses the same pixels. `key:Name` presses a key instead.
+// presses the same pixels. `key:Name` presses a key instead. `<body data-ink>`
+// names elements whose line boxes are recorded too.
 //
 //   node crates/eldur_convert/tests/inline_dom/gen.mjs
 //
@@ -74,7 +75,17 @@ for (const file of fs.readdirSync(here).filter((f) => f.endsWith(".html")).sort(
   // The log is all the page says, however late its timers run.
   await settle(page);
   requireLogged(file, fs.readFileSync(path.join(here, file), "utf8"), log, "LC ");
-  out[file.slice(0, -5)] = { log, clicks };
+  // `<body data-ink>` names elements whose text's line boxes are recorded,
+  // left and right of each line, for the test to hold the drawn ink to.
+  const inked = ((await page.getAttribute("body", "data-ink")) || "").split(/\s+/).filter(Boolean);
+  const ink = await page.evaluate((sels) => sels.map((sel) => {
+    const el = document.querySelector(sel);
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const lines = [...range.getClientRects()].map((r) => [Math.round(r.left), Math.round(r.right)]);
+    return { text: el.textContent, lines };
+  }), inked);
+  out[file.slice(0, -5)] = ink.length > 0 ? { log, clicks, ink } : { log, clicks };
 }
 await browser.close();
 writeRecording(path.join(here, "chromium.json"), JSON.stringify(out, null, 1) + "\n");
