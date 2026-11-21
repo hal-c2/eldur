@@ -1,0 +1,27 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>append scaling</title></head><body>
+<p id="t">rows</p>
+<script>
+// hal-c2/eldur#23: 300 appends to body took 8 s because each append walked
+// everything already there. A clock only hints at that, and a loaded machine
+// moves it, so the runtime counts instead: `Eldur._itemsWalked` is every child
+// its walks of an element's children visit and every key QV4 walks to find one
+// in a Map. Of 600 appends, none of the last ten may walk more than the most
+// one of the first ten did; an append that walks its siblings walks some 600
+// there and a few here. A script's text in the page sends each append through
+// the lines text takes, which once read every child of body too.
+function L(k){console.log("OB "+k)}
+document.getElementById("t").textContent = "rows below";
+function row(i) { var d = document.createElement("div"); d.textContent = "row " + i; document.body.appendChild(d); }
+var first = 0, last = 0;
+for (var i = 0; i < 600; ++i) {
+  var before = Eldur._itemsWalked;
+  row(i);
+  var walked = Eldur._itemsWalked - before;
+  if (i < 10) { first = Math.max(first, walked); }
+  if (i >= 590) { last = Math.max(last, walked); }
+}
+L(last <= first ? "appends walk no more at the 600th than at the first"
+  : "the last appends walk " + last + " items, the first " + first);
+L("rows " + document.querySelectorAll("div").length);
+var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
+</script></body></html>
