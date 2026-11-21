@@ -36,10 +36,14 @@ TestCase {
         }
         const names = item.objectName ? under.concat([item.objectName]) : under
         if (item.lineCount !== undefined && typeof item.text === "string" && item.text !== "") {
-            const text = item.text.replace(/<[^>]*>/g, "")
-            console.log("DRAWN " + text)
-            for (const name of names) {
-                console.log("DRAWNIN " + name + " " + text)
+            const whole = item.text.replace(/<[^>]*>/g, "")
+            // A label that breaks its line is logged on one, "\\n" for the break.
+            const texts = whole.indexOf("\n") === -1 ? [whole] : [whole, whole.replace(/\n/g, "\\n")]
+            for (const text of texts) {
+                console.log("DRAWN " + text)
+                for (const name of names) {
+                    console.log("DRAWNIN " + name + " " + text)
+                }
             }
         }
         for (let i = 0; i < item.children.length; ++i) {
@@ -632,6 +636,19 @@ fn a_buttons_line_holds_its_text_nodes_as_chromium_does() {
             ("bpre", &["Save  later"], &["K"]),
             ("ab", &["A B"], &[]),
         ],
+    );
+}
+
+#[test]
+fn a_button_keeps_its_spaces_by_its_style_attribute_as_chromium_does() {
+    // No style sheet, so the runtime has only the converter's
+    // `eldurWhiteSpace` to draw by: a `pre` button draws both nodes' spaces
+    // and a `pre-line` one its line break, after a script writes their nodes
+    // (Chromium's innerText in the log).
+    page_drawing_within(
+        "button_spaces",
+        &["Save  later", "X Y\\nZ"],
+        &[("sp", &["Save  later"], &["K"]), ("sl", &["X Y\\nZ"], &[])],
     );
 }
 

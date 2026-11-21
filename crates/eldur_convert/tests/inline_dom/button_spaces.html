@@ -1,0 +1,17 @@
+<!doctype html><html><head><meta charset="utf-8"><script>
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+document.addEventListener("DOMContentLoaded",function(){
+var byId=function(s){return document.getElementById(s)};
+// No style sheet: each button keeps its spaces as its own style attribute
+// says, once a script writes its Text nodes too.
+var sp=byId("sp");sp.lastChild.nodeValue=" later";
+L("pre-set",JSON.stringify(sp.textContent),JSON.stringify(sp.lastChild.nodeValue),JSON.stringify(sp.innerText));
+// pre-line keeps its line breaks, and collapses the spaces around them.
+var sl=byId("sl");sl.firstChild.nodeValue="X   Y \n  Z";
+L("pre-line-set",JSON.stringify(sl.textContent),JSON.stringify(sl.innerText));
+});
+</script></head><body style="margin:0;font:16px/20px sans-serif">
+<p><button id="sp" style="white-space:pre">Save <kbd style="display:none">K</kbd> now</button></p>
+<p><button id="sl" style="white-space:pre-line">A  B
+  C</button></p>
+</body></html>

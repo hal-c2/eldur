@@ -6601,8 +6601,11 @@ function _itCollect(raw, out) {
             out.push(_markupName(drawn.text));
         } else if (kids.length === 0) {
             // Rendered text: a button's drawn label, not its nodes' text.
-            out.push(typeof raw.eldurDomText === "string" && typeof raw.text === "string"
-                ? _pseudoOwn(raw, raw.text) : getText(raw));
+            // One that keeps its spaces keeps them here too: they are drawn.
+            var label = typeof raw.eldurDomText === "string" && typeof raw.text === "string"
+                ? _pseudoOwn(raw, raw.text) : getText(raw);
+            out.push(_isTextButton(raw) && /^(pre|pre-wrap|break-spaces)$/.test(_btnWhiteSpace(raw))
+                ? _itKept(label) : label);
         } else if (kids[0].tableSlot) {
             _itGrid(kids, out);
         } else {
@@ -6748,6 +6751,13 @@ function _contentName(raw) {
     }
 }
 
+// Spaces a box draws, kept from `_innerText`'s collapsing until its end.
+var _IT_KEPT = { " ": "\uE011", "\t": "\uE012", "\n": "\uE013" };
+
+function _itKept(text) {
+    return text.replace(/[ \t\n]/g, function(c) { return _IT_KEPT[c]; });
+}
+
 function _innerText(raw) {
     // An element not being rendered reads as its textContent.
     if (_itHidden(raw)) {
@@ -6775,7 +6785,8 @@ function _innerText(raw) {
     return text.replace(/[ \t\r\f]*\n[ \t\r\f]*(?=\S)/g, function(m) { return m.replace(/[^\n]/g, ""); })
         .replace(/[ \r\f\n]+/g, function(m) { return m.indexOf("\n") >= 0 ? m.replace(/[^\n]/g, "") : " "; })
         .replace(/^ +| +$/g, "")
-        .split(_IT_ATOM).join("");
+        .split(_IT_ATOM).join("")
+        .replace(/[\uE011-\uE013]/g, function(c) { return c === "\uE011" ? " " : c === "\uE012" ? "\t" : "\n"; });
 }
 
 // A button keeps its nodes' text (`eldurDomText`) while they are as the page
