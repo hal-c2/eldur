@@ -600,6 +600,18 @@ function getOnload(call) {
     return call.handler || null;
 }
 
+// `window.onload` as a place a pattern, a `for` head or `++` assigns to.
+function onloadRef(listeners, call) {
+    return {
+        get value() {
+            return getOnload(call);
+        },
+        set value(value) {
+            setOnload(listeners, call, value);
+        }
+    };
+}
+
 // A top-level `DOMContentLoaded` or `load` listener, added where the
 // `addEventListener` call runs. The callback is the value it had there, as a
 // browser takes it: a function is called on `target`, an object has its

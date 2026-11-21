@@ -782,6 +782,22 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
         }
     }
 
+    /// `window.onload` (or `window["onload"]`) in code run at load, where it
+    /// is the page's own handler; a lazy module's goes through the runtime.
+    fn is_window_onload(&self, object: &Expression<'a>, prop: &str) -> bool {
+        !self.after_load
+            && is_global_window(object, self.scoping)
+            && known_dom_event_from_on_prop(prop) == Some("load")
+    }
+
+    /// `window.onload` as a place to assign to, for a pattern, a `for` head
+    /// or `++`: an object whose `value` gets and sets the page's handler.
+    fn window_onload_place(&mut self) -> String {
+        let queue = self.shared.lifecycle_queue(true);
+        let call = self.shared.window_onload();
+        format!("Eldur.onloadRef({queue}, {call}).value")
+    }
+
     fn try_rewrite_member_assignment(
         &mut self,
         full_span: Span,
@@ -790,23 +806,35 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
         prop: &str,
         right: &Expression<'a>,
     ) -> bool {
+        // `window.onload <op> rhs` at load. It is set where it runs, as at the
+        // top level: a handler set while `load` is dispatched is a new
+        // listener it is not dispatched to. Any other operator reads through
+        // `Eldur.getOnload` first, so the expression has a browser's value and
+        // a logical assignment that short-circuits sets nothing.
+        if self.is_window_onload(member_obj, prop) {
+            let queue = self.shared.lifecycle_queue(true);
+            let call = self.shared.window_onload();
+            let rhs = self.rewrite_listener_callback_expr(right, None);
+            let get = format!("Eldur.getOnload({call})");
+            let set = |value: &str| format!("Eldur.setOnload({queue}, {call}, {value})");
+            let rep = match op {
+                AssignmentOperator::Assign => set(&rhs),
+                AssignmentOperator::LogicalOr => format!("({get} || {})", set(&rhs)),
+                AssignmentOperator::LogicalAnd => format!("({get} && {})", set(&rhs)),
+                AssignmentOperator::LogicalNullish => format!("({get} ?? {})", set(&rhs)),
+                _ => {
+                    let binary = op.as_str().trim_end_matches('=');
+                    set(&format!("{get} {binary} ({rhs})"))
+                }
+            };
+            self.editor.replace(full_span, rep);
+            return true;
+        }
+
         // 1. `el.on<event> = rhs`
         if let Some(ev) = known_dom_event_from_on_prop(prop)
             && op == AssignmentOperator::Assign
         {
-            if !self.after_load && is_global_window(member_obj, self.scoping) && ev == "load" {
-                // Set where it runs, as at the top level: a handler set while
-                // `load` is dispatched is a new listener it is not dispatched
-                // to, and the assignment's value is the value assigned.
-                let queue = self.shared.lifecycle_queue(true);
-                let call = self.shared.window_onload();
-                let rhs_str = self.rewrite_listener_callback_expr(right, None);
-                self.editor.replace(
-                    full_span,
-                    format!("Eldur.setOnload({queue}, {call}, {rhs_str})"),
-                );
-                return true;
-            }
             if let Some(target) = self.resolve_single_target(member_obj) {
                 if self
                     .shared
@@ -1262,7 +1290,7 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
 
         // 4. `window.<prop>` read
         if is_global_window(&it.object, self.scoping) {
-            if prop == "onload" && !self.after_load {
+            if self.is_window_onload(&it.object, prop) {
                 // What the assignments that ran kept: a value that is not an
                 // object reads as `null`, as a browser's event handler does.
                 let call = self.shared.window_onload();
@@ -1327,6 +1355,15 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
     }
 
     fn visit_computed_member_expression(&mut self, it: &ComputedMemberExpression<'a>) {
+        if let Some(prop) = extract_string_literal(&it.expression)
+            && self.is_window_onload(&it.object, &prop)
+        {
+            let call = self.shared.window_onload();
+            self.editor
+                .replace(it.span, format!("Eldur.getOnload({call})"));
+            return;
+        }
+
         // `el.style["color"]` read on resolved element
         if let Some(prop) = extract_string_literal(&it.expression)
             && let Expression::StaticMemberExpression(style_member) = unwrap_parens(&it.object)
@@ -1399,6 +1436,29 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
         }
 
         walk::walk_assignment_expression(self, it);
+    }
+
+    // `window.onload` assigned to by a pattern, a `for` head or `++` is a
+    // place whose setter is `Eldur.setOnload`; read as a value, it would be a
+    // call, which is not a place.
+    fn visit_simple_assignment_target(&mut self, it: &SimpleAssignmentTarget<'a>) {
+        let onload = match it {
+            SimpleAssignmentTarget::StaticMemberExpression(m) => self
+                .is_window_onload(&m.object, m.property.name.as_str())
+                .then_some(m.span),
+            SimpleAssignmentTarget::ComputedMemberExpression(c) => {
+                extract_string_literal(&c.expression)
+                    .filter(|prop| self.is_window_onload(&c.object, prop))
+                    .map(|_| c.span)
+            }
+            _ => None,
+        };
+        if let Some(span) = onload {
+            let place = self.window_onload_place();
+            self.editor.replace(span, place);
+            return;
+        }
+        walk::walk_simple_assignment_target(self, it);
     }
 
     fn visit_update_expression(&mut self, it: &UpdateExpression<'a>) {
