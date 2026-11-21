@@ -5364,3 +5364,337 @@ Item {
         "unexpected qml6 item record output:\n{output}"
     );
 }
+
+/// `_itemsWalked` is what the append-scaling page counts, so each walk adds
+/// exactly what it steps over: every key the item table's Map holds for each
+/// `set`, `get`, `has` and `delete` that looks there, every record for a walk
+/// of the whole table, and every child for a walk of an element's children. A
+/// live item's first read walks nothing, since the Map never holds one. A
+/// walk left out, or one counted short, would let a cost that grows only
+/// through it past that page.
+#[test]
+fn qml6_every_item_table_map_walk_is_counted() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 items walked test: qml6 not on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("items_walked");
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+    dir.write_file("eldur_runtime.js", RUNTIME_JS);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import "eldur_runtime.js" as R
+
+Item {
+    id: root
+    Component { id: made; Item {} }
+    property var held: []
+    property var seen: []
+
+    Column {
+        id: captioned
+        spacing: 0
+        Item { property string eldurTag: "caption" }
+        Grid { id: cells; Item {} Item {} Item {} }
+    }
+    Item {
+        id: flexed
+        Item { id: flowed; Item {} Item {} }
+        Item {}
+        Item {}
+    }
+    Item { id: box; Item {} Item {} Item {} }
+    // Named items, then a spacer, which an append goes before.
+    Column {
+        id: spaced
+        Item { objectName: "a" }
+        Item { objectName: "b" }
+        Item { objectName: "c" }
+        Item {}
+    }
+
+    // What `step` adds to the runtime's count against `want`, given how many
+    // keys the table's Map holds and how many records it keeps by address.
+    function walks(name, step, want) {
+        var table = R._itemMeta;
+        var m = table._others.size;
+        var a = Object.keys(table._byAddress).length;
+        var before = R._itemsWalked;
+        step();
+        var got = R._itemsWalked - before;
+        var wanted = want(m, a);
+        seen.push(name + (got === wanted ? "" : " " + got + "!=" + wanted));
+    }
+
+    Timer {
+        id: later
+        interval: 50
+        onTriggered: {
+            var table = R._itemMeta;
+            var gone = root.held[0];
+            // The first lookup of a destroyed item checks the Map, scans the
+            // addressed records, moves its record to the Map and looks there.
+            walks("adopt", function() { table.has(gone); }, function(m, a) { return m + a + m + (m + 1); });
+            // In the Map now, another lookup checks it and then looks there.
+            walks("gone", function() { table.get(gone); }, function(m) { return 2 * m; });
+            walks("delete-gone", function() { table.delete(gone); }, function(m) { return 2 * m; });
+            // The last name is followed too, so its mismatch can't pass.
+            console.log("ELDUR_ITEMS_WALKED", seen.join("|") + "|end");
+            Qt.quit();
+        }
+    }
+
+    Component.onCompleted: {
+        var table = R._itemMeta;
+        
+        R._meta(captioned).tableGrid = cells;
+        R._meta(flexed).flow = flowed;
+        for (var i = 0; i < 20; ++i) {
+            table.set({}, { n: i });
+        }
+        var plain = {};
+        walks("set", function() { table.set(plain, { mark: "plain" }); }, function(m) { return m; });
+        walks("get", function() { table.get(plain); }, function(m) { return m; });
+        walks("has", function() { table.has(plain); }, function(m) { return m; });
+        walks("delete", function() { table.delete(plain); }, function(m) { return m; });
+        // A live item's first read finds no record by its address, and the
+        // Map never holds a live item.
+        var fresh = made.createObject(root);
+        walks("new", function() { table.get(fresh); table.has(fresh); }, function() { return 0; });
+        walks("forEach", function() { table.forEach(function() {}); }, function(m, a) { return a + m; });
+        // A key `fn` deletes before the Map's turn is not visited there.
+        var spare = {};
+        table.set(spare, { n: -1 });
+        var dropped = false;
+        walks("forEach-delete", function() {
+            table.forEach(function() {
+                if (!dropped) {
+                    dropped = true;
+                    table.delete(spare);
+                }
+            });
+        }, function(m, a) { return a + m + (m - 1); });
+        walks("deleteWhere", function() { table.deleteWhere(function() { return false; }); },
+              function(m, a) { return a + m; });
+        // Each of the two dropped keys is looked for in the Map as it shrinks.
+        walks("deleteWhere-drop", function() { table.deleteWhere(function(v) { return v.n >= 18; }); },
+              function(m, a) { return a + m + m + (m - 1); });
+        // A table's captions, then each cell of its grid.
+        walks("captions", function() { R._rawKids(captioned, false, false, false); },
+              function() { return captioned.children.length + cells.children.length; });
+        // Its own Text, its flow's items, then the boxes beside the flow.
+        walks("corners", function() { R._rawKids(flexed, false, false, false); },
+              function() { return flexed.children.length + flowed.children.length + flexed.children.length; });
+        // The spacer from the end, then the item before it, which ends the
+        // run of spacers; then the spacer is found and is the whole tail.
+        walks("append", function() { R._insertInFlow(spaced, [made.createObject(root)], null); },
+              function() { return 2 + 1 + 1; });
+        // Before "b", of five: from the end back to it, then it and the
+        // three after it.
+        walks("insert", function() { R._insertInFlow(spaced, [made.createObject(root)], spaced.children[1]); },
+              function() { return 4 + 4; });
+        walks("text", function() { R._findTextChild(box); }, function() { return box.children.length; });
+        walks("lines", function() { R._anonLinesOf(box); }, function() { return box.children.length; });
+        var gone = made.createObject(root);
+        held.push(gone);
+        table.set(gone, { mark: "gone" });
+        gone.destroy();
+        later.start();
+    }
+}
+
+"#,
+    );
+
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
+    assert!(
+        output.contains(
+            "ELDUR_ITEMS_WALKED set|get|has|delete|new|forEach|forEach-delete|deleteWhere\
+             |deleteWhere-drop|captions|corners|append|insert|text|lines|adopt|gone|delete-gone|end"
+        ),
+        "a walk the count leaves out or counts short:\n{output}"
+    );
+}
+
+/// A packed flex layout takes an append or an insert where it lands: it walks
+/// what follows the new items, not the whole layout, and leaves the spacers as
+/// a fresh pack would for every kind of packing. Packed and unchanged, a
+/// settle only counts its children.
+///
+/// A settle trusts its spacer count, so after every step the count is checked
+/// against the spacers there: for an append and inserts before the first and an
+/// inner item in each packing, and for a layout whose hidden items leave it a
+/// collapser, which looks like a spacer and must stay out of the count.
+#[test]
+fn qml6_packed_flex_inserts_walk_what_follows() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 packed flex test: qml6 not on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("packed_flex");
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+    dir.write_file("eldur_runtime.js", RUNTIME_JS);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r##"import QtQuick
+import QtQuick.Layouts
+import "eldur_runtime.js" as R
+
+Item {
+    id: root
+    Component { id: rect; Rectangle {} }
+    Component { id: column; ColumnLayout { property string eldurPack; property bool eldurPackRow: false; property real eldurPackGap: 6 } }
+    property var seen: []
+    property int made: 0
+
+    ColumnLayout { id: between; property string eldurPack: "between"; property bool eldurPackRow: false; property real eldurPackGap: 6; Rectangle { objectName: "p0" } Rectangle { objectName: "p1" } }
+    ColumnLayout { id: around; property string eldurPack: "around"; property bool eldurPackRow: false; property real eldurPackGap: 6; Rectangle { objectName: "p0" } Rectangle { objectName: "p1" } }
+    ColumnLayout { id: evenly; property string eldurPack: "evenly"; property bool eldurPackRow: false; property real eldurPackGap: 6; Rectangle { objectName: "p0" } Rectangle { objectName: "p1" } }
+    RowLayout { id: start; property string eldurPack: "start"; property bool eldurPackRow: true; property real eldurPackGap: 6; Rectangle { objectName: "p0" } Rectangle { objectName: "p1" } }
+    ColumnLayout { id: end; property string eldurPack: "end"; property bool eldurPackRow: false; property real eldurPackGap: 6; Rectangle { objectName: "p0" } Rectangle { objectName: "p1" } }
+    ColumnLayout { id: center; property string eldurPack: "center"; property bool eldurPackRow: false; property real eldurPackGap: 6; Rectangle { objectName: "p0" } Rectangle { objectName: "p1" } }
+    ColumnLayout { id: counted; property string eldurPack: "between"; property bool eldurPackRow: false; property real eldurPackGap: 6; Rectangle { objectName: "p0" } Rectangle { objectName: "p1" } }
+
+    function walks(name, step, wanted) {
+        var before = R._itemsWalked;
+        step();
+        var got = R._itemsWalked - before;
+        seen.push(name + (got === wanted ? "" : " " + got + "!=" + wanted));
+    }
+    function fresh() {
+        return rect.createObject(root, { objectName: "n" + made++ });
+    }
+    // Each child in order: an item's name, or a spacer's minimum.
+    function shape(layout) {
+        var out = [];
+        for (var i = 0; i < layout.children.length; ++i) {
+            var c = layout.children[i];
+            out.push(c === R._meta(layout).collapser ? "collapser"
+                : c.objectName || "s" + (layout.eldurPackRow ? c.Layout.minimumWidth : c.Layout.minimumHeight));
+        }
+        return out.join(" ");
+    }
+    // What a settle trusts: the spacers it counts are the spacers there, and
+    // a collapser stays in its layout, last. Empty when they hold.
+    function broken(layout) {
+        var m = R._meta(layout);
+        var real = 0;
+        for (var i = 0; i < layout.children.length; ++i) {
+            var c = layout.children[i];
+            if (c !== m.collapser && R._isLayoutSpacer(c)) ++real;
+        }
+        var out = [];
+        if (m.packedSpacers !== real) out.push("spacers " + m.packedSpacers + "!=" + real);
+        if (m.collapser && m.collapser.parent !== layout) out.push("collapser lost");
+        if (m.collapser && layout.children[layout.children.length - 1] !== m.collapser) out.push("collapser moved");
+        return out.join(",");
+    }
+    // A packed column of two items, shown or not.
+    function packed(pack, visible) {
+        var layout = column.createObject(root, { eldurPack: pack });
+        fresh().parent = layout;
+        fresh().parent = layout;
+        layout.children[0].visible = visible;
+        layout.children[1].visible = visible;
+        R._packFlex(layout, true);
+        return layout;
+    }
+    // Runs `steps` on `layout`, checking `broken` after each and after a
+    // settle, then compares it with a fresh pack; "" when all of it holds.
+    function holds(layout, steps) {
+        var out = [];
+        steps.forEach(function(step) {
+            step[1](layout);
+            var after = broken(layout);
+            R._packFlex(layout, false);
+            var settled = broken(layout);
+            if (after || settled) out.push(step[0] + ": " + (after || "settle " + settled));
+        });
+        var got = shape(layout);
+        R._packFlex(layout, true);
+        if (got !== shape(layout)) out.push(got + " != " + shape(layout));
+        return out.join("; ");
+    }
+    function nth(layout, at) {
+        for (var i = 0; i < layout.children.length; ++i) {
+            if (!R._isLayoutSpacer(layout.children[i]) && at-- === 0) return layout.children[i];
+        }
+        return null;
+    }
+    function item(layout, name) {
+        for (var i = 0; i < layout.children.length; ++i) {
+            if (layout.children[i].objectName === name) return layout.children[i];
+        }
+        return null;
+    }
+
+    Component.onCompleted: {
+        // A first pack walks the children, then moves each item out and back.
+        walks("pack", function() { R._packFlex(counted, true); }, 2 + 2 + 2);
+        // Packed and unchanged, a settle only counts.
+        walks("pack-settle", function() { R._packFlex(counted, false); }, 0);
+        // The insert's search from the end, its one check that the new item
+        // is not a spacer, and the item read, moved out and back after its
+        // gap.
+        walks("pack-append", function() { R._insertInFlow(counted, [fresh()], null); }, 1 + 1 + 3 * 1);
+        // Before p1 the insert searches from the end to it and moves what
+        // follows; the pack checks the item, then reads, detaches and
+        // reattaches it and what follows again, now with a gap after it.
+        walks("pack-insert", function() { R._insertInFlow(counted, [fresh()], item(counted, "p1")); }, 3 + 3 + 1 + 3 * 4);
+        // Appends and inserts leave each kind of packing as a fresh pack would.
+        [between, around, evenly, start, end, center].forEach(function(layout) {
+            R._packFlex(layout, true);
+            for (var k = 0; k < 3; ++k) R._insertInFlow(layout, [fresh()], null);
+            R._insertInFlow(layout, [fresh()], item(layout, "p1"));
+            R._insertInFlow(layout, [fresh(), fresh()], item(layout, "p1"));
+            var got = shape(layout);
+            R._packFlex(layout, true);
+            var want = shape(layout);
+            seen.push(layout.eldurPack + (got === want ? "" : " " + got + " != " + want));
+        });
+        // An append, an insert before the first item and one before an inner
+        // item, in each kind of packing, end as a fresh pack would.
+        var modes = ["between", "around", "evenly", "start", "end", "center"];
+        var table = [];
+        modes.forEach(function(pack) {
+            [["append", null], ["first", 0], ["inner", 1]].forEach(function(where) {
+                var layout = packed(pack, true);
+                var before = where[1] === null ? null : nth(layout, where[1]);
+                var why = holds(layout, [[where[0], function(l) { R._insertInFlow(l, [fresh()], before); }]]);
+                if (why) table.push(pack + " " + where[0] + ": " + why);
+            });
+        });
+        seen.push("table" + (table.length ? " " + table.join(" / ") : ""));
+        // A layout whose items are all hidden holds a collapser, shaped like
+        // a spacer: settles, repacks and an append keep it out of the count
+        // and in its place, and end as a fresh pack would.
+        var collapse = [];
+        ["none"].concat(modes).forEach(function(pack) {
+            var why = holds(packed(pack, false), [
+                ["collapse", function(l) { R._keepCollapsing(l); }],
+                ["repack", function(l) { R._packFlex(l, true); }],
+                ["append", function(l) { R._insertInFlow(l, [fresh()], null); }],
+                ["uncollapse", function(l) { R._keepCollapsing(l); }],
+            ]);
+            if (why) collapse.push(pack + ": " + why);
+        });
+        seen.push("collapse" + (collapse.length ? " " + collapse.join(" / ") : ""));
+        console.log("ELDUR_PACK_WALKED", seen.join("|") + "|end");
+        Qt.quit();
+    }
+}
+"##,
+    );
+
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
+    assert!(
+        output.contains(
+            "ELDUR_PACK_WALKED pack|pack-settle|pack-append|pack-insert\
+             |between|around|evenly|start|end|center|table|collapse|end"
+        ),
+        "a packed insert walks more than what follows it, or packs unlike a fresh pack:\n{output}"
+    );
+}

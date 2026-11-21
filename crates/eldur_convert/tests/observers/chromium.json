@@ -1,8 +1,4 @@
 {
- "append_scaling": [
-  "OB appends grow linearly",
-  "OB rows 600"
- ],
  "cancel_frame": [
   "OB ro 120x30",
   "OB io true",

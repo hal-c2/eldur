@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Nightly, and by hand: the qml-e2e job then also runs the slow tests that
+  # a push runs only when it touches what they guard (the scaling page's
+  # mutants), as a backstop.
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -37,8 +43,9 @@ jobs:
   qml-e2e:
     runs-on: ubuntu-24.04
     # The suite takes minutes; a qmltestrunner that never exits must fail
-    # the job, not hold the runner for six hours.
-    timeout-minutes: 45
+    # the job, not hold the runner for six hours. The room above 45 minutes
+    # is for the mutant step at the end, which has its own limit.
+    timeout-minutes: 90
     env:
       ELDUR_REQUIRE_QT: "1"
       QT_QPA_PLATFORM: offscreen
@@ -152,3 +159,39 @@ jobs:
             ls -d "${TMPDIR:-/tmp}"/eldur-* || true
           fi
           wait "$tests"
+      # The mutant test is minutes long, so a push or PR runs it only when it
+      # touches something the test can depend on: crates/, Cargo.toml,
+      # Cargo.lock, mise.toml, mise-tasks/, rust-toolchain* or this workflow.
+      # A regression there then fails this job in the change that makes it.
+      # Other changes (docs, feature files) skip it; the nightly and hand
+      # runs always run it, as a backstop.
+      - name: Does the change touch what the mutant test guards
+        id: guarded
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [[ "$EVENT" != push && "$EVENT" != pull_request ]]; then
+            echo "run=true" >>"$GITHUB_OUTPUT"; exit 0
+          fi
+          # A new branch has no before; then there is nothing to compare with.
+          if [[ -z "$BASE" || "$BASE" =~ ^0+$ ]] || ! git fetch -q --depth=1 origin "$BASE"; then
+            echo "no base to compare with, so the mutant test runs"
+            echo "run=true" >>"$GITHUB_OUTPUT"; exit 0
+          fi
+          changed=$(git diff --name-only "$BASE" HEAD)
+          echo "$changed"
+          if grep -qxE 'crates/.*|Cargo\.(toml|lock)|mise\.toml|mise-tasks/.*|rust-toolchain.*|\.github/workflows/ci\.yml' <<<"$changed"; then
+            echo "run=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "run=false" >>"$GITHUB_OUTPUT"
+          fi
+      # Each append-cost mutant of the runtime must fail a budget line of the
+      # scaling page (observers/scaling), or the page no longer guards the
+      # cost it claims to.
+      - name: The scaling page catches every append-cost mutant
+        if: steps.guarded.outputs.run == 'true'
+        timeout-minutes: 40
+        run: |
+          mise run test -- -p eldur_convert --test observers_e2e \
+            -- --ignored --exact every_append_cost_mutant_fails_the_scaling_page --nocapture

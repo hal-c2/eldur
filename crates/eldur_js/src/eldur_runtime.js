@@ -766,6 +766,18 @@ var _explicitDocumentUrl = "";
 // QML QObjects reject ad-hoc JS property assignments, so the records live in a
 // table beside them.
 var _itemMeta = new _ItemTable();
+
+// Items the runtime has stepped over: each child a walk of an element's
+// children visits (`_rawKids`, `_tableCaptions`, `_findTextChild`,
+// `_anonLinesOf`, `_insertInFlow`, `_packFlex`), each key QV4 walks to find
+// one in the item table's Map, and each record a walk of the whole table
+// visits (`_adoptDestroyed`, `deleteWhere`, `forEach`). A cost that grows with
+// the page shows here exactly, where a clock only hints at it under load.
+// `_itemsSwept` is the part of it the item table's sweeps walked, which a
+// test takes out to see what each step costs between them. Tests read both;
+// nothing else does.
+var _itemsWalked = 0;
+var _itemsSwept = 0;
 var _warnedMissingTemplates = {};
 var _componentProbeCache = new Map();
 
@@ -782,6 +794,9 @@ function _ItemTable() {
     // comparing it with the last one asked about.
     this._lastKey = null;
     this._lastSlot = null;
+    // The last `_slot` missed a live QObject, which is never in the Map:
+    // `set` keeps those by address, and only destroyed ones move there.
+    this._missedLive = false;
 }
 
 var _objectTag = Object.prototype.toString;
@@ -812,6 +827,7 @@ function _itemAddress(key) {
 }
 
 _ItemTable.prototype._slot = function(key) {
+    this._missedLive = false;
     // Only while the last key is up: a destroyed one is `===` any other.
     if (key === this._lastKey && key && typeof key.objectName === "string") {
         return this._lastSlot;
@@ -823,6 +839,7 @@ _ItemTable.prototype._slot = function(key) {
     var slot = this._byAddress[address];
     // Qt may reuse a destroyed QObject's address; its old record is not this one's.
     if (!slot || slot.key !== key) {
+        this._missedLive = true;
         return null;
     }
     this._lastKey = key;
@@ -835,15 +852,21 @@ _ItemTable.prototype._slot = function(key) {
 // address moves to the Map, which then answers for them all, as it did when
 // it held every record.
 _ItemTable.prototype._adoptDestroyed = function(key) {
-    if (_itemAddress(key) !== null || this._others.has(key)) {
+    if (_itemAddress(key) !== null) {
+        return;
+    }
+    _itemsWalked += this._others.size;
+    if (this._others.has(key)) {
         return;
     }
     var addresses = Object.keys(this._byAddress);
+    _itemsWalked += addresses.length;
     for (var i = 0; i < addresses.length; ++i) {
         var slot = this._byAddress[addresses[i]];
         if (slot.key === key) {
             delete this._byAddress[addresses[i]];
             --this._addressed;
+            _itemsWalked += this._others.size;
             this._others.set(key, slot.value);
             return;
         }
@@ -855,7 +878,12 @@ _ItemTable.prototype.get = function(key) {
     if (slot) {
         return slot.value;
     }
+    // Each item's first read misses; the Map need not be walked for it.
+    if (this._missedLive) {
+        return undefined;
+    }
     this._adoptDestroyed(key);
+    _itemsWalked += this._others.size;
     return this._others.get(key);
 };
 
@@ -863,13 +891,18 @@ _ItemTable.prototype.has = function(key) {
     if (this._slot(key) !== null) {
         return true;
     }
+    if (this._missedLive) {
+        return false;
+    }
     this._adoptDestroyed(key);
+    _itemsWalked += this._others.size;
     return this._others.has(key);
 };
 
 _ItemTable.prototype.set = function(key, value) {
     var address = _itemAddress(key);
     if (!address) {
+        _itemsWalked += this._others.size;
         this._others.set(key, value);
         return this;
     }
@@ -893,6 +926,7 @@ _ItemTable.prototype.delete = function(key) {
     if (address === null) {
         this._adoptDestroyed(key);
     }
+    _itemsWalked += this._others.size;
     return this._others.delete(key);
 };
 
@@ -901,6 +935,7 @@ _ItemTable.prototype.delete = function(key) {
 _ItemTable.prototype.deleteWhere = function(drop) {
     this._lastKey = null;
     var addresses = Object.keys(this._byAddress);
+    _itemsWalked += addresses.length;
     for (var i = 0; i < addresses.length; ++i) {
         var slot = this._byAddress[addresses[i]];
         if (drop(slot.value, slot.key)) {
@@ -910,12 +945,14 @@ _ItemTable.prototype.deleteWhere = function(drop) {
     }
     var others = this._others;
     var dropped = [];
+    _itemsWalked += others.size;
     others.forEach(function(value, key) {
         if (drop(value, key)) {
             dropped.push(key);
         }
     });
     for (var n = 0; n < dropped.length; ++n) {
+        _itemsWalked += others.size;
         others.delete(dropped[n]);
     }
 };
@@ -923,12 +960,15 @@ _ItemTable.prototype.deleteWhere = function(drop) {
 // Visits a snapshot, so `fn` may delete what it is shown.
 _ItemTable.prototype.forEach = function(fn) {
     var addresses = Object.keys(this._byAddress);
+    _itemsWalked += addresses.length;
     for (var i = 0; i < addresses.length; ++i) {
         var slot = this._byAddress[addresses[i]];
         if (slot) {
             fn(slot.value, slot.key);
         }
     }
+    // After the records by address, whose `fn` may have deleted some here.
+    _itemsWalked += this._others.size;
     var others = [];
     this._others.forEach(function(value, key) { others.push([key, value]); });
     for (var n = 0; n < others.length; ++n) {
@@ -2785,9 +2825,11 @@ function _meta(item) {
 // records as after the last sweep.
 var _itemMetaSweepAt = 256;
 function _sweepItemMeta() {
+    var before = _itemsWalked;
     _itemMeta.deleteWhere(function(entry, item) {
         return entry.item && item.parent === undefined;
     });
+    _itemsSwept += _itemsWalked - before;
     _itemMetaSweepAt = Math.max(256, 2 * _itemMeta.size);
 }
 
@@ -4956,35 +4998,33 @@ function _polishSubtree(item) {
 // A flex container the page left empty: its spacers follow what it now holds
 // (`spacer_slots` in the converter's flex.rs). `spacing` is the gap unless
 // spacers sit between the items, which then hold the gap open themselves.
-function _packFlex(layout, force) {
+function _packFlex(layout, force, added) {
+    var m = _meta(layout);
+    // Only this function makes or drops spacers once a layout is packed, so
+    // what it holds besides them is a count, not a walk.
+    if (!force && m.packedSpacers !== undefined && _packItemCount(layout, m) === m.packedFor) {
+        return;
+    }
+    if (added && _packAdded(layout, m, added)) {
+        return;
+    }
     var kids = [];
     var spacers = [];
     for (var i = 0; i < layout.children.length; ++i) {
-        (_isLayoutSpacer(layout.children[i]) ? spacers : kids).push(layout.children[i]);
+        ++_itemsWalked;
+        if (layout.children[i] !== m.collapser) {
+            (_isLayoutSpacer(layout.children[i]) ? spacers : kids).push(layout.children[i]);
+        }
     }
-    var m = _meta(layout);
     if (!force && m.packedFor === kids.length) {
+        m.packedSpacers = spacers.length;
         return;
     }
     m.packedFor = kids.length;
     var n = kids.length;
-    var pack = layout.eldurPack;
-    if (pack === "between" && n <= 1) {
-        pack = "start";
-    }
-    var slot = function(at) {
-        switch (pack) {
-        case "none": return 0;
-        case "start": return at === n ? 1 : 0;
-        case "end": return at === 0 ? 1 : 0;
-        case "center": return at === 0 || at === n ? 1 : 0;
-        case "between": return at === 0 || at === n ? 0 : 1;
-        case "around": return at === 0 || at === n ? 1 : 2;
-        default: return 1;
-        }
-    };
-    var axis = layout.eldurPackRow ? "Width" : "Height";
-    var source = "import QtQuick; import QtQuick.Layouts; Item { Layout.fill" + axis + ": true; Layout.minimum" + axis + ": ";
+    var pack = _packOf(layout, n);
+    var source = _packSpacerSource(layout);
+    _itemsWalked += spacers.length + n;
     for (var d = 0; d < spacers.length; ++d) {
         spacers[d].parent = null;
         spacers[d].destroy();
@@ -4992,15 +5032,125 @@ function _packFlex(layout, force) {
     for (var k = 0; k < n; ++k) {
         kids[k].parent = null;
     }
+    var made = 0;
     for (var at = 0; at <= n; ++at) {
-        for (var c = slot(at); c > 0; --c) {
+        for (var c = _packSlot(pack, at, n); c > 0; --c) {
             var between = at > 0 && at < n;
-            Qt.createQmlObject(source + (between ? layout.eldurPackGap / slot(at) : 0) + " }", layout);
+            Qt.createQmlObject(source + (between ? layout.eldurPackGap / _packSlot(pack, at, n) : 0) + " }", layout);
+            ++made;
         }
         if (at < n) {
+            ++_itemsWalked;
             kids[at].parent = layout;
         }
     }
+    m.packedSpacers = made;
+    // The collapser keeps an empty layout's size; it stays, and stays last.
+    if (_packCollapsed(layout, m)) {
+        ++_itemsWalked;
+        m.collapser.parent = null;
+        m.collapser.parent = layout;
+    }
+}
+
+// An empty layout's collapser (`_keepCollapsing`) is shaped like a spacer
+// but is neither a spacer nor an item of the pack.
+function _packCollapsed(layout, m) {
+    return Boolean(m.collapser) && m.collapser.parent === layout;
+}
+
+function _packItemCount(layout, m) {
+    return layout.children.length - m.packedSpacers - (_packCollapsed(layout, m) ? 1 : 0);
+}
+
+function _packOf(layout, n) {
+    var pack = layout.eldurPack;
+    return pack === "between" && n <= 1 ? "start" : pack;
+}
+
+// How many spacers sit before the item at `at`, or after the last at `n`.
+function _packSlot(pack, at, n) {
+    switch (pack) {
+    case "none": return 0;
+    case "start": return at === n ? 1 : 0;
+    case "end": return at === 0 ? 1 : 0;
+    case "center": return at === 0 || at === n ? 1 : 0;
+    case "between": return at === 0 || at === n ? 0 : 1;
+    case "around": return at === 0 || at === n ? 1 : 2;
+    default: return 1;
+    }
+}
+
+function _packSpacerSource(layout) {
+    var axis = layout.eldurPackRow ? "Width" : "Height";
+    return "import QtQuick; import QtQuick.Layouts; Item { Layout.fill" + axis + ": true; Layout.minimum" + axis + ": ";
+}
+
+// Items `_insertInFlow` just put in a packed layout land together, at
+// `added.at` (before what was there) or, when that is -1, last: only spacers
+// next to them change, so an append walks what follows it, not the whole
+// layout. An element may stand in the layout as another item (a Text for one
+// holding only text), so they are found by place, not by identity. Anything
+// else is packed again from the start; false says so.
+function _packAdded(layout, m, added) {
+    var old = m.packedFor;
+    if (m.packedSpacers === undefined || old === undefined || old === 0) {
+        return false;
+    }
+    var kids = layout.children;
+    var k = _packItemCount(layout, m) - old;
+    if (k <= 0 || k !== added.count || _packOf(layout, old) !== _packOf(layout, old + k)) {
+        return false;
+    }
+    var at = added.at >= 0 ? added.at : kids.length - k;
+    if (at <= 0 || at + k > kids.length) {
+        return false;
+    }
+    for (var q = 0; q < k; ++q) {
+        ++_itemsWalked;
+        if (_isLayoutSpacer(kids[at + q])) {
+            return false;
+        }
+    }
+    var pack = _packOf(layout, old + k);
+    var gaps = _packSlot(pack, 1, old + k + 1);
+    var after = at + k < kids.length ? kids[at + k] : null;
+    // Before an item the new ones each take the gap after them; after the
+    // last item they take the gap before them, ahead of the end's spacers.
+    var beforeItem = after !== null && !_isLayoutSpacer(after);
+    if (!beforeItem && _isLayoutSpacer(kids[at - 1])) {
+        return false;
+    }
+    m.packedFor = old + k;
+    if (gaps === 0) {
+        return true;
+    }
+    var tail = [];
+    _itemsWalked += kids.length - at;
+    for (var t = at; t < kids.length; ++t) {
+        tail.push(kids[t]);
+    }
+    for (var u = 0; u < tail.length; ++u) {
+        ++_itemsWalked;
+        tail[u].parent = null;
+    }
+    var source = _packSpacerSource(layout) + layout.eldurPackGap / gaps + " }";
+    for (var r = 0; r < tail.length; ++r) {
+        if (r < k && !beforeItem) {
+            for (var g = 0; g < gaps; ++g) {
+                Qt.createQmlObject(source, layout);
+            }
+        }
+        ++_itemsWalked;
+        tail[r].parent = layout;
+        if (r < k && beforeItem) {
+            for (var h = 0; h < gaps; ++h) {
+                Qt.createQmlObject(source, layout);
+            }
+        }
+    }
+    m.packedSpacers += k * gaps;
+    return true;
 }
 
 // A grid the page left empty: each item takes the next cell and that column's
@@ -5076,9 +5226,9 @@ function _placeInStaticGrid(grid) {
     }
 }
 
-function _reflowFilled(container, force) {
+function _reflowFilled(container, force, added) {
     if (typeof container.eldurPack === "string") {
-        _packFlex(container, force);
+        _packFlex(container, force, added);
     } else if (container.eldurTracks) {
         _placeGrid(container);
     } else if (typeof container.columnSpacing === "number" && typeof container.columns === "number") {
@@ -5434,6 +5584,7 @@ function _findTextChild(raw) {
         return null;
     }
     for (var i = 0; i < raw.children.length; ++i) {
+        ++_itemsWalked;
         var child = raw.children[i];
         if (_isPlainTextItem(child) && !child.objectName && !_meta(child).createdTag) {
             return child;
@@ -5650,6 +5801,7 @@ function _scriptElementChildren(raw) {
 function _tableCaptions(raw) {
     var out = [];
     if (_meta(raw).tableGrid && typeof raw.spacing === "number") {
+        _itemsWalked += raw.children.length;
         for (var i = 0; i < raw.children.length; ++i) {
             if (raw.children[i].eldurTag === "caption") {
                 out.push(raw.children[i]);
@@ -5669,6 +5821,7 @@ function _rawKids(raw, withText, withPseudo, asRuns) {
     var captions = raw ? _tableCaptions(raw) : [];
     if (captions.length > 0) {
         var below = container.children;
+        _itemsWalked += below.length;
         for (var bi = 0; bi < below.length; ++bi) {
             captions.push(below[bi]);
         }
@@ -5686,6 +5839,7 @@ function _rawKids(raw, withText, withPseudo, asRuns) {
     // A box cut out of an inline element is that element's child; the line
     // still places it, so layout input keeps it where it stands.
     var cutLine = !asRuns && _isLines(container) && _vSlotLine(container);
+    _itemsWalked += container.children.length;
     for (var i = 0; i < container.children.length; ++i) {
         var child = container.children[i];
         if (!child) {
@@ -5770,6 +5924,7 @@ function _rawKids(raw, withText, withPseudo, asRuns) {
     }
     // A flex or grid container's out-of-flow boxes wait beside its items.
     if (container !== raw && raw.children) {
+        _itemsWalked += raw.children.length;
         for (var c = 0; c < raw.children.length; ++c) {
             var corner = raw.children[c];
             if (corner.eldurBox && corner.eldurOrder !== undefined) {
@@ -11504,6 +11659,7 @@ function _anonLinesOf(raw) {
     }
     var kids = container ? container.children : null;
     for (var i = 0; kids && i < kids.length; ++i) {
+        ++_itemsWalked;
         if (_isLines(kids[i]) && _isAnonLines(kids[i])) {
             return kids[i];
         }
@@ -12188,12 +12344,18 @@ function _insertChildrenAt(raw, nodes, ref) {
     var real = _forRealItems(nodes);
     _insertRawNodesBefore(_appendTarget(raw), real, at);
     // A Text node standing in a column, below its boxes, is drawn as the
-    // column's own text or lines are.
+    // column's own text or lines are. Finding those walks the column's
+    // children, so only when a Text node comes: else each append to a column
+    // walks everything already in it.
+    var texts = real.filter(function(n) { return _isTextNode(n) && typeof n.text === "string"; });
+    if (texts.length === 0) {
+        return;
+    }
     var own = _gIsBox(raw) ? null : _findTextChild(raw);
     var lines = _gIsBox(raw) || own ? null : _anonLinesOf(raw);
     if ((own && typeof own.lineHeight === "number") || lines) {
-        real.forEach(function(n) {
-            if (!_isTextNode(n) || typeof n.text !== "string" || n === own) {
+        texts.forEach(function(n) {
+            if (n === own) {
                 return;
             }
             n.font = (own || lines).font;
@@ -12243,6 +12405,7 @@ function _insertInFlow(container, rawNodes, rawRef) {
         var isLayout = typeof container.spacing === "number" || typeof container.columnSpacing === "number";
         // The end of an element is before its `::after` box.
         for (var s = container.children.length - 1; s >= 0; --s) {
+            ++_itemsWalked;
             var last = container.children[s];
             if (!(isLayout && _isLayoutSpacer(last))
                 && !(_pseudoBoxSide(last) === "after" && rawNodes.indexOf(last) === -1)) {
@@ -12251,6 +12414,9 @@ function _insertInFlow(container, rawNodes, rawRef) {
             rawRef = last;
         }
     }
+    // Where the new items start among the children, for a packed layout;
+    // -1 is after everything there.
+    var placed = -1;
     if (!rawRef || !container.children) {
         for (var a = 0; a < rawNodes.length; ++a) {
             if (rawNodes[a] && rawNodes[a].parent !== undefined) {
@@ -12259,11 +12425,18 @@ function _insertInFlow(container, rawNodes, rawRef) {
             }
         }
     } else {
-        var kids = [];
-        for (var i = 0; i < container.children.length; ++i) {
-            kids.push(container.children[i]);
+        // `rawRef` is mostly near the end (a trailing spacer or `::after`
+        // box), so it is looked for from there: an append walks what follows
+        // it, not everything before.
+        var kids = container.children;
+        var idx = -1;
+        for (var i = kids.length - 1; i >= 0; --i) {
+            ++_itemsWalked;
+            if (kids[i] === rawRef) {
+                idx = i;
+                break;
+            }
         }
-        var idx = kids.indexOf(rawRef);
         if (idx === -1) {
             for (var b = 0; b < rawNodes.length; ++b) {
                 if (rawNodes[b] && rawNodes[b].parent !== undefined) {
@@ -12272,7 +12445,9 @@ function _insertInFlow(container, rawNodes, rawRef) {
                 }
             }
         } else {
+            placed = idx;
             var tail = [];
+            _itemsWalked += kids.length - idx;
             for (var t = idx; t < kids.length; ++t) {
                 if (rawNodes.indexOf(kids[t]) === -1) {
                     tail.push(kids[t]);
@@ -12297,7 +12472,7 @@ function _insertInFlow(container, rawNodes, rawRef) {
             _connectSubtree(rawNodes[mIdx]);
         }
     }
-    _reflowFilled(container, true);
+    _reflowFilled(container, true, { at: placed, count: rawNodes.length });
     rawNodes.forEach(_noteNumbered);
     // Before the script reads styles back; removals settle with the layouts.
     _renumber(container);
