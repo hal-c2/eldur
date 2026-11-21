@@ -6328,7 +6328,7 @@ function getText(item) {
         return "";
     }
     if (_meta(raw).btnLines) {
-        return _rawChildNodes(raw).map(getText).join("");
+        return _linesText(raw);
     }
     var vOwn = _vModelOf(raw);
     if (vOwn) {
@@ -7058,7 +7058,34 @@ function _setInnerHTMLAt(item, html) {
 
 // Every child of a box whose content is on lines goes, and the runs with
 // them; the line stays for what comes next.
+// A button's line's text, with what it holds but does not draw where it was.
+function _linesText(raw) {
+    var kids = _rawChildNodes(raw);
+    var hidden = _meta(raw).linesHidden || [];
+    var place = function(h) {
+        for (var i = 0; i < h.after.length; ++i) {
+            if (kids.indexOf(h.after[i]) !== -1) {
+                return h.after[i];
+            }
+        }
+        return null;
+    };
+    var at = hidden.map(place);
+    var text = hidden.filter(function(h, i) { return at[i] === null; }).map(function(h) { return h.text; }).join("");
+    kids.forEach(function(kid) {
+        text += getText(kid);
+        hidden.forEach(function(h, i) {
+            if (at[i] === kid) {
+                text += h.text;
+            }
+        });
+    });
+    return text;
+}
+
 function _clearLines(raw) {
+    // What it is given replaces all it held, drawn or not.
+    delete _meta(raw).linesHidden;
     _rawKids(raw, true).forEach(function(kid) {
         if (kid.__eldurInline || _meta(kid).createdTag || kid.objectName) {
             _detachNode(kid);
@@ -12517,7 +12544,25 @@ function _btnBecomesLines(raw) {
     lines.font = Qt.binding(function() { return raw.font; });
     lines.color = Qt.binding(function() { return raw.palette.buttonText; });
     lines.textAlign = 4; // Text.AlignHCenter
+    // What it holds but does not draw stays in its textContent, after the
+    // node it followed (or the nearest earlier one still there); leaves
+    // index the nodes made from them below.
+    var hidden = [];
+    if (m.btnHidden) {
+        hidden.push({ at: -1, text: m.btnHidden });
+    }
+    leaves.forEach(function(leaf, i) {
+        if (leaf.btnBefore) {
+            hidden.push({ at: i - 1, text: leaf.btnBefore });
+        }
+        if (leaf.btnAfter) {
+            hidden.push({ at: i, text: leaf.btnAfter });
+        }
+    });
     var texts = leaves.map(_vToReal);
+    m.linesHidden = (m.linesHidden || []).concat(hidden.map(function(h) {
+        return { text: h.text, after: texts.slice(0, h.at + 1).reverse() };
+    }));
     _btnForget(raw);
     delete m.btnMarkup;
     m.btnLines = lines;
@@ -13375,9 +13420,18 @@ function _swapRawItemCarried(oldRaw, component, fallbackQmlSrc) {
     if (_isLines(oldRaw) && !_isAnonLines(oldRaw) && m.createdTag) {
         childElements = _rawChildNodes(oldRaw);
     }
+    // A button holding lines is made again holding none: its line's nodes,
+    // text and elements, go on as nodes and are put on the new button's line.
+    // The line is the old button's, out of the new one's tree.
+    var heldLines = m.btnLines || null;
+    if (heldLines) {
+        childElements = _rawChildNodes(oldRaw);
+        delete m.btnLines;
+        heldLines.parent = null;
+    }
     // A model's elements stand among its text: taking them alone loses the text.
     var carried = null;
-    if (childElements.some(function(k) { return k.__eldurInline; })) {
+    if (!heldLines && childElements.some(function(k) { return k.__eldurInline; })) {
         var oldText = _vModelOf(oldRaw) ? oldRaw : _findTextChild(oldRaw);
         carried = oldText ? _vModelOf(oldText) : null;
         childElements = _rawChildNodes(oldRaw);
@@ -13540,7 +13594,7 @@ function _swapRawItemCarried(oldRaw, component, fallbackQmlSrc) {
         return _meta(n).createdTag === "#text";
     });
     if (childElements.length > 0 && !(carried && _vCarryModel(next, carried, childElements))
-        && !(onlyText && _vTryInsert(next, childElements, null))) {
+        && !(onlyText && !heldLines && _vTryInsert(next, childElements, null))) {
         // Before the template's trailing spacers, renumbered.
         ++_vCarrying;
         try {
@@ -13548,6 +13602,9 @@ function _swapRawItemCarried(oldRaw, component, fallbackQmlSrc) {
         } finally {
             --_vCarrying;
         }
+    }
+    if (heldLines) {
+        heldLines.destroy();
     }
     // A pseudo-element's box goes with the element, unless its new form has one.
     pseudoBoxes.forEach(function(box) {
@@ -21680,6 +21737,8 @@ function _fieldsetTurned(raw) {
         return !node.__eldurInline && /^(button|input|select|textarea)$/.test(_nodeTag(node));
     }, false).forEach(function(node) {
         node.enabled = !_isDisabled(node);
+        // As `_fieldsetHolds` marks one: it is enabled again once out.
+        _meta(node).fieldsetHeld = !node.enabled;
     });
 }
 

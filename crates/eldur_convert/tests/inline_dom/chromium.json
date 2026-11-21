@@ -70,11 +70,18 @@
  "button_lines": {
   "log": [
    "LC append-own \"A\",SPAN \"Ax\" true",
+   "LC hidden-kept \"Savehiddenx\"",
+   "LC hidden-left \"hiddenx\"",
    "LC created-wrap true B,\" many words that wrap\"",
    "LC created-empty true SPAN",
+   "LC swapped B,\" on\" \"Go on\" true true",
    "LC moved-out false false",
+   "LC turned-in true",
+   "LC turned-out false false",
    "LC focus mv",
-   "LC typed \"k\" true true"
+   "LC typed \"k\" true true",
+   "LC focus ti",
+   "LC typed \"j\""
   ],
   "clicks": [
    {
@@ -85,6 +92,15 @@
    {
     "name": "key:k",
     "key": "k"
+   },
+   {
+    "name": "#ti",
+    "x": 92.5,
+    "y": 290.6875
+   },
+   {
+    "name": "key:j",
+    "key": "j"
    }
   ]
  },
