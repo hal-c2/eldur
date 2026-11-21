@@ -81,8 +81,9 @@ var k=byId("kept");k.insertAdjacentHTML("beforeend",'<b><i>OK</i><span title="un
 L("unclosed-holder",k.childNodes.length,k.lastChild.nodeName,k.lastChild.childNodes.length,k.lastChild.firstChild.nodeName,JSON.stringify(k.textContent));
 k.innerHTML='<b><i>OK</i><span title="unfinished</b>';
 L("unclosed-holder-inner",k.childNodes.length,k.lastChild.nodeName,k.lastChild.childNodes.length,k.lastChild.firstChild.nodeName,JSON.stringify(k.textContent));
-// A run of `<` inside a quoted value is read once, not once per `<`.
-t0=Date.now();q.innerHTML='<b><span title="'+'<a'.repeat(16000)+'">x</span></b>';
+// A run of `<` inside a quoted value is read once, not once per `<`: at this
+// length a scan that starts again at each `<` takes seconds.
+t0=Date.now();q.innerHTML='<b><span title="'+'<a'.repeat(128000)+'">x</span></b>';
 L("many-lt-in-value-fast",Date.now()-t0<500,JSON.stringify(q.textContent),q.firstChild.firstChild.title.length);
 // An end tag written in a quoted value closes nothing.
 q.innerHTML='<b><span title="<b>">OK</span></b>tail';
