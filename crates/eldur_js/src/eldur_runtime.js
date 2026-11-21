@@ -6900,15 +6900,7 @@ function _setTextAt(item, value) {
     var m = _meta(raw);
     // A fragment draws nothing of its own, so its text is a text node it holds.
     if (m.isFragment || _holdsLines(raw)) {
-        // Every child goes, and the runs with them; the line stays for the text.
-        _rawKids(raw, true).forEach(function(kid) {
-            if (kid.__eldurInline || _meta(kid).createdTag || kid.objectName) {
-                _detachNode(kid);
-            } else {
-                kid.destroy();
-            }
-        });
-        _wsEnd(raw).length = 0;
+        _clearLines(raw);
         if (str !== "") {
             _insertChildren(raw, [_unwrap(document.createTextNode(str))], null);
         }
@@ -6980,6 +6972,15 @@ function _setInnerHTMLAt(item, html) {
         return;
     }
     _domTextStale(raw);
+    // A button drawing a line holds what it is given on that line, text as
+    // well as elements; its hidden label draws nothing any more.
+    if (_meta(raw).btnLines) {
+        _clearLines(raw);
+        _replaceWithMarkup(raw, str);
+        _btnLineStyle(raw);
+        _rememberMarkup(raw, str);
+        return;
+    }
     if (str === "" && !raw.__eldurInline) {
         _rawElementChildren(raw).forEach(_detachNode);
     }
@@ -7043,6 +7044,19 @@ function _setInnerHTMLAt(item, html) {
         return;
     }
     console.warn("eldur: innerHTML assignment on non-text QML item is unsupported");
+}
+
+// Every child of a box whose content is on lines goes, and the runs with
+// them; the line stays for what comes next.
+function _clearLines(raw) {
+    _rawKids(raw, true).forEach(function(kid) {
+        if (kid.__eldurInline || _meta(kid).createdTag || kid.objectName) {
+            _detachNode(kid);
+        } else {
+            kid.destroy();
+        }
+    });
+    _wsEnd(raw).length = 0;
 }
 
 // Whether markup set on `raw` becomes elements, as `createElement` makes
@@ -12604,7 +12618,8 @@ function _btnForget(raw) {
     delete m.btnHidden;
 }
 
-function _btnTakeOut(leaf) {
+// `staying`: the node is moving within its button, which is not emptied.
+function _btnTakeOut(leaf, staying) {
     var raw = leaf.btnOf;
     var list = _meta(raw).btnNodes || [];
     var at = list.indexOf(leaf);
@@ -12632,7 +12647,7 @@ function _btnTakeOut(leaf) {
     // An emptied button draws no line at all, only its padding and border; a
     // label would keep a line's height. What it holds but doesn't draw (a
     // hidden element) is the label's still.
-    if (list.length === 0 && raw.text === "" && getText(raw) === "") {
+    if (!staying && list.length === 0 && raw.text === "" && getText(raw) === "") {
         _btnBecomesLines(raw);
     }
 }
@@ -12688,7 +12703,7 @@ function _putDrawnText(raw, nodes, atStart, ref, going) {
     }
     var leaves = nodes.map(function(n) {
         if (n.btnOf) {
-            _btnTakeOut(n);
+            _btnTakeOut(n, n.btnOf === raw);
             return _btnOwn(n, raw);
         }
         if (n.__eldurInline ? n.vparent || n.model : n.parent) {

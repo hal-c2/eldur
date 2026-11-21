@@ -12,6 +12,7 @@ function near(a,b){return Math.abs(a-b)<=3}
 <button id="gm">Save</button>
 <form id="gf"><fieldset id="gd" disabled><legend><span id="gl">l </span></legend><p><input id="gx" value="2"></p></fieldset></form>
 <p id="sc">one</p>
+<p><button id="gk">Save</button> <button id="ge">Save</button> <button id="gq">Save</button></p>
 <p id="last">end <span id="gs2">moved</span></p>
 <script>
 // A span put before a button's text is drawn before it, on the label's line.
@@ -33,6 +34,17 @@ L("legend",I(gi.parentNode),gi.matches(":disabled"),gx.matches(":disabled"),R(gi
 // A span moved to the body goes at its end, after the last paragraph.
 var sc=document.getElementById("sc"),yz=document.createElement("span");yz.textContent="yz";sc.after(yz);
 L("after-p",I(yz.previousSibling),JSON.stringify(yz.nextSibling&&yz.nextSibling.data),near(R(yz).t-R(sc).b,17));
+// A button given markup, then plain text, holds the text as its one node.
+var gn=document.getElementById("gn"),gk=document.getElementById("gk");gk.innerHTML="<b>Go</b> now";gk.innerHTML="CCC";
+L("markup-text",N(gk),JSON.stringify(gk.textContent),near(R(gk).h,R(gn).h));
+gk.textContent="DDD";
+L("markup-content",N(gk),JSON.stringify(gk.textContent),near(R(gk).h,R(gn).h));
+// An emptied button given text, emptied by markup, then given text holds the last.
+var ge=document.getElementById("ge");ge.removeChild(ge.firstChild);ge.textContent="BBB";ge.innerHTML="";ge.innerHTML="B2";
+L("emptied-text",N(ge),JSON.stringify(ge.textContent),near(R(ge).h,R(gn).h));
+// A button's one Text node appended to it again stays its own, and drawn.
+var gq=document.getElementById("gq");gq.appendChild(gq.firstChild);
+L("self-append",N(gq),JSON.stringify(gq.textContent),near(R(gq).w,R(gn).w),near(R(gq).h,R(gn).h));
 var gs2=document.getElementById("gs2"),last=document.getElementById("last");document.body.append(gs2);
 L("to-body",N(last),R(gs2).t>=R(last).b,near(R(gs2).l,0));
 </script></body></html>
