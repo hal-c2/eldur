@@ -3801,6 +3801,26 @@ fn window_onload_as_any_assignment_target_is_read_then_set() {
     assert!(!js.contains("Eldur.window.onload"), "{js}");
 }
 
+/// `delete window.onload` at load deletes the page's handler property
+/// through `Eldur.deleteOnload`, for `window["onload"]` too, rather than
+/// deleting a call's value.
+#[test]
+fn delete_window_onload_goes_through_the_runtime() {
+    let resolver = FakeResolver::default();
+    let first = classic(
+        "first.js",
+        "console.log(delete window.onload);\nfunction later() { return delete window[\"onload\"]; }\n",
+    );
+    let out = run_rewrite(&[first], &resolver);
+    let js = &out.page_js;
+    assert_eq!(
+        js.matches("Eldur.deleteOnload(__eldur_call_window_onload)").count(),
+        2,
+        "{js}"
+    );
+    assert!(!js.contains("delete Eldur."), "{js}");
+}
+
 /// A `load` listener and `window.onload` each take their place among the
 /// `load` listeners where they run: the listener is queued where its module
 /// adds it, and each assignment goes through `Eldur.setOnload`, which adds the
