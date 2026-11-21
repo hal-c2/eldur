@@ -25,6 +25,12 @@ L("hidden-first",JSON.stringify(bk.textContent));
 // that followed it, also once text is put ahead of everything.
 var bp=byId("bp"),px=document.createElement("span");px.textContent="x";bp.append(px);bp.append(bp.firstChild);bp.prepend("y");
 L("hidden-between",JSON.stringify(bp.textContent));
+// The split is where the nodes are, not where the text matches.
+function ends(b){return JSON.stringify([b.firstChild.nodeValue,b.lastChild.nodeValue]);}
+var bb=byId("bb"),bs=byId("bs"),bg=byId("bg");
+L("split-repeat",ends(bb));bb.lastChild.nodeValue="C";L("split-repeat-set",JSON.stringify(bb.textContent));
+L("split-letter",ends(bs));bs.lastChild.nodeValue="ip";L("split-letter-set",JSON.stringify(bs.textContent));
+L("split-same",JSON.stringify(bg.lastChild.nodeValue));bg.lastChild.nodeValue="Z";L("split-same-set",JSON.stringify(bg.textContent));
 // A created button holding a line keeps the line's height when restyled.
 var pcd=document.createElement("div");byId("pc").append(pcd);
 var cb=document.createElement("button");cb.style.width="60px";pcd.append(cb);
@@ -55,7 +61,7 @@ ti.addEventListener("focus",function(){L("focus",I(ti))});
 ti.addEventListener("input",function(){L("typed",JSON.stringify(ti.value))});
 });
 </script></head><body data-clicks="#mv key:k #ti key:j">
-<p><button id="ba">A</button> <button id="bn">Save</button> <button id="bh">Save<kbd style="display:none">hidden</kbd></button> <button id="bm">A<kbd style="display:none">H</kbd></button> <button id="bk"><kbd style="display:none">K</kbd>Save</button> <button id="bp">A<kbd style="display:none">K</kbd>B</button></p>
+<p><button id="ba">A</button> <button id="bn">Save</button> <button id="bh">Save<kbd style="display:none">hidden</kbd></button> <button id="bm">A<kbd style="display:none">H</kbd></button> <button id="bk"><kbd style="display:none">K</kbd>Save</button> <button id="bp">A<kbd style="display:none">K</kbd>B</button> <button id="bb">A<kbd style="display:none">B</kbd>B</button> <button id="bs">S<kbd style="display:none">a</kbd>ave</button> <button id="bg"><kbd style="display:none">Go</kbd>Go</button></p>
 <div id="pc"></div>
 <fieldset id="dfs" disabled><legend id="dfsl">off</legend></fieldset>
 <p id="pm"></p>
