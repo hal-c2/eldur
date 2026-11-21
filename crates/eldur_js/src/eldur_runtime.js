@@ -2812,6 +2812,10 @@ function _sanitizeClassProp(cls) {
     return "cls_" + String(cls).replace(/[^A-Za-z0-9_]/g, "_");
 }
 
+// How many times a class change looked for the box an inline element binds
+// its classes on: only an element the converter marked has one.
+var _carriedWalks = 0;
+
 function _syncClassProp(raw, cls, active) {
     if (!raw || typeof raw !== "object") {
         return;
@@ -2819,6 +2823,27 @@ function _syncClassProp(raw, cls, active) {
     var prop = _sanitizeClassProp(cls);
     if (typeof raw[prop] === "boolean") {
         raw[prop] = Boolean(active);
+    }
+    // An inline element with no item of its own, whose class may make it a
+    // stacking context, binds the class on the first box it holds.
+    if (raw.__eldurInline && raw.eldurCarries) {
+        ++_carriedWalks;
+        var carried = "eldurIn" + raw.eldurKey + "_" + prop;
+        // The span's own page: one page can cover another, and keys are
+        // only unique within a page.
+        var page = _root;
+        for (var at = raw.model && raw.model.text; at; at = at.parent) {
+            if (_roots.indexOf(at) !== -1) {
+                page = at;
+                break;
+            }
+        }
+        var holder = _elementsUnder(page, function(node) {
+            return typeof node[carried] === "boolean";
+        }, true)[0];
+        if (holder) {
+            holder[carried] = Boolean(active);
+        }
     }
 }
 
@@ -7480,6 +7505,36 @@ function _shownByAttribute(raw, hidden) {
     }
 }
 
+// A box on a line inside an inline element with an opacity paints faded by
+// that element too, which has no item of its own: conversion puts the fade in
+// `eldurInlineFade`. What is written goes in with it, what is read leaves it out.
+function _fadedOpacity(raw, opacity) {
+    if (typeof raw.eldurInlineFade !== "number") {
+        return opacity;
+    }
+    // The declared own opacity is readonly, so what a script writes is kept
+    // here for a fade of 0 to read back.
+    _meta(raw).ownOpacity = opacity;
+    return opacity * raw.eldurInlineFade;
+}
+
+// A fade of 0 leaves nothing to divide by: the own opacity a script wrote, or
+// the one conversion declared beside it, is read then.
+function _ownOpacity(raw) {
+    var fade = raw.eldurInlineFade;
+    if (typeof fade !== "number") {
+        return raw.opacity;
+    }
+    if (fade > 0) {
+        return Math.round(raw.opacity / fade * 1e6) / 1e6;
+    }
+    var written = _meta(raw).ownOpacity;
+    if (typeof written === "number") {
+        return written;
+    }
+    return typeof raw.eldurOwnOpacity === "number" ? raw.eldurOwnOpacity : raw.opacity;
+}
+
 // `visibility` has no property of its own here: it paints as no opacity.
 function _inlineOpacity(raw, m) {
     if (typeof raw.opacity !== "number") {
@@ -7487,6 +7542,10 @@ function _inlineOpacity(raw, m) {
     }
     var hidden = m.styles.visibility;
     var written = m.styles.opacity;
+    if (!written) {
+        // A cleared opacity goes back to the declared one, not the last write.
+        delete m.ownOpacity;
+    }
     if (!hidden && !written) {
         _inlineRelease(raw, raw, "opacity");
         _inlineRelease(raw, raw, "enabled");
@@ -7501,8 +7560,14 @@ function _inlineOpacity(raw, m) {
         opacity = parseFloat(s.opacity);
     } else if (hidden) {
         shown = hidden !== "hidden";
+        if (!written && typeof raw.eldurInlineFade === "number") {
+            // Only `visibility` was written: the box keeps its own opacity,
+            // the declared one, not what the hold still has.
+            _inlineRelease(raw, raw, "opacity");
+            opacity = _ownOpacity(raw);
+        }
     }
-    _inlineHold(raw, raw, "opacity", !shown ? 0 : isNaN(opacity) ? 1 : opacity);
+    _inlineHold(raw, raw, "opacity", !shown ? 0 : _fadedOpacity(raw, isNaN(opacity) ? 1 : opacity));
     if (typeof raw.enabled === "boolean") {
         _inlineHold(raw, raw, "enabled", shown);
     }
@@ -7869,7 +7934,7 @@ function getComputedStyle(item) {
             return raw.opacity === 0 ? "hidden" : "visible";
         }
         if (camel === "opacity") {
-            return typeof raw.opacity === "number" ? String(raw.opacity) : "1";
+            return typeof raw.opacity === "number" ? String(_ownOpacity(raw)) : "1";
         }
         if (camel === "width") {
             return typeof raw.width === "number" ? raw.width + "px" : "0px";
@@ -14771,6 +14836,8 @@ function _vBuild(json, parent, model) {
     }
     var v = _vElement(json.tag, json.attrs, parent, model);
     v.eldurKey = json.key;
+    // A class may make it a stacking context, and binds on a box it holds.
+    v.eldurCarries = json.carries === true;
     if (json.key !== undefined) {
         _vKeyed[json.key] = v;
     }
@@ -15191,6 +15258,11 @@ function _vRemoveAttr(v, name) {
     if (key === "id") {
         v.objectName = "";
     } else if (key === "class") {
+        // What the classes gave a box the element holds goes with them, as
+        // it does when a class is set to "".
+        for (var c = 0; c < m.classes.length; ++c) {
+            _syncClassProp(m.raw || v, m.classes[c], false);
+        }
         m.classes.length = 0;
     } else if (key === "style") {
         m.styles = {};
@@ -25592,7 +25664,7 @@ function _gPaintBox(raw, s, e) {
     var painted = _meta(raw).gPainted === true;
     var radius = _gPx(s["border-top-left-radius"], raw.width, s.fontSize, s.rootSize) || 0;
     _gSet(raw, "radius", radius);
-    _gSet(raw, "opacity", s.visibility === "hidden" ? 0 : _gNumber(s.opacity));
+    _gSet(raw, "opacity", s.visibility === "hidden" ? 0 : _fadedOpacity(raw, _gNumber(s.opacity)));
     var uniform = e.bt === e.br && e.bt === e.bb && e.bt === e.bl
         && s["border-top-color"] === s["border-right-color"] && s["border-top-color"] === s["border-bottom-color"]
         && s["border-top-color"] === s["border-left-color"];
@@ -30222,7 +30294,7 @@ function _gInFlight(raw, prop, settled) {
     }
     var name = _camelToKebab(prop);
     var read = {
-        "opacity": function() { return String(raw.opacity); },
+        "opacity": function() { return String(_ownOpacity(raw)); },
         "width": function() { return raw.width + "px"; },
         "height": function() { return raw.height + "px"; },
         "background-color": function() {

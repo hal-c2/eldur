@@ -137,11 +137,11 @@ pub(crate) struct Emitter<'a, 'd> {
     /// The `z` the box being emitted needs for something inside it to paint
     /// over its later siblings: every QML item is a stacking context, where
     /// CSS lets a positioned box paint over the page outside its parent.
-    above_flow: Option<i32>,
+    above_flow: Option<Level>,
     /// What the out-of-flow box just emitted holds, as `above_flow` has it:
     /// at `z-index: auto` it makes no stacking context, so that is its level
     /// among the boxes of its block and over what follows it.
-    overlay_inside: Option<i32>,
+    overlay_inside: Option<Level>,
     /// The stop whose column an overlay emitted here goes to when its
     /// containing block makes no stacking context (`hoisted_host`):
     /// every box between is a block of a column that makes none and clips
@@ -215,6 +215,12 @@ pub(crate) struct Emitter<'a, 'd> {
     /// what they hold: they stay in their block, as a block raised out in
     /// one world and not in another leaves the worlds no common shape.
     restacks: HashSet<NodeId>,
+    /// Of those, the elements a class or state may make a stacking context
+    /// or not.
+    restack_contexts: HashSet<NodeId>,
+    /// Inline elements with no item of their own whose classes bind on a
+    /// box they hold (`dynamic::carried_marker`).
+    carried: HashSet<NodeId>,
     /// The page holds the rule table: the runtime computes styles of its own.
     pub cascade_rules: bool,
     /// The boxes a script may put block children in.
@@ -345,6 +351,8 @@ impl<'a, 'd> Emitter<'a, 'd> {
             script_hides: HashSet::new(),
             rules_hide: HashSet::new(),
             restacks: HashSet::new(),
+            restack_contexts: HashSet::new(),
+            carried: HashSet::new(),
             cascade_rules: false,
             gains: HashSet::new(),
             live_tables: HashSet::new(),
@@ -1229,7 +1237,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         &mut self,
         obj: &mut Object,
         b: &LayoutBox<'_>,
-        outer: Option<i32>,
+        outer: Option<Level>,
         layout_item: bool,
     ) {
         let style = &*b.style;
@@ -1241,7 +1249,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             // rules, the runtime reads that `z` here, to lift its block by
             // when it levels that block again.
             if self.writes_z_index && !page {
-                push_z_markers(obj, style.z_index, 1);
+                push_z_markers(obj, style.z_index.map(Level::from), 1);
                 if boxes::is_context_at_auto(style) {
                     push_context_marker(obj);
                 }
@@ -1263,7 +1271,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         };
         let own = match style.z_index {
             // `z-index: 0` is still over what is not positioned.
-            Some(z) if stacks && z >= 0 => Some(z + 1),
+            Some(z) if stacks && z >= 0 => Some(Level::from(z) + 1),
             // Under its parent in Qt, as it is not in CSS: it stays in the flow.
             Some(_) if stacks => Some(0),
             _ => None,
@@ -1274,7 +1282,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
         // one it applies to, what clearing it goes back to, or the least
         // level it has at `auto`; what it holds it sees itself.
         if (holds || layout_item || context) && self.writes_z_index && !page {
-            push_z_markers(obj, own, i32::from(holds));
+            push_z_markers(obj, own, Level::from(holds));
             if context {
                 push_context_marker(obj);
             }
@@ -1284,7 +1292,7 @@ impl<'a, 'd> Emitter<'a, 'd> {
             return;
         }
         if let Some(z) = level.filter(|_| !page) {
-            obj.set("z", Value::Number(f64::from(z)));
+            obj.set("z", level_value(z));
         }
         // Out in its stop's column, it is over its block's later siblings
         // without its block.
@@ -1983,13 +1991,24 @@ fn push_context_marker(obj: &mut Object) {
     });
 }
 
-fn push_z_markers(obj: &mut Object, own: Option<i32>, hold: i32) {
+/// A stacking level in QML. One over a CSS `z-index` is out of `i32`'s
+/// range at `i32::MAX`, where saturating would tie it with the level one
+/// under and let tree order put the wrong box over.
+pub(super) type Level = i64;
+
+/// `z` as QML's `real`, which holds every level one over an `i32` exactly.
+#[allow(clippy::cast_precision_loss)]
+pub(super) fn level_value(z: Level) -> Value {
+    Value::Number(z as f64)
+}
+
+fn push_z_markers(obj: &mut Object, own: Option<Level>, hold: Level) {
     let own = own.map(|z| ("eldurRuleZ", z));
     for (name, z) in own.into_iter().chain([("eldurHoldZ", hold)]) {
         obj.members.push(Member::PropertyDecl {
             ty: "real".to_owned(),
             name: name.to_owned(),
-            value: Some(Value::Number(f64::from(z))),
+            value: Some(level_value(z)),
             readonly: true,
             required: false,
         });

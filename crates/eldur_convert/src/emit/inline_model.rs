@@ -309,6 +309,10 @@ impl Emitter<'_, '_> {
                     node["kids"] = Json::Array(self.run_nodes(&s.children, gen_boxes));
                     // The boxes cut out of it name it by this.
                     node["key"] = json!(n.index());
+                    // Its classes bind on a box it holds (`carried_marker`).
+                    if self.markers && self.restack_contexts.contains(&n) {
+                        node["carries"] = json!(true);
+                    }
                     out.push(node);
                 }
                 _ => out.extend(self.item_nodes(std::slice::from_ref(item), gen_boxes)),

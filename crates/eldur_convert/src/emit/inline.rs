@@ -13,10 +13,10 @@ use eldur_css::{
 use eldur_dom::NodeId;
 use eldur_qml::{Member, Object, Value};
 
-use super::Emitter;
 use super::controls::{line_box, normal_line, text_scale};
 use super::decoration::{border_width, is_visible};
 use super::units::{fmt_number, number, round};
+use super::{Emitter, Level};
 use crate::boxes::{BoxKind, Inline, LayoutBox, Span, node_line};
 
 /// The layouter, written beside `Main.qml` when anything may use it.
@@ -292,8 +292,34 @@ fn percent_width(style: &ComputedStyle) -> Option<(f32, f32)> {
 enum Piece<'b, 'a> {
     /// A run of text between boxes, its spans kept.
     Run(Vec<Inline<'a>>),
-    /// A box, with the innermost element around it that has its own node.
-    Atomic(&'b LayoutBox<'a>, Option<NodeId>),
+    /// A box, with the innermost element around it that has its own node,
+    /// the outermost one that makes a stacking context, the elements around
+    /// it, outermost first, and the opacity they fade it by, multiplied.
+    Atomic(
+        &'b LayoutBox<'a>,
+        Option<NodeId>,
+        Option<&'b ComputedStyle>,
+        Vec<NodeId>,
+        f32,
+    ),
+}
+
+/// Whether a span has a `z-index` that applies to it, from its rules or a
+/// class, rather than making a stacking context at `auto`.
+fn has_own_level(span: &ComputedStyle) -> bool {
+    span.z_index.is_some() && crate::boxes::is_containing_block(span)
+}
+
+/// The level a span that makes a stacking context lifts its block by, for
+/// a box in it with a level, as `stack_above_flow` has a block's: its own
+/// `z-index` over the flow, or over the flow and no higher at `auto`. One
+/// under 0 stays in the flow, as a block's does. The span is the one in the
+/// world being emitted, so a level a class gives it counts.
+fn context_level(span: &ComputedStyle) -> Option<Level> {
+    match span.z_index {
+        Some(z) if crate::boxes::is_containing_block(span) => (z >= 0).then(|| Level::from(z) + 1),
+        _ => Some(1),
+    }
 }
 
 fn pieces<'b, 'a>(
@@ -308,7 +334,13 @@ fn pieces<'b, 'a>(
             Inline::Atomic(b) => {
                 end_run(run, out);
                 let owner = chain.iter().rev().find_map(|span| span.node);
-                out.push(Piece::Atomic(b, owner));
+                let kept = chain
+                    .iter()
+                    .find(|span| super::flow::is_context(span.style))
+                    .map(|span| span.style);
+                let around = chain.iter().filter_map(|span| span.node).collect();
+                let fade = chain.iter().map(|span| span.style.opacity).product();
+                out.push(Piece::Atomic(b, owner, kept, around, fade));
             }
             Inline::Span(span)
                 if has_atomic(&span.children)
@@ -496,6 +528,73 @@ fn each_span<'b, 'a>(items: &'b [Inline<'a>], out: &mut Vec<&'b Span<'a>>) {
     }
 }
 
+/// The opacity `span` and the elements in `items` around it fade it by,
+/// multiplied; `None` when it is not in `items`.
+fn faded_by(items: &[Inline<'_>], span: &Span<'_>) -> Option<f32> {
+    items.iter().find_map(|item| match item {
+        Inline::Span(s) if std::ptr::addr_eq(s, span) => Some(s.style.opacity),
+        Inline::Span(s) => faded_by(&s.children, span).map(|a| a * s.style.opacity),
+        _ => None,
+    })
+}
+
+/// Fades a box on the line by the opacity of the elements around it, which
+/// have no item of their own to carry it, on top of the box's own. On a page
+/// with a runtime the fade is declared too, so an opacity a script writes or
+/// reads is the box's own (`_fadedOpacity`, `_ownOpacity`). The runtime gets
+/// the own opacity back by dividing by the fade, so there both are kept to
+/// 1e-6 rather than 1/100, and a fade of 0, which no division undoes, has the
+/// own opacity declared beside it.
+fn fade_atomic(placed: &mut Object, fade: f32, runtime: bool) {
+    if fade >= 1.0 {
+        return;
+    }
+    let keep = |v: f64| {
+        let scale = if runtime { 1e6 } else { 100.0 };
+        (v * scale).round() / scale
+    };
+    let fade_value = keep(f64::from(fade));
+    let own = placed.get("opacity").cloned();
+    let faded = match &own {
+        Some(Value::Number(own)) => Value::Number(keep(own * f64::from(fade))),
+        Some(Value::Expr(own)) => Value::Expr(format!("({own}) * {}", fmt_number(fade_value))),
+        _ => Value::Number(fade_value),
+    };
+    placed.set("opacity", faded);
+    if runtime {
+        if fade_value == 0.0 {
+            placed.members.insert(
+                0,
+                Member::PropertyDecl {
+                    ty: "real".to_owned(),
+                    name: "eldurOwnOpacity".to_owned(),
+                    value: Some(match own {
+                        Some(v @ (Value::Number(_) | Value::Expr(_))) => v,
+                        _ => Value::Number(1.0),
+                    }),
+                    readonly: true,
+                    required: false,
+                },
+            );
+        }
+        placed.members.insert(
+            0,
+            Member::PropertyDecl {
+                ty: "real".to_owned(),
+                name: "eldurInlineFade".to_owned(),
+                value: Some(Value::Number(fade_value)),
+                readonly: true,
+                required: false,
+            },
+        );
+    }
+    // QML multiplies the opacity into each thing drawn; CSS fades the box as
+    // one picture.
+    if super::paints_count(placed) > 1 {
+        placed.set("layer.enabled", true);
+    }
+}
+
 fn end_run<'a>(run: &mut Vec<Inline<'a>>, out: &mut Vec<Piece<'_, 'a>>) {
     if !run.is_empty() {
         out.push(Piece::Run(std::mem::take(run)));
@@ -665,7 +764,7 @@ impl Emitter<'_, '_> {
             // A generated box is not a child `all_inline` sees, but the element
             // around it reaches across it all the same: the runtime finds the
             // box by the element's key.
-            if let Piece::Atomic(_, Some(owner)) = piece {
+            if let Piece::Atomic(_, Some(owner), ..) = piece {
                 self.cut_nodes.insert(*owner);
             }
             if let Piece::Run(items) = piece {
@@ -774,8 +873,25 @@ impl Emitter<'_, '_> {
                     }
                     flow.push_child(text);
                 }
-                Piece::Atomic(a, owner) => {
+                Piece::Atomic(a, owner, kept, around, fade) => {
+                    let before = self.above_flow.take();
                     let part = self.atomic(a, decoration, &flow_id);
+                    // A span that makes a stacking context keeps a level the
+                    // box has, or a class gives it, inside, and lifts a box
+                    // with none by a level of its own: the block takes the
+                    // span's level in the box's place. One at `auto` with no
+                    // level for the box lifts nothing, as a block at `auto`
+                    // does not (`stack_above_flow`): the block would tie an
+                    // earlier overlay and paint its background over it.
+                    if let Some(span) = kept
+                        && (self.above_flow.is_some() || has_own_level(span))
+                    {
+                        self.above_flow = context_level(span);
+                    }
+                    self.above_flow = match (before, self.above_flow) {
+                        (Some(a), Some(b)) => Some(a.max(b)),
+                        (a, b) => a.or(b),
+                    };
                     runs |= part.own;
                     let mut obj = part.obj;
                     // A `Text` is placed as a run: the line measures it on its
@@ -817,6 +933,7 @@ impl Emitter<'_, '_> {
                         placed.members.insert(0, pseudo);
                     }
                     vertical_align(&mut placed, &a.style);
+                    fade_atomic(&mut placed, fade, self.runtime_dom);
                     if let Some(link) = a.node.and_then(|n| self.inline_link(n)) {
                         let first = named_links.insert(link);
                         self.atomic_link(&mut placed, a.node, link, first);
@@ -826,6 +943,18 @@ impl Emitter<'_, '_> {
                             placed
                                 .members
                                 .push(Member::Comment(super::dynamic::marker(link)));
+                        }
+                    }
+                    // An element around it a class may make a stacking
+                    // context or not decides its lift, and has no item of
+                    // its own: the class binds on the first box it holds.
+                    if self.markers {
+                        for &span in around.iter().filter(|n| self.restack_contexts.contains(n)) {
+                            if self.carried.insert(span) {
+                                placed
+                                    .members
+                                    .push(Member::Comment(super::dynamic::carried_marker(span)));
+                            }
                         }
                     }
                     if self.options.source_comments
@@ -894,6 +1023,8 @@ impl Emitter<'_, '_> {
         let mut painted = Vec::new();
         for (span, opens, closes) in boxes.iter().rev() {
             let st = span.style;
+            // Each element around a box fades it, as it fades its own text.
+            let alpha = faded_by(items, span).unwrap_or(1.0);
             let pad = |l: &Length| l.as_px().unwrap_or(0.0).max(0.0);
             let (opens, closes) = (*opens, *closes);
             if opens {
@@ -926,6 +1057,9 @@ impl Emitter<'_, '_> {
             }
             if !st.background_color.is_transparent() {
                 paint.set("fill", super::units::color(st.background_color));
+            }
+            if alpha < 1.0 {
+                paint.set("opacity", number(alpha));
             }
             let radii = self.corner_radii(st, line);
             if radii.iter().any(|r| *r != 0.0) {

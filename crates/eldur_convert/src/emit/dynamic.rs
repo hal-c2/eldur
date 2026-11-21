@@ -57,6 +57,16 @@ pub(super) fn marker(node: NodeId) -> String {
     format!("{MARKER}{}", node.index())
 }
 
+/// The marker comment [`Emitter`] puts on the first box an inline element
+/// with no item of its own holds, when a class may make the element a
+/// stacking context: the box's lift follows the class, so the class binds
+/// there. [`strip_markers`] strips it with the others.
+pub(super) fn carried_marker(node: NodeId) -> String {
+    format!("{MARKER}{CARRIED}{}", node.index())
+}
+
+const CARRIED: &str = "in:";
+
 fn marked(obj: &Object) -> Option<usize> {
     obj.members.iter().find_map(|m| match m {
         Member::Comment(c) => c.strip_prefix(MARKER).and_then(|n| n.parse().ok()),
@@ -874,11 +884,20 @@ fn object_at<'o>(root: &'o mut Object, path: &[Step]) -> Option<&'o mut Object> 
 
 /// Every marked object's path.
 fn marker_paths(obj: &Object, path: &mut Path, out: &mut HashMap<usize, Path>) {
+    marks_under(obj, path, MARKER, out);
+}
+
+/// Where each [`carried_marker`] is.
+fn carried_paths(obj: &Object, path: &mut Path, out: &mut HashMap<usize, Path>) {
+    marks_under(obj, path, &format!("{MARKER}{CARRIED}"), out);
+}
+
+fn marks_under(obj: &Object, path: &mut Path, prefix: &str, out: &mut HashMap<usize, Path>) {
     // An item can be more than one element's: an icon in an inline link is
     // the svg's item and the link's.
     for m in &obj.members {
         if let Member::Comment(c) = m
-            && let Some(i) = c.strip_prefix(MARKER).and_then(|n| n.parse().ok())
+            && let Some(i) = c.strip_prefix(prefix).and_then(|n| n.parse().ok())
         {
             out.entry(i).or_insert_with(|| path.clone());
         }
@@ -886,7 +905,7 @@ fn marker_paths(obj: &Object, path: &mut Path, out: &mut HashMap<usize, Path>) {
     for (i, m) in obj.members.iter().enumerate() {
         if let Member::Child(c) = m {
             path.push(Step::Child(i));
-            marker_paths(c, path, out);
+            marks_under(c, path, prefix, out);
             path.pop();
         }
     }
@@ -939,6 +958,8 @@ struct Across {
     restacks: HashSet<NodeId>,
     /// The elements hidden in some combination (the keys of `shown`).
     hideable: HashSet<NodeId>,
+    /// Elements a class or state may make a stacking context or not.
+    contexts: HashSet<NodeId>,
 }
 
 impl Dynamic<'_, '_> {
@@ -986,6 +1007,13 @@ impl Dynamic<'_, '_> {
             .map(|e| e.node)
             .collect();
         let doc = self.cx.doc;
+        let contexts: HashSet<NodeId> = self
+            .found
+            .elements
+            .iter()
+            .filter(|e| matches!(restacks(&e.by_mask), Restacks::Subtree))
+            .map(|e| e.node)
+            .collect();
         let restacks: HashSet<NodeId> = self
             .found
             .elements
@@ -1014,6 +1042,7 @@ impl Dynamic<'_, '_> {
             shares,
             restacks,
             hideable: shown.keys().copied().collect(),
+            contexts,
         };
         let (styles, collapsed) = self.world(&[], &shown);
         let Emitted {
@@ -1026,11 +1055,20 @@ impl Dynamic<'_, '_> {
         } = Self::emit_world(self.cx, &styles, &across, collapsed, self.diags);
         let mut markers = HashMap::new();
         marker_paths(&root, &mut Vec::new(), &mut markers);
+        let mut carried = HashMap::new();
+        carried_paths(&root, &mut Vec::new(), &mut carried);
+        carried.retain(|i, _| !markers.contains_key(i));
         // A condition on an element without an item of its own (an inline
         // link in a paragraph) has nothing to bind; its combinations would
-        // only change the form of the text around it.
+        // only change the form of the text around it. A class that may make
+        // it a stacking context binds on a box it holds.
         let unmarked: BTreeSet<u16> = (0..self.conds.len())
-            .filter(|&c| !markers.contains_key(&node_of(&self.conds[c].cond).index()))
+            .filter(|&c| {
+                let cond = &self.conds[c].cond;
+                let at = node_of(cond).index();
+                !markers.contains_key(&at)
+                    && !(carried.contains_key(&at) && matches!(cond, Condition::Class { .. }))
+            })
             .map(|c| u16::try_from(c).expect("conditions fit u16"))
             .collect();
         for &c in &unmarked {
@@ -1128,6 +1166,7 @@ impl Dynamic<'_, '_> {
         }
         let mut sources = Sources {
             probe: self.cx.probe.is_some(),
+            carried,
             ..Sources::default()
         };
         let mut bindings: BTreeMap<Path, Vec<(String, String, Option<Member>)>> = BTreeMap::new();
@@ -1375,7 +1414,8 @@ impl Dynamic<'_, '_> {
     }
 
     /// Every combination of flipped conditions some element depends on,
-    /// the document's (none flipped) first.
+    /// the document's (none flipped) first, then by how many flip; at most
+    /// [`MAX_WORLDS`] of them.
     ///
     /// Hideable elements that number or count make groups as well: a
     /// sibling's marker or `counter()` depends on how many of them show at
@@ -1460,25 +1500,41 @@ impl Dynamic<'_, '_> {
                 (w.len(), w)
             })
         }
+        // A box whose level a condition changes lifts its block by what the
+        // stacking contexts around it allow, which other conditions change:
+        // each combination of the two is a world of its own.
+        let contexts: HashMap<NodeId, &[u16]> = self
+            .found
+            .elements
+            .iter()
+            .filter(|e| matches!(restacks(&e.by_mask), Restacks::Subtree))
+            .map(|e| (e.node, e.depends_on.as_slice()))
+            .collect();
+        let mut each: BTreeSet<Vec<u16>> = BTreeSet::new();
+        for e in &self.found.elements {
+            let mut deps: Vec<u16> = e.depends_on.clone();
+            if !contexts.is_empty() && changes_level(&e.by_mask) {
+                for a in doc.ancestors(e.node) {
+                    deps.extend(contexts.get(&a).copied().unwrap_or_default());
+                }
+            }
+            deps.retain(|c| !excluded.contains(c));
+            deps.sort_unstable();
+            deps.dedup();
+            each.insert(deps);
+        }
         // Each element's own worlds, as on a page with no groups: a group
         // never takes their place.
-        let mut set: BTreeSet<(usize, Vec<u16>)> = BTreeSet::from([(0, Vec::new())]);
-        for e in &self.found.elements {
-            let deps: Vec<u16> = e
-                .depends_on
-                .iter()
-                .copied()
-                .filter(|c| !excluded.contains(c))
-                .collect();
-            set.extend(subsets(&deps));
-        }
-        if set.len() > MAX_WORLDS {
+        let (worlds, more) = fewest_flips(&each, MAX_WORLDS);
+        let mut set: BTreeSet<(usize, Vec<u16>)> =
+            worlds.into_iter().map(|w| (w.len(), w)).collect();
+        if more {
             self.diags.warning(
                 "css",
                 None,
                 format!(
-                    "classes and states combine in {} ways; only {MAX_WORLDS} are converted",
-                    set.len()
+                    "classes and states combine in more than {MAX_WORLDS} ways; \
+                     only {MAX_WORLDS} are converted"
                 ),
             );
         }
@@ -1593,6 +1649,7 @@ impl Dynamic<'_, '_> {
         emitter.shares = across.shares.clone();
         emitter.restacks = across.restacks.clone();
         emitter.hideable = across.hideable.clone();
+        emitter.restack_contexts = across.contexts.clone();
         emitter.collapsed = collapsed.clone();
         let root = emitter.document(tree.as_ref(), body);
         cx.svgs.borrow_mut().append(&mut emitter.svgs);
@@ -2108,6 +2165,55 @@ enum Restacks {
     Subtree,
 }
 
+/// The first `max` subsets of any of `each` (each sorted), by size and then
+/// in order, and whether there are more. Subsets are made in that order, so
+/// the work stops with the last one kept rather than after all `2^n`.
+pub(super) fn fewest_flips(each: &BTreeSet<Vec<u16>>, max: usize) -> (Vec<Vec<u16>>, bool) {
+    let mut kept: BTreeSet<(usize, Vec<u16>)> = BTreeSet::from([(0, Vec::new())]);
+    let most = each.iter().map(Vec::len).max().unwrap_or(0);
+    for size in 1..=most {
+        for deps in each.iter().filter(|d| d.len() >= size) {
+            let mut pick: Vec<usize> = (0..size).collect();
+            loop {
+                let w = (size, pick.iter().map(|&i| deps[i]).collect::<Vec<u16>>());
+                // The rest of this size are later still.
+                if kept.len() > max && kept.last().is_some_and(|last| w >= *last) {
+                    break;
+                }
+                kept.insert(w);
+                if kept.len() > max + 1 {
+                    kept.pop_last();
+                }
+                if !next_pick(&mut pick, deps.len()) {
+                    break;
+                }
+            }
+        }
+        // Every larger subset comes after the ones kept.
+        if kept.len() > max {
+            break;
+        }
+    }
+    let more = kept.len() > max;
+    let worlds = kept.into_iter().take(max).map(|(_, w)| w).collect();
+    (worlds, more)
+}
+
+/// The next `pick.len()` of `0..n` in order, or false after the last.
+fn next_pick(pick: &mut [usize], n: usize) -> bool {
+    let k = pick.len();
+    for i in (0..k).rev() {
+        if pick[i] < n - k + i {
+            pick[i] += 1;
+            for j in i + 1..k {
+                pick[j] = pick[j - 1] + 1;
+            }
+            return true;
+        }
+    }
+    false
+}
+
 fn restacks(styles: &[Box<ComputedStyle>]) -> Restacks {
     let first = &styles[0];
     let gone = |s: &ComputedStyle| {
@@ -2126,6 +2232,13 @@ fn restacks(styles: &[Box<ComputedStyle>]) -> Restacks {
     } else {
         Restacks::No
     }
+}
+
+/// Whether the box's level differs between combinations, or whether it
+/// rises out of its block in some and not in others.
+fn changes_level(styles: &[Box<ComputedStyle>]) -> bool {
+    !matches!(restacks(styles), Restacks::No)
+        || styles.iter().any(|s| s.z_index != styles[0].z_index)
 }
 
 /// Whether some combination paints the box, or they differ in what makes
@@ -2161,6 +2274,11 @@ struct Sources {
     exprs: BTreeMap<u16, Option<String>>,
     /// `cls_` properties to declare, by the path of the object.
     classes: BTreeMap<Path, (NodeId, BTreeSet<String>)>,
+    /// Where an inline element with no item of its own binds its classes
+    /// ([`carried_marker`]), by its node's index.
+    carried: HashMap<usize, Path>,
+    /// Their properties to declare there, by the path of the box.
+    carried_classes: BTreeMap<Path, BTreeMap<NodeId, BTreeSet<String>>>,
     /// Hover/press handlers to add: path, handler type, id.
     handlers: BTreeMap<Path, Vec<(&'static str, String)>>,
     /// What takes the focus by `tabindex`, with no control's policy to do it.
@@ -2210,7 +2328,12 @@ impl Sources {
         let cond = &dynamic.conds[usize::from(c)].cond;
         let node = node_of(cond);
         // `run` leaves out conditions without an item.
-        let path = markers.get(&node.index())?;
+        let carried = !markers.contains_key(&node.index());
+        let path = markers
+            .get(&node.index())
+            .or_else(|| self.carried.get(&node.index()))?
+            .clone();
+        let path = &path;
         let obj = object_at(root, path)?;
         let id = match &obj.id {
             Some(id) => id.clone(),
@@ -2227,6 +2350,16 @@ impl Sources {
         };
         let control = classify(doc, node);
         let expr = match cond {
+            Condition::Class { class, .. } if carried => {
+                self.carried_classes
+                    .entry(path.clone())
+                    .or_default()
+                    .entry(node)
+                    .or_default()
+                    .insert(class.clone());
+                format!("{id}.{}", crate::metadata::carried_class_prop(node, class))
+            }
+            _ if carried => return None,
             Condition::Class { class, .. } => {
                 self.classes
                     .entry(path.clone())
@@ -2336,6 +2469,7 @@ impl Sources {
         _imports: &mut BTreeSet<&'static str>,
     ) {
         let mut paths: BTreeSet<&Path> = self.classes.keys().collect();
+        paths.extend(self.carried_classes.keys());
         paths.extend(self.handlers.keys());
         paths.extend(self.hover_enabled.iter());
         paths.extend(self.positions.keys());
@@ -2361,6 +2495,9 @@ impl Sources {
             }
             if let Some((node, classes)) = self.classes.get(path) {
                 crate::metadata::declare_classes(obj, doc, *node, classes);
+            }
+            for (node, classes) in self.carried_classes.get(path).into_iter().flatten() {
+                crate::metadata::declare_carried_classes(obj, doc, *node, classes);
             }
             if let Some(&(node, of_type)) = self.positions.get(path) {
                 crate::metadata::declare_position(obj, doc, node, of_type);
@@ -2498,3 +2635,40 @@ fn broken_constraint(id: &str, element: &Element, control: Option<Control>) -> O
 // WHATWG's valid e-mail address, and a scheme for a URL.
 const EMAIL: &str = r"/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/";
 const URL: &str = r"/^[a-zA-Z][a-zA-Z0-9+.-]*:\S*$/";
+
+#[cfg(test)]
+mod fewest_flips_tests {
+    use std::collections::BTreeSet;
+
+    use super::fewest_flips;
+
+    /// Every subset of each, smallest first: what `fewest_flips` keeps the
+    /// start of without making the rest.
+    fn all_flips(each: &[Vec<u16>]) -> Vec<Vec<u16>> {
+        let mut set = BTreeSet::new();
+        set.insert((0, Vec::new()));
+        for deps in each {
+            for mask in 0..1usize << deps.len() {
+                let w: Vec<u16> = (0..deps.len())
+                    .filter(|i| mask & 1 << i != 0)
+                    .map(|i| deps[i])
+                    .collect();
+                set.insert((w.len(), w));
+            }
+        }
+        set.into_iter().map(|(_, w)| w).collect()
+    }
+
+    #[test]
+    fn the_worlds_kept_are_the_ones_with_fewest_flips() {
+        let each: Vec<Vec<u16>> =
+            vec![vec![0, 1, 2, 5], vec![1, 3, 4], vec![2, 6, 7, 8, 9], vec![]];
+        let all = all_flips(&each);
+        let set: BTreeSet<Vec<u16>> = each.iter().cloned().collect();
+        for max in [1, 2, 5, 9, 17, 40, all.len() - 1, all.len(), all.len() + 3] {
+            let (kept, more) = fewest_flips(&set, max);
+            assert_eq!(kept, all[..max.min(all.len())], "first {max}");
+            assert_eq!(more, all.len() > max, "more than {max}");
+        }
+    }
+}

@@ -94,7 +94,7 @@ TestCase {
         "at", "rt", "nt",
         "p1", "p2", "r2", "a2",
         "b3", "b4", "da", "db", "k6", "n6", "v6",
-        "g1", "g2", "mq", "oq", "pq", "ax", "ox", "bx", "rx", "qx", "gx", "fa", "ff", "fc", "fv"]
+        "g1", "g2", "mq", "oq", "pq", "ax", "ox", "bx", "rx", "qx", "gx", "ix", "lx", "fa", "ff", "fc", "fv"]
 
     // The painted box nearest the front at a point, in Qt Quick's paint
     // order: the children over an item from the last level down, then the
@@ -972,6 +972,695 @@ fn a_level_a_class_gives_inside_a_context_does_not_keep_its_box_from_rising() {
         );
     assert_ne!(page, HELD);
     run(&page, &with_test(CONTAINED_TEST), "contained", false);
+}
+
+/// The same blocks, with an inline-block (`#ix`) in the later block's
+/// relative box that a class gives a level, and a box at 1 (`#lx`) over the
+/// lower half of that block. Chromium paints `#ix` over `#lx` and `#rx`
+/// over `#ox` in tree order; without the class `#lx` is over `#ix` too.
+/// To lift `#ix` the converter raises its ancestors, as it does for a level
+/// `#ix` has from the start or for a block in its place ("Overlays of
+/// different ancestors", docs/spec/layout.md), so `#bx` and the rest of
+/// `#rx` come over `#ox` (75,50) and `#lx` (30,70; 75,70), where Chromium
+/// paints them under; those points are not checked.
+const INLINE_LEVEL_TEST: &str = r##"
+    function test_a_level_a_class_gives_an_inline_box_lifts_it_over_a_later_box() {
+        compare(front(page, 5, 70), "ix", "the inline box is over the later box")
+        compare(front(page, 5, 50), "ix")
+        compare(front(page, 30, 50), "rx", "and over the earlier block's overlay")
+        compare(front(page, 150, 50), "bx")
+        compare(front(page, 75, 30), "ox")
+        compare(front(page, 150, 30), "ax")
+        compare(front(page, 150, 90), "lx")
+    }
+}
+}
+"##;
+
+#[test]
+fn a_level_a_class_gives_an_inline_box_lifts_it_over_a_later_box() {
+    let page = inline_level_page(INLINE_BLOCK, "<span id=ix></span>", RELATIVE, LATER_AT_1);
+    run(&page, &with_test(INLINE_LEVEL_TEST), "inline-level", false);
+}
+
+/// The same, with `#ix` in a span that makes no stacking context: the
+/// level lifts through it as through a block at `auto`.
+#[test]
+fn a_level_a_class_gives_an_inline_box_in_a_plain_span_lifts_it() {
+    let page = inline_level_page(
+        INLINE_BLOCK,
+        "<span id=wx><span id=ix></span></span>",
+        RELATIVE,
+        LATER_AT_1,
+    );
+    run(
+        &page,
+        &with_test(INLINE_LEVEL_TEST),
+        "inline-level-span",
+        false,
+    );
+}
+
+/// The same, with `#ix` in a span that makes a stacking context. The
+/// context keeps the level in: Chromium paints `#lx` over `#ix` (5,70),
+/// whether the span is a box (`inline-block`) or not.
+const CONTEXT_SPAN_TEST: &str = r##"
+    function test_a_span_that_makes_a_context_keeps_the_level_in() {
+        compare(front(page, 5, 70), "lx", "the later box is over the inline box")
+        compare(front(page, 5, 50), "ix")
+        compare(front(page, 30, 50), "rx")
+        compare(front(page, 150, 50), "bx")
+        compare(front(page, 75, 30), "ox")
+        compare(front(page, 150, 30), "ax")
+        compare(front(page, 30, 70), "lx")
+        compare(front(page, 150, 90), "lx")
+    }
+}
+}
+"##;
+
+#[test]
+fn a_span_that_makes_a_context_keeps_the_level_a_class_gives_in() {
+    for (name, wrapper) in [
+        ("context-span", "opacity: .9"),
+        (
+            "context-inline-block",
+            "display: inline-block; vertical-align: top; opacity: .9",
+        ),
+    ] {
+        let page = inline_level_page(
+            INLINE_BLOCK,
+            &format!("<span id=wx style=\"{wrapper}\"><span id=ix></span></span>"),
+            RELATIVE,
+            LATER_AT_1,
+        );
+        run(&page, &with_test(CONTEXT_SPAN_TEST), name, false);
+    }
+}
+
+/// The same, with `#ix` in a span that makes a stacking context with a
+/// level of its own (5): over `#lx` (1), the context lifts `#ix` with it.
+#[test]
+fn a_span_with_a_level_of_its_own_lifts_the_level_it_keeps_in() {
+    let page = inline_level_page(
+        INLINE_BLOCK,
+        "<span id=wx style=\"position: relative; z-index: 5\"><span id=ix></span></span>",
+        RELATIVE,
+        LATER_AT_1,
+    );
+    run(
+        &page,
+        &with_test(INLINE_LEVEL_TEST),
+        "context-span-level",
+        false,
+    );
+}
+
+/// The same, with the span's level from a class: the span in each world
+/// is the one with that world's classes, so the class lifts `#ix` as the
+/// level the span has from the start does.
+#[test]
+fn a_level_a_class_gives_a_span_lifts_the_level_it_keeps_in() {
+    let page = inline_level_page(
+        &format!("{INLINE_BLOCK}\n.wup {{ z-index: 5 }}"),
+        "<span id=wx style=\"position: relative\"><span id=ix></span></span>",
+        RELATIVE,
+        LATER_AT_1,
+    )
+    .replace(
+        "var lx = document.getElementById('lx');",
+        "var lx = document.getElementById('lx');\n\
+         document.getElementById('wx').classList.add('wup');",
+    );
+    assert_eq!(page.matches("classList.add('wup')").count(), 1);
+    run(
+        &page,
+        &with_test(INLINE_LEVEL_TEST),
+        "context-span-class-level",
+        false,
+    );
+}
+
+/// The same, with the class on the span alone: `#ix` has no level of its
+/// own, so only the span's class can lift it over `#lx` (5,70), as
+/// Chromium paints it. The span has no item of its own; the class binds on
+/// `#ix`, the box it holds.
+#[test]
+fn a_level_a_class_gives_a_span_lifts_what_it_holds_with_no_level_of_its_own() {
+    let page = inline_level_page(
+        &format!("{INLINE_BLOCK}\n.wup {{ z-index: 5 }}"),
+        "<span id=wx style=\"position: relative\"><span id=ix></span></span>",
+        RELATIVE,
+        LATER_AT_1,
+    )
+    .replace(
+        "document.getElementById('ix').classList.add('up');",
+        "document.getElementById('wx').classList.add('wup');",
+    );
+    assert_eq!(page.matches("classList.add('wup')").count(), 1);
+    assert_eq!(page.matches("classList.add('up')").count(), 0);
+    run(
+        &page,
+        &with_test(INLINE_LEVEL_TEST),
+        "context-span-class-only",
+        false,
+    );
+}
+
+/// The span of the tests before, around an `#ix` with no position of its
+/// own: the span paints what it holds at its level, so `#ix` is over `#lx`
+/// (5,70) whether the span has its level from the start or from a class,
+/// as Chromium paints both (`x-wstatic-flat`, `x-wcls-flat`). The script
+/// names `#ix`, so the test finds it. `#rx` rises with it, as for a box
+/// with a level, which puts `#rx` over `#lx` too (30,70), where Chromium
+/// has `#lx`; that point is not checked.
+#[test]
+fn a_span_with_a_level_lifts_a_box_with_no_position_it_holds() {
+    let flat = INLINE_BLOCK.replace("position: relative; ", "");
+    for (name, rule, span, script) in [
+        (
+            "flat-span-level",
+            "",
+            "position: relative; z-index: 5",
+            "var ix = document.getElementById('ix');",
+        ),
+        (
+            "flat-span-class",
+            "\n.wup { z-index: 5 }",
+            "position: relative",
+            "var ix = document.getElementById('ix');\n\
+             document.getElementById('wx').classList.add('wup');",
+        ),
+    ] {
+        let page = inline_level_page(
+            &format!("{flat}{rule}"),
+            &format!("<span id=wx style=\"{span}\"><span id=ix></span></span>"),
+            RELATIVE,
+            LATER_AT_1,
+        )
+        .replace("document.getElementById('ix').classList.add('up');", script);
+        assert!(!page.contains("display: inline-block; position"));
+        assert_eq!(page.matches("classList.add('up')").count(), 0);
+        run(&page, &with_test(INLINE_LEVEL_TEST), name, false);
+    }
+}
+
+/// A span that makes a stacking context with no level of its own
+/// (`opacity`, `filter`, `sticky`), around an `#ix` with no position, after
+/// an overlay at `auto` (`#ox`) and before a box at level 1 (`#lx`).
+/// Chromium paints the span in the positioned layer after `#ox`, so `#ix`
+/// is over `#ox` (5,50), while the block around it paints its background
+/// under `#ox` (30,50, `ox` in a static `#rx`, `rx` in a relative one, which
+/// is positioned itself) and `#lx` is over both (`c-<kind>-<rx>`).
+/// The block takes no level for the span: it would tie `#ox`'s host and
+/// paint its background over `#ox` (30,50; 75,50). A relative `#rx` rises
+/// over `#ox` with `#ix` in it. In a static one, `#ix` stays under `#ox`
+/// (5,50), where Chromium has `#ix`: only `#ix` out of its block, at the
+/// span's place in its stop, would paint over `#ox` there, the known limit
+/// this PR names.
+#[test]
+fn a_span_that_makes_a_context_at_auto_paints_what_it_holds_after_an_earlier_overlay() {
+    let flat = INLINE_BLOCK.replace("position: relative; ", "");
+    let static_rx = RELATIVE.replace("position: relative; ", "");
+    let mut failed = Vec::new();
+    for (kind, span) in [
+        ("opacity", "opacity: .5"),
+        ("filter", "filter: blur(0px)"),
+        ("sticky", "position: sticky"),
+    ] {
+        for (at, rx, held, under) in [
+            ("rel", RELATIVE, "ix", "rx"),
+            ("static", static_rx.as_str(), "ox", "ox"),
+        ] {
+            let page = inline_level_page(
+                &flat,
+                &format!("<span id=wx style=\"{span}\"><span id=ix></span></span>"),
+                rx,
+                LATER_AT_1,
+            )
+            .replace(
+                "document.getElementById('ix').classList.add('up');",
+                "var ix = document.getElementById('ix');",
+            );
+            assert!(!page.contains("display: inline-block; position"));
+            let fronts = format!(
+                "5,30=ox 5,50={held} 5,70=lx 30,50={under} 30,70=lx 75,50=ox 75,70=lx 150,50=bx"
+            );
+            let test = pages_test(
+                "ContextAtAuto",
+                &format!(
+                    r#"
+    function test_the_span_paints_after_the_overlay() {{
+        page = make("Main.qml")
+        var got = []
+        var want = "{fronts}".split(" ")
+        for (var i = 0; i < want.length; ++i) {{
+            var xy = want[i].split("=")[0].split(",")
+            got.push(xy[0] + "," + xy[1] + "=" + front(page, Number(xy[0]), Number(xy[1])))
+        }}
+        compare(got.join(" "), want.join(" "), "the fronts Chromium paints")
+    }}
+"#
+                ),
+            );
+            let name = format!("context-at-auto-{kind}-{at}");
+            // Every kind runs, so one failure shows the others too.
+            if std::panic::catch_unwind(|| run_pages(&[("Main", &page)], &test, &name)).is_err() {
+                failed.push(name);
+            }
+        }
+    }
+    assert!(failed.is_empty(), "differ from Chromium: {failed:?}");
+}
+
+/// The span of the test before last, whose `class` attribute a timer
+/// removes: the level the class gave `#ix` goes with it, so `#lx` is over
+/// `#ix` again (5,70), as Chromium paints the page with the class gone
+/// (`x-wclsrm`).
+#[test]
+fn removing_a_spans_class_attribute_takes_back_the_level_it_gave() {
+    let page = inline_level_page(
+        &format!("{INLINE_BLOCK}\n.wup {{ z-index: 5 }}"),
+        "<span id=wx style=\"position: relative\"><span id=ix></span></span>",
+        RELATIVE,
+        LATER_AT_1,
+    )
+    .replace(
+        "document.getElementById('ix').classList.add('up');",
+        "var wx = document.getElementById('wx');\n\
+         wx.classList.add('wup');\n\
+         setTimeout(function () { wx.removeAttribute('class'); }, 300);",
+    );
+    assert_eq!(page.matches("removeAttribute('class')").count(), 1);
+    let test = pages_test(
+        "RemovedClass",
+        r#"
+    function test_removing_the_class_takes_back_its_level() {
+        page = make("Main.qml")
+        compare(front(page, 5, 70), "ix", "with the class")
+        wait(800)
+        compare(front(page, 5, 70), "lx", "with the class attribute gone")
+    }
+"#,
+    );
+    run_pages(&[("Main", &page)], &test, "removed-class");
+}
+
+/// The span of the test before, whose class a timer adds: `#wx` is held
+/// from the start, as a page whose timer runs under another page must.
+fn timed_span_page(rule: &str, class: &str) -> String {
+    let page = inline_level_page(
+        &format!("{INLINE_BLOCK}\n{rule}"),
+        "<span id=wx style=\"position: relative\"><span id=ix></span></span>",
+        RELATIVE,
+        LATER_AT_1,
+    )
+    .replace(
+        "document.getElementById('ix').classList.add('up');",
+        &format!(
+            "var wx = document.getElementById('wx');\n\
+             setTimeout(function () {{ wx.classList.add('{class}'); }}, 300);"
+        ),
+    );
+    assert_eq!(page.matches("setTimeout").count(), 1);
+    page
+}
+
+/// A test of pages made in `body`, with `front` from [`TEST`].
+fn pages_test(name: &str, body: &str) -> String {
+    let from = TEST.find("    // The painted box nearest").expect("front");
+    let to = TEST.find("    function init()").expect("init");
+    format!(
+        r#"
+import QtQuick
+import QtTest
+import "eldur_runtime.js" as R
+
+Item {{
+    id: host
+    width: 900
+    height: 1200
+
+TestCase {{
+    name: "{name}"
+    when: windowShown
+
+    property var page
+    readonly property var painted: ["ax", "ox", "bx", "rx", "ix", "lx"]
+
+{}
+    function make(file) {{
+        const component = Qt.createComponent(file)
+        verify(component.status === Component.Ready, component.errorString())
+        const made = createTemporaryObject(component, host, {{ width: 900, height: 1200 }})
+        waitForRendering(made)
+        return made
+    }}
+{body}
+}}
+}}
+"#,
+        &TEST[from..to]
+    )
+}
+
+/// Converts each page into `dir`: the first as `Main.qml`, each other as
+/// `<name>.qml` with its own script.
+fn run_pages(pages: &[(&str, &str)], test: &str, dir_name: &str) {
+    if support::no_qt() {
+        return;
+    }
+    let options = Options {
+        root: RootKind::Item,
+        viewport: Viewport {
+            width: 900.0,
+            height: 1200.0,
+            ..Viewport::default()
+        },
+        ..Options::default()
+    };
+    let dir =
+        std::env::temp_dir().join(format!("eldur-stacking-{dir_name}-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    let mut qml = String::new();
+    for (i, (name, page)) in pages.iter().enumerate() {
+        let out = convert_str(page, &options);
+        if i == 0 {
+            write(&dir, &out);
+            qml.push_str(out.main_qml().unwrap_or_default());
+            continue;
+        }
+        // The pages share the runtime, and so its state.
+        let script = format!("{}_page.js", name.to_lowercase());
+        for file in &out.files {
+            match file.path.to_string_lossy().as_ref() {
+                "Main.qml" => std::fs::write(
+                    dir.join(format!("{name}.qml")),
+                    String::from_utf8_lossy(&file.contents)
+                        .replace("\"page.js\"", &format!("\"{script}\""))
+                        .replace("Main.qml", &format!("{name}.qml")),
+                ),
+                "page.js" => std::fs::write(dir.join(&script), &file.contents),
+                _ => Ok(()),
+            }
+            .expect("write page");
+        }
+    }
+    std::fs::write(dir.join("tst_stacking.qml"), test).expect("write test");
+    let output = support::qmltestrunner()
+        .args(["-platform", "offscreen", "-input"])
+        .arg(dir.join("tst_stacking.qml"))
+        .env("QT_FORCE_STDERR_LOGGING", "1")
+        .output()
+        .expect("run qmltestrunner");
+    let text = format!(
+        "{}\n{}\n{qml}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
+    std::fs::remove_dir_all(&dir).expect("remove temp dir");
+    assert!(output.status.success(), "{text}");
+}
+
+/// The page of the test before under another one like it, whose timer adds
+/// another class: the covered page's class lifts the covered page's box, as
+/// Chromium paints the page on its own (`x-wcls`: `#ix` at 5,70), and the
+/// page over it keeps `#lx` there.
+#[test]
+fn a_covered_pages_span_class_lifts_its_own_box() {
+    let test = pages_test(
+        "CoveredSpan",
+        r#"
+    function test_a_covered_pages_class_lifts_its_own_box() {
+        const first = make("Main.qml")
+        page = first
+        compare(front(first, 5, 70), "lx", "before the class")
+        const cover = make("Cover.qml")
+        wait(800)
+        page = first
+        compare(front(first, 5, 70), "ix", "the covered page's class lifts its own box")
+        page = cover
+        compare(front(cover, 5, 70), "lx", "and not the page over it")
+    }
+"#,
+    );
+    run_pages(
+        &[
+            ("Main", &timed_span_page(".wup { z-index: 5 }", "wup")),
+            ("Cover", &timed_span_page(".wup { z-index: 5 }", "nop")),
+        ],
+        &test,
+        "covered-span",
+    );
+}
+
+/// A class change on an inline element looks for a box to bind it on only
+/// when a class may make the element a stacking context: `#wx`'s class
+/// that gives a level (5) does, and one that gives a colour does not.
+#[test]
+fn a_class_looks_for_its_box_only_on_a_span_that_may_be_a_context() {
+    for (name, rule, walks) in [
+        (
+            "walks-level",
+            ".wup { z-index: 5 }",
+            "verify(R._carriedWalks > 0, R._carriedWalks)",
+        ),
+        (
+            "walks-colour",
+            ".wup { color: green }",
+            "compare(R._carriedWalks, 0)",
+        ),
+    ] {
+        let page = timed_span_page(rule, "wup");
+        let test = pages_test(
+            "CarriedWalks",
+            &format!(
+                "
+    function test_walks() {{
+        page = make(\"Main.qml\")
+        wait(800)
+        {walks}
+    }}
+"
+            ),
+        );
+        run_pages(&[("Main", &page)], &test, name);
+    }
+}
+
+/// The same, with the span at the top of the `z-index` range: one over it
+/// stays at `i32::MAX` rather than wrapping to the bottom.
+#[test]
+fn a_span_at_the_highest_level_lifts_the_level_it_keeps_in() {
+    let page = inline_level_page(
+        INLINE_BLOCK,
+        "<span id=wx style=\"position: relative; z-index: 2147483647\"><span id=ix></span></span>",
+        RELATIVE,
+        LATER_AT_1,
+    );
+    run(
+        &page,
+        &with_test(INLINE_LEVEL_TEST),
+        "context-span-highest-level",
+        false,
+    );
+}
+
+/// The same, with the span under 0: the span stays in its block's flow, as
+/// a block under 0 does, and `#ix` with it, so `#lx` is over `#ix` (5,70)
+/// and `#rx` over `#ox` in tree order (30,50). Chromium paints `#ix` under
+/// `#rx` too (5,50), which a kid under its parent cannot be in Qt. The level
+/// a class gives `#ix` still lifts `#bx` over `#ox` (75,50), as for a block
+/// in its place ("Overlays of different ancestors", docs/spec/layout.md).
+/// Neither point is checked.
+const UNDER_SPAN_TEST: &str = r##"
+    function test_a_span_under_0_keeps_what_it_holds_in_the_flow() {
+        compare(front(page, 5, 70), "lx", "the later box is over the inline box")
+        compare(front(page, 30, 50), "rx", "the box that holds it is over the earlier overlay")
+        compare(front(page, 150, 50), "bx")
+        compare(front(page, 75, 30), "ox")
+        compare(front(page, 150, 30), "ax")
+        compare(front(page, 30, 70), "lx")
+        compare(front(page, 150, 90), "lx")
+    }
+}
+}
+"##;
+
+#[test]
+fn a_span_under_0_keeps_the_level_it_holds_in_the_flow() {
+    for (name, kid) in [
+        (
+            "context-span-under",
+            "<span id=wx style=\"position: relative; z-index: -1\"><span id=ix></span></span>",
+        ),
+        (
+            "context-block-under",
+            "<div id=wx style=\"position: relative; z-index: -1\"><span id=ix></span></div>",
+        ),
+    ] {
+        let page = inline_level_page(INLINE_BLOCK, kid, RELATIVE, LATER_AT_1);
+        run(&page, &with_test(UNDER_SPAN_TEST), name, false);
+    }
+}
+
+/// The same, with the level under 0 from a class: Chromium paints `#lx`
+/// over `#ix` (5,70; 30,70), as with the level from the start. The level a
+/// class gives `#ix` and the one a class gives the span are worlds of their
+/// own, so the block takes the span's level in the one with both.
+#[test]
+fn a_level_under_0_a_class_gives_a_span_keeps_what_it_holds_in_the_flow() {
+    for (name, kid) in [
+        (
+            "context-span-class-under",
+            "<span id=wx style=\"position: relative\"><span id=ix></span></span>",
+        ),
+        (
+            "context-block-class-under",
+            "<div id=wx style=\"position: relative\"><span id=ix></span></div>",
+        ),
+    ] {
+        let page = inline_level_page(
+            &format!("{INLINE_BLOCK}\n.wup {{ z-index: -1 }}"),
+            kid,
+            RELATIVE,
+            LATER_AT_1,
+        )
+        .replace(
+            "var lx = document.getElementById('lx');",
+            "var lx = document.getElementById('lx');\n\
+             document.getElementById('wx').classList.add('wup');",
+        );
+        assert_eq!(page.matches("classList.add('wup')").count(), 1);
+        run(&page, &with_test(UNDER_SPAN_TEST), name, false);
+    }
+}
+
+/// A block at the top of the `z-index` range: one over it is out of
+/// `i32`'s range, and stays one over rather than wrap or meet the level
+/// one under.
+#[test]
+fn a_block_at_the_highest_level_stays_at_the_top() {
+    let page = r#"<!doctype html><html><body>
+<div style="position: relative; z-index: 2147483647; height: 10px; background: red"><div style="position: relative; height: 5px; background: blue"></div></div>
+</body></html>"#;
+    let out = convert_str(page, &Options::default());
+    let qml = out.main_qml().expect("Main.qml");
+    assert!(qml.contains("z: 2147483648"), "the block\n{qml}");
+    assert!(!qml.contains("z: -2147483648"), "the block\n{qml}");
+}
+
+/// An overlay at the top of the `z-index` range in a static block, and a
+/// later block at `level`: Chromium paints the later block over the overlay
+/// at the same level, in tree order, and under it one level under.
+fn highest_page(level: &str) -> String {
+    HELD.replace(
+        "#ox { position: absolute;",
+        "#ox { position: absolute; z-index: 2147483647;",
+    )
+    .replace(
+        "#bx { background: blue }",
+        &format!("#bx {{ position: relative; z-index: {level}; background: blue }}"),
+    )
+    .replace("<div id=rx></div>", "")
+    .replace("var rx = document.getElementById('rx');\n", "")
+}
+
+/// Chromium's fronts (`elementFromPoint`), with `#bx` at `i32::MAX`.
+const HIGHEST_TIED_TEST: &str = r##"
+    function test_a_later_block_at_the_highest_level_is_over_the_overlay() {
+        compare(front(page, 30, 50), "bx", "tree order puts the later block over")
+        compare(front(page, 30, 30), "ox")
+        compare(front(page, 150, 30), "ax")
+        compare(front(page, 150, 50), "bx")
+        compare(front(page, 75, 70), "bx")
+    }
+}
+}
+"##;
+
+/// The same, with `#bx` one under.
+const HIGHEST_UNDER_TEST: &str = r##"
+    function test_a_later_block_one_under_the_highest_level_is_under_the_overlay() {
+        compare(front(page, 30, 50), "ox", "the overlay is a level over the block")
+        compare(front(page, 30, 30), "ox")
+        compare(front(page, 150, 30), "ax")
+        compare(front(page, 150, 50), "bx")
+        compare(front(page, 75, 70), "bx")
+    }
+}
+}
+"##;
+
+#[test]
+fn an_overlay_at_the_highest_level_keeps_its_order_with_a_later_block() {
+    let tied = highest_page("2147483647");
+    assert_eq!(tied.matches("z-index: 2147483647").count(), 2);
+    assert!(!tied.contains("id=rx"));
+    run(&tied, &with_test(HIGHEST_TIED_TEST), "highest-tied", false);
+    let under = highest_page("2147483646");
+    run(
+        &under,
+        &with_test(HIGHEST_UNDER_TEST),
+        "highest-under",
+        false,
+    );
+}
+
+/// The inline-block in a static box (`#rx`) and a static box after (`#lx`):
+/// nothing after `#bx` paints later, so only the level a class gives `#ix`
+/// sends `#ox` to the stop, where Chromium has it, under `#ix` (5,50).
+/// `#bx` lifts with that level ("Overlays of different ancestors"), so it
+/// and `#rx` come over `#ox` (30,50; 75,50), where Chromium paints them
+/// under; those points are not checked.
+const SENT_TEST: &str = r##"
+    function test_a_level_a_class_gives_an_inline_box_sends_an_earlier_overlay_under_it() {
+        compare(front(page, 5, 50), "ix", "the inline box is over the earlier block's overlay")
+        compare(front(page, 5, 70), "ix")
+        compare(front(page, 5, 30), "ox")
+        compare(front(page, 30, 70), "rx")
+        compare(front(page, 75, 70), "bx")
+        compare(front(page, 150, 30), "ax")
+        compare(front(page, 150, 90), "lx")
+    }
+}
+}
+"##;
+
+#[test]
+fn a_level_a_class_gives_an_inline_box_sends_an_earlier_overlay_under_it() {
+    let page = inline_level_page(
+        INLINE_BLOCK,
+        "<span id=ix></span>",
+        "#rx { width: 50px; background: red }",
+        "#lx { background: gray }",
+    );
+    run(&page, &with_test(SENT_TEST), "inline-level-sent", false);
+}
+
+const INLINE_BLOCK: &str = "#ix { display: inline-block; position: relative; width: 10px; height: 40px; vertical-align: top; background: purple }";
+const RELATIVE: &str = "#rx { position: relative; width: 50px; background: red }";
+const LATER_AT_1: &str = "#lx { position: relative; z-index: 1; top: -20px; background: gray }";
+
+/// `HELD` with `kid` in `#rx`, a box after `#bx` (`#lx`), and a class that
+/// gives `#ix` a level.
+fn inline_level_page(ix: &str, kid: &str, rx: &str, lx: &str) -> String {
+    let page = HELD
+        .replace(RELATIVE, &format!("{rx}\n{ix}\n{lx}\n.up {{ z-index: 3 }}"))
+        .replace(
+            "<div id=rx></div></div>",
+            &format!("<div id=rx>{kid}</div></div><div id=lx></div>"),
+        )
+        .replace(
+            "var rx = document.getElementById('rx');",
+            "var rx = document.getElementById('rx');\n\
+             var lx = document.getElementById('lx');\n\
+             document.getElementById('ix').classList.add('up');",
+        );
+    assert_eq!(page.matches("id=ix").count(), 1);
+    assert_eq!(page.matches("id=lx").count(), 1);
+    assert_eq!(page.matches(".up").count(), 1);
+    page
 }
 
 /// A float the runtime lays out (`#fm`, which a script makes) and one it

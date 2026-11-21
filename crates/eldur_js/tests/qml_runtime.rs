@@ -5364,3 +5364,91 @@ Item {
         "unexpected qml6 item record output:\n{output}"
     );
 }
+
+/// A box inside a faded inline element is converted with the element's fade
+/// folded into its `opacity` and declared as `eldurInlineFade`. An opacity a
+/// script writes keeps that fade, and what it reads back is the box's own.
+#[test]
+fn qml6_an_opacity_a_script_writes_keeps_an_inline_elements_fade() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default()
+        .with_id("box", 1, "box", TargetKind::Box)
+        .with_id("uneven", 2, "uneven", TargetKind::Box)
+        .with_id("hidden", 3, "hidden", TargetKind::Box);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verify() {
+    const box = document.getElementById("box");
+    const before = getComputedStyle(box).opacity;
+    box.style.opacity = "0.6";
+    // .75 in .5 is declared 0.375, which divides back to .75 exactly; a
+    // fade of 0 has the own opacity declared beside it.
+    const uneven = getComputedStyle(document.getElementById("uneven")).opacity;
+    const hiddenBox = document.getElementById("hidden");
+    const hidden = getComputedStyle(hiddenBox).opacity;
+    // The declared own opacity is readonly: a write to a box faded to 0 still
+    // reads back.
+    hiddenBox.style.opacity = "0.6";
+    const rewritten = getComputedStyle(hiddenBox).opacity;
+    // Clearing it goes back to the declared one, and so does a box whose
+    // only write is its visibility.
+    hiddenBox.style.opacity = "";
+    const cleared = getComputedStyle(hiddenBox).opacity;
+    hiddenBox.style.visibility = "visible";
+    const visible = getComputedStyle(hiddenBox).opacity;
+    hiddenBox.style.visibility = "";
+    // A fade above 0 reads the box's own opacity through the one it paints
+    // at: shown again, or with its opacity cleared while its visibility is
+    // still written, it is the declared one, not what was held.
+    const u = document.getElementById("uneven");
+    u.style.visibility = "hidden";
+    u.style.visibility = "visible";
+    const reshown = getComputedStyle(u).opacity;
+    u.style.opacity = "0.2";
+    u.style.opacity = "";
+    const uncleared = getComputedStyle(u).opacity;
+    u.style.visibility = "";
+    return [before, getComputedStyle(box).opacity, uneven, hidden, rewritten, cleared, visible,
+        reshown, uncleared].join(" ");
+}
+"##,
+        r#"Item {
+    id: root
+    Rectangle {
+        id: box
+        objectName: "box"
+        readonly property real eldurInlineFade: 0.5
+        width: 4; height: 4; color: "red"
+        opacity: 0.4
+    }
+    Rectangle {
+        id: uneven
+        objectName: "uneven"
+        readonly property real eldurInlineFade: 0.5
+        width: 4; height: 4; color: "red"
+        opacity: 0.375
+    }
+    Rectangle {
+        id: hidden
+        objectName: "hidden"
+        readonly property real eldurInlineFade: 0
+        readonly property real eldurOwnOpacity: 0.75
+        width: 4; height: 4; color: "red"
+        opacity: 0
+    }
+    Component.onCompleted: {
+        (Page.__eldur_init || Eldur.init)(root);
+        console.log("ELDUR_OK_FADE", Page.verify(), box.opacity.toFixed(2), hidden.opacity);
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains("ELDUR_OK_FADE 0.8 0.6 0.75 0.75 0.6 0.75 0.75 0.75 0.75 0.30 0"),
+        "{output}"
+    );
+}

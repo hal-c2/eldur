@@ -30,6 +30,9 @@ struct State {
     font_size: f32,
     family: String,
     in_link: bool,
+    /// The opacity of the inline elements around the run, multiplied: a run
+    /// has no item of its own to fade, so its colours take it.
+    alpha: f32,
 }
 
 struct Markup {
@@ -73,6 +76,7 @@ impl Emitter<'_, '_> {
             font_size: style.font_size,
             family: font_family(&style.font_family),
             in_link: false,
+            alpha: 1.0,
         };
         let mut markup = Markup {
             styled: String::new(),
@@ -408,6 +412,28 @@ impl Emitter<'_, '_> {
             .node
             .map_or_else(|| "generated content".to_owned(), |n| describe(self.doc, n));
         let mut state = parent.clone();
+        // A run has no item to fade, so an element's `opacity` goes into the
+        // alpha of its colours: what its glyphs fade to as a group wherever
+        // they do not overlap each other or its background.
+        let alpha = parent.alpha * style.opacity;
+        state.alpha = alpha;
+        // Its text is in the block's `Text`, at the block's level: only a box
+        // it holds can take the element's level (`inline::context_level`).
+        if style.z_index.is_some()
+            && crate::boxes::is_containing_block(style)
+            && span
+                .children
+                .iter()
+                .any(|c| matches!(c, Inline::Text(t) if !t.trim().is_empty()))
+        {
+            self.diags.warning(
+                "css",
+                line,
+                format!(
+                    "{what}: `z-index` on an inline element is not converted; its text paints at its block's level"
+                ),
+            );
+        }
         let mut open = Vec::<String>::new();
         let mut close = Vec::<&str>::new();
         let mut tag = |open: &mut Vec<String>, o: String, c: &'static str| {
@@ -431,11 +457,11 @@ impl Emitter<'_, '_> {
                 format!(
                     "<a href=\"{}\" style=\"color:{};text-decoration:none\">",
                     escape_attr(href),
-                    css_color(style.color)
+                    css_color(faded(style.color, alpha))
                 ),
                 "</a>",
             );
-            m.link_colors.push(style.color);
+            m.link_colors.push(faded(style.color, alpha));
         } else if let Some(href) = href
             && !parent.in_link
             && !bare
@@ -446,7 +472,7 @@ impl Emitter<'_, '_> {
                 "</a>",
             );
             state.in_link = true;
-            m.link_colors.push(style.color);
+            m.link_colors.push(faded(style.color, alpha));
             // StyledText underlines links itself.
             state.decoration.underline = true;
             if !style.text_decoration_line.underline && !parent.decoration.underline {
@@ -496,11 +522,12 @@ impl Emitter<'_, '_> {
             );
         }
         // Inside a link StyledText paints with `linkColor`.
-        if style.color != parent.color && !state.in_link {
-            let c = super::units::qml_color(style.color).to_qml_string();
+        let shown = faded(style.color, alpha);
+        if shown != parent.color && !state.in_link {
+            let c = super::units::qml_color(shown).to_qml_string();
             tag(&mut open, format!("<font color=\"{c}\">"), "</font>");
         }
-        state.color = style.color;
+        state.color = shown;
         let mut css = Vec::<String>::new();
         if m.html && (style.font_size - parent.font_size).abs() > 0.5 {
             // Whole pixels, as `font.pixelSize`.
@@ -519,7 +546,7 @@ impl Emitter<'_, '_> {
         if m.html && !drawn && !style.background_color.is_transparent() {
             css.push(format!(
                 "background-color:{}",
-                css_color(style.background_color)
+                css_color(faded(style.background_color, alpha))
             ));
         }
         if !style.background_layers.is_empty()
@@ -721,7 +748,9 @@ pub(super) fn whole_span(
     style.font_weight = s.font_weight;
     style.font_style = s.font_style;
     style.small_caps = s.small_caps;
-    style.color = s.color;
+    // The `Text` is the block's item, which the span's opacity must not fade
+    // as a whole: the span's colour takes it, as a run's does (`span`).
+    style.color = faded(s.color, s.opacity);
     style.letter_spacing = s.letter_spacing;
     style.word_spacing = s.word_spacing;
     style.text_transform = s.text_transform;
@@ -842,6 +871,17 @@ pub(super) fn line_height(style: &ComputedStyle) -> Option<f32> {
         LineHeight::Normal => None,
         LineHeight::Number(n) => Some(n * style.font_size),
         LineHeight::Px(px) => Some(px),
+    }
+}
+
+/// `c` with `alpha` (an element's opacity, 1 for none) in its own alpha.
+pub(super) fn faded(c: Rgba, alpha: f32) -> Rgba {
+    if alpha >= 1.0 {
+        return c;
+    }
+    Rgba {
+        a: (f32::from(c.a) * alpha.max(0.0)).round() as u8,
+        ..c
     }
 }
 

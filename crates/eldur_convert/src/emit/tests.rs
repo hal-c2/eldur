@@ -2625,3 +2625,104 @@ document.getElementById('t').addEventListener('click', () => {
         assert!(!hides(id), "#{id}: {qml}");
     }
 }
+
+/// A run has no item to fade, so an inline element's `opacity` goes into the
+/// alpha of its text's colour, multiplied by the elements around it.
+#[test]
+fn opacity_on_an_inline_element_fades_its_text() {
+    let (qml, diags) = convert(&page(
+        "",
+        r#"<p>a <span style="opacity:.5;color:#dc2626">F</span> b</p>"#,
+    ));
+    assert!(
+        qml.contains(r##"<font color=\"#80dc2626\">F</font>"##),
+        "{qml}"
+    );
+    assert!(!diags.iter().any(|d| d.contains("opacity")), "{diags:?}");
+    let (nested, _) = convert(&page(
+        "",
+        r#"<p>a <span style="opacity:.5">b <span style="opacity:.5;color:#ff0000">c</span></span></p>"#,
+    ));
+    assert!(
+        nested.contains(r##"<font color=\"#80000000\">b"##),
+        "{nested}"
+    );
+    assert!(
+        nested.contains(r##"<font color=\"#40ff0000\">c</font>"##),
+        "{nested}"
+    );
+    // A span that is the whole text gives the `Text` its colour, faded.
+    let (whole, _) = convert(&page("", r#"<p><span style="opacity:.5">x</span></p>"#));
+    assert!(whole.contains("#80000000"), "{whole}");
+    assert!(!whole.contains("opacity: 0.5"), "{whole}");
+}
+
+/// A box on the line inside a faded inline element fades with its text, as
+/// the element has no item of its own to carry the opacity.
+#[test]
+fn opacity_on_an_inline_element_fades_the_boxes_it_holds() {
+    let (block, _) = convert(&page(
+        "",
+        r#"<p>a <span style="opacity:.5">b <span style="display:inline-block;background:red;width:20px;height:20px"></span></span></p>"#,
+    ));
+    assert!(block.contains("#80000000"), "{block}");
+    assert!(block.contains("opacity: 0.5"), "{block}");
+    let (image, _) = convert(&page(
+        "",
+        r#"<p>a <span style="opacity:.5">b <img src="a.png" width="10" height="10"></span></p>"#,
+    ));
+    assert!(image.contains("opacity: 0.5"), "{image}");
+    // Nested elements multiply.
+    let (nested, _) = convert(&page(
+        "",
+        r#"<p>a <span style="opacity:.5">b <span style="opacity:.5">c <span style="display:inline-block;width:4px;height:4px;background:red"></span></span></span></p>"#,
+    ));
+    assert!(nested.contains("opacity: 0.25"), "{nested}");
+    let (opaque, _) = convert(&page(
+        "",
+        r#"<p>a <span>b <span style="display:inline-block;width:4px;height:4px;background:red"></span></span></p>"#,
+    ));
+    assert!(!opaque.contains("opacity: "), "{opaque}");
+    assert!(!block.contains("eldurInlineFade"), "{block}");
+    // A runtime keeps the fade apart, so what a script writes is the box's own.
+    let (runtime, _) = convert(&page(
+        "",
+        r#"<details><summary>s</summary></details><p>a <span style="opacity:.5">b <span style="display:inline-block;width:4px;height:4px;background:red"></span></span></p>"#,
+    ));
+    assert!(runtime.contains("eldurInlineFade: 0.5"), "{runtime}");
+    // The runtime divides the fade back out, so neither is rounded to 1/100
+    // there: .75 in .5 stays 0.375, not 0.38.
+    let (uneven, _) = convert(&page(
+        "",
+        r#"<details><summary>s</summary></details><p>a <span style="opacity:.5">b <span style="opacity:.5">c <span style="opacity:.5">d <span style="display:inline-block;width:4px;height:4px;background:red;opacity:.75"></span></span></span></span></p>"#,
+    ));
+    assert!(uneven.contains("eldurInlineFade: 0.125"), "{uneven}");
+    assert!(uneven.contains("opacity: 0.09375"), "{uneven}");
+    // A fade of 0 cannot be divided out: the box's own opacity is declared.
+    let (hidden, _) = convert(&page(
+        "",
+        r#"<details><summary>s</summary></details><p>a <span style="opacity:0">b <span style="display:inline-block;width:4px;height:4px;background:red;opacity:.75"></span></span></p>"#,
+    ));
+    assert!(hidden.contains("eldurInlineFade: 0\n"), "{hidden}");
+    assert!(hidden.contains("eldurOwnOpacity: 0.75"), "{hidden}");
+    assert!(!uneven.contains("eldurOwnOpacity"), "{uneven}");
+}
+
+/// The text of a positioned inline element is in its block's `Text`, at the
+/// block's level, so a `z-index` it has is reported rather than lost.
+#[test]
+fn a_level_on_inline_text_is_reported() {
+    let (_, diags) = convert(&page(
+        "",
+        r#"<p>x <span style="position:relative;z-index:2">y</span></p>"#,
+    ));
+    assert!(
+        diags
+            .iter()
+            .any(|d| d.contains("`z-index` on an inline element")),
+        "{diags:?}"
+    );
+    // `z-index` applies only to a positioned box.
+    let (_, diags) = convert(&page("", r#"<p>x <span style="z-index:2">y</span></p>"#));
+    assert!(!diags.iter().any(|d| d.contains("z-index")), "{diags:?}");
+}

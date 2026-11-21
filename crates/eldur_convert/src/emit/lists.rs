@@ -13,7 +13,7 @@ use eldur_qml::{Member, Object, Value};
 
 use super::decoration::border_width;
 use super::units::{ROOT_ID, color, fmt_number, length_expr, number, round};
-use super::{Emitter, FLICKABLE_ID, hint};
+use super::{Emitter, FLICKABLE_ID, Level, hint, level_value};
 use crate::boxes::{
     self, BoxKind, Content, Inline, LayoutBox, Marker, MarkerKind, describe, is_out_of_flow,
     node_line,
@@ -347,8 +347,7 @@ impl Emitter<'_, '_> {
                     .unwrap_or(1)
                     .max(1)
             },
-            // A level at the top of the range stays there rather than wrap.
-            |z| z.max(0).saturating_add(1),
+            |z| Level::from(z.max(0)) + 1,
         );
         if node.is_some() && hoist.is_none() {
             self.above_flow = Some(self.above_flow.map_or(lift, |n| n.max(lift)));
@@ -358,12 +357,8 @@ impl Emitter<'_, '_> {
             .filter(|_| self.options.source_comments)
             .map(|n| describe(self.doc, n));
         if let Some(stop) = hoist {
-            // Out in its stop's column its host is a level of its own, where
-            // the two highest keep their order rather than meet at the top.
-            let lift = style
-                .z_index
-                .map_or(f64::from(lift), |z| f64::from(z.max(0)) + 1.0);
-            let host = self.hoisted_host(b, obj, block_id.as_deref(), Value::Number(lift));
+            // Out in its stop's column its host is a level of its own.
+            let host = self.hoisted_host(b, obj, block_id.as_deref(), level_value(lift));
             self.hoisted.push((stop, host));
         } else {
             match (fixed, self.fixed_block.as_mut()) {
@@ -722,13 +717,13 @@ impl Emitter<'_, '_> {
         // what it holds over it: a kid's level is its `z-index` plus one.
         // A stacking context at `auto` keeps that in, at 0.
         let context = boxes::is_context_at_auto(style);
-        let z = style.z_index.or_else(|| {
+        let z = style.z_index.map(Level::from).or_else(|| {
             self.overlay_inside
                 .map(|n| n - 1)
                 .filter(|&n| n > 0 && !context)
         });
         if let Some(z) = z {
-            obj.set("z", Value::Number(f64::from(z)));
+            obj.set("z", level_value(z));
         }
         let line = b.node.and_then(|n| node_line(self.doc, n));
         let insets = self.insets(style, line);
