@@ -186,8 +186,8 @@ fn appends_walk_no_more_items_as_the_page_grows() {
     if support::no_qt() {
         return;
     }
-    let page = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("tests/observers/scaling/append_scaling.html");
+    let page =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/observers/scaling/append_scaling.html");
     let html = std::fs::read_to_string(page).expect("page");
     if let Err(e) = run(
         "append_scaling",
