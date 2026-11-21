@@ -383,8 +383,20 @@ TestCase {
 }
 "##;
 
+/// How a [`wait_draining`] ended.
+#[derive(Debug, PartialEq)]
+enum Outcome {
+    /// The child exited by itself and both pipes reached their end.
+    Finished,
+    /// The child ran past the limit and was killed.
+    TimedOut,
+    /// A pipe was still held open after the limit and the group kill, by a
+    /// process outside the group, so its output may be cut short.
+    Incomplete,
+}
+
 /// Waits for `child` until `limit`, killing it then, and returns its output
-/// and whether it finished by itself. Both pipes are read while it runs: a
+/// and how the wait ended. Both pipes are read while it runs: a
 /// child that writes more than a pipe holds would otherwise block on the
 /// write and look like a run that never ends. A process the child leaves
 /// behind can hold the pipes open after it exits, so reading them is bound
@@ -393,7 +405,7 @@ TestCase {
 fn wait_draining(
     mut child: std::process::Child,
     limit: std::time::Duration,
-) -> (std::process::Output, bool) {
+) -> (std::process::Output, Outcome) {
     use std::io::Read;
     use std::time::{Duration, Instant};
     let (sent, received) = std::sync::mpsc::channel();
@@ -422,13 +434,13 @@ fn wait_draining(
             .status();
     };
     let deadline = Instant::now() + limit;
-    let mut finished = true;
+    let mut outcome = Outcome::Finished;
     let status = loop {
         if let Some(status) = child.try_wait().expect("wait for the child") {
             break status;
         }
         if Instant::now() > deadline {
-            finished = false;
+            outcome = Outcome::TimedOut;
             kill_group();
             let _ = child.kill();
             break child.wait().expect("wait for the killed child");
@@ -436,7 +448,8 @@ fn wait_draining(
         std::thread::sleep(Duration::from_millis(50));
     };
     let mut pipes = [Vec::new(), Vec::new()];
-    let mut killed = !finished;
+    let mut killed = outcome == Outcome::TimedOut;
+    let mut ended = 0;
     for _ in 0..2 {
         let left = deadline.saturating_duration_since(Instant::now());
         let got = match received.recv_timeout(left) {
@@ -450,9 +463,15 @@ fn wait_draining(
             Err(_) => received.recv_timeout(Duration::from_secs(5)),
         };
         match got {
-            Ok((which, bytes)) => pipes[which] = bytes,
+            Ok((which, bytes)) => {
+                pipes[which] = bytes;
+                ended += 1;
+            }
             Err(_) => break,
         }
+    }
+    if ended < 2 && outcome == Outcome::Finished {
+        outcome = Outcome::Incomplete;
     }
     let [stdout, stderr] = pipes;
     let output = std::process::Output {
@@ -460,7 +479,7 @@ fn wait_draining(
         stdout,
         stderr,
     };
-    (output, finished)
+    (output, outcome)
 }
 
 #[cfg(unix)]
@@ -475,8 +494,12 @@ fn a_child_that_writes_more_than_a_pipe_holds_still_finishes() {
         .stderr(std::process::Stdio::piped())
         .spawn()
         .expect("run sh");
-    let (output, finished) = wait_draining(child, std::time::Duration::from_secs(10));
-    assert!(finished, "the child blocked on a full pipe");
+    let (output, outcome) = wait_draining(child, std::time::Duration::from_secs(10));
+    assert_eq!(
+        outcome,
+        Outcome::Finished,
+        "the child blocked on a full pipe"
+    );
     assert!(output.status.success());
     assert_eq!(
         (output.stdout.len(), output.stderr.len()),
@@ -496,12 +519,13 @@ fn a_grandchild_that_holds_the_pipes_open_does_not_outlast_the_limit() {
         .stderr(std::process::Stdio::piped())
         .spawn()
         .expect("run sh");
-    let (output, _) = wait_draining(child, std::time::Duration::from_secs(5));
+    let (output, outcome) = wait_draining(child, std::time::Duration::from_secs(5));
     assert!(
         started.elapsed() < std::time::Duration::from_secs(30),
         "waited {:?} for a grandchild's pipe",
         started.elapsed()
     );
+    assert_eq!(outcome, Outcome::Finished);
     assert_eq!(String::from_utf8_lossy(&output.stdout), "started\n");
 }
 
@@ -522,14 +546,15 @@ fn a_pipe_held_open_outside_the_group_is_not_a_finished_run() {
         .stderr(std::process::Stdio::piped())
         .spawn()
         .expect("run sh");
-    let (output, finished) = wait_draining(child, std::time::Duration::from_secs(2));
+    let (output, outcome) = wait_draining(child, std::time::Duration::from_secs(2));
     assert!(
         started.elapsed() < std::time::Duration::from_secs(20),
         "waited {:?} for a pipe held outside the group",
         started.elapsed()
     );
-    assert!(
-        !finished,
+    assert_eq!(
+        outcome,
+        Outcome::Incomplete,
         "partial output read as a finished run: {:?}",
         String::from_utf8_lossy(&output.stdout)
     );
@@ -562,11 +587,16 @@ fn run(name: &str, page: &str, test: &str) -> String {
         .expect("run qmltestrunner");
     // A layout that never settles keeps the runner busy forever; fail
     // instead of hanging the suite.
-    let (output, finished) = wait_draining(child, std::time::Duration::from_secs(60));
-    if !finished {
+    let (output, outcome) = wait_draining(child, std::time::Duration::from_secs(60));
+    let cause = match outcome {
+        Outcome::Finished => None,
+        Outcome::TimedOut => Some("qmltestrunner did not finish in 60 s; the layout never settles"),
+        Outcome::Incomplete => Some("output incomplete: a pipe was held open past the deadline"),
+    };
+    if let Some(cause) = cause {
         let _ = std::fs::remove_dir_all(&dir);
         panic!(
-            "{name}: qmltestrunner did not finish in 60 s; the layout never settles\n{}\n{}",
+            "{name}: {cause}\n{}\n{}",
             String::from_utf8_lossy(&output.stdout),
             String::from_utf8_lossy(&output.stderr)
         );
