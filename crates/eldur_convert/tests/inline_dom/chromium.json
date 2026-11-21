@@ -152,6 +152,13 @@
   ],
   "clicks": []
  },
+ "button_spaces": {
+  "log": [
+   "LC pre-set \"Save K later\" \" later\" \"Save  later\"",
+   "LC pre-line-set \"X   Y \\n  Z\" \"X Y\\nZ\""
+  ],
+  "clicks": []
+ },
  "button_text": {
   "log": [
    "LC hidden \"SaveCtrl S\" \"Find Ctrl K\"",
