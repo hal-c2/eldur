@@ -2804,6 +2804,69 @@ function verify() {
     );
 }
 
+/// The content of a raw-text or RCDATA element in markup a script inserts is
+/// text up to the element's own end tag, as the HTML tokenizer reads it, so
+/// a `<b` in a script, a style or a textarea is no tag and the `<p>` after it
+/// is kept. Only `</tag` followed by a space, `/` or `>` ends it, and only
+/// once its `>` comes; a textarea's and a title's references are decoded.
+/// The expected string is Chromium 1254's (headless shell, `--dump-dom`) for
+/// the same cases.
+#[test]
+fn qml6_raw_text_in_inserted_markup_ends_only_at_its_own_end_tag() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("box", 1, "box", TargetKind::Box);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verify() {
+    const box = document.getElementById("box");
+    const show = n => n.tagName.toLowerCase() + JSON.stringify(n.textContent);
+    const cases = {
+        a: '<textarea>He said "x<y"</textarea><p>after</p>',
+        b: '<style>a<b{}</style><p>after</p>',
+        c: '<script>if(a<b)x()</' + 'script><p>after</p>',
+        d: '<title>a<b &amp; c</title><p>q</p>',
+        e: '<textarea>a</TEXTAREA ><p>q</p>',
+        f: '<xmp>a<b>c</b></xmp><p>q</p>',
+        g: '<textarea>a</textareax></textarea><p>q</p>',
+        h: '<style>x</style',
+    };
+    return Object.entries(cases).map(([k, m]) => {
+        const d = document.createElement("div");
+        box.appendChild(d);
+        d.innerHTML = m;
+        return k + "=" + Array.from(d.children).map(show).join(",");
+    }).join(" ; ");
+}
+"##,
+        r#"Item {
+    id: root
+    Column { id: box; objectName: "box" }
+    Component.onCompleted: {
+        (Page.__eldur_init || Eldur.init)(root);
+        console.log("ELDUR_OK_RAW", Page.verify());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains(
+            "ELDUR_OK_RAW a=textarea\"He said \\\"x<y\\\"\",p\"after\" ; \
+             b=style\"a<b{}\",p\"after\" ; \
+             c=script\"if(a<b)x()\",p\"after\" ; \
+             d=title\"a<b & c\",p\"q\" ; \
+             e=textarea\"a\",p\"q\" ; \
+             f=xmp\"a<b>c</b>\",p\"q\" ; \
+             g=textarea\"a</textareax>\",p\"q\" ; \
+             h=style\"x</style\""
+        ),
+        "{output}"
+    );
+}
+
 #[test]
 fn qml6_anchor_href_resolves_against_document_base_and_preserves_raw_attribute() {
     if !has_binary("qml6") {
