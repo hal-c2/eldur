@@ -553,6 +553,19 @@ fn an_onload_set_again_while_load_fires_is_a_new_listener() {
     assert_eq!(run("onloadagain", &read), wanted("onloadagain", &read));
 }
 
+/// `window.onload` reads as what its event handler keeps: a string, number,
+/// boolean or `undefined` set at the top level, after a handler, in a
+/// function or while `load` is being dispatched reads as `null`, and takes out
+/// the handler it replaced; an object that is not a function is kept.
+#[test]
+fn a_window_onload_that_is_not_an_object_reads_as_null() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("onloadvalue", &read), wanted("onloadvalue", &read));
+}
+
 /// A `signal` that is not an `AbortSignal` (a number, `null`, a string, a
 /// plain object, or what a getter returns after the other options are read)
 /// throws a `TypeError` from `addEventListener`, for a null callback too, at

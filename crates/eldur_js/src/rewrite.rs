@@ -2037,16 +2037,15 @@ impl PageBuffers {
                     // while replaced, and loses it to `null`, so one set again
                     // is heard after the listeners added in between.
                     let queue = self.load_queue(lowerer.shared);
-                    let (slot, call) = lowerer.shared.window_onload();
+                    let call = lowerer.shared.window_onload();
                     self.top_decls.append(&mut lowerer.shared.lifecycle.decls);
                     let value = if is_null_or_undefined(&assign.right, scoping) {
                         "null".to_string()
                     } else {
                         lowerer.rewrite_listener_callback_expr(&assign.right, None)
                     };
-                    self.init_stmts.push(format!(
-                        "{slot} = Eldur.setOnload({queue}, {call}, {value});"
-                    ));
+                    self.init_stmts
+                        .push(format!("Eldur.setOnload({queue}, {call}, {value});"));
                     return true;
                 }
 

@@ -77,7 +77,7 @@ pub(crate) struct SharedRewriteState {
 pub(crate) struct Lifecycle {
     pub ready_queue: Option<String>,
     pub load_queue: Option<String>,
-    pub window_onload: Option<(String, String)>,
+    pub window_onload: Option<String>,
     pub decls: Vec<String>,
 }
 
@@ -140,20 +140,18 @@ impl SharedRewriteState {
         queue
     }
 
-    /// `window.onload`'s variable and the function the `load` listeners call
-    /// its handler by.
-    pub(crate) fn window_onload(&mut self) -> (String, String) {
-        if let Some(pair) = &self.lifecycle.window_onload {
-            return pair.clone();
+    /// The function the `load` listeners call `window.onload`'s handler by;
+    /// `Eldur.setOnload` keeps the handler on it, and a read gets it there.
+    pub(crate) fn window_onload(&mut self) -> String {
+        if let Some(call) = &self.lifecycle.window_onload {
+            return call.clone();
         }
-        let slot = self.alloc_fn_name("__eldur_window_onload");
         let call = self.alloc_fn_name("__eldur_call_window_onload");
-        self.lifecycle.decls.push(format!("var {slot} = null;"));
         self.lifecycle.decls.push(format!(
-            "function {call}() {{\n    if (typeof {slot} === \"function\") {{\n        {slot}.call(Eldur.window, Eldur.event(\"load\", Eldur.window, null));\n    }}\n}}"
+            "function {call}() {{\n    var handler = {call}.handler;\n    if (typeof handler === \"function\") {{\n        handler.call(Eldur.window, Eldur.event(\"load\", Eldur.window, null));\n    }}\n}}"
         ));
-        self.lifecycle.window_onload = Some((slot.clone(), call.clone()));
-        (slot, call)
+        self.lifecycle.window_onload = Some(call.clone());
+        call
     }
 
     pub(crate) fn fresh_id(&mut self) -> u32 {
@@ -801,11 +799,11 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
                 // `load` is dispatched is a new listener it is not dispatched
                 // to, and the assignment's value is the value assigned.
                 let queue = self.shared.lifecycle_queue(true);
-                let (slot, call) = self.shared.window_onload();
+                let call = self.shared.window_onload();
                 let rhs_str = self.rewrite_listener_callback_expr(right, None);
                 self.editor.replace(
                     full_span,
-                    format!("({slot} = Eldur.setOnload({queue}, {call}, {rhs_str}))"),
+                    format!("Eldur.setOnload({queue}, {call}, {rhs_str})"),
                 );
                 return true;
             }
@@ -1264,6 +1262,14 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
 
         // 4. `window.<prop>` read
         if is_global_window(&it.object, self.scoping) {
+            if prop == "onload" && !self.after_load {
+                // What the assignments that ran kept: a value that is not an
+                // object reads as `null`, as a browser's event handler does.
+                let call = self.shared.window_onload();
+                self.editor
+                    .replace(it.span, format!("Eldur.getOnload({call})"));
+                return;
+            }
             let rep = match prop {
                 "localStorage" => "Eldur.localStorage".to_string(),
                 "sessionStorage" => "Eldur.sessionStorage".to_string(),
