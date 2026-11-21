@@ -620,6 +620,7 @@ ApplicationWindow {
                                         implicitWidth: legendText.implicitWidth + 12
                                         implicitHeight: legendText.implicitHeight
                                         x: 13
+                                        width: Math.min(implicitWidth, fieldset.availableWidth)
 
                                         Text {
                                             id: legendText
