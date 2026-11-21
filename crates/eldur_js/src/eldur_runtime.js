@@ -12697,6 +12697,11 @@ var _HTML_ATTR = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)(?:\s*=\s*(?:"([^"]*)(?:"|$)|'([^'
 // Each tag pattern ends in `(>|$)`: a tag the markup ends inside of matches
 // with an empty last group, and the HTML parser drops such a tag.
 var _TAG_REST = "(?:[^>\"'=]|=\\s*\"[^\"]*(?:\"|$)|=\\s*'[^']*(?:'|$)|=|[\"'])*";
+// Elements whose content the HTML tokenizer reads as text up to their own
+// end tag (its RAWTEXT, script-data and PLAINTEXT states), and those of them
+// whose character references it still decodes (RCDATA).
+var _RAW_TEXT_TAGS = { script: true, style: true, xmp: true, iframe: true, noembed: true, noframes: true, plaintext: true, textarea: true, title: true };
+var _RCDATA_TAGS = { textarea: true, title: true };
 
 function _applyAttrsFromHtml(el, attrStr, svg) {
     if (!attrStr) {
@@ -12883,6 +12888,30 @@ function _parseFragment(src, inSvg) {
         if (selfClosing) {
             nodes.push(el);
             pos = afterOpen;
+            continue;
+        }
+        // In HTML a raw-text element's content has no tags, so a `<b` in it
+        // (`if(a<b)`) is text: only its own end tag ends it, and only once its
+        // `>` comes. In SVG the same names are elements like any other.
+        if (!svg && _RAW_TEXT_TAGS[tag] === true) {
+            var rawEnd = src.length;
+            var rawNext = src.length;
+            if (tag !== "plaintext") {
+                var endRe = new RegExp("</" + tag + "(?=[\\s/>])", "ig");
+                endRe.lastIndex = afterOpen;
+                var endTag = endRe.exec(src);
+                var endGt = endTag ? src.indexOf(">", endRe.lastIndex) : -1;
+                if (endGt !== -1) {
+                    rawEnd = endTag.index;
+                    rawNext = endGt + 1;
+                }
+            }
+            var rawText = src.slice(afterOpen, rawEnd);
+            if (rawText) {
+                el.textContent = _RCDATA_TAGS[tag] === true ? _unescapeHtmlText(rawText) : rawText;
+            }
+            nodes.push(el);
+            pos = rawNext;
             continue;
         }
         // Find matching closing tag for `tag`
