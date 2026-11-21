@@ -184,7 +184,7 @@ fn a_runaway_mutation_loop_stops() {
 /// every record once the records double. Chromium has no such count, so this
 /// page has no recording.
 #[test]
-fn appends_walk_no_more_items_as_the_page_grows() {
+fn appends_walk_a_few_items_each_on_average() {
     if support::no_qt() {
         return;
     }
