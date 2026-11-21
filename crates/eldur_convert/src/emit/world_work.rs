@@ -301,7 +301,7 @@ fn every_left_out_list_warns(sep: &str) {
     let out = convert_str(&page, &Options::default());
     let qml = out.main_qml().expect("Main.qml");
     let mut expected = Vec::new();
-    for k in 0..lists {
+    for (k, &start) in starts.iter().enumerate() {
         let hovers: Vec<String> = (0..3).map(|i| format!("s{k}a{i}Hover")).collect();
         // The last item's marker is the last line bound to all three.
         let line = qml
@@ -325,7 +325,7 @@ fn every_left_out_list_warns(sep: &str) {
         } else {
             String::new()
         };
-        expected.push((Some(starts[k]), left_out_warning(3, &which)));
+        expected.push((Some(start), left_out_warning(3, &which)));
     }
     assert!(!expected.is_empty(), "the budget never binds");
     assert!(expected.len() < lists, "no list fits");
