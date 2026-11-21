@@ -840,39 +840,63 @@ fn walked_ancestors(doc: &Document, node: NodeId) -> impl Iterator<Item = NodeId
 /// `display: none; color: red;` reads `color: red;`). Values stay as
 /// written, so one CSSOM would normalize (`0` as `0px`) can still differ.
 fn without_display(style: &str) -> Option<String> {
-    // The tokenizer drops comments before a declaration is read, so
-    // `display/**/:none` declares `display`.
-    let parts = declarations(style);
-    fn named(p: &str) -> Option<(&str, &str)> {
-        p.split_once(':')
-            .map(|(name, value)| (name.trim(), value.trim()))
-    }
-    if !parts
+    let kept = kept_declarations(style)?;
+    let (important, normal): (Vec<_>, Vec<_>) = kept
+        .into_iter()
+        .filter(|(name, _, _)| name != "display")
+        .partition(|(_, _, important)| *important);
+    let serialized: Vec<String> = normal
         .iter()
-        .map(String::as_str)
-        .filter_map(named)
-        .any(|(name, _)| name.eq_ignore_ascii_case("display"))
-    {
-        return None;
-    }
-    let mut normal = Vec::new();
-    let mut important = Vec::new();
-    for (name, value) in parts.iter().map(String::as_str).filter_map(named) {
-        if name.eq_ignore_ascii_case("display") || value.is_empty() {
+        .chain(&important)
+        .map(|(name, value, important)| match important {
+            true => format!("{name}: {value} !important;"),
+            false => format!("{name}: {value};"),
+        })
+        .collect();
+    Some(serialized.join(" "))
+}
+
+/// The declarations CSSOM keeps of `style`, each `(name, value, important)`
+/// in the order it writes them back, or `None` when none is `display`. It
+/// keeps only the ones it parsed: not one holding a bad string, a bad url,
+/// a closer of no open block or a `!` other than a last `!important` (CSS
+/// Syntax 3, 5.4.6), and not an empty one but a custom property's. A name
+/// declared twice stays once, where it was declared last. Measured in
+/// Chromium 158, the cases in `cascade/style_display_chromium.rs`.
+fn kept_declarations(style: &str) -> Option<Vec<(String, String, bool)>> {
+    let mut kept: Vec<(String, String, bool)> = Vec::new();
+    for part in declarations(style) {
+        let Some((name, value)) = part.text.split_once(':') else {
+            continue;
+        };
+        let (name, value) = (name.trim(), value.trim());
+        let important = strip_important(value);
+        if part.bad || part.bangs > usize::from(important.is_some()) {
             continue;
         }
-        let name = if name.starts_with("--") {
-            name.to_owned()
-        } else {
-            name.to_ascii_lowercase()
-        };
-        match strip_important(value) {
-            Some(v) => important.push(format!("{name}: {v} !important;")),
-            None => normal.push(format!("{name}: {value};")),
+        let value = important.unwrap_or(value);
+        let custom = name.starts_with("--");
+        if value.is_empty() && !custom {
+            continue;
         }
+        let name = match custom {
+            true => name.to_owned(),
+            false => name.to_ascii_lowercase(),
+        };
+        kept.retain(|(n, _, _)| *n != name);
+        kept.push((name, value.to_owned(), important.is_some()));
     }
-    normal.extend(important);
-    Some(normal.join(" "))
+    kept.iter().any(|(name, _, _)| name == "display").then_some(kept)
+}
+
+/// One declaration of a `style` attribute as [`declarations`] reads it.
+struct Declaration {
+    /// Its text, comments a space each and trimmed.
+    text: String,
+    /// It holds a bad string, a bad url or a closer of no open block.
+    bad: bool,
+    /// Its `!`s outside strings, escapes and blocks.
+    bangs: usize,
 }
 
 /// The declarations of a `style` attribute as CSS Syntax 3 reads them, each
@@ -880,9 +904,10 @@ fn without_display(style: &str) -> Option<String> {
 /// side apart): split at a `;` outside strings, escapes, `url(` tokens and
 /// `()`, `[]` and `{}` blocks. Measured in Chromium 158, the cases in
 /// `cascade/style_display_chromium.rs`.
-fn declarations(style: &str) -> Vec<String> {
+fn declarations(style: &str) -> Vec<Declaration> {
     let mut parts = Vec::new();
     let mut out = String::with_capacity(style.len());
+    let (mut bad, mut bangs) = (false, 0);
     // The closers of the blocks open here, innermost last: a `]` inside
     // `(` closes nothing, and one with no block open is a token.
     let mut closers = Vec::new();
@@ -896,13 +921,28 @@ fn declarations(style: &str) -> Vec<String> {
         if !in_name && let Some(name) = unquoted_url(c, &chars) {
             out.push(c);
             out.extend(chars.by_ref().take(name));
+            out.extend(std::iter::from_fn(|| chars.next_if(char::is_ascii_whitespace)));
+            // Past the spaces that may open and close it, a space before
+            // more, a quote, `(`, a non-printable or an escaped newline
+            // makes it a bad url (4.3.6).
+            let mut spaced = false;
             while let Some(c) = chars.next() {
                 out.push(c);
                 match c {
-                    '\\' => out.extend(chars.next_if(|e| !is_newline(*e))),
                     ')' => break,
+                    _ if c.is_ascii_whitespace() => {
+                        spaced = true;
+                        continue;
+                    }
+                    '\\' => match chars.next_if(|e| !is_newline(*e)) {
+                        Some(e) => out.push(e),
+                        None => bad = true,
+                    },
+                    '"' | '\'' | '(' => bad = true,
+                    _ if is_non_printable(c) => bad = true,
                     _ => {}
                 }
+                bad |= spaced;
             }
             in_name = false;
             continue;
@@ -919,8 +959,12 @@ fn declarations(style: &str) -> Vec<String> {
             '"' | '\'' => {
                 out.push(c);
                 // A newline ends a string unescaped, a bad string, and is the
-                // whitespace after it.
-                while let Some(s) = chars.next_if(|s| !is_newline(*s)) {
+                // whitespace after it; the end of the text ends one well.
+                loop {
+                    let Some(s) = chars.next_if(|s| !is_newline(*s)) else {
+                        bad |= chars.peek().is_some();
+                        break;
+                    };
                     out.push(s);
                     if s == c {
                         break;
@@ -949,7 +993,11 @@ fn declarations(style: &str) -> Vec<String> {
                 out.push(' ');
             }
             ';' if closers.is_empty() => {
-                parts.push(std::mem::take(&mut out));
+                parts.push(Declaration {
+                    text: std::mem::take(&mut out),
+                    bad: std::mem::take(&mut bad),
+                    bangs: std::mem::take(&mut bangs),
+                });
                 in_name = false;
             }
             _ => {
@@ -957,9 +1005,11 @@ fn declarations(style: &str) -> Vec<String> {
                     '(' => closers.push(')'),
                     '[' => closers.push(']'),
                     '{' => closers.push('}'),
-                    ')' | ']' | '}' if closers.last() == Some(&c) => {
-                        closers.pop();
-                    }
+                    ')' | ']' | '}' => match closers.last() == Some(&c) {
+                        true => _ = closers.pop(),
+                        false => bad = true,
+                    },
+                    '!' if closers.is_empty() => bangs += 1,
                     _ => {}
                 }
                 // `#` and `@` lead a hash or at-keyword's name: `#url(` is
@@ -970,17 +1020,27 @@ fn declarations(style: &str) -> Vec<String> {
             }
         }
     }
-    parts.push(out);
+    parts.push(Declaration {
+        text: out,
+        bad,
+        bangs,
+    });
+    for part in &mut parts {
+        part.text = part.text.trim().to_owned();
+    }
+    parts.retain(|part| !part.text.is_empty());
     parts
-        .into_iter()
-        .map(|p| p.trim().to_owned())
-        .filter(|p| !p.is_empty())
-        .collect()
 }
 
 /// A newline as CSS reads one: `\r` and form feed are preprocessed into it.
 fn is_newline(c: char) -> bool {
     matches!(c, '\n' | '\r' | '\x0c')
+}
+
+/// A character CSS Syntax 3 calls non-printable (4.2): a control other than
+/// tab and the newlines, or delete.
+fn is_non_printable(c: char) -> bool {
+    matches!(c, '\0'..='\x08' | '\x0b' | '\x0e'..='\x1f' | '\x7f')
 }
 
 /// When `first` and then `rest`, outside a name, open an unquoted `url(`
@@ -2658,11 +2718,21 @@ mod tests {
         let differ: Vec<_> = NAMED
             .iter()
             .chain(GENERATED)
-            .filter(|(style, declared)| without_display(style).is_some() != *declared)
+            .filter(|(style, kept)| {
+                let names = kept_declarations(style).map(|kept| {
+                    let names: Vec<_> = kept
+                        .into_iter()
+                        .map(|(name, _, _)| name)
+                        .filter(|name| name != "display")
+                        .collect();
+                    names.join(" ")
+                });
+                names.as_deref() != *kept
+            })
             .collect();
         assert!(
             differ.is_empty(),
-            "{} of {} recorded texts differ from Chromium (text, Chromium declares display): {differ:#?}",
+            "{} of {} recorded texts differ from Chromium (text, what clearing display keeps): {differ:#?}",
             differ.len(),
             NAMED.len() + GENERATED.len(),
         );

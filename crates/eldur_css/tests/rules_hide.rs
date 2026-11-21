@@ -443,3 +443,56 @@ fn each_tokenizer_edge_hides_as_chromium_reads_it() {
         "differ from Chromium (name, style, hidden): {differ:#?}"
     );
 }
+
+/// Clearing `display` writes back only the declarations Chromium parsed, so
+/// a rule on one it drops stops matching: whether `[style*="--a"]` still
+/// hides each after `el.style.display = ''`, measured in Chromium 158.
+const DROPPED_DECLARATIONS: &[(&str, &str, bool)] = &[
+    ("bad_string", "--a:\"a\n;display:none;--b:\"", false),
+    ("bad_url", "--a:url(a b);display:none", false),
+    ("stray_closer", "--a:a);display:none", false),
+    ("closer_in_block", "--a:(a]);display:none", false),
+    ("stray_bang", "--a:a!b;display:none", false),
+    ("bang_in_block", "--a:(a!b);display:none", true),
+    ("empty_custom", "--a:;display:none", true),
+    ("important_custom", "--a:x !important;display:none", true),
+    ("bad_redeclaration", "--a:1;--a:\"x\n;display:none", true),
+    ("escaped_newline_url", "--a:url(a\\\n);display:none", false),
+];
+
+#[test]
+fn clearing_display_drops_what_chromium_drops() {
+    fn attribute(text: &str) -> String {
+        text.replace('&', "&amp;")
+            .replace('"', "&quot;")
+            .replace('<', "&lt;")
+            .replace('\r', "&#13;")
+            .replace('\x0c', "&#12;")
+    }
+    let mut page = String::from(
+        "<!DOCTYPE html>\n<style>\n  [style*=\"--a\"] { display: none; }\n</style>\n",
+    );
+    for (name, style, _) in DROPPED_DECLARATIONS {
+        page += &format!(
+            "<div id=\"{name}\" style=\"{}\">x</div>\n",
+            attribute(style)
+        );
+    }
+    let doc = Document::parse(&page);
+    let viewport = Viewport::default();
+    let (sheets, _) = collect_stylesheets(&doc, &mut NoSheets, &viewport);
+    let node = |name: &str| doc.element_by_id(name).expect(name);
+    let nodes: BTreeSet<_> = DROPPED_DECLARATIONS
+        .iter()
+        .map(|(name, ..)| node(name))
+        .collect();
+    let hidden = rules_hide(&doc, &sheets, &viewport, &nodes);
+    let differ: Vec<_> = DROPPED_DECLARATIONS
+        .iter()
+        .filter(|(name, _, chromium)| hidden.contains(&node(name)) != *chromium)
+        .collect();
+    assert!(
+        differ.is_empty(),
+        "differ from Chromium (name, style, hidden): {differ:#?}"
+    );
+}
