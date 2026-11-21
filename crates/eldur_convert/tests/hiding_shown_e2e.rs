@@ -779,6 +779,27 @@ const CASES: &[Case] = &[
         toggle: "",
         back: &[],
     },
+    // The same with the name written with escapes, which CSS decodes first.
+    Case {
+        name: "escaped_url_comment_display_cleared",
+        body: r#"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="background-image:\75rl(/*);display:none">B</p><p id="c">C</p>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "",
+        back: &[],
+    },
+    Case {
+        name: "spaced_escape_url_comment_display_cleared",
+        body: r#"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="background-image:u\72 l(/*);display:none">B</p><p id="c">C</p>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "",
+        back: &[],
+    },
     // In the world a class makes, the custom property is what that class's
     // rule declares, not the value as loaded.
     Case {
@@ -1489,4 +1510,14 @@ fn margins_close_around_a_scripts_variable_display_a_class_hides() {
 #[test]
 fn a_comment_opener_in_an_unquoted_url_leaves_display_the_attributes_own() {
     run(case("url_comment_display_cleared"));
+}
+
+#[test]
+fn a_url_name_written_with_a_hex_escape_keeps_its_comment_opener() {
+    run(case("escaped_url_comment_display_cleared"));
+}
+
+#[test]
+fn a_url_name_written_with_a_spaced_escape_keeps_its_comment_opener() {
+    run(case("spaced_escape_url_comment_display_cleared"));
 }
