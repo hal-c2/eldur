@@ -2843,6 +2843,12 @@ function verify() {
         u: '<div><svg><style>s</style><title>t</title></svg></div><p>after</p>',
         t: '<div><svg><title/></svg><textarea></div></textarea></div><p>q</p>',
     };
+    // Markup set into an <svg>: an HTML element that breaks out of SVG
+    // holds raw text again, and an SVG end tag written in it closes nothing.
+    const inSvg = {
+        s1: '<g><p><style>a</g>b</style></p></g>',
+        s3: '<g><p><textarea>x</g></textarea></p></g><rect/>',
+    };
     const shown = d => Array.from(d.children).map(show).join(",");
     return Object.entries(cases).map(([k, m]) => {
         const d = document.createElement("div");
@@ -2859,7 +2865,13 @@ function verify() {
             if (shown(e) !== got) got += " innerHTML=" + shown(e);
         }
         return k + "=" + got;
-    }).join(" ; ");
+    }).concat(Object.entries(inSvg).map(([k, m]) => {
+        const d = document.createElement("div");
+        box.appendChild(d);
+        d.innerHTML = "<svg></svg>";
+        d.children[0].insertAdjacentHTML("beforeend", m);
+        return k + "=" + shown(d.children[0]);
+    })).join(" ; ");
 }
 "##,
         r#"Item {
@@ -2887,7 +2899,9 @@ function verify() {
              w=div\"p</div>{}x\",p\"q\" ; \
              v=div\"\",p\"after\" ; \
              u=div\"st\",p\"after\" ; \
-             t=div\"</div>\",p\"q\""
+             t=div\"</div>\",p\"q\" ; \
+             s1=g\"\",p\"a</g>b\" ; \
+             s3=g\"\",p\"x</g>\",rect\"\""
         ),
         "{output}"
     );

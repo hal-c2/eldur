@@ -12823,6 +12823,12 @@ function _closeSvgBeforeHtml(src, inSvg) {
             last = m.index;
             foreign = false;
         }
+        // Raw text in HTML holds no tags: an SVG end tag written in it closes
+        // nothing.
+        if (!foreign && _RAW_TEXT_TAGS[tag] === true) {
+            tagRe.lastIndex = _rawTextEnd(src, tag, tagRe.lastIndex)[1];
+            continue;
+        }
         if (m[4] === "/" || _VOID_TAGS[tag]) {
             continue;
         }
@@ -12954,7 +12960,9 @@ function _parseFragment(src, inSvg) {
             } else if (tok[0].slice(-2) !== "/>") {
                 if (tokTag === "svg") {
                     spaces.push({ tag: tokTag, svg: true });
-                } else if (inSvgNow && _SVG_HTML_POINTS[tokTag]) {
+                } else if (inSvgNow && (_SVG_HTML_POINTS[tokTag] || _breaksOutOfSvg(tokTag, tok[0]))) {
+                    // An integration point, or an HTML element the child
+                    // parse also takes out of SVG.
                     spaces.push({ tag: tokTag, svg: false });
                 }
             }
