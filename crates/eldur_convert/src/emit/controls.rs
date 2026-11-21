@@ -1978,9 +1978,15 @@ mod tests {
             q.contains(r#"property var eldurDomRuns: ["", "Save ", "K", " now", ""]"#),
             "{q}"
         );
-        assert!(q.contains(r#"property string eldurWhiteSpace: "pre""#), "{q}");
+        assert!(
+            q.contains(r#"property string eldurWhiteSpace: "pre""#),
+            "{q}"
+        );
         assert!(q.contains(r#"text: "A B\nC""#), "{q}");
-        assert!(q.contains(r#"property string eldurDomText: "A  B\n  C""#), "{q}");
+        assert!(
+            q.contains(r#"property string eldurDomText: "A  B\n  C""#),
+            "{q}"
+        );
         assert!(
             q.contains(r#"property string eldurWhiteSpace: "pre-line""#),
             "{q}"
