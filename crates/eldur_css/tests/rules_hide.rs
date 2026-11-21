@@ -436,64 +436,72 @@ fn each_tokenizer_edge_hides_as_chromium_reads_it() {
     let hidden = rules_hide(&doc, &sheets, &viewport, &nodes);
     let differ: Vec<_> = TOKENIZER_EDGES
         .iter()
-        .filter(|(name, _, chromium)| hidden.contains(&node(name)) != *chromium)
+        .filter(|(name, .., chromium)| hidden.contains(&node(name)) != *chromium)
         .collect();
     assert!(
         differ.is_empty(),
-        "differ from Chromium (name, style, hidden): {differ:#?}"
+        "differ from Chromium (name, needle, style, hidden): {differ:#?}"
     );
 }
 
-/// Clearing `display` writes back only the declarations Chromium parsed, so
-/// a rule on one it drops stops matching: whether `[style*="--a"]` still
+/// Clearing `display` writes back only the declarations Chromium parsed,
+/// the important ones last and kept over a later normal one, so a rule on
+/// what it drops stops matching: whether `#name[style*="needle"]` still
 /// hides each after `el.style.display = ''`, measured in Chromium 158.
-const DROPPED_DECLARATIONS: &[(&str, &str, bool)] = &[
-    ("bad_string", "--a:\"a\n;display:none;--b:\"", false),
-    ("bad_url", "--a:url(a b);display:none", false),
-    ("stray_closer", "--a:a);display:none", false),
-    ("closer_in_block", "--a:(a]);display:none", false),
-    ("stray_bang", "--a:a!b;display:none", false),
-    ("bang_in_block", "--a:(a!b);display:none", true),
-    ("empty_custom", "--a:;display:none", true),
-    ("important_custom", "--a:x !important;display:none", true),
-    ("bad_redeclaration", "--a:1;--a:\"x\n;display:none", true),
-    ("escaped_newline_url", "--a:url(a\\\n);display:none", false),
-];
-
-/// A normal declaration never replaces an `!important` one of its name, so
-/// whether `[style*="x"]` still hides each after `el.style.display = ''`
-/// follows the important value, measured in Chromium 158.
-const IMPORTANT_DECLARATIONS: &[(&str, &str, bool)] = &[
+const DROPPED_DECLARATIONS: &[(&str, &str, &str, bool)] = &[
+    ("bad_string", "--a", "--a:\"a\n;display:none;--b:\"", false),
+    ("bad_url", "--a", "--a:url(a b);display:none", false),
+    ("stray_closer", "--a", "--a:a);display:none", false),
+    ("closer_in_block", "--a", "--a:(a]);display:none", false),
+    ("stray_bang", "--a", "--a:a!b;display:none", false),
+    ("bang_in_block", "--a", "--a:(a!b);display:none", true),
+    ("empty_custom", "--a", "--a:;display:none", true),
     (
-        "important_then_normal",
+        "important_custom",
+        "--a",
+        "--a:x !important;display:none",
+        true,
+    ),
+    (
+        "bad_redeclaration",
+        "--a",
+        "--a:1;--a:\"x\n;display:none",
+        true,
+    ),
+    (
+        "escaped_newline_url",
+        "--a",
+        "--a:url(a\\\n);display:none",
+        false,
+    ),
+    (
+        "important_kept",
+        "x",
         "--a:x !important;--a:y;display:none",
         true,
     ),
     (
-        "normal_then_important",
+        "important_after",
+        "x",
         "--a:y;--a:x !important;display:none",
         true,
     ),
     (
-        "important_twice",
+        "important_replaced",
+        "x",
         "--a:x !important;--a:y !important;display:none",
         false,
+    ),
+    (
+        "important_kept_color",
+        "red",
+        "color:red !important;display:none;color:blue",
+        true,
     ),
 ];
 
 #[test]
 fn clearing_display_drops_what_chromium_drops() {
-    assert_hidden_after_clearing("--a", DROPPED_DECLARATIONS);
-}
-
-#[test]
-fn clearing_display_keeps_the_important_declaration_of_a_name() {
-    assert_hidden_after_clearing("x", IMPORTANT_DECLARATIONS);
-}
-
-/// Whether `[style*=needle]` hides each of `cases` after its `display` is
-/// cleared is what Chromium recorded.
-fn assert_hidden_after_clearing(needle: &str, cases: &[(&str, &str, bool)]) {
     fn attribute(text: &str) -> String {
         text.replace('&', "&amp;")
             .replace('"', "&quot;")
@@ -501,10 +509,12 @@ fn assert_hidden_after_clearing(needle: &str, cases: &[(&str, &str, bool)]) {
             .replace('\r', "&#13;")
             .replace('\x0c', "&#12;")
     }
-    let mut page = format!(
-        "<!DOCTYPE html>\n<style>\n  [style*=\"{needle}\"] {{ display: none; }}\n</style>\n",
-    );
-    for (name, style, _) in cases {
+    let mut page = String::from("<!DOCTYPE html>\n<style>\n");
+    for (name, needle, ..) in DROPPED_DECLARATIONS {
+        page += &format!("  #{name}[style*=\"{needle}\"] {{ display: none; }}\n");
+    }
+    page += "</style>\n";
+    for (name, _, style, _) in DROPPED_DECLARATIONS {
         page += &format!(
             "<div id=\"{name}\" style=\"{}\">x</div>\n",
             attribute(style)
@@ -514,14 +524,17 @@ fn assert_hidden_after_clearing(needle: &str, cases: &[(&str, &str, bool)]) {
     let viewport = Viewport::default();
     let (sheets, _) = collect_stylesheets(&doc, &mut NoSheets, &viewport);
     let node = |name: &str| doc.element_by_id(name).expect(name);
-    let nodes: BTreeSet<_> = cases.iter().map(|(name, ..)| node(name)).collect();
-    let hidden = rules_hide(&doc, &sheets, &viewport, &nodes);
-    let differ: Vec<_> = cases
+    let nodes: BTreeSet<_> = DROPPED_DECLARATIONS
         .iter()
-        .filter(|(name, _, chromium)| hidden.contains(&node(name)) != *chromium)
+        .map(|(name, ..)| node(name))
+        .collect();
+    let hidden = rules_hide(&doc, &sheets, &viewport, &nodes);
+    let differ: Vec<_> = DROPPED_DECLARATIONS
+        .iter()
+        .filter(|(name, .., chromium)| hidden.contains(&node(name)) != *chromium)
         .collect();
     assert!(
         differ.is_empty(),
-        "differ from Chromium (name, style, hidden): {differ:#?}"
+        "differ from Chromium (name, needle, style, hidden): {differ:#?}"
     );
 }

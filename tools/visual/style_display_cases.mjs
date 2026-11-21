@@ -1,6 +1,7 @@
 /**
  * Records, in headless Chromium, whether each of a set of `style` attribute
- * texts declares `display` and which properties clearing it leaves, and
+ * texts declares `display` and the text `el.style.display = ''` writes back
+ * to the attribute, and
  * writes them as the Rust table that
  * `eldur_css`'s `style_display_chromium` test checks the converter against.
  *
@@ -122,6 +123,97 @@ const named = [
   "display:none \"a\n;color:red",
   "display:none);color:red",
   "color:red;display:none !important x",
+  // Importance: the important declarations are written last, and a later
+  // normal one does not replace an earlier important one.
+  "--a:x !important;--a:y;display:none",
+  "color:red !important;display:none;color:blue",
+  "--a:1 !important;--a:2 !important;display:none",
+  "--a:1;--a:2 !important;--b:x;display:none",
+  "--a:x!important;--b:y ! important;--c:z;display:none",
+  // The written-back value: comments kept in the middle, trimmed at the
+  // ends, and a backslash before a newline or at the end of the text.
+  "--a:a/* x */b;display:none",
+  "--a:/* x */a;display:none",
+  "--a:a/* x */;display:none",
+  "--a:a /* x */ ;display:none",
+  "--a: /* x */ ;display:none",
+  "color:/* x */red;display:none",
+  "color:red/* x */;display:none",
+  "--a:url(/*);display:none",
+  "--a:url(a/*b);display:none",
+  "--a:url(a/*b*/c);display:none",
+  "--a:url(a)/*;display:none",
+  "--a:(/*);display:none",
+  "--a:a\\;display:none",
+  "display:none;--a:a\\",
+  "--a:a\\\n;display:none",
+  "--a:a\\\n b;display:none",
+  "--a:a \\\n;display:none",
+  "--a:\"a\\\";display:none",
+  "display:none;--a:\"a",
+  "display:none;--a:\"a\\",
+  "display:none;--a:url(a",
+  "display:none;--a:(a",
+  "display:none;--a:a/* x",
+  "--a:a\t\n ;display:none",
+  "--a: \t a;display:none",
+  "COLOR:red;display:none",
+  "--A:x;--a:y;display:none",
+  "--a:a  b;display:none",
+  "color:red  !important ;display:none",
+  "--a:x!important;display:none",
+  "--a:x!IMPORTANT;display:none",
+  "--a:x ! important;display:none",
+  "--a:\\75 \\\n;display:none",
+  "--a:a\\75 \\\n;display:none",
+  "--a:\\75\\\n;display:none",
+  "--a:\\75  \\\n;display:none",
+  "--a:\\\"\\\n;display:none",
+  "--a:/\\\n;display:none",
+  "--a:a\\75\\\n;display:none",
+  "--a:\\75 a\\\n;display:none",
+  "--a:\\75 \\\n ;display:none",
+  "--a:\\75 \\;display:none",
+  "--a:\\75 a \\\n;display:none",
+  "--a:a b\\\n;display:none",
+  "--a:\\61 b\\\n;display:none",
+  "--a:\"x\"\\\n;display:none",
+  "--a:u\\\n;display:none",
+  "--a:\\75\t\\\n;display:none",
+  "--a:x/\\\n;display:none",
+  "--a:/ \\\n;display:none",
+  "--a:*\\\n;display:none",
+  "--a:.\\\n;display:none",
+  "--a:-\\\n;display:none",
+  "--a:#\\\n;display:none",
+  "--a:,\\\n;display:none",
+  "--a:+\\\n;display:none",
+  "--a:%\\\n;display:none",
+  "--a:<\\\n;display:none",
+  "--a:a/\\\n;display:none",
+  "--a:/\\\n\n;display:none",
+  "--a:/\\\r\n;display:none",
+  "--a:/\\\f;display:none",
+  "--a:/\\;display:none",
+  "--a://\\\n;display:none",
+  "--a:/\\\\\n;display:none",
+  "--a:*/\\\n;display:none",
+  "--a:(/\\\n);display:none",
+  "--a:/*x*//\\\n;display:none",
+  "--a:\"/\"\\\n;display:none",
+  "--a:url(/)\\\n;display:none",
+  "--a:/*/x*/\\\n;display:none",
+  "--a:a/*/*/\\\n;display:none",
+  "--a:\\/\\\n;display:none",
+  "--a:\\2f\\\n;display:none",
+  "--a:/\na\\\n;display:none",
+  "--a:/a b c\\\n;display:none",
+  "--a:/\\\n ;display:none",
+  "--a:/\\\n\t\n;display:none",
+  "display:none;--a:\"/a\\",
+  "display:none;--a:/\\",
+  "display:none;--a:/a\\",
+  "display:none;--a:/\"a\\",
 ];
 
 // Pieces the generated texts are made of.
@@ -165,7 +257,7 @@ const declared = await page.evaluate((texts) => {
     el.setAttribute("style", text);
     if (el.style.getPropertyValue("display") === "") return null;
     el.style.display = "";
-    return [...el.style].join(" ");
+    return el.getAttribute("style");
   });
 }, texts);
 const version = browser.version();
@@ -194,8 +286,8 @@ const rows = (list, from) =>
     })
     .join("\n");
 process.stdout.write(`//! Whether a \`style\` attribute's text declares \`display\` and, when it
-//! does, the properties \`el.style.display = ''\` leaves in it, in order, as
-//! Chromium ${version} reads it. Recorded by
+//! does, the text \`el.style.display = ''\` writes back to the attribute, as
+//! Chromium ${version} writes it. Recorded by
 //! \`tools/visual/style_display_cases.mjs\`; regenerate with that script
 //! rather than editing by hand.
 
