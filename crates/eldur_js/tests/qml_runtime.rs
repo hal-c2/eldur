@@ -6342,8 +6342,13 @@ function verify() {
     // .75 in .5 is declared 0.375, which divides back to .75 exactly; a
     // fade of 0 has the own opacity declared beside it.
     const uneven = getComputedStyle(document.getElementById("uneven")).opacity;
-    const hidden = getComputedStyle(document.getElementById("hidden")).opacity;
-    return [before, getComputedStyle(box).opacity, uneven, hidden].join(" ");
+    const hiddenBox = document.getElementById("hidden");
+    const hidden = getComputedStyle(hiddenBox).opacity;
+    // The declared own opacity is readonly: a write to a box faded to 0 still
+    // reads back.
+    hiddenBox.style.opacity = "0.6";
+    const rewritten = getComputedStyle(hiddenBox).opacity;
+    return [before, getComputedStyle(box).opacity, uneven, hidden, rewritten].join(" ");
 }
 "##,
         r#"Item {
@@ -6372,13 +6377,13 @@ function verify() {
     }
     Component.onCompleted: {
         (Page.__eldur_init || Eldur.init)(root);
-        console.log("ELDUR_OK_FADE", Page.verify(), box.opacity.toFixed(2));
+        console.log("ELDUR_OK_FADE", Page.verify(), box.opacity.toFixed(2), hidden.opacity);
         Qt.quit();
     }
 }"#,
     );
     assert!(
-        output.contains("ELDUR_OK_FADE 0.8 0.6 0.75 0.75 0.30"),
+        output.contains("ELDUR_OK_FADE 0.8 0.6 0.75 0.75 0.6 0.30 0"),
         "{output}"
     );
 }
