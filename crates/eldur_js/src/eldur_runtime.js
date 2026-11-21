@@ -6661,35 +6661,36 @@ function _setInnerHTMLAt(item, html) {
     console.warn("eldur: innerHTML assignment on non-text QML item is unsupported");
 }
 
-// Every child of a box whose content is on lines goes, and the runs with
-// them; the line stays for what comes next.
-// A button's line's text, with what it holds but does not draw where it was.
+// A button's line's text, with what it holds but does not draw where it was:
+// after the nearest node it followed that is still there, else before the
+// nearest one that followed it, else at the start.
 function _linesText(raw) {
     var kids = _rawChildNodes(raw);
     var hidden = _meta(raw).linesHidden || [];
-    // A node that left, or was put in again, is no longer what it followed.
-    var place = function(h) {
-        for (var i = 0; i < h.after.length; ++i) {
-            var node = _gCurrent(h.after[i].node);
-            if (kids.indexOf(node) !== -1 && (_meta(node).linesPut || 0) === h.after[i].put) {
+    // A node that left, or was put in again, is no longer next to it.
+    var stayed = function(anchors) {
+        for (var i = 0; i < anchors.length; ++i) {
+            var node = _gCurrent(anchors[i].node);
+            if (kids.indexOf(node) !== -1 && (_meta(node).linesPut || 0) === anchors[i].put) {
                 return node;
             }
         }
         return null;
     };
-    var at = hidden.map(place);
-    var text = hidden.filter(function(h, i) { return at[i] === null; }).map(function(h) { return h.text; }).join("");
+    var after = hidden.map(function(h) { return stayed(h.after); });
+    var before = hidden.map(function(h, i) { return after[i] ? null : stayed(h.before); });
+    var held = function(at, kid) {
+        return hidden.filter(function(h, i) { return at[i] === kid; }).map(function(h) { return h.text; }).join("");
+    };
+    var text = hidden.filter(function(h, i) { return !after[i] && !before[i]; }).map(function(h) { return h.text; }).join("");
     kids.forEach(function(kid) {
-        text += getText(kid);
-        hidden.forEach(function(h, i) {
-            if (at[i] === kid) {
-                text += h.text;
-            }
-        });
+        text += held(before, kid) + getText(kid) + held(after, kid);
     });
     return text;
 }
 
+// Every child of a box whose content is on lines goes, and the runs with
+// them; the line stays for what comes next.
 function _clearLines(raw) {
     // What it is given replaces all it held, drawn or not.
     delete _meta(raw).linesHidden;
@@ -12007,9 +12008,9 @@ function _btnBecomesLines(raw) {
     lines.font = Qt.binding(function() { return raw.font; });
     lines.color = Qt.binding(function() { return raw.palette.buttonText; });
     lines.textAlign = 4; // Text.AlignHCenter
-    // What it holds but does not draw stays in its textContent, after the
-    // node it followed (or the nearest earlier one still there); leaves
-    // index the nodes made from them below.
+    // What it holds but does not draw stays in its textContent where it
+    // was, between the nodes around it (see _linesText); leaves index the
+    // nodes made from them below.
     var hidden = [];
     if (m.btnHidden) {
         hidden.push({ at: -1, text: m.btnHidden });
@@ -12024,11 +12025,13 @@ function _btnBecomesLines(raw) {
     });
     var texts = leaves.map(_vToReal);
     m.linesHidden = (m.linesHidden || []).concat(hidden.map(function(h) {
+        var anchor = function(node) {
+            return { node: node, put: _meta(node).linesPut || 0 };
+        };
         return {
             text: h.text,
-            after: texts.slice(0, h.at + 1).reverse().map(function(node) {
-                return { node: node, put: _meta(node).linesPut || 0 };
-            })
+            after: texts.slice(0, h.at + 1).reverse().map(anchor),
+            before: texts.slice(h.at + 1).map(anchor)
         };
     }));
     _btnForget(raw);
@@ -12282,6 +12285,10 @@ function _insertChildren(raw, nodes, ref, going, atStart) {
             var nm = _meta(n);
             nm.linesPut = (nm.linesPut || 0) + 1;
         });
+        // Put at its start is before its first node, a Text one too.
+        if (atStart) {
+            ref = _rawChildNodes(raw).filter(function(n) { return nodes.indexOf(n) === -1; })[0] || null;
+        }
     }
     if (nodes.length > 0 && nodes.every(_isTextNode) && _drawsOwnText(raw)
         && (!ref || ref.btnOf === raw) && (!going || going.btnOf === raw)) {
@@ -14673,7 +14680,7 @@ function wrap(rawItem) {
         },
         prepend: function() {
             var rawNodes = _expandInsertRawNodes(arguments);
-            var vFirst = _vHostOf(rawItem, rawNodes, null);
+            var vFirst = _btnKeepsNodes(rawItem, rawNodes, null) ? null : _vHostOf(rawItem, rawNodes, null);
             if (vFirst) {
                 _vPut(vFirst, rawNodes, vFirst.kids.filter(_vIsRendered)[0] || null, null);
                 return;
@@ -22350,11 +22357,15 @@ function _vCarryModel(raw, old, nodes) {
 }
 
 // `true` when the nodes went into a line of text, in place of `going` if given.
+// A button drawing its text keeps its Text nodes itself; given an element,
+// it holds them in a line (`_btnBecomesLines`). No model's line takes them.
+function _btnKeepsNodes(raw, nodes, ref, going) {
+    return nodes.length > 0 && _drawsOwnText(raw) || _takesMarkupText(raw, nodes, ref, going)
+        || Boolean(_meta(raw).btnLines);
+}
+
 function _vTryInsert(raw, nodes, ref, going) {
-    // A button drawing its text keeps its Text nodes itself; given an
-    // element, it holds them in a line (`_btnBecomesLines`).
-    if (nodes.length > 0 && _drawsOwnText(raw) || _takesMarkupText(raw, nodes, ref, going)
-        || _meta(raw).btnLines) {
+    if (_btnKeepsNodes(raw, nodes, ref, going)) {
         return false;
     }
     var host = _vHostOf(raw, nodes, ref);

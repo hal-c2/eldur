@@ -18,6 +18,9 @@ L("hidden-left",JSON.stringify(bh.textContent));
 // It also stays there when the text it followed is put in again.
 var bm=byId("bm"),mb=document.createElement("span");mb.textContent="B";bm.append(mb);bm.append(bm.firstChild);
 L("hidden-stays",JSON.stringify(bm.textContent));
+// Hidden text before the first node stays before it when text is put ahead.
+var bk=byId("bk"),kx=document.createElement("span");kx.textContent="x";bk.append(kx);bk.prepend("y");
+L("hidden-first",JSON.stringify(bk.textContent));
 // A created button holding a line keeps the line's height when restyled.
 var pcd=document.createElement("div");byId("pc").append(pcd);
 var cb=document.createElement("button");cb.style.width="60px";pcd.append(cb);
@@ -48,7 +51,7 @@ ti.addEventListener("focus",function(){L("focus",I(ti))});
 ti.addEventListener("input",function(){L("typed",JSON.stringify(ti.value))});
 });
 </script></head><body data-clicks="#mv key:k #ti key:j">
-<p><button id="ba">A</button> <button id="bn">Save</button> <button id="bh">Save<kbd style="display:none">hidden</kbd></button> <button id="bm">A<kbd style="display:none">H</kbd></button></p>
+<p><button id="ba">A</button> <button id="bn">Save</button> <button id="bh">Save<kbd style="display:none">hidden</kbd></button> <button id="bm">A<kbd style="display:none">H</kbd></button> <button id="bk"><kbd style="display:none">K</kbd>Save</button></p>
 <div id="pc"></div>
 <fieldset id="dfs" disabled><legend id="dfsl">off</legend></fieldset>
 <p id="pm"></p>
