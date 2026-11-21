@@ -800,6 +800,140 @@ const CASES: &[Case] = &[
         toggle: "",
         back: &[],
     },
+    // The tokenizer's edges (Chromium 158, `out/g17/chromium/r85n`): clearing
+    // `display` shows `#shy` only when its `style` text declares one.
+    Case {
+        name: "edge_escaped_quote_in_string",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:&quot;a\&quot;/*&quot;;display:none;--b:*/;color:red">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[8.0, 48.0],
+    },
+    Case {
+        name: "edge_newline_ends_string",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:&quot;a
+;display:none;--b:&quot;">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[8.0, 48.0],
+    },
+    Case {
+        name: "edge_backslash_at_end",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="display:none;--a:\">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[8.0, 48.0],
+    },
+    Case {
+        name: "edge_six_digit_escape_space",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:\000075 rl(/*);display:none;--b:*/;color:red">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[8.0, 48.0],
+    },
+    Case {
+        name: "edge_escape_crlf_continues_name",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:a\75&#13;
+url(/*);display:none;--b:*/;color:red">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
+    Case {
+        name: "edge_escaped_slash",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:\/*;display:none;--b:*/;color:red">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[8.0, 48.0],
+    },
+    Case {
+        name: "edge_url_quoted_arg_comment",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:url( &quot;/*&quot; /* x */);display:none;--b:*/;color:red">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[8.0, 48.0],
+    },
+    Case {
+        name: "edge_unclosed_url",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:url(/*;display:none">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
+    Case {
+        name: "edge_comment_after_quote_in_url",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:url(a&quot;/*);display:none;--b:*/;color:red">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[8.0, 48.0],
+    },
+    Case {
+        name: "edge_digit_led_name",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:5url(/*);display:none;--b:*/;color:red">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
+    Case {
+        name: "edge_double_dash_ident",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:--url(/*);display:none;--b:*/;color:red">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
+    Case {
+        name: "edge_hash_name",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:#url(/*);display:none;--b:*/;color:red">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
+    Case {
+        name: "edge_bracket_block",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:[;display:none;--b:];color:red">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
     // `url(` right after an escape goes on that name, a function, so its
     // `/*` is a comment and no `display` is declared to clear.
     Case {
@@ -1567,4 +1701,69 @@ fn url_after_an_escape_goes_on_that_name() {
 #[test]
 fn url_after_an_escaped_letter_goes_on_that_name() {
     run(case("escaped_letter_continues_name"));
+}
+
+#[test]
+fn tokenizer_edge_escaped_quote_in_string() {
+    run(case("edge_escaped_quote_in_string"));
+}
+
+#[test]
+fn tokenizer_edge_newline_ends_string() {
+    run(case("edge_newline_ends_string"));
+}
+
+#[test]
+fn tokenizer_edge_backslash_at_end() {
+    run(case("edge_backslash_at_end"));
+}
+
+#[test]
+fn tokenizer_edge_six_digit_escape_space() {
+    run(case("edge_six_digit_escape_space"));
+}
+
+#[test]
+fn tokenizer_edge_escape_crlf_continues_name() {
+    run(case("edge_escape_crlf_continues_name"));
+}
+
+#[test]
+fn tokenizer_edge_escaped_slash() {
+    run(case("edge_escaped_slash"));
+}
+
+#[test]
+fn tokenizer_edge_url_quoted_arg_comment() {
+    run(case("edge_url_quoted_arg_comment"));
+}
+
+#[test]
+fn tokenizer_edge_unclosed_url() {
+    run(case("edge_unclosed_url"));
+}
+
+#[test]
+fn tokenizer_edge_comment_after_quote_in_url() {
+    run(case("edge_comment_after_quote_in_url"));
+}
+
+#[test]
+fn tokenizer_edge_digit_led_name() {
+    run(case("edge_digit_led_name"));
+}
+
+#[test]
+fn tokenizer_edge_double_dash_ident() {
+    run(case("edge_double_dash_ident"));
+}
+
+#[test]
+fn tokenizer_edge_hash_name() {
+    run(case("edge_hash_name"));
+}
+
+#[test]
+fn tokenizer_edge_bracket_block() {
+    run(case("edge_bracket_block"));
 }

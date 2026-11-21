@@ -842,14 +842,14 @@ fn walked_ancestors(doc: &Document, node: NodeId) -> impl Iterator<Item = NodeId
 fn without_display(style: &str) -> Option<String> {
     // The tokenizer drops comments before a declaration is read, so
     // `display/**/:none` declares `display`.
-    let style = without_comments(style);
-    let parts = declaration_parts(&style);
-    fn named<'a>(p: &&'a str) -> Option<(&'a str, &'a str)> {
+    let parts = declarations(style);
+    fn named(p: &str) -> Option<(&str, &str)> {
         p.split_once(':')
             .map(|(name, value)| (name.trim(), value.trim()))
     }
     if !parts
         .iter()
+        .map(String::as_str)
         .filter_map(named)
         .any(|(name, _)| name.eq_ignore_ascii_case("display"))
     {
@@ -857,7 +857,7 @@ fn without_display(style: &str) -> Option<String> {
     }
     let mut normal = Vec::new();
     let mut important = Vec::new();
-    for (name, value) in parts.iter().filter_map(named) {
+    for (name, value) in parts.iter().map(String::as_str).filter_map(named) {
         if name.eq_ignore_ascii_case("display") || value.is_empty() {
             continue;
         }
@@ -875,31 +875,31 @@ fn without_display(style: &str) -> Option<String> {
     Some(normal.join(" "))
 }
 
-/// `style` with each comment outside a string turned into a space, which
-/// keeps the tokens on either side apart as the tokenizer does.
-fn without_comments(style: &str) -> std::borrow::Cow<'_, str> {
-    if !style.contains("/*") {
-        return style.into();
-    }
+/// The declarations of a `style` attribute as CSS Syntax 3 reads them, each
+/// with its comments turned into a space (which keeps the tokens on either
+/// side apart): split at a `;` outside strings, escapes, `url(` tokens and
+/// `()`, `[]` and `{}` blocks. Measured in Chromium 158, the cases in
+/// `cascade/style_display_chromium.rs`.
+fn declarations(style: &str) -> Vec<String> {
+    let mut parts = Vec::new();
     let mut out = String::with_capacity(style.len());
-    let mut quote = None::<char>;
+    // The closers of the blocks open here, innermost last: a `]` inside
+    // `(` closes nothing, and one with no block open is a token.
+    let mut closers = Vec::new();
     // Whether what came last continues a name, escapes included: in
     // `a\75 url(` the space ends the escape, so `url(` goes on `auurl`.
     let mut in_name = false;
     let mut chars = style.chars().peekable();
     while let Some(c) = chars.next() {
-        // An unquoted `url(` reads to its `)` as one token, comments and all:
-        // `url(/*)` names `/*` (CSS Syntax 3, 4.3.6).
-        if quote.is_none()
-            && !in_name
-            && let Some(name) = unquoted_url(c, &chars)
-        {
+        // An unquoted `url(` reads to its `)` as one token, comments, quotes
+        // and `;` too: `url(/*)` names `/*` (CSS Syntax 3, 4.3.6).
+        if !in_name && let Some(name) = unquoted_url(c, &chars) {
             out.push(c);
             out.extend(chars.by_ref().take(name));
             while let Some(c) = chars.next() {
                 out.push(c);
                 match c {
-                    '\\' => out.extend(chars.next()),
+                    '\\' => out.extend(chars.next_if(|e| !is_newline(*e))),
                     ')' => break,
                     _ => {}
                 }
@@ -907,8 +907,8 @@ fn without_comments(style: &str) -> std::borrow::Cow<'_, str> {
             in_name = false;
             continue;
         }
-        match (quote, c) {
-            (None, '\\') => {
+        match c {
+            '\\' => {
                 // The whole escape, hex digits and the space after them too.
                 let mut taken = 0;
                 let read = ident_char(&mut std::iter::once(c).chain(chars.clone()), &mut taken);
@@ -916,21 +916,27 @@ fn without_comments(style: &str) -> std::borrow::Cow<'_, str> {
                 out.extend(chars.by_ref().take(taken - 1));
                 in_name = read.is_some();
             }
-            (Some(_), '\\') => {
+            '"' | '\'' => {
                 out.push(c);
-                out.extend(chars.next());
-            }
-            (Some(q), c) if c == q => {
-                quote = None;
-                out.push(c);
-            }
-            (Some(_), _) => out.push(c),
-            (None, '"' | '\'') => {
-                quote = Some(c);
+                // A newline ends a string unescaped, a bad string, and is the
+                // whitespace after it.
+                while let Some(s) = chars.next_if(|s| !is_newline(*s)) {
+                    out.push(s);
+                    if s == c {
+                        break;
+                    }
+                    if s == '\\'
+                        && let Some(e) = chars.next()
+                    {
+                        out.push(e);
+                        if e == '\r' {
+                            out.extend(chars.next_if_eq(&'\n'));
+                        }
+                    }
+                }
                 in_name = false;
-                out.push(c);
             }
-            (None, '/') if chars.peek() == Some(&'*') => {
+            '/' if chars.peek() == Some(&'*') => {
                 chars.next();
                 let mut last = ' ';
                 for c in chars.by_ref() {
@@ -942,13 +948,39 @@ fn without_comments(style: &str) -> std::borrow::Cow<'_, str> {
                 in_name = false;
                 out.push(' ');
             }
-            (None, c) => {
-                in_name = c.is_alphanumeric() || matches!(c, '-' | '_') || !c.is_ascii();
+            ';' if closers.is_empty() => {
+                parts.push(std::mem::take(&mut out));
+                in_name = false;
+            }
+            _ => {
+                match c {
+                    '(' => closers.push(')'),
+                    '[' => closers.push(']'),
+                    '{' => closers.push('}'),
+                    ')' | ']' | '}' if closers.last() == Some(&c) => {
+                        closers.pop();
+                    }
+                    _ => {}
+                }
+                // `#` and `@` lead a hash or at-keyword's name: `#url(` is
+                // no `url(` token.
+                in_name =
+                    c.is_alphanumeric() || matches!(c, '-' | '_' | '#' | '@') || !c.is_ascii();
                 out.push(c);
             }
         }
     }
-    out.into()
+    parts.push(out);
+    parts
+        .into_iter()
+        .map(|p| p.trim().to_owned())
+        .filter(|p| !p.is_empty())
+        .collect()
+}
+
+/// A newline as CSS reads one: `\r` and form feed are preprocessed into it.
+fn is_newline(c: char) -> bool {
+    matches!(c, '\n' | '\r' | '\x0c')
 }
 
 /// When `first` and then `rest`, outside a name, open an unquoted `url(`
@@ -1000,11 +1032,16 @@ fn ident_char(it: &mut (impl Iterator<Item = char> + Clone), taken: &mut usize) 
     if digits == 0 {
         let e = it.next()?;
         *taken += 1;
-        return (e != '\n').then_some(e);
+        return (!is_newline(e)).then_some(e);
     }
-    if it.clone().next().is_some_and(|w| w.is_ascii_whitespace()) {
+    if let Some(w) = it.clone().next().filter(char::is_ascii_whitespace) {
         it.next();
         *taken += 1;
+        // CR LF is one newline, so one whitespace.
+        if w == '\r' && it.clone().next() == Some('\n') {
+            it.next();
+            *taken += 1;
+        }
     }
     Some(
         char::from_u32(hex)
@@ -1020,34 +1057,6 @@ fn strip_important(value: &str) -> Option<&str> {
         .trim()
         .eq_ignore_ascii_case("important")
         .then(|| value[..bang].trim_end())
-}
-
-/// The declarations of a `style` attribute, split where CSS splits them: at
-/// a `;` outside strings, escapes and parentheses (`url(a;b)`).
-fn declaration_parts(style: &str) -> Vec<&str> {
-    let mut parts = Vec::new();
-    let (mut depth, mut quote, mut start) = (0_i32, None::<char>, 0);
-    let mut chars = style.char_indices();
-    while let Some((i, c)) = chars.next() {
-        match (quote, c) {
-            (_, '\\') => {
-                chars.next();
-            }
-            (Some(q), c) if c == q => quote = None,
-            (Some(_), _) => {}
-            (None, '"' | '\'') => quote = Some(c),
-            (None, '(') => depth += 1,
-            (None, ')') => depth -= 1,
-            (None, ';') if depth <= 0 => {
-                parts.push(style[start..i].trim());
-                start = i + 1;
-            }
-            _ => {}
-        }
-    }
-    parts.push(style[start..].trim());
-    parts.retain(|p| !p.is_empty());
-    parts
 }
 
 fn declares_display(decl: &ParsedDecl) -> bool {
@@ -2631,12 +2640,33 @@ pub(crate) fn layer_ranks(sheets: &[Stylesheet], viewport: &Viewport) -> LayerRa
 #[cfg(test)]
 mod sheet_vars_work;
 #[cfg(test)]
+#[rustfmt::skip]
+mod style_display_chromium;
+#[cfg(test)]
 mod variant_work;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{Length, LengthAuto, LengthPercentage, Rgba, Size};
+
+    /// Each recorded `style` text declares `display` here when it does in
+    /// Chromium: the tokenizer's edges by name, then seed 51's generated run.
+    #[test]
+    fn a_style_attribute_declares_display_where_chromium_reads_one() {
+        use super::style_display_chromium::{GENERATED, NAMED};
+        let differ: Vec<_> = NAMED
+            .iter()
+            .chain(GENERATED)
+            .filter(|(style, declared)| without_display(style).is_some() != *declared)
+            .collect();
+        assert!(
+            differ.is_empty(),
+            "{} of {} recorded texts differ from Chromium (text, Chromium declares display): {differ:#?}",
+            differ.len(),
+            NAMED.len() + GENERATED.len(),
+        );
+    }
 
     #[test]
     fn blockification_rules_per_css_display_3() {
