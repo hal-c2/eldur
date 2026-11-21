@@ -2685,6 +2685,34 @@ fn opacity_on_an_inline_element_fades_its_text() {
     assert!(!whole.contains("opacity: 0.5"), "{whole}");
 }
 
+/// A box on the line inside a faded inline element fades with its text, as
+/// the element has no item of its own to carry the opacity.
+#[test]
+fn opacity_on_an_inline_element_fades_the_boxes_it_holds() {
+    let (block, _) = convert(&page(
+        "",
+        r#"<p>a <span style="opacity:.5">b <span style="display:inline-block;background:red;width:20px;height:20px"></span></span></p>"#,
+    ));
+    assert!(block.contains("#80000000"), "{block}");
+    assert!(block.contains("opacity: 0.5"), "{block}");
+    let (image, _) = convert(&page(
+        "",
+        r#"<p>a <span style="opacity:.5">b <img src="a.png" width="10" height="10"></span></p>"#,
+    ));
+    assert!(image.contains("opacity: 0.5"), "{image}");
+    // Nested elements multiply.
+    let (nested, _) = convert(&page(
+        "",
+        r#"<p>a <span style="opacity:.5">b <span style="opacity:.5">c <span style="display:inline-block;width:4px;height:4px;background:red"></span></span></span></p>"#,
+    ));
+    assert!(nested.contains("opacity: 0.25"), "{nested}");
+    let (opaque, _) = convert(&page(
+        "",
+        r#"<p>a <span>b <span style="display:inline-block;width:4px;height:4px;background:red"></span></span></p>"#,
+    ));
+    assert!(!opaque.contains("opacity: "), "{opaque}");
+}
+
 /// The text of a positioned inline element is in its block's `Text`, at the
 /// block's level, so a `z-index` it has is reported rather than lost.
 #[test]
