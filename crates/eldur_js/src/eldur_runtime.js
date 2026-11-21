@@ -7075,7 +7075,7 @@ function _hiddenRecord(text, after, before) {
 
 // `kids` read with `textOf`, and the `hidden` records' text between them. A
 // record missing a list of anchors has none on that side.
-function _linesHiddenText(hidden, kids, textOf) {
+function _linesHiddenText(hidden, kids, textOf, places) {
     // A node that left, or was put in again, is no longer next to it.
     var stayed = function(anchors) {
         anchors = anchors || [];
@@ -7089,6 +7089,14 @@ function _linesHiddenText(hidden, kids, textOf) {
     };
     var after = hidden.map(function(h) { return stayed(h.after); });
     var before = hidden.map(function(h, i) { return after[i] ? null : stayed(h.before); });
+    if (places) {
+        // Before which of `kids` each record goes, and its turn in that gap:
+        // what had none left, then what follows a node, then what precedes one.
+        hidden.forEach(function(h, i) {
+            places.push(after[i] ? { at: kids.indexOf(after[i]) + 1, turn: 1 }
+                : before[i] ? { at: kids.indexOf(before[i]), turn: 2 } : { at: 0, turn: 0 });
+        });
+    }
     var held = function(at, kid) {
         return hidden.filter(function(h, i) { return at[i] === kid; }).map(function(h) { return h.text; }).join("");
     };
@@ -7097,6 +7105,28 @@ function _linesHiddenText(hidden, kids, textOf) {
         text += held(before, kid) + textOf(kid) + held(after, kid);
     });
     return text;
+}
+
+// Each record anchored to the nodes around it now, before anything is put
+// on the line: a node put in then goes on its own side of the hidden text,
+// also where every node the text was beside has left
+// (`A<kbd hidden>H</kbd>` with A gone and X prepended reads "XH…").
+function _linesHiddenSettle(raw) {
+    var m = _meta(raw);
+    var hidden = m.linesHidden;
+    if (!hidden || hidden.length === 0) {
+        return;
+    }
+    var kids = _rawChildNodes(raw);
+    var places = [];
+    _linesHiddenText(hidden, kids, function() { return ""; }, places);
+    var order = hidden.map(function(h, i) { return i; }).sort(function(x, y) {
+        return places[x].at - places[y].at || places[x].turn - places[y].turn || x - y;
+    });
+    m.linesHidden = order.map(function(i) {
+        var at = places[i].at;
+        return _hiddenRecord(hidden[i].text, kids.slice(0, at).reverse(), kids.slice(at));
+    });
 }
 
 // Every child of a box whose content is on lines goes, and the runs with
@@ -12705,7 +12735,7 @@ function _btnRuns(raw, dom, own, split) {
             runs.after.push(split[i + 1]);
             all += split[i] + split[i + 1];
         }
-        if (_btnDrawn(raw, runs.texts.join("")) === own && all === dom) {
+        if (_btnDrawn(runs.texts.join("")) === own && all === dom) {
             return runs;
         }
     }
@@ -12716,14 +12746,12 @@ function _btnRuns(raw, dom, own, split) {
     return { before: "", texts: [own], after: [""] };
 }
 
-// What a button's Text nodes draw: as a browser lays out a line, a run of
-// spaces is one and the line's ends have none, unless `white-space` keeps
-// them. The nodes keep theirs, as a page's do.
-function _btnDrawn(raw, str) {
-    var white = _gHasCascade() ? _gFreshStyle(raw)["white-space"] : null;
-    if (white && white !== "normal" && white !== "nowrap") {
-        return str;
-    }
+// What a button's Text nodes draw: a run of spaces is one and the label's
+// ends have none. The nodes keep theirs, as a page's do. This collapses as
+// the converter's label and `eldurDomRuns` do, whatever the button's
+// `white-space` (Known gap: a `pre` button's label collapses its spaces), so
+// a split the converter made is always the one read here.
+function _btnDrawn(str) {
     return str.replace(/[ \t\n\r\f]+/g, " ").replace(/^ | $/g, "");
 }
 
@@ -12790,7 +12818,7 @@ function _btnTakeOut(leaf, staying) {
 
 function _btnDraw(raw) {
     var m = _meta(raw);
-    var own = _btnDrawn(raw, (m.btnNodes || []).map(function(leaf) { return leaf.data; }).join(""));
+    var own = _btnDrawn((m.btnNodes || []).map(function(leaf) { return leaf.data; }).join(""));
     if (typeof raw.eldurDomText === "string" && !m.ownText) {
         raw.eldurDomText = (m.btnHidden || "") + (m.btnNodes || []).map(function(leaf) {
             return (leaf.btnBefore || "") + leaf.data + (leaf.btnAfter || "");
@@ -12889,6 +12917,7 @@ function _insertChildren(raw, nodes, ref, going, atStart) {
         nodes = nodes.map(_gCurrent);
         ref = ref ? _gCurrent(ref) : ref;
         going = going ? _gCurrent(going) : going;
+        _linesHiddenSettle(raw);
         // Hidden text put after one of them stays where it was.
         nodes.forEach(function(n) {
             var nm = _meta(n);
@@ -15603,10 +15632,17 @@ function wrap(rawItem) {
                 _vPut(p, _expandInsertRawNodes(arguments), around[around.indexOf(rawItem) + 1] || null, null);
                 return;
             }
+            var rawNodes = _expandInsertRawNodes(arguments);
+            if (_meta(p).btnLines) {
+                // A button's line holds its Text nodes as nodes: what goes after
+                // this element goes before the next of them, a Text one too.
+                var onLine = _rawChildNodes(p).filter(function(n) { return n === rawItem || rawNodes.indexOf(n) === -1; });
+                _insertChildren(p, rawNodes, onLine[onLine.indexOf(rawItem) + 1] || null);
+                return;
+            }
             var kids = _rawElementChildren(p);
             var idx = kids.indexOf(rawItem);
             var nextRef = (idx !== -1 && idx + 1 < kids.length) ? kids[idx + 1] : null;
-            var rawNodes = _expandInsertRawNodes(arguments);
             // The whitespace after this element is a Text node of its own, so
             // what goes right after the element goes before that whitespace.
             var wsOwner = nextRef || _meta(p).hostBox || p;
@@ -15701,7 +15737,12 @@ function wrap(rawItem) {
             for (var s = 0; s < stKeys.length; ++s) {
                 setStyle(clone, stKeys[s], m.styles[stKeys[s]]);
             }
-            if (Boolean(deep)) {
+            if (Boolean(deep) && m.btnLines) {
+                // A button's line holds Text nodes beside its elements: each is copied, in order.
+                _rawChildNodes(rawItem).forEach(function(kid) {
+                    clone.appendChild(wrap(kid).cloneNode(true));
+                });
+            } else if (Boolean(deep)) {
                 var kids = _rawElementChildren(rawItem);
                 if (kids.length > 0) {
                     for (var c = 0; c < kids.length; ++c) {

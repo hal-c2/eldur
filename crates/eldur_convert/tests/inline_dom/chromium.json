@@ -67,6 +67,16 @@
   ],
   "clicks": []
  },
+ "button_line_nodes": {
+  "log": [
+   "LC after-element B,\"!\",\" on\" \"Go! on\"",
+   "LC clone-lines B,\" on\" \"Go on\"",
+   "LC hidden-unanchored \"XHB\"",
+   "LC pre-split [\"Save \",\" now\"]",
+   "LC pre-set \"Save K later\""
+  ],
+  "clicks": []
+ },
  "button_lines": {
   "log": [
    "LC append-own \"A\",SPAN \"Ax\" true",
