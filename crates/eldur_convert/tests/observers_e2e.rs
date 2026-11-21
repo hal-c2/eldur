@@ -178,11 +178,13 @@ fn a_runaway_mutation_loop_stops() {
     );
 }
 
-/// 600 appends to body walk at most 10 items each on average, by the runtime's
-/// own count, so a loaded machine cannot pass a quadratic append or fail a
-/// linear one. The average holds the item table's sweeps, each of which walks
-/// every record once the records double. Chromium has no such count, so this
-/// page has no recording.
+/// 600 appends to body, and to a flex column, walk at most 10 items each on
+/// average, by the runtime's own count, so a loaded machine cannot pass a
+/// quadratic append or fail a linear one. The average holds the item table's sweeps, each of which walks
+/// every record once the records double. Leaving out the five largest of each
+/// hundred, which holds any sweep, the last hundred walk no more than the first
+/// hundred, so a cost that grows as log n fails too. Chromium has no such count,
+/// so this page has no recording.
 #[test]
 fn appends_walk_a_few_items_each_on_average() {
     if support::no_qt() {
@@ -195,8 +197,11 @@ fn appends_walk_a_few_items_each_on_average() {
         "append_scaling",
         &html,
         &[
-            "OB 600 appends walk at most 10 items each on average",
-            "OB rows 600",
+            "OB body: 600 appends walk at most 10 items each on average",
+            "OB body: the last 100 appends walk no more than the first 100",
+            "OB flex: 600 appends walk at most 10 items each on average",
+            "OB flex: the last 100 appends walk no more than the first 100",
+            "OB rows 600 600",
         ],
     ) {
         panic!("{e}");
