@@ -122,6 +122,31 @@ fn a_comment_opener_inside_an_unquoted_url_is_part_of_the_url() {
 }
 
 #[test]
+fn a_url_name_written_with_escapes_is_a_url_too() {
+    // `\75rl(` and `u\72 l(` decode to `url(`, so `/*` inside them is the
+    // URL's; `\75rl("…")` is a function and `\75rlx(` another name
+    // (Chromium 158).
+    let page = r#"<!DOCTYPE html>
+<style>
+  [style*="display"] { display: none; }
+</style>
+<div id="hex" style="background-image:\75rl(/*);display:none">a</div>
+<div id="spaced" style="background-image:u\72 l(/*);display:none">b</div>
+<div id="upper" style="background-image:\55 \52\4C(/*);display:none">c</div>
+<div id="other" style="--a:\75rlx(/*);display:none */;color:red">d</div>
+"#;
+    let doc = Document::parse(page);
+    let viewport = Viewport::default();
+    let (sheets, _) = collect_stylesheets(&doc, &mut NoSheets, &viewport);
+    let id = |name: &str| doc.element_by_id(name).expect(name);
+    let nodes: BTreeSet<_> = [id("hex"), id("spaced"), id("upper"), id("other")].into();
+    assert_eq!(
+        rules_hide(&doc, &sheets, &viewport, &nodes),
+        [id("other")].into()
+    );
+}
+
+#[test]
 fn a_variable_display_hides_when_it_resolves_to_none() {
     let none: BTreeMap<String, String> = [("--d".to_owned(), "none".to_owned())].into();
     let block: BTreeMap<String, String> = [("--d".to_owned(), "block".to_owned())].into();
