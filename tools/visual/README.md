@@ -223,6 +223,17 @@ Passing `--diff <out.png>` writes a labelled three-panel PNG:
   `tools/visual/baseline.json` (preserving unselected or failed entries) and is
   refused when combined with `--selftest`.
 
+### 5. `style_display_cases.mjs`
+
+Records in Chromium whether each of a set of `style` attribute texts declares
+`display`: the CSS tokenizer's edges (strings, escapes, comments, `url(`
+tokens, blocks) by name, then a fixed seed's 600 generated texts. It writes
+the table that `eldur_css` checks the converter's own reading against:
+
+```bash
+node tools/visual/style_display_cases.mjs > crates/eldur_css/src/cascade/style_display_chromium.rs
+```
+
 ## Self-Test & Font Choice (`tools/visual/selftest/`)
 
 `python3 tools/visual/run.py --selftest` renders five hand-written HTML/QML
