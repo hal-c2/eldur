@@ -6615,8 +6615,7 @@ function _itCollect(raw, out) {
             // One that keeps its spaces keeps them here too: they are drawn.
             var label = _itLiteral(typeof raw.eldurDomText === "string" && typeof raw.text === "string"
                 ? _pseudoOwn(raw, raw.text) : getText(raw));
-            out.push(_isTextButton(raw) && /^(pre|pre-wrap|break-spaces)$/.test(_btnWhiteSpace(raw))
-                ? _itKept(label) : label);
+            out.push(_itKeepsSpaces(raw) ? _itKept(label) : label);
         } else if (kids[0].tableSlot) {
             _itGrid(kids, out);
         } else {
@@ -6760,6 +6759,18 @@ function _contentName(raw) {
     } finally {
         _itNamed = was;
     }
+}
+
+// A button's label, or a run of text on the line a button holds its
+// elements on, keeps its spaces when the button's white-space does.
+function _itKeepsSpaces(raw) {
+    var button = _isTextButton(raw) ? raw : null;
+    for (var p = raw.parent, up = 0; !button && p && up < 4; p = p.parent, ++up) {
+        if (_meta(p).btnLines && _nodeTag(p) === "button") {
+            button = p;
+        }
+    }
+    return Boolean(button) && /^(pre|pre-wrap|break-spaces)$/.test(_btnWhiteSpace(button));
 }
 
 // Spaces a box draws, kept from `_innerText`'s collapsing until its end.
@@ -14234,14 +14245,24 @@ var _SVG_ATTR_CASE = (function() {
 // One attribute of a start tag: its name, then its value quoted either way or
 // bare, so a name-like word inside a quoted value is part of that value. A
 // quoted value runs to its closing quote, or to the end of the tag's text when
-// there is none, as in the HTML tokenizer's attribute-value states.
-var _HTML_ATTR = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)(?:\s*=\s*(?:"([^"]*)(?:"|$)|'([^']*)(?:'|$)|([^\s"'=<>`]+)))?/g;
+// there is none, as in the HTML tokenizer's attribute-value states. A bare
+// value runs to a space or the `>`: `a/` in `<b data-x=a/>` is the value.
+var _HTML_ATTR = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)(?:\s*=\s*(?:"([^"]*)(?:"|$)|'([^']*)(?:'|$)|([^\s>"'][^\s>]*)))?/g;
 
 // What follows a tag's name up to its `>`: a `>` or `<` inside a quoted value
 // is part of the value, and an unclosed quote runs to the end of the markup.
-// Each tag pattern ends in `(>|$)`: a tag the markup ends inside of matches
-// with an empty last group, and the HTML parser drops such a tag.
-var _TAG_REST = "(?:[^>\"'=]|=\\s*\"[^\"]*(?:\"|$)|=\\s*'[^']*(?:'|$)|=|[\"'])*";
+// A bare value runs to a space or the `>`, so `<b data-x=a/>` is not
+// self-closing, while a `/` of its own right before the `>` is left for the
+// tag pattern's self-closing group: `<circle r="1" />`. Each tag pattern ends
+// in `(>|$)`: a tag the markup ends inside of matches with an empty last
+// group, and the HTML parser drops such a tag. Once the name is read the
+// pattern always matches, at the `>` or the end, so it never backtracks far.
+var _TAG_REST = "(?:[^>\"'=/]|\\/(?!>)|=\\s*\"[^\"]*(?:\"|$)|=\\s*'[^']*(?:'|$)|=\\s*[^\\s>\"'][^\\s>]*|=|[\"'])*";
+// A start tag: its name, what follows it, whether it closes itself, and its
+// `>`, empty when the markup ends inside the tag. A `/` not closing the tag
+// separates its name from an attribute, as HTML's tokenizer reads
+// `<i/aria-label="Now">`.
+var _HTML_OPEN_TAG = "<([a-zA-Z][a-zA-Z0-9-]*)((?:\\s|\\/(?!>))" + _TAG_REST + ")?\\s*(\\/?)(>|$)";
 // Elements whose content the HTML tokenizer reads as text up to their own
 // end tag (its RAWTEXT, script-data and PLAINTEXT states), and those of them
 // whose character references it still decodes (RCDATA).
@@ -14405,57 +14426,175 @@ function _rawTextEnd(src, tag, from) {
     return [src.length, src.length];
 }
 
+// `src` up to the first start tag the input ends inside: HTML's tokenizer
+// drops it and everything after it. Each tag is read whole, so a `<` inside
+// one that closes is part of it, and the scan reads each character once.
+function _htmlCutRunOff(src) {
+    var re = new RegExp(_HTML_OPEN_TAG, "g");
+    var m;
+    while ((m = re.exec(src)) !== null) {
+        if (m[4] === "") {
+            return src.slice(0, m.index);
+        }
+    }
+    return src;
+}
+
+// How deep a fragment's elements nest below where it is parsed: one that
+// would be deeper is its parent's sibling, as in Chromium's parser.
+var _HTML_MAX_DEPTH = 512;
+
+// Where the end tag of each start tag of `src` is, by the start tag's index,
+// found in one pass over the parser's own tokens: an end tag closes the latest
+// open element of its name, which is what counting depth from each start tag
+// finds. Every tag is read whole, so one written inside another's quoted value
+// is neither, and raw text in HTML holds no tags. A start tag closes itself by
+// its own `/>`, not one ending a bare value. `inSvg` is the namespace `src`
+// starts in, which decides what raw text is.
+function _htmlCloses(src, inSvg) {
+    var tokenRe = new RegExp("<(/?)([a-zA-Z][a-zA-Z0-9-]*)" + _TAG_REST + "(?:>|$)", "g");
+    var openRe = new RegExp(_HTML_OPEN_TAG, "y");
+    var found = {};
+    var open = {};
+    // The namespace each element entered: an `<svg>` enters SVG, where the
+    // raw-text names are ordinary elements, and its integration points and
+    // the HTML elements that leave it go back to HTML.
+    var spaces = [];
+    var tok;
+    while ((tok = tokenRe.exec(src)) !== null) {
+        var tag = tok[2].toLowerCase();
+        var svgNow = spaces.length > 0 ? spaces[spaces.length - 1].svg : Boolean(inSvg);
+        if (tok[1] === "/") {
+            if (spaces.length > 0 && spaces[spaces.length - 1].tag === tag) {
+                spaces.pop();
+            }
+            var opens = open[tag];
+            if (opens && opens.length > 0) {
+                found[opens.pop()] = [tok.index, tokenRe.lastIndex];
+            }
+            continue;
+        }
+        if (!svgNow && _RAW_TEXT_TAGS[tag] === true) {
+            tokenRe.lastIndex = _rawTextEnd(src, tag, tokenRe.lastIndex)[1];
+            continue;
+        }
+        openRe.lastIndex = tok.index;
+        var whole = openRe.exec(src);
+        if ((whole ? whole[3] === "/" : tok[0].slice(-2) === "/>") || _VOID_TAGS[tag]) {
+            continue;
+        }
+        if (tag === "svg") {
+            spaces.push({ tag: tag, svg: true });
+        } else if (svgNow && (_SVG_HTML_POINTS[tag] || _breaksOutOfSvg(tag, tok[0]))) {
+            spaces.push({ tag: tag, svg: false });
+        }
+        (open[tag] || (open[tag] = [])).push(tok.index);
+    }
+    return found;
+}
+
 // `inSvg`: the markup is the content of an SVG element outside an integration
 // point, with the SVG elements an HTML one leaves already closed.
+//
+// One pass with a stack of open elements rather than a call per element, so
+// markup nested deeper than the script's stack still parses. Each element's
+// content ends at its end tag, or where what holds it ends; what is past that
+// belongs to an element further out.
 function _parseFragment(src, inSvg) {
     var nodes = [];
     var gap = "";
-    var lastTag = "";
+    var tagOpenRe = new RegExp(_HTML_OPEN_TAG, "g");
+    var markupRe = /<[a-zA-Z]/g;
+    var closes = null;
+    var open = [{ el: null, depth: 0, up: null, end: src.length, after: src.length, svg: Boolean(inSvg), lastTag: "", placed: 0 }];
     var pos = 0;
-    // A `/` not closing the tag separates its name from an attribute, as
-    // HTML's tokenizer reads `<i/aria-label="Now">`.
-    var tagOpenRe = new RegExp("<([a-zA-Z][a-zA-Z0-9-]*)((?:\\s|\\/(?!>))" + _TAG_REST + ")?\\s*(\\/?)(>|$)", "g");
-    var voidTags = _VOID_TAGS;
 
-    while (pos < src.length) {
-        tagOpenRe.lastIndex = pos;
-        var m = tagOpenRe.exec(src);
+    function into(frame, node) {
+        if (frame.el) {
+            frame.el.appendChild(node);
+        } else {
+            nodes.push(node);
+        }
+        ++frame.placed;
+    }
+    function text(frame, s) {
+        into(frame, document.createTextNode(_unescapeHtmlText(s)));
+    }
+    function leave(cur) {
+        open.pop();
+        gap = "";
+        pos = cur.after;
+    }
+
+    while (open.length > 0) {
+        var cur = open[open.length - 1];
+        var stop = cur.end;
+        var m = null;
+        var runOff = false;
+        if (pos < stop) {
+            tagOpenRe.lastIndex = pos;
+            m = tagOpenRe.exec(src);
+            if (m && m.index >= stop) {
+                m = null;
+            } else if (m && (m[4] === "" || tagOpenRe.lastIndex > stop)) {
+                // A tag running past the end of what holds it is dropped
+                // there, with the rest of that content.
+                runOff = true;
+            }
+        }
         if (!m) {
-            var trailing = src.slice(pos);
+            var trailing = src.slice(pos, stop);
+            // So is a name with nothing after it before that end.
+            var bare = /<[a-zA-Z][a-zA-Z0-9-]*$/.exec(trailing);
+            if (bare && stop < src.length) {
+                trailing = trailing.slice(0, bare.index);
+                if (trailing.trim()) {
+                    text(cur, trailing);
+                }
+                leave(cur);
+                continue;
+            }
             if (trailing.trim()) {
-                nodes.push(document.createTextNode(_unescapeHtmlText(trailing)));
-            } else {
+                text(cur, trailing);
+            } else if (trailing && cur.el) {
+                _wsGiven(_unwrap(cur.el), "wsEnd", trailing);
+            } else if (trailing) {
                 nodes.wsEnd = trailing;
             }
-            break;
+            leave(cur);
+            continue;
         }
         if (m.index > pos) {
             var lead = src.slice(pos, m.index);
             if (lead.trim()) {
-                nodes.push(document.createTextNode(_unescapeHtmlText(lead)));
-            } else if (nodes.length > 0 && _HTML_INLINE.test(lastTag) && _HTML_INLINE.test(m[1])) {
+                text(cur, lead);
+            } else if (cur.placed > 0 && _HTML_INLINE.test(cur.lastTag) && _HTML_INLINE.test(m[1])) {
                 // Between inline elements a space is drawn: it is text.
-                nodes.push(document.createTextNode(" "));
+                text(cur, " ");
             } else {
                 gap = lead;
             }
         }
-        if (m[4] === "") {
-            break;
+        if (runOff) {
+            leave(cur);
+            continue;
         }
-        lastTag = m[1];
+        cur.lastTag = m[1];
         var tag = m[1].toLowerCase();
         var attrStr = m[2] || "";
-        var selfClosing = m[3] === "/" || Boolean(voidTags[tag]);
+        var selfClosing = m[3] === "/" || Boolean(_VOID_TAGS[tag]);
         var el = document.createElement(tag);
-        var svg = tag === "svg" || (Boolean(inSvg) && !_breaksOutOfSvg(tag, attrStr));
+        var svg = tag === "svg" || (cur.svg && !_breaksOutOfSvg(tag, attrStr));
         _applyAttrsFromHtml(el, attrStr, svg);
         _wsGiven(_unwrap(el), "ws", gap);
         gap = "";
+        // Past `_HTML_MAX_DEPTH` an element goes beside the innermost one; a
+        // text still goes in it.
+        var at = cur.depth >= _HTML_MAX_DEPTH ? cur.up : cur;
+        into(at, el);
 
         var afterOpen = tagOpenRe.lastIndex;
         if (selfClosing) {
-            nodes.push(el);
             pos = afterOpen;
             continue;
         }
@@ -14464,6 +14603,9 @@ function _parseFragment(src, inSvg) {
         // `>` comes. In SVG the same names are elements like any other.
         if (!svg && _RAW_TEXT_TAGS[tag] === true) {
             var rawEnd = _rawTextEnd(src, tag, afterOpen);
+            if (rawEnd[1] > stop) {
+                rawEnd = [stop, stop];
+            }
             var rawText = src.slice(afterOpen, rawEnd[0]);
             // The parser drops one newline right after `<textarea>`.
             if (tag === "textarea") {
@@ -14472,82 +14614,29 @@ function _parseFragment(src, inSvg) {
             if (rawText) {
                 el.textContent = _RCDATA_TAGS[tag] === true ? _unescapeHtmlText(rawText) : rawText;
             }
-            nodes.push(el);
             pos = rawEnd[1];
             continue;
         }
-        // Find matching closing tag for `tag`
-        var depth = 1;
-        var scanPos = afterOpen;
-        // Every tag is read whole, so one written inside another's quoted
-        // value is not taken for an end tag.
-        var tokenRe = new RegExp("<(/?)([a-zA-Z][a-zA-Z0-9-]*)" + _TAG_REST + "(?:>|$)", "g");
-        tokenRe.lastIndex = scanPos;
-        var tok;
-        var closeStart = -1;
-        var closeEnd = -1;
-        // The scan's namespace: an `<svg>` inside enters SVG, where the
-        // raw-text names are ordinary elements, and its integration points
-        // go back to HTML.
-        var kidsSvg = svg && !_SVG_HTML_POINTS[tag];
-        var spaces = [];
-        while ((tok = tokenRe.exec(src)) !== null) {
-            var tokTag = tok[2].toLowerCase();
-            var inSvgNow = spaces.length > 0 ? spaces[spaces.length - 1].svg : kidsSvg;
-            if (tok[1] === "/") {
-                if (spaces.length > 0 && spaces[spaces.length - 1].tag === tokTag) {
-                    spaces.pop();
-                }
-            } else if (!inSvgNow && _RAW_TEXT_TAGS[tokTag] === true) {
-                // A raw-text element inside holds no tags, so an end tag of
-                // this element written in it (`<textarea></div></textarea>`)
-                // is text.
-                tokenRe.lastIndex = _rawTextEnd(src, tokTag, tokenRe.lastIndex)[1];
-                continue;
-            } else if (tok[0].slice(-2) !== "/>") {
-                if (tokTag === "svg") {
-                    spaces.push({ tag: tokTag, svg: true });
-                } else if (inSvgNow && (_SVG_HTML_POINTS[tokTag] || _breaksOutOfSvg(tokTag, tok[0]))) {
-                    // An integration point, or an HTML element the child
-                    // parse also takes out of SVG.
-                    spaces.push({ tag: tokTag, svg: false });
-                }
-            }
-            if (tokTag !== tag) {
-                continue;
-            }
-            var fullTok = tok[0];
-            if (tok[1] === "/") {
-                depth -= 1;
-                if (depth === 0) {
-                    closeStart = tok.index;
-                    closeEnd = tokenRe.lastIndex;
-                    break;
-                }
-            } else if (fullTok.slice(-2) !== "/>" && !voidTags[tag]) {
-                depth += 1;
-            }
+        if (closes === null) {
+            closes = _htmlCloses(src, inSvg);
         }
-        if (closeStart === -1) {
-            // No end tag: the element holds the rest of the markup.
-            closeStart = src.length;
-            closeEnd = src.length;
+        var close = closes[m.index] || null;
+        if (close && close[1] > stop) {
+            close = null;
         }
-        var inner = src.slice(afterOpen, closeStart);
-        if (/<[a-zA-Z]/.test(inner)) {
-            var childWrappers = _parseFragment(inner, svg && !_SVG_HTML_POINTS[tag]);
-            _wsGiven(_unwrap(el), "wsEnd", childWrappers.wsEnd);
-            for (var c = 0; c < childWrappers.length; ++c) {
-                el.appendChild(childWrappers[c]);
+        // No end tag: the element holds the rest of what holds it.
+        var end = close ? close[0] : stop;
+        markupRe.lastIndex = afterOpen;
+        var inner = markupRe.exec(src);
+        if (!inner || inner.index >= end) {
+            if (end > afterOpen) {
+                el.textContent = _unescapeHtmlText(src.slice(afterOpen, end));
             }
-        } else if (inner) {
-            el.textContent = _unescapeHtmlText(inner);
+            pos = close ? close[1] : end;
+            continue;
         }
-        nodes.push(el);
-        if (closeStart === -1) {
-            break;
-        }
-        pos = closeEnd;
+        open.push({ el: el, depth: at.depth + 1, up: at, end: end, after: close ? close[1] : stop, svg: svg && !_SVG_HTML_POINTS[tag], lastTag: "", placed: 0 });
+        pos = afterOpen;
     }
     return nodes;
 }
@@ -16389,7 +16478,7 @@ function _vSetText(c, value) {
 function _vParseInto(c, html) {
     var parent = c.__eldurInline ? c : null;
     var model = _vModelFor(c);
-    var stack = [{ node: parent, list: c.kids }];
+    var stack = [{ node: parent, list: c.kids, depth: 0, up: null }];
     // An unquoted value does not start with a quote, so each attribute is
     // read one way and a tag with no `>` fails in linear time.
     var re = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)((?:\s+[^\s=>\/]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>"'][^\s>]*))?)*)\s*(\/?)>/g;
@@ -16420,11 +16509,13 @@ function _vParseInto(c, html) {
             var val = a[2] !== undefined ? a[2] : a[3] !== undefined ? a[3] : a[4] !== undefined ? a[4] : "";
             attrs.push([a[1].toLowerCase(), _unescapeHtmlText(val)]);
         }
+        // Past `_HTML_MAX_DEPTH` an element is its parent's sibling.
         var top = stack[stack.length - 1];
-        var v = _vElement(tag, attrs, top.node, model);
-        top.list.push(v);
+        var at = top.depth >= _HTML_MAX_DEPTH ? top.up : top;
+        var v = _vElement(tag, attrs, at.node, model);
+        at.list.push(v);
         if (!_vVoid[tag] && !hit[4]) {
-            stack.push({ node: v, list: v.kids });
+            stack.push({ node: v, list: v.kids, depth: at.depth + 1, up: at });
         }
     }
     addText(html.slice(pos));

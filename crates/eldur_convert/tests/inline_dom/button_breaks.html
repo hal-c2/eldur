@@ -14,6 +14,10 @@ L("fixed-pre-wrap",R(byId("fw")).h>one+10,near(R(byId("fn")).h,one));
 // spaces, nowrap stays on one line.
 var ps=byId("ps"),pc=document.createElement("span");pc.textContent="C";ps.append(pc);
 L("pre-element",near(R(ps).w,R(byId("pr")).w),JSON.stringify(ps.textContent));
+// Its rendered text keeps the spaces it draws, with an empty element on
+// the line too.
+ps.append(document.createElement("span"));
+L("pre-element-text",JSON.stringify(ps.innerText));
 // pre-line keeps line breaks but collapses runs of spaces, also once the
 // button holds an element.
 var lx=byId("lx"),lc=document.createElement("span");lc.textContent="C";lx.append(lc);
@@ -23,6 +27,8 @@ L("nowrap-element",near(R(nr).h,one));
 // A button the page gives breaks and an inline-block is as tall as its
 // lines.
 L("pre-line-markup",near(R(byId("bm")).h,R(byId("pl")).h),R(byId("bm")).h>one+10);
+// So is one whose element is inline, the label it is folded into.
+L("pre-line-bold",near(R(byId("bmp")).h,R(byId("pl")).h),R(byId("bmp")).h>one+10);
 // A script that changes the button's white-space later changes how its
 // line keeps spaces, and what it holds stays as it is.
 var sw=byId("sw"),sc=document.createElement("span");sc.textContent="C";sw.append(sc);
@@ -35,6 +41,10 @@ var q=byId("q");q.innerHTML='<span title="a>b">Save</span>';
 L("quoted-gt",JSON.stringify(q.textContent),q.firstChild.title,q.childNodes.length);
 q.innerHTML="<span title=it's>Go</span>";
 L("unquoted-apos",JSON.stringify(q.textContent),q.firstChild.title);
+// A value not quoted runs to a space or `>`: an `=` and a quote in it are
+// its own, not a quoted value opening.
+q.innerHTML='<span data-x=a=">OK</span>';
+L("unquoted-eq-quote",JSON.stringify(q.textContent),q.firstChild.getAttribute("data-x"),q.childNodes.length);
 // A tag cut short before its `>`, with many quoted attributes, is read in
 // time proportional to its length, and is no node.
 var t0=Date.now();byId("cut").insertAdjacentHTML("beforeend","<span"+' a="x"'.repeat(30));
@@ -53,12 +63,34 @@ t0=Date.now();w.innerHTML="L"+"<a x".repeat(16000);
 L("many-runoff-fast",Date.now()-t0<500,JSON.stringify(w.textContent),w.childNodes.length);
 t0=Date.now();w.insertAdjacentHTML("beforeend","<p".repeat(16000)+">");
 L("many-p-fast",Date.now()-t0<500,w.textContent.charAt(0));
+// Start tags never closed nest, each holding the rest, but only so deep:
+// past that an element is its parent's sibling, a text is still the
+// innermost element's. So the `Y` after the last `span` closes is in the
+// one before it, ahead of the `Z`.
+function deepest(e){var d=0;while(e.lastElementChild){e=e.lastElementChild;++d;}return d;}
+var dp=byId("deep");
+dp.innerHTML='<span>'.repeat(600)+"Z";
+L("many-open",JSON.stringify(dp.textContent),deepest(dp),dp.getElementsByTagName("span").length);
+dp.innerHTML='<span>'.repeat(600)+"Z<b>Y</b>";
+L("many-open-closed",JSON.stringify(dp.textContent),deepest(dp));
+dp.innerHTML='<span>'.repeat(600)+"Z</span>Y";
+L("many-open-close-last",JSON.stringify(dp.textContent));
 // What an element holds before a start tag the input ends inside is still
 // markup: the `i` inside the unclosed `b` is an element.
 var k=byId("kept");k.insertAdjacentHTML("beforeend",'<b><i>OK</i><span title="unfinished</b>');
 L("unclosed-holder",k.childNodes.length,k.lastChild.nodeName,k.lastChild.childNodes.length,k.lastChild.firstChild.nodeName,JSON.stringify(k.textContent));
 k.innerHTML='<b><i>OK</i><span title="unfinished</b>';
 L("unclosed-holder-inner",k.childNodes.length,k.lastChild.nodeName,k.lastChild.childNodes.length,k.lastChild.firstChild.nodeName,JSON.stringify(k.textContent));
+// A run of `<` inside a quoted value is read once, not once per `<`.
+t0=Date.now();q.innerHTML='<b><span title="'+'<a'.repeat(16000)+'">x</span></b>';
+L("many-lt-in-value-fast",Date.now()-t0<500,JSON.stringify(q.textContent),q.firstChild.firstChild.title.length);
+// An end tag written in a quoted value closes nothing.
+q.innerHTML='<b><span title="<b>">OK</span></b>tail';
+L("title-holds-tag",JSON.stringify(q.textContent),q.childNodes.length,q.lastChild.nodeName);
+// A bare value takes a `/` before the `>`: that tag is not self-closing, and
+// holds what follows up to its end tag.
+q.innerHTML='<b>outer<b data-x=a/>inner</b>tail</b>';
+L("unquoted-slash",JSON.stringify(q.textContent),q.childNodes.length,q.firstChild.childNodes.length,q.firstChild.childNodes[1].getAttribute("data-x"),JSON.stringify(q.firstChild.childNodes[1].textContent));
 // Characters of the private use area are text like any other, also the
 // ones a reading of rendered text could mark its own spaces with.
 function codes(t){return Array.prototype.map.call(t,function(c){return c.charCodeAt(0).toString(16);}).join(",");}
@@ -82,12 +114,15 @@ B</button></div>
 <div><button id="sr" style="white-space:pre">X   YC</button></div>
 <div><button id="bm" style="white-space:pre-line">A
 B<b style="display:inline-block">C</b></button></div>
+<div><button id="bmp" style="white-space:pre-line">A
+B<b>C</b></button></div>
 <div><button id="nr" style="white-space:nowrap;width:40px">Aaa Bbb</button></div>
 <div><button id="q">X</button></div>
 <div id="cut">Cut</div>
 <div id="open">O</div>
 <div id="many">M</div>
 <div id="kept">K</div>
+<div id="deep">D</div>
 <div id="pd">P</div>
 <div><button id="pb" style="white-space:pre">P</button></div>
 </body></html>
