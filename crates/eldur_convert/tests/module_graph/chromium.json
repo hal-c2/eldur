@@ -393,6 +393,30 @@
     },
     "errors": []
   },
+  "onloadassign": {
+    "lines": [
+      "or orHandler, reads orHandler",
+      "or again orHandler, reads orHandler",
+      "and andHandler, reads andHandler",
+      "nullish andHandler, reads andHandler",
+      "nullish on null string z, reads null",
+      "plus string null, reads null",
+      "and on null null, reads null",
+      "increment number NaN, reads null",
+      "array pattern undefined undefined, reads fromArray",
+      "object pattern undefined undefined, reads null",
+      "loop undefined undefined, reads loopFirst",
+      "loop undefined undefined, reads loopLast",
+      "or in a function loopLast, reads loopLast",
+      "or on null in a function lateHandler, reads lateHandler",
+      "late handler heard",
+      "load undefined undefined, reads lateHandler"
+    ],
+    "text": {
+      "out": "late"
+    },
+    "errors": []
+  },
   "signalthrow": {
     "lines": [
       "data options added",

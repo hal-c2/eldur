@@ -3773,6 +3773,34 @@ fn window_onload_reads_what_set_onload_kept() {
     assert!(js.contains("function __eldur_call_window_onload()"), "{js}");
 }
 
+/// `window.onload` as the target of a compound or logical assignment, `++`,
+/// a pattern or a `for … of` head is read through `Eldur.getOnload` and set
+/// through `Eldur.setOnload`, never left as a call to assign to. A logical
+/// assignment sets only when it does not short-circuit.
+#[test]
+fn window_onload_as_any_assignment_target_is_read_then_set() {
+    let resolver = FakeResolver::default();
+    let first = classic(
+        "first.js",
+        "window.onload ||= f;\nwindow.onload += \"\";\nfunction later() { window.onload ??= f; }\nwindow.onload++;\n[window.onload] = [f];\nfor (window.onload of [f]) {}\nfunction f() {}\n",
+    );
+    let out = run_rewrite(&[first], &resolver);
+    let js = &out.page_js;
+    let get = "Eldur.getOnload(__eldur_call_window_onload)";
+    let set = "Eldur.setOnload(__eldur_load_listeners, __eldur_call_window_onload, ";
+    let place = "Eldur.onloadRef(__eldur_load_listeners, __eldur_call_window_onload).value";
+    assert!(js.contains(&format!("({get} || {set}f))")), "{js}");
+    assert!(js.contains(&format!("{set}{get} + (\"\"))")), "{js}");
+    assert!(js.contains(&format!("({get} ?? {set}f))")), "{js}");
+    assert!(js.contains(&format!("{place}++")), "{js}");
+    assert!(js.contains(&format!("[{place}] = [f]")), "{js}");
+    assert!(js.contains(&format!("for ({place} of [f])")), "{js}");
+    assert!(!js.contains(&format!("{get} =")), "{js}");
+    assert!(!js.contains(&format!("{get} +=")), "{js}");
+    assert!(!js.contains(&format!("{get}++")), "{js}");
+    assert!(!js.contains("Eldur.window.onload"), "{js}");
+}
+
 /// A `load` listener and `window.onload` each take their place among the
 /// `load` listeners where they run: the listener is queued where its module
 /// adds it, and each assignment goes through `Eldur.setOnload`, which adds the
