@@ -445,6 +445,27 @@ fn a_child_that_writes_more_than_a_pipe_holds_still_finishes() {
     );
 }
 
+#[cfg(unix)]
+#[test]
+fn a_grandchild_that_holds_the_pipes_open_does_not_outlast_the_limit() {
+    use std::os::unix::process::CommandExt;
+    let started = std::time::Instant::now();
+    let child = std::process::Command::new("sh")
+        .args(["-c", "sleep 120 & echo started"])
+        .process_group(0)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .expect("run sh");
+    let (output, _) = wait_draining(child, std::time::Duration::from_secs(5));
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(30),
+        "waited {:?} for a grandchild's pipe",
+        started.elapsed()
+    );
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "started\n");
+}
+
 fn run(name: &str, page: &str, test: &str) -> String {
     let options = Options {
         root: RootKind::Item,
