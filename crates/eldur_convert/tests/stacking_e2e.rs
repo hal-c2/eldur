@@ -1127,6 +1127,44 @@ fn a_level_a_class_gives_a_span_lifts_what_it_holds_with_no_level_of_its_own() {
     );
 }
 
+/// The span of the tests before, around an `#ix` with no position of its
+/// own: the span paints what it holds at its level, so `#ix` is over `#lx`
+/// (5,70) whether the span has its level from the start or from a class,
+/// as Chromium paints both (`x-wstatic-flat`, `x-wcls-flat`). The script
+/// names `#ix`, so the test finds it. `#rx` rises with it, as for a box
+/// with a level, which puts `#rx` over `#lx` too (30,70), where Chromium
+/// has `#lx`; that point is not checked.
+#[test]
+fn a_span_with_a_level_lifts_a_box_with_no_position_it_holds() {
+    let flat = INLINE_BLOCK.replace("position: relative; ", "");
+    for (name, rule, span, script) in [
+        (
+            "flat-span-level",
+            "",
+            "position: relative; z-index: 5",
+            "var ix = document.getElementById('ix');",
+        ),
+        (
+            "flat-span-class",
+            "\n.wup { z-index: 5 }",
+            "position: relative",
+            "var ix = document.getElementById('ix');\n\
+             document.getElementById('wx').classList.add('wup');",
+        ),
+    ] {
+        let page = inline_level_page(
+            &format!("{flat}{rule}"),
+            &format!("<span id=wx style=\"{span}\"><span id=ix></span></span>"),
+            RELATIVE,
+            LATER_AT_1,
+        )
+        .replace("document.getElementById('ix').classList.add('up');", script);
+        assert!(!page.contains("display: inline-block; position"));
+        assert_eq!(page.matches("classList.add('up')").count(), 0);
+        run(&page, &with_test(INLINE_LEVEL_TEST), name, false);
+    }
+}
+
 /// The span of the test before last, whose `class` attribute a timer
 /// removes: the level the class gave `#ix` goes with it, so `#lx` is over
 /// `#ix` again (5,70), as Chromium paints the page with the class gone

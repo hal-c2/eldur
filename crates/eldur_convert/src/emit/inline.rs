@@ -801,12 +801,11 @@ impl Emitter<'_, '_> {
                 Piece::Atomic(a, owner, kept, around) => {
                     let before = self.above_flow.take();
                     let part = self.atomic(a, decoration, &flow_id);
-                    // A span that makes a stacking context keeps a level the
-                    // box has, or a class gives it, inside: the block takes
-                    // the span's own level in its place.
-                    if let Some(span) = kept
-                        && self.above_flow.is_some()
-                    {
+                    // A span that makes a stacking context paints what it
+                    // holds at its own level, whether the box has a level,
+                    // a class gives it one, or it has none: the block takes
+                    // the span's level in the box's place.
+                    if let Some(span) = kept {
                         self.above_flow = context_level(span);
                     }
                     self.above_flow = match (before, self.above_flow) {
