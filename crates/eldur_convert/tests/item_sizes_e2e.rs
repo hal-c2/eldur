@@ -386,40 +386,79 @@ TestCase {
 /// Waits for `child` until `limit`, killing it then, and returns its output
 /// and whether it finished by itself. Both pipes are read while it runs: a
 /// child that writes more than a pipe holds would otherwise block on the
-/// write and look like a run that never ends.
+/// write and look like a run that never ends. A process the child leaves
+/// behind can hold the pipes open after it exits, so reading them is bound
+/// by the same limit, and past it the child's process group is killed
+/// (spawn it with `process_group(0)` so that reaches what it left).
 fn wait_draining(
     mut child: std::process::Child,
     limit: std::time::Duration,
 ) -> (std::process::Output, bool) {
     use std::io::Read;
-    fn drain(pipe: Option<impl Read + Send + 'static>) -> std::thread::JoinHandle<Vec<u8>> {
+    use std::time::{Duration, Instant};
+    let (sent, received) = std::sync::mpsc::channel();
+    fn drain(
+        pipe: Option<impl Read + Send + 'static>,
+        which: usize,
+        sent: std::sync::mpsc::Sender<(usize, Vec<u8>)>,
+    ) {
         std::thread::spawn(move || {
             let mut bytes = Vec::new();
             if let Some(mut pipe) = pipe {
                 let _ = pipe.read_to_end(&mut bytes);
             }
-            bytes
-        })
+            let _ = sent.send((which, bytes));
+        });
     }
-    let stdout = drain(child.stdout.take());
-    let stderr = drain(child.stderr.take());
-    let deadline = std::time::Instant::now() + limit;
+    drain(child.stdout.take(), 0, sent.clone());
+    drain(child.stderr.take(), 1, sent);
+    let group = child.id();
+    let kill_group = || {
+        // Negative: the whole group, which outlives the child while anything
+        // it started is still running.
+        let _ = std::process::Command::new("kill")
+            .args(["-s", "KILL", "--", &format!("-{group}")])
+            .stderr(std::process::Stdio::null())
+            .status();
+    };
+    let deadline = Instant::now() + limit;
     let mut finished = true;
     let status = loop {
         if let Some(status) = child.try_wait().expect("wait for the child") {
             break status;
         }
-        if std::time::Instant::now() > deadline {
+        if Instant::now() > deadline {
             finished = false;
-            child.kill().expect("kill the child");
+            kill_group();
+            let _ = child.kill();
             break child.wait().expect("wait for the killed child");
         }
-        std::thread::sleep(std::time::Duration::from_millis(50));
+        std::thread::sleep(Duration::from_millis(50));
     };
+    let mut pipes = [Vec::new(), Vec::new()];
+    let mut killed = !finished;
+    for _ in 0..2 {
+        let left = deadline.saturating_duration_since(Instant::now());
+        let got = match received.recv_timeout(left) {
+            Ok(got) => Ok(got),
+            Err(_) if !killed => {
+                killed = true;
+                kill_group();
+                // Killed, the holders close the pipes and the readers finish.
+                received.recv_timeout(Duration::from_secs(5))
+            }
+            Err(_) => received.recv_timeout(Duration::from_secs(5)),
+        };
+        match got {
+            Ok((which, bytes)) => pipes[which] = bytes,
+            Err(_) => break,
+        }
+    }
+    let [stdout, stderr] = pipes;
     let output = std::process::Output {
         status,
-        stdout: stdout.join().expect("stdout reader"),
-        stderr: stderr.join().expect("stderr reader"),
+        stdout,
+        stderr,
     };
     (output, finished)
 }
@@ -479,7 +518,11 @@ fn run(name: &str, page: &str, test: &str) -> String {
     }
     let qml = dir.join(format!("tst_{name}.qml"));
     std::fs::write(&qml, test).expect("write test");
-    let child = support::qmltestrunner()
+    let mut runner = support::qmltestrunner();
+    // Its own process group, so a timeout reaches anything it started.
+    #[cfg(unix)]
+    std::os::unix::process::CommandExt::process_group(&mut runner, 0);
+    let child = runner
         .args(["-platform", "offscreen", "-input"])
         .arg(&qml)
         .env("QT_FORCE_STDERR_LOGGING", "1")
