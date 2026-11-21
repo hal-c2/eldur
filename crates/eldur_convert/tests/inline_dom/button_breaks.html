@@ -29,6 +29,12 @@ L("unquoted-apos",JSON.stringify(q.textContent),q.firstChild.title);
 // time proportional to its length, and is no node.
 var t0=Date.now();byId("cut").insertAdjacentHTML("beforeend","<span"+' a="x"'.repeat(30));
 L("unclosed-fast",Date.now()-t0<500,JSON.stringify(byId("cut").textContent),byId("cut").childNodes.length);
+// A quoted value never closed runs to the end of the input, past later
+// tags, also inside an element: all of it is dropped.
+var u=byId("open");u.innerHTML='<span a="x>Go</span><b>Y</b>';
+L("unclosed-value",JSON.stringify(u.textContent),u.childNodes.length);
+u.innerHTML='Z<b><span a="x>Go</span></b><i>Y</i>';
+L("unclosed-nested",JSON.stringify(u.textContent),u.childNodes.length,u.lastChild.nodeName);
 });
 </script></head><body style="margin:0;font:16px/20px sans-serif">
 <div><button id="bn">One</button></div>
@@ -45,4 +51,5 @@ B</button></div>
 <div><button id="nr" style="white-space:nowrap;width:40px">Aaa Bbb</button></div>
 <div><button id="q">X</button></div>
 <div id="cut">Cut</div>
+<div id="open">O</div>
 </body></html>

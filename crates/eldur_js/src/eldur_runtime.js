@@ -14393,12 +14393,6 @@ function _parseFragment(src, inSvg) {
         var m = tagOpenRe.exec(src);
         if (!m) {
             var trailing = src.slice(pos);
-            // A tag the input ends inside, before its `>` or in a quoted
-            // value, is no node: HTML's tokenizer drops it at the end.
-            var cut = trailing.search(/<[a-zA-Z]/);
-            if (cut !== -1) {
-                trailing = trailing.slice(0, cut);
-            }
             if (trailing.trim()) {
                 nodes.push(document.createTextNode(_unescapeHtmlText(trailing)));
             } else {
@@ -16364,7 +16358,11 @@ function _vParseInto(c, html) {
     var parent = c.__eldurInline ? c : null;
     var model = _vModelFor(c);
     var stack = [{ node: parent, list: c.kids }];
-    var re = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)((?:\s+[^\s=>\/]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*)\s*(\/?)>/g;
+    // An unquoted value does not start with a quote, so each attribute is
+    // read one way and a tag with no `>` fails in linear time.
+    var re = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)((?:\s+[^\s=>\/]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>"'][^\s>]*))?)*)\s*(\/?)>/g;
+    html = _htmlCutRunOff(html, re);
+    re.lastIndex = 0;
     var pos = 0, hit;
     function addText(s) {
         if (s !== "") {
@@ -16386,7 +16384,7 @@ function _vParseInto(c, html) {
             continue;
         }
         var attrs = [];
-        var attrRe = /([^\s=>\/]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g, a;
+        var attrRe = /([^\s=>\/]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>"'][^\s>]*)))?/g, a;
         while ((a = attrRe.exec(hit[3])) !== null) {
             var val = a[2] !== undefined ? a[2] : a[3] !== undefined ? a[3] : a[4] !== undefined ? a[4] : "";
             attrs.push([a[1].toLowerCase(), _unescapeHtmlText(val)]);
