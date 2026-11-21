@@ -440,7 +440,7 @@ fn each_tokenizer_edge_hides_as_chromium_reads_it() {
         .collect();
     assert!(
         differ.is_empty(),
-        "differ from Chromium (name, needle, style, hidden): {differ:#?}"
+        "differ from Chromium (name, style, hidden): {differ:#?}"
     );
 }
 
