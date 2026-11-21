@@ -3080,6 +3080,10 @@ function _sanitizeClassProp(cls) {
     return "cls_" + String(cls).replace(/[^A-Za-z0-9_]/g, "_");
 }
 
+// How many times a class change looked for the box an inline element binds
+// its classes on: only an element the converter marked has one.
+var _carriedWalks = 0;
+
 function _syncClassProp(raw, cls, active) {
     if (!raw || typeof raw !== "object") {
         return;
@@ -3090,9 +3094,19 @@ function _syncClassProp(raw, cls, active) {
     }
     // An inline element with no item of its own, whose class may make it a
     // stacking context, binds the class on the first box it holds.
-    if (raw.__eldurInline && raw.eldurKey !== undefined) {
+    if (raw.__eldurInline && raw.eldurCarries) {
+        ++_carriedWalks;
         var carried = "eldurIn" + raw.eldurKey + "_" + prop;
-        var holder = _elementsUnder(_root, function(node) {
+        // The span's own page: one page can cover another, and keys are
+        // only unique within a page.
+        var page = _root;
+        for (var at = raw.model && raw.model.text; at; at = at.parent) {
+            if (_roots.indexOf(at) !== -1) {
+                page = at;
+                break;
+            }
+        }
+        var holder = _elementsUnder(page, function(node) {
             return typeof node[carried] === "boolean";
         }, true)[0];
         if (holder) {
@@ -16286,6 +16300,8 @@ function _vBuild(json, parent, model) {
     }
     var v = _vElement(json.tag, json.attrs, parent, model);
     v.eldurKey = json.key;
+    // A class may make it a stacking context, and binds on a box it holds.
+    v.eldurCarries = json.carries === true;
     if (json.key !== undefined) {
         _vKeyed[json.key] = v;
     }
