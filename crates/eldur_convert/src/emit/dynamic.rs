@@ -1414,7 +1414,8 @@ impl Dynamic<'_, '_> {
     }
 
     /// Every combination of flipped conditions some element depends on,
-    /// the document's (none flipped) first.
+    /// the document's (none flipped) first, then by how many flip; at most
+    /// [`MAX_WORLDS`] of them.
     ///
     /// Hideable elements that number or count make groups as well: a
     /// sibling's marker or `counter()` depends on how many of them show at
@@ -1499,9 +1500,6 @@ impl Dynamic<'_, '_> {
                 (w.len(), w)
             })
         }
-        // Each element's own worlds, as on a page with no groups: a group
-        // never takes their place.
-        let mut set: BTreeSet<(usize, Vec<u16>)> = BTreeSet::from([(0, Vec::new())]);
         // A box whose level a condition changes lifts its block by what the
         // stacking contexts around it allow, which other conditions change:
         // each combination of the two is a world of its own.
@@ -1512,25 +1510,31 @@ impl Dynamic<'_, '_> {
             .filter(|e| matches!(restacks(&e.by_mask), Restacks::Subtree))
             .map(|e| (e.node, e.depends_on.as_slice()))
             .collect();
+        let mut each: BTreeSet<Vec<u16>> = BTreeSet::new();
         for e in &self.found.elements {
             let mut deps: Vec<u16> = e.depends_on.clone();
             if !contexts.is_empty() && changes_level(&e.by_mask) {
                 for a in doc.ancestors(e.node) {
                     deps.extend(contexts.get(&a).copied().unwrap_or_default());
                 }
-                deps.sort_unstable();
-                deps.dedup();
             }
             deps.retain(|c| !excluded.contains(c));
-            set.extend(subsets(&deps));
+            deps.sort_unstable();
+            deps.dedup();
+            each.insert(deps);
         }
-        if set.len() > MAX_WORLDS {
+        // Each element's own worlds, as on a page with no groups: a group
+        // never takes their place.
+        let (worlds, more) = fewest_flips(&each, MAX_WORLDS);
+        let mut set: BTreeSet<(usize, Vec<u16>)> =
+            worlds.into_iter().map(|w| (w.len(), w)).collect();
+        if more {
             self.diags.warning(
                 "css",
                 None,
                 format!(
-                    "classes and states combine in {} ways; only {MAX_WORLDS} are converted",
-                    set.len()
+                    "classes and states combine in more than {MAX_WORLDS} ways; \
+                     only {MAX_WORLDS} are converted"
                 ),
             );
         }
@@ -2161,6 +2165,55 @@ enum Restacks {
     Subtree,
 }
 
+/// The first `max` subsets of any of `each` (each sorted), by size and then
+/// in order, and whether there are more. Subsets are made in that order, so
+/// the work stops with the last one kept rather than after all `2^n`.
+pub(super) fn fewest_flips(each: &BTreeSet<Vec<u16>>, max: usize) -> (Vec<Vec<u16>>, bool) {
+    let mut kept: BTreeSet<(usize, Vec<u16>)> = BTreeSet::from([(0, Vec::new())]);
+    let most = each.iter().map(Vec::len).max().unwrap_or(0);
+    for size in 1..=most {
+        for deps in each.iter().filter(|d| d.len() >= size) {
+            let mut pick: Vec<usize> = (0..size).collect();
+            loop {
+                let w = (size, pick.iter().map(|&i| deps[i]).collect::<Vec<u16>>());
+                // The rest of this size are later still.
+                if kept.len() > max && kept.last().is_some_and(|last| w >= *last) {
+                    break;
+                }
+                kept.insert(w);
+                if kept.len() > max + 1 {
+                    kept.pop_last();
+                }
+                if !next_pick(&mut pick, deps.len()) {
+                    break;
+                }
+            }
+        }
+        // Every larger subset comes after the ones kept.
+        if kept.len() > max {
+            break;
+        }
+    }
+    let more = kept.len() > max;
+    let worlds = kept.into_iter().take(max).map(|(_, w)| w).collect();
+    (worlds, more)
+}
+
+/// The next `pick.len()` of `0..n` in order, or false after the last.
+fn next_pick(pick: &mut [usize], n: usize) -> bool {
+    let k = pick.len();
+    for i in (0..k).rev() {
+        if pick[i] < n - k + i {
+            pick[i] += 1;
+            for j in i + 1..k {
+                pick[j] = pick[j - 1] + 1;
+            }
+            return true;
+        }
+    }
+    false
+}
+
 fn restacks(styles: &[Box<ComputedStyle>]) -> Restacks {
     let first = &styles[0];
     let gone = |s: &ComputedStyle| {
@@ -2582,3 +2635,40 @@ fn broken_constraint(id: &str, element: &Element, control: Option<Control>) -> O
 // WHATWG's valid e-mail address, and a scheme for a URL.
 const EMAIL: &str = r"/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/";
 const URL: &str = r"/^[a-zA-Z][a-zA-Z0-9+.-]*:\S*$/";
+
+#[cfg(test)]
+mod fewest_flips_tests {
+    use std::collections::BTreeSet;
+
+    use super::fewest_flips;
+
+    /// Every subset of each, smallest first: what `fewest_flips` keeps the
+    /// start of without making the rest.
+    fn all_flips(each: &[Vec<u16>]) -> Vec<Vec<u16>> {
+        let mut set = BTreeSet::new();
+        set.insert((0, Vec::new()));
+        for deps in each {
+            for mask in 0..1usize << deps.len() {
+                let w: Vec<u16> = (0..deps.len())
+                    .filter(|i| mask & 1 << i != 0)
+                    .map(|i| deps[i])
+                    .collect();
+                set.insert((w.len(), w));
+            }
+        }
+        set.into_iter().map(|(_, w)| w).collect()
+    }
+
+    #[test]
+    fn the_worlds_kept_are_the_ones_with_fewest_flips() {
+        let each: Vec<Vec<u16>> =
+            vec![vec![0, 1, 2, 5], vec![1, 3, 4], vec![2, 6, 7, 8, 9], vec![]];
+        let all = all_flips(&each);
+        let set: BTreeSet<Vec<u16>> = each.iter().cloned().collect();
+        for max in [1, 2, 5, 9, 17, 40, all.len() - 1, all.len(), all.len() + 3] {
+            let (kept, more) = fewest_flips(&set, max);
+            assert_eq!(kept, all[..max.min(all.len())], "first {max}");
+            assert_eq!(more, all.len() > max, "more than {max}");
+        }
+    }
+}
