@@ -376,6 +376,23 @@
     },
     "errors": []
   },
+  "onloadvalue": {
+    "lines": [
+      "string null",
+      "number null",
+      "boolean null",
+      "undefined null",
+      "object kept true object",
+      "string after a handler null",
+      "number in a function null",
+      "string while load fires null",
+      "load after null"
+    ],
+    "text": {
+      "out": "after"
+    },
+    "errors": []
+  },
   "signalthrow": {
     "lines": [
       "data options added",

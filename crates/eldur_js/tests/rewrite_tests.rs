@@ -387,10 +387,10 @@ let saved;
 let a, b;
 var __eldur_ready_listeners = [];
 var __eldur_load_listeners = [];
-var __eldur_window_onload = null;
 function __eldur_call_window_onload() {
-    if (typeof __eldur_window_onload === "function") {
-        __eldur_window_onload.call(Eldur.window, Eldur.event("load", Eldur.window, null));
+    var handler = __eldur_call_window_onload.handler;
+    if (typeof handler === "function") {
+        handler.call(Eldur.window, Eldur.event("load", Eldur.window, null));
     }
 }
 function onReady() {
@@ -404,11 +404,11 @@ function __eldur_init(rootItem) {
     Eldur.queueListener(__eldur_ready_listeners, Eldur.document, "DOMContentLoaded", () => {
         counter += 1;
     });
-    __eldur_window_onload = Eldur.setOnload(__eldur_load_listeners, __eldur_call_window_onload, function() {
+    Eldur.setOnload(__eldur_load_listeners, __eldur_call_window_onload, function() {
         counter += 100;
     });
     Eldur.queueListener(__eldur_load_listeners, Eldur.window, "load", onReady);
-    __eldur_window_onload = Eldur.setOnload(__eldur_load_listeners, __eldur_call_window_onload, function() {
+    Eldur.setOnload(__eldur_load_listeners, __eldur_call_window_onload, function() {
         outLabel.text = APP_NAME + ":" + counter;
     });
     console.log("top-level tail", a, b);
@@ -3732,7 +3732,7 @@ fn window_onload_is_set_where_it_runs() {
     let js = &out.page_js;
     let run = function_body(js, "__eldur_run_m1");
     assert!(
-        run.find("__eldur_window_onload = Eldur.setOnload(__eldur_load_listeners, __eldur_call_window_onload, null);")
+        run.find("Eldur.setOnload(__eldur_load_listeners, __eldur_call_window_onload, null);")
             .expect("null set in its module")
             > run.find("fail()").expect("fail call"),
         "{js}"
@@ -3740,15 +3740,37 @@ fn window_onload_is_set_where_it_runs() {
     let init = function_body(js, "__eldur_init");
     assert!(
         init.contains(
-            "__eldur_window_onload = Eldur.setOnload(__eldur_load_listeners, __eldur_call_window_onload, function () {"
+            "Eldur.setOnload(__eldur_load_listeners, __eldur_call_window_onload, function () {"
         ),
         "{js}"
     );
     assert!(
         function_body(js, "__eldur_call_window_onload")
-            .contains("if (typeof __eldur_window_onload === \"function\") {"),
+            .contains("var handler = __eldur_call_window_onload.handler;"),
         "{js}"
     );
+}
+
+/// A read of `window.onload` at load is what `Eldur.setOnload` kept, at the
+/// top level and in a function alike, so a value that is not an object reads
+/// as `null`. The function that calls the handler is declared for a read alone.
+#[test]
+fn window_onload_reads_what_set_onload_kept() {
+    let resolver = FakeResolver::default();
+    let first = classic(
+        "first.js",
+        "console.log(window.onload);\nfunction later() { return window.onload; }\nwindow.onload = \"x\";\n",
+    );
+    let out = run_rewrite(&[first], &resolver);
+    let js = &out.page_js;
+    assert_eq!(
+        js.matches("Eldur.getOnload(__eldur_call_window_onload)")
+            .count(),
+        2,
+        "{js}"
+    );
+    assert!(!js.contains("Eldur.window.onload"), "{js}");
+    assert!(js.contains("function __eldur_call_window_onload()"), "{js}");
 }
 
 /// A `load` listener and `window.onload` each take their place among the
@@ -3773,7 +3795,7 @@ fn load_listeners_take_their_place_where_they_run() {
     );
     let out = run_rewrite(&[handler, listen, reset], &resolver);
     let js = &out.page_js;
-    let set = "__eldur_window_onload = Eldur.setOnload(__eldur_load_listeners, __eldur_call_window_onload, ";
+    let set = "Eldur.setOnload(__eldur_load_listeners, __eldur_call_window_onload, ";
     let run0 = function_body(js, "__eldur_run_m0");
     assert!(
         run0.find(set).expect("h1 set in its module") > run0.find("fail()").expect("fail call"),
@@ -3793,7 +3815,7 @@ fn load_listeners_take_their_place_where_they_run() {
             .ends_with("Eldur.fireListeners(__eldur_load_listeners);"),
         "{js}"
     );
-    assert!(!init.contains("__eldur_window_onload"), "{js}");
+    assert!(!init.contains("Eldur.setOnload("), "{js}");
 }
 
 /// A `DOMContentLoaded` or `load` listener given by name is the value the
