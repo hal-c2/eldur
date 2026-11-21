@@ -93,7 +93,7 @@
    "LC many-open-close-last \"YZ\"",
    "LC unclosed-holder 2 B 1 I \"KOK\"",
    "LC unclosed-holder-inner 1 B 1 I \"OK\"",
-   "LC many-lt-in-value-fast true \"x\" 32000",
+   "LC many-lt-in-value-fast true \"x\" 256000",
    "LC title-holds-tag \"OKtail\" 2 #text",
    "LC unquoted-slash \"outerinnertail\" 1 3 a/ \"inner\"",
    "LC pre-normal-span \"Ax y\" \"Ax   y\"",
