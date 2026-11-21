@@ -548,17 +548,20 @@ impl Drop for KillOnDrop {
 /// only waits for its parent to reap it, which a subreaper may never do, and
 /// `kill -0` still succeeds on it. So on Linux this reads `/proc/<pid>/stat`,
 /// whose state field follows the last `)` (the command name may hold any).
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 fn is_running(pid: u32) -> bool {
-    if std::path::Path::new("/proc/self/stat").exists() {
-        return match std::fs::read_to_string(format!("/proc/{pid}/stat")) {
-            Err(_) => false,
-            Ok(stat) => stat
-                .rsplit_once(')')
-                .and_then(|(_, rest)| rest.split_whitespace().next())
-                .is_some_and(|state| state != "Z"),
-        };
+    match std::fs::read_to_string(format!("/proc/{pid}/stat")) {
+        Err(_) => false,
+        Ok(stat) => stat
+            .rsplit_once(')')
+            .and_then(|(_, rest)| rest.split_whitespace().next())
+            .is_some_and(|state| state != "Z"),
     }
+}
+
+/// Elsewhere `kill -0`, which a zombie still answers.
+#[cfg(all(unix, not(target_os = "linux")))]
+fn is_running(pid: u32) -> bool {
     std::process::Command::new("kill")
         .args(["-0", &pid.to_string()])
         .stderr(std::process::Stdio::null())
