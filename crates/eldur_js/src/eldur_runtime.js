@@ -11414,9 +11414,10 @@ function _lineToJoin(raw, nodes, ref) {
         return { lines: ref.parent, ref: ref };
     }
     var boxes = nodes.some(function(n) { return !_isTextNode(n) && !_vStaysInline(n, raw, ref); });
-    // A box inside a created inline element: the element becomes the line.
+    // A box inside a created inline element: the element becomes the line,
+    // where the host has the line's component (a host of its own may not).
     if (_meta(raw).createdTag && _isPlainTextItem(raw)) {
-        return boxes ? { lines: _inlineBecomesLines(raw), ref: ref } : null;
+        return boxes && _linesAvailable() ? { lines: _inlineBecomesLines(raw), ref: ref } : null;
     }
     if (raw.contentItem || _meta(raw).tableGrid || _TABLE_PARTS[_nodeTag(raw)]) {
         return null;
