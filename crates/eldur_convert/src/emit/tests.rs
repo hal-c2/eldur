@@ -2471,6 +2471,29 @@ fn a_button_with_a_drawn_icon_wraps_only_a_text_label() {
 }
 
 #[test]
+fn a_button_with_breaks_and_elements_is_as_tall_as_its_line() {
+    // Its label counted its lines; the line that holds the elements takes
+    // the label's place, and the height may not name a label that is gone.
+    let (qml, _) = convert(&page(
+        ".pl{white-space:pre-line}",
+        "<button class=pl>A\nB<b>C</b></button>",
+    ));
+    let button = object_after(&qml, "<button class=\"pl\">");
+    assert!(!button.contains(".lineCount"), "{button}");
+    assert!(
+        button.contains("implicitHeight: contentItem.implicitHeight + topPadding + bottomPadding"),
+        "{button}"
+    );
+    // An ordinary button holding an element keeps the height it had.
+    let (qml, _) = convert(&page("", "<button>A<b>C</b></button>"));
+    let button = object_after(&qml, "<button>");
+    assert!(
+        !button.contains("contentItem.implicitHeight + topPadding"),
+        "{button}"
+    );
+}
+
+#[test]
 fn a_form_reset_writes_a_scrolled_textarea_s_own_text() {
     // The TextArea sits in a ScrollView that takes the element's id, and a
     // ScrollView has no `text` to reset.

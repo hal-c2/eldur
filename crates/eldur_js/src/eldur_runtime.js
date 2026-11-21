@@ -6533,6 +6533,17 @@ var _IT_BLOCK = /^(address|article|aside|blockquote|center|dd|details|dialog|dir
 // between blocks, two around a paragraph, and a tab between cells.
 var _IT_ATOM = "\uE000";
 
+// A character of the page that `_innerText` marks with (`_IT_ATOM`,
+// `_IT_KEPT`, `_IT_ESC`) is read as `_IT_ESC` and its own form, so a mark
+// is only ever one `_innerText` made.
+var _IT_ESC = "\uE010";
+
+function _itLiteral(text) {
+    return String(text).replace(/[\uE000\uE010-\uE013]/g, function(c) {
+        return _IT_ESC + String.fromCharCode(c.charCodeAt(0) + 0x20);
+    });
+}
+
 // While a name is read (`_contentName`), the button being named.
 var _itNamed = null;
 
@@ -6540,7 +6551,7 @@ function _itCollect(raw, out) {
     if (raw.__eldurInline) {
         if (raw.vtext) {
             if (!raw.vparent || _vStyle(raw.vparent).visible !== false) {
-                out.push(raw.data);
+                out.push(_itLiteral(raw.data));
             }
             return;
         }
@@ -6560,7 +6571,7 @@ function _itCollect(raw, out) {
         }
         var own = _itOwnName(raw);
         if (own !== null) {
-            out.push(1, own, 1);
+            out.push(1, _itLiteral(own), 1);
             return;
         }
     }
@@ -6598,12 +6609,12 @@ function _itCollect(raw, out) {
             : raw.contentItem && typeof raw.contentItem.textFormat === "number" ? raw.contentItem : null;
         if (kids.length === 0 && _itNamed && drawn && drawn.textFormat === 4 && typeof drawn.text === "string") {
             // A label drawing `innerHTML`'s markup names by what it marks up.
-            out.push(_markupName(drawn.text));
+            out.push(_itLiteral(_markupName(drawn.text)));
         } else if (kids.length === 0) {
             // Rendered text: a button's drawn label, not its nodes' text.
             // One that keeps its spaces keeps them here too: they are drawn.
-            var label = typeof raw.eldurDomText === "string" && typeof raw.text === "string"
-                ? _pseudoOwn(raw, raw.text) : getText(raw);
+            var label = _itLiteral(typeof raw.eldurDomText === "string" && typeof raw.text === "string"
+                ? _pseudoOwn(raw, raw.text) : getText(raw));
             out.push(_isTextButton(raw) && /^(pre|pre-wrap|break-spaces)$/.test(_btnWhiteSpace(raw))
                 ? _itKept(label) : label);
         } else if (kids[0].tableSlot) {
@@ -6786,7 +6797,8 @@ function _innerText(raw) {
         .replace(/[ \r\f\n]+/g, function(m) { return m.indexOf("\n") >= 0 ? m.replace(/[^\n]/g, "") : " "; })
         .replace(/^ +| +$/g, "")
         .split(_IT_ATOM).join("")
-        .replace(/[\uE011-\uE013]/g, function(c) { return c === "\uE011" ? " " : c === "\uE012" ? "\t" : "\n"; });
+        .replace(/[\uE011-\uE013]/g, function(c) { return c === "\uE011" ? " " : c === "\uE012" ? "\t" : "\n"; })
+        .replace(/\uE010([\uE020\uE030-\uE033])/g, function(m, c) { return String.fromCharCode(c.charCodeAt(0) - 0x20); });
 }
 
 // A button keeps its nodes' text (`eldurDomText`) while they are as the page
@@ -7876,6 +7888,9 @@ function _setStyleAt(item, prop, value) {
     _gTouch();
     if (name.indexOf("--") === 0 && !_gActive()) {
         _varDisplaysFollow(raw);
+    }
+    if (m.btnLines && /^(whiteSpace|whiteSpaceCollapse|textWrap|textWrapMode)$/.test(name)) {
+        _btnLineStyle(raw);
     }
     if (_vBlockFont(raw, name)) {
         return;
@@ -12370,12 +12385,14 @@ function _dressLineText(lines, node) {
     node.wrapMode = _meta(lines).wrapMode || 1; // Text.WordWrap
     node.renderType = 1; // Text.NativeRendering
     // A `pre-line` line draws a node's runs of spaces as one, and the node
-    // keeps them in its data (`runText`, which getText reads).
-    if (_meta(lines).keepsBreaks) {
-        var m = _meta(node);
-        if (m.runText === undefined) {
-            m.runText = node.text;
-        }
+    // keeps them in its data (`runText`, which getText reads). Once it does,
+    // it draws the form its line's `white-space` gives that data, also after
+    // the line's `white-space` changes.
+    var m = _meta(node);
+    if (_meta(lines).keepsBreaks && m.runText === undefined) {
+        m.runText = node.text;
+    }
+    if (m.runText !== undefined) {
         var form = _runText(m.runText, lines);
         if (node.text !== form) {
             node.text = form;
@@ -12660,12 +12677,7 @@ function _btnBecomesLines(raw) {
     lines.font = Qt.binding(function() { return raw.font; });
     lines.color = Qt.binding(function() { return raw.palette.buttonText; });
     lines.textAlign = 4; // Text.AlignHCenter
-    // The line wraps and keeps spaces as the button's own label did.
-    var white = _btnWhiteSpace(raw);
-    lines.noWrap = white === "nowrap" || white === "pre";
-    // `pre-line` keeps its breaks but collapses runs of spaces (_runText).
-    lines.preserveSpace = white !== "normal" && white !== "nowrap" && white !== "pre-line";
-    _meta(lines).keepsBreaks = white === "pre-line";
+    _btnLinesWhite(raw, lines);
     // What it holds but does not draw stays in its textContent where it
     // was, between the nodes around it (see _linesText); leaves index the
     // nodes made from them below.
@@ -12705,6 +12717,16 @@ function _btnBecomesLines(raw) {
         texts.forEach(function(n) { _dressLineText(lines, n); });
     }
     return lines;
+}
+
+// The line wraps and keeps spaces as the button's `white-space` says, now
+// and after a script changes it.
+function _btnLinesWhite(raw, lines) {
+    var white = _btnWhiteSpace(raw);
+    lines.noWrap = white === "nowrap" || white === "pre";
+    // `pre-line` keeps its breaks but collapses runs of spaces (_runText).
+    lines.preserveSpace = white !== "normal" && white !== "nowrap" && white !== "pre-line";
+    _meta(lines).keepsBreaks = white === "pre-line";
 }
 
 // A created button whose template shows no label until it has text.
@@ -12842,6 +12864,12 @@ function _btnDrawn(raw, str) {
 function _btnWhiteSpace(raw) {
     if (_gHasCascade()) {
         return _gFreshStyle(raw)["white-space"];
+    }
+    // A script's own `style.whiteSpace` is over the converter's.
+    var own = String(_meta(raw).styles && _meta(raw).styles.whiteSpace || "")
+        .replace(/!\s*important\s*$/i, "").trim().toLowerCase();
+    if (/^(normal|nowrap|pre|pre-wrap|pre-line|break-spaces)$/.test(own)) {
+        return own;
     }
     return typeof raw.eldurWhiteSpace === "string" ? raw.eldurWhiteSpace : "normal";
 }
@@ -13168,6 +13196,7 @@ function _btnLineStyle(raw) {
     if (_gHasCascade()) {
         ++_gGen;
     }
+    _btnLinesWhite(raw, lines);
     for (var i = 0; i < lines.children.length; ++i) {
         var kid = lines.children[i];
         var tag = _meta(kid).createdTag;
@@ -16361,8 +16390,7 @@ function _vParseInto(c, html) {
     // An unquoted value does not start with a quote, so each attribute is
     // read one way and a tag with no `>` fails in linear time.
     var re = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)((?:\s+[^\s=>\/]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>"'][^\s>]*))?)*)\s*(\/?)>/g;
-    html = _htmlCutRunOff(html, re);
-    re.lastIndex = 0;
+    html = _htmlCutRunOff(html);
     var pos = 0, hit;
     function addText(s) {
         if (s !== "") {

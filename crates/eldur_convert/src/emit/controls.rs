@@ -515,8 +515,26 @@ impl Emitter<'_, '_> {
                 let mut button = self.button(node, style, &id, drawn, line);
                 match &b.content {
                     Content::Inline(items) => {
+                        // A height counted from the label's lines
+                        // (`label_lines`) names a label that is gone: it
+                        // follows the line that takes its place.
+                        let counted = match button.get("contentItem") {
+                            Some(Value::Object(label)) => label.id.clone(),
+                            _ => None,
+                        };
                         let label = self.button_lines(b, items, &id, line);
                         button.set("contentItem", object_value(label));
+                        if let Some(label_id) = counted
+                            && matches!(button.get("implicitHeight"),
+                                Some(Value::Expr(e)) if e.contains(&format!("{label_id}.lineCount")))
+                        {
+                            button.set(
+                                "implicitHeight",
+                                Value::expr(
+                                    "contentItem.implicitHeight + topPadding + bottomPadding",
+                                ),
+                            );
+                        }
                     }
                     Content::Blocks(inside) => {
                         let label = self.button_inside(inside, &id);

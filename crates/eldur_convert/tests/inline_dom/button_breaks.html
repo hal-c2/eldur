@@ -20,6 +20,15 @@ var lx=byId("lx"),lc=document.createElement("span");lc.textContent="C";lx.append
 L("pre-line-element",near(R(lx).w,R(byId("lr")).w),JSON.stringify(lx.textContent));
 var nr=byId("nr"),nc=document.createElement("span");nc.textContent=" Ccc";nr.append(nc);
 L("nowrap-element",near(R(nr).h,one));
+// A button the page gives breaks and an element is as tall as its lines.
+L("pre-line-markup",near(R(byId("bm")).h,R(byId("pl")).h),R(byId("bm")).h>one+10);
+// A script that changes the button's white-space later changes how its
+// line keeps spaces, and what it holds stays as it is.
+var sw=byId("sw"),sc=document.createElement("span");sc.textContent="C";sw.append(sc);
+sw.style.whiteSpace="pre";var swPre=R(sw).w;
+sw.style.whiteSpace="pre-line";var swLine=R(sw).w;
+sw.style.whiteSpace="normal";
+L("white-space-later",near(swPre,R(byId("sr")).w),near(swLine,R(byId("lr")).w),near(R(sw).w,R(byId("lr")).w),JSON.stringify(sw.textContent));
 // A `>` inside a quoted attribute value is the attribute's, not the tag's end.
 var q=byId("q");q.innerHTML='<span title="a>b">Save</span>';
 L("quoted-gt",JSON.stringify(q.textContent),q.firstChild.title,q.childNodes.length);
@@ -35,6 +44,20 @@ var u=byId("open");u.innerHTML='<span a="x>Go</span><b>Y</b>';
 L("unclosed-value",JSON.stringify(u.textContent),u.childNodes.length);
 u.innerHTML='Z<b><span a="x>Go</span></b><i>Y</i>';
 L("unclosed-nested",JSON.stringify(u.textContent),u.childNodes.length,u.lastChild.nodeName);
+// A `<` inside a tag is part of that tag, and a run of start tags with no
+// `>` is dropped from the first: either is read in time linear in its length.
+var w=byId("many");t0=Date.now();w.innerHTML="L"+'<a"x '.repeat(16000)+">";
+L("many-lt-fast",Date.now()-t0<500,w.textContent.charAt(0));
+t0=Date.now();w.innerHTML="L"+"<a x".repeat(16000);
+L("many-runoff-fast",Date.now()-t0<500,JSON.stringify(w.textContent),w.childNodes.length);
+t0=Date.now();w.insertAdjacentHTML("beforeend","<p".repeat(16000)+">");
+L("many-p-fast",Date.now()-t0<500,w.textContent.charAt(0));
+// Characters of the private use area are text like any other, also the
+// ones a reading of rendered text could mark its own spaces with.
+function codes(t){return Array.prototype.map.call(t,function(c){return c.charCodeAt(0).toString(16);}).join(",");}
+var pua="A\uE011B\uE000C\uE012\uE013\uE010D";
+byId("pd").textContent=pua;byId("pb").textContent=pua;
+L("private-use",codes(byId("pd").innerText),codes(byId("pb").innerText));
 });
 </script></head><body style="margin:0;font:16px/20px sans-serif">
 <div><button id="bn">One</button></div>
@@ -48,8 +71,15 @@ B</button></div>
 <div><button id="pr" style="white-space:pre">A      BC</button></div>
 <div><button id="lx" style="white-space:pre-line">X   Y</button></div>
 <div><button id="lr">X YC</button></div>
+<div><button id="sw" style="white-space:pre-line">X   Y</button></div>
+<div><button id="sr" style="white-space:pre">X   YC</button></div>
+<div><button id="bm" style="white-space:pre-line">A
+B<b>C</b></button></div>
 <div><button id="nr" style="white-space:nowrap;width:40px">Aaa Bbb</button></div>
 <div><button id="q">X</button></div>
 <div id="cut">Cut</div>
 <div id="open">O</div>
+<div id="many">M</div>
+<div id="pd">P</div>
+<div><button id="pb" style="white-space:pre">P</button></div>
 </body></html>
