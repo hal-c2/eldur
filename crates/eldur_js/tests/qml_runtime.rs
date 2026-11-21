@@ -5365,11 +5365,13 @@ Item {
     );
 }
 
-/// `_itemsWalked` is what the append-scaling page counts, so every lookup that
-/// walks the item table's Map adds at least as many as the Map holds: `set`,
-/// `get`, `has` and `delete`, and a destroyed item's lookups, which check the
-/// Map before scanning the addressed records and walk it after. One left out
-/// would let a cost that grows only through it past that page.
+/// `_itemsWalked` is what the append-scaling page counts, so each walk adds
+/// exactly what it steps over: every key the item table's Map holds for each
+/// `set`, `get`, `has` and `delete` that looks there, every record for a walk
+/// of the whole table, and every child for a walk of an element's children. A
+/// live item's first read walks nothing, since the Map never holds one. A
+/// walk left out, or one counted short, would let a cost that grows only
+/// through it past that page.
 #[test]
 fn qml6_every_item_table_map_walk_is_counted() {
     if !has_binary("qml6") {
@@ -5391,13 +5393,31 @@ Item {
     property var held: []
     property var seen: []
 
-    // How many items `step` adds to the runtime's count, against how many keys
-    // the table's Map holds when it starts.
-    function walks(name, step) {
-        var size = R._itemMeta._others.size;
+    Column {
+        id: captioned
+        spacing: 0
+        Item { property string eldurTag: "caption" }
+        Grid { id: cells; Item {} Item {} Item {} }
+    }
+    Item {
+        id: flexed
+        Item { id: flowed; Item {} Item {} }
+        Item {}
+        Item {}
+    }
+    Item { id: box; Item {} Item {} Item {} }
+
+    // What `step` adds to the runtime's count against `want`, given how many
+    // keys the table's Map holds and how many records it keeps by address.
+    function walks(name, step, want) {
+        var table = R._itemMeta;
+        var m = table._others.size;
+        var a = Object.keys(table._byAddress).length;
         var before = R._itemsWalked;
         step();
-        seen.push(name + (R._itemsWalked - before >= size ? "" : " " + (R._itemsWalked - before) + "<" + size));
+        var got = R._itemsWalked - before;
+        var wanted = want(m, a);
+        seen.push(name + (got === wanted ? "" : " " + got + "!=" + wanted));
     }
 
     Timer {
@@ -5406,12 +5426,12 @@ Item {
         onTriggered: {
             var table = R._itemMeta;
             var gone = root.held[0];
-            // The first lookup of a destroyed item checks the Map, then scans
-            // the addressed records and moves its record to the Map.
-            walks("adopt", function() { table.has(gone); });
-            // Now in the Map, another destroyed lookup walks it.
-            walks("gone", function() { table.get(gone); });
-            walks("delete-gone", function() { table.delete(gone); });
+            // The first lookup of a destroyed item checks the Map, scans the
+            // addressed records, moves its record to the Map and looks there.
+            walks("adopt", function() { table.has(gone); }, function(m, a) { return m + a + m + (m + 1); });
+            // In the Map now, another lookup checks it and then looks there.
+            walks("gone", function() { table.get(gone); }, function(m) { return 2 * m; });
+            walks("delete-gone", function() { table.delete(gone); }, function(m) { return 2 * m; });
             console.log("ELDUR_ITEMS_WALKED", seen.join("|"));
             Qt.quit();
         }
@@ -5419,18 +5439,39 @@ Item {
 
     Component.onCompleted: {
         var table = R._itemMeta;
+        
+        R._meta(captioned).tableGrid = cells;
+        R._meta(flexed).flow = flowed;
         for (var i = 0; i < 20; ++i) {
             table.set({}, { n: i });
         }
         var plain = {};
-        walks("set", function() { table.set(plain, { mark: "plain" }); });
-        walks("get", function() { table.get(plain); });
-        walks("has", function() { table.has(plain); });
-        walks("delete", function() { table.delete(plain); });
-        var a = made.createObject(root);
-        held.push(a);
-        table.set(a, { mark: "a" });
-        a.destroy();
+        walks("set", function() { table.set(plain, { mark: "plain" }); }, function(m) { return m; });
+        walks("get", function() { table.get(plain); }, function(m) { return m; });
+        walks("has", function() { table.has(plain); }, function(m) { return m; });
+        walks("delete", function() { table.delete(plain); }, function(m) { return m; });
+        // A live item's first read finds no record by its address, and the
+        // Map never holds a live item.
+        var fresh = made.createObject(root);
+        walks("new", function() { table.get(fresh); table.has(fresh); }, function() { return 0; });
+        walks("forEach", function() { table.forEach(function() {}); }, function(m, a) { return a + m; });
+        walks("deleteWhere", function() { table.deleteWhere(function() { return false; }); },
+              function(m, a) { return a + m; });
+        // Each of the two dropped keys is looked for in the Map as it shrinks.
+        walks("deleteWhere-drop", function() { table.deleteWhere(function(v) { return v.n >= 18; }); },
+              function(m, a) { return a + m + m + (m - 1); });
+        // A table's captions, then each cell of its grid.
+        walks("captions", function() { R._rawKids(captioned, false, false, false); },
+              function() { return captioned.children.length + cells.children.length; });
+        // Its own Text, its flow's items, then the boxes beside the flow.
+        walks("corners", function() { R._rawKids(flexed, false, false, false); },
+              function() { return flexed.children.length + flowed.children.length + flexed.children.length; });
+        walks("text", function() { R._findTextChild(box); }, function() { return box.children.length; });
+        walks("lines", function() { R._anonLinesOf(box); }, function() { return box.children.length; });
+        var gone = made.createObject(root);
+        held.push(gone);
+        table.set(gone, { mark: "gone" });
+        gone.destroy();
         later.start();
     }
 }
@@ -5439,7 +5480,10 @@ Item {
 
     let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
     assert!(
-        output.contains("ELDUR_ITEMS_WALKED set|get|has|delete|adopt|gone|delete-gone"),
-        "a Map walk the count leaves out:\n{output}"
+        output.contains(
+            "ELDUR_ITEMS_WALKED set|get|has|delete|new|forEach|deleteWhere|deleteWhere-drop\
+             |captions|corners|text|lines|adopt|gone|delete-gone"
+        ),
+        "a walk the count leaves out or counts short:\n{output}"
     );
 }

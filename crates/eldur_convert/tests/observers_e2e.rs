@@ -178,9 +178,11 @@ fn a_runaway_mutation_loop_stops() {
     );
 }
 
-/// 600 appends to body: the last walk no more items than the first, by the
-/// runtime's own count, so a loaded machine cannot pass a quadratic append or
-/// fail a linear one. Chromium has no such count, so this page has no recording.
+/// 600 appends to body walk at most 10 items each on average, by the runtime's
+/// own count, so a loaded machine cannot pass a quadratic append or fail a
+/// linear one. The average holds the item table's sweeps, each of which walks
+/// every record once the records double. Chromium has no such count, so this
+/// page has no recording.
 #[test]
 fn appends_walk_no_more_items_as_the_page_grows() {
     if support::no_qt() {
@@ -193,7 +195,7 @@ fn appends_walk_no_more_items_as_the_page_grows() {
         "append_scaling",
         &html,
         &[
-            "OB appends walk no more at the 600th than at the first",
+            "OB 600 appends walk at most 10 items each on average",
             "OB rows 600",
         ],
     ) {
