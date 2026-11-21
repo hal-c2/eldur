@@ -460,8 +460,40 @@ const DROPPED_DECLARATIONS: &[(&str, &str, bool)] = &[
     ("escaped_newline_url", "--a:url(a\\\n);display:none", false),
 ];
 
+/// A normal declaration never replaces an `!important` one of its name, so
+/// whether `[style*="x"]` still hides each after `el.style.display = ''`
+/// follows the important value, measured in Chromium 158.
+const IMPORTANT_DECLARATIONS: &[(&str, &str, bool)] = &[
+    (
+        "important_then_normal",
+        "--a:x !important;--a:y;display:none",
+        true,
+    ),
+    (
+        "normal_then_important",
+        "--a:y;--a:x !important;display:none",
+        true,
+    ),
+    (
+        "important_twice",
+        "--a:x !important;--a:y !important;display:none",
+        false,
+    ),
+];
+
 #[test]
 fn clearing_display_drops_what_chromium_drops() {
+    assert_hidden_after_clearing("--a", DROPPED_DECLARATIONS);
+}
+
+#[test]
+fn clearing_display_keeps_the_important_declaration_of_a_name() {
+    assert_hidden_after_clearing("x", IMPORTANT_DECLARATIONS);
+}
+
+/// Whether `[style*=needle]` hides each of `cases` after its `display` is
+/// cleared is what Chromium recorded.
+fn assert_hidden_after_clearing(needle: &str, cases: &[(&str, &str, bool)]) {
     fn attribute(text: &str) -> String {
         text.replace('&', "&amp;")
             .replace('"', "&quot;")
@@ -469,10 +501,10 @@ fn clearing_display_drops_what_chromium_drops() {
             .replace('\r', "&#13;")
             .replace('\x0c', "&#12;")
     }
-    let mut page = String::from(
-        "<!DOCTYPE html>\n<style>\n  [style*=\"--a\"] { display: none; }\n</style>\n",
+    let mut page = format!(
+        "<!DOCTYPE html>\n<style>\n  [style*=\"{needle}\"] {{ display: none; }}\n</style>\n",
     );
-    for (name, style, _) in DROPPED_DECLARATIONS {
+    for (name, style, _) in cases {
         page += &format!(
             "<div id=\"{name}\" style=\"{}\">x</div>\n",
             attribute(style)
@@ -482,12 +514,9 @@ fn clearing_display_drops_what_chromium_drops() {
     let viewport = Viewport::default();
     let (sheets, _) = collect_stylesheets(&doc, &mut NoSheets, &viewport);
     let node = |name: &str| doc.element_by_id(name).expect(name);
-    let nodes: BTreeSet<_> = DROPPED_DECLARATIONS
-        .iter()
-        .map(|(name, ..)| node(name))
-        .collect();
+    let nodes: BTreeSet<_> = cases.iter().map(|(name, ..)| node(name)).collect();
     let hidden = rules_hide(&doc, &sheets, &viewport, &nodes);
-    let differ: Vec<_> = DROPPED_DECLARATIONS
+    let differ: Vec<_> = cases
         .iter()
         .filter(|(name, _, chromium)| hidden.contains(&node(name)) != *chromium)
         .collect();
