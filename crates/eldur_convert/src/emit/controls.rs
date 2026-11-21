@@ -1251,6 +1251,17 @@ impl Emitter<'_, '_> {
                     readonly: false,
                     required: false,
                 });
+                if let Some(runs) =
+                    accessible::drawn_runs(self.doc, self.styles, node, &drawn, &dom)
+                {
+                    obj.members.push(Member::PropertyDecl {
+                        ty: "var".to_owned(),
+                        name: "eldurDomRuns".to_owned(),
+                        value: Some(Value::List(runs.into_iter().map(Value::String).collect())),
+                        readonly: false,
+                        required: false,
+                    });
+                }
             }
             drawn
         };
@@ -1921,6 +1932,31 @@ mod tests {
             "{q}"
         );
         assert_eq!(q.matches("eldurDomText").count(), 1, "{q}");
+        assert!(
+            q.contains(r#"property var eldurDomRuns: ["", "Save", "Ctrl S"]"#),
+            "{q}"
+        );
+    }
+
+    #[test]
+    fn a_buttons_runs_split_where_its_nodes_do() {
+        // String matching would split "ABB" as "AB" + "B" and "Saave" as
+        // "Sa" + "a" + "ve".
+        let (q, _) = qml(r#"<button>A<kbd style="display:none">B</kbd>B</button>
+               <button>S<kbd style="display:none">a</kbd>ave</button>
+               <button><kbd style="display:none">Go</kbd>Go</button>
+               <button>A <kbd style="display:none">K</kbd> B</button>"#);
+        for runs in [
+            r#"["", "A", "B", "B", ""]"#,
+            r#"["", "S", "a", "ave", ""]"#,
+            r#"["Go", "Go", ""]"#,
+            r#"["", "A ", "K ", "B", ""]"#,
+        ] {
+            assert!(
+                q.contains(&format!("property var eldurDomRuns: {runs}")),
+                "{runs}\n{q}"
+            );
+        }
     }
 
     #[test]
