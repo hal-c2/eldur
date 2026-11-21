@@ -505,6 +505,36 @@ fn a_grandchild_that_holds_the_pipes_open_does_not_outlast_the_limit() {
     assert_eq!(String::from_utf8_lossy(&output.stdout), "started\n");
 }
 
+#[cfg(unix)]
+#[test]
+fn a_pipe_held_open_outside_the_group_is_not_a_finished_run() {
+    use std::os::unix::process::CommandExt;
+    if support::missing(&["setsid"]) {
+        return;
+    }
+    let started = std::time::Instant::now();
+    // `setsid` moves the holder out of the child's process group, so the
+    // group kill can't reach it.
+    let child = std::process::Command::new("sh")
+        .args(["-c", "setsid sleep 30 & echo started"])
+        .process_group(0)
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .expect("run sh");
+    let (output, finished) = wait_draining(child, std::time::Duration::from_secs(2));
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(20),
+        "waited {:?} for a pipe held outside the group",
+        started.elapsed()
+    );
+    assert!(
+        !finished,
+        "partial output read as a finished run: {:?}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+}
+
 fn run(name: &str, page: &str, test: &str) -> String {
     let options = Options {
         root: RootKind::Item,
