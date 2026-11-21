@@ -578,3 +578,51 @@ fn shared_emissions_convert_as_one_world_at_a_time_does() {
     let (shared, alone) = both_ways(&cards(40), None);
     assert_eq!(shared, alone, "cards");
 }
+
+/// A box deep inside `depth` boxes a class may make stacking contexts, its
+/// own level from a class: its worlds take every context's class with its
+/// own, 2^(depth + 1) of them, and only the first `MAX_WORLDS` are made.
+fn deep_contexts(depth: usize) -> String {
+    let rules: String = (0..depth)
+        .map(|i| format!("#d{i}.on {{ opacity: .9 }} "))
+        .collect();
+    let open: String = (0..depth).map(|i| format!("<div id=d{i}>")).collect();
+    let toggles: String = (0..depth)
+        .map(|i| format!("document.getElementById('d{i}').classList.toggle('on');\n"))
+        .collect();
+    format!(
+        "<!DOCTYPE html><style>{rules} #t {{ position: relative }} #t.up {{ z-index: 3 }}</style>\
+         {open}<p id=t>x</p>{}<script>{toggles}document.getElementById('t').classList.add('up');</script>",
+        "</div>".repeat(depth)
+    )
+}
+
+#[test]
+fn a_box_deep_in_class_made_contexts_makes_the_first_worlds_only() {
+    // 70 nested blocks take more stack than a test thread has in a debug
+    // build; the worlds are what is measured here, not the depth.
+    let run = std::thread::Builder::new()
+        .stack_size(256 << 20)
+        .spawn(|| {
+            let page = deep_contexts(70);
+            let before = PAGE_EMISSIONS.with(std::cell::Cell::get);
+            let start = std::time::Instant::now();
+            let out = convert_str(&page, &Options::default());
+            let took = start.elapsed();
+            let made = PAGE_EMISSIONS.with(std::cell::Cell::get) - before;
+            (out, took, made)
+        })
+        .expect("spawn");
+    let (out, took, made) = run.join().expect("converts without a panic");
+    assert!(out.main_qml().is_some(), "converts");
+    assert!(
+        out.diagnostics
+            .iter()
+            .any(|d| d.message.contains("combine in more than 512 ways")),
+        "{:?}",
+        out.diagnostics
+    );
+    assert!(made <= 512, "{made} emissions");
+    // Making 2^71 worlds, or even listing them, takes no less than hours.
+    assert!(took.as_secs() < 120, "{took:?}");
+}
