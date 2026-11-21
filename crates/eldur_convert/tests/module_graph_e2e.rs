@@ -540,6 +540,46 @@ fn a_listener_reads_its_options_first() {
     assert_eq!(run("loadoptions", &read), wanted("loadoptions", &read));
 }
 
+/// A `load` listener sets `window.onload` to `null` and then to a new
+/// handler while `load` is being dispatched. The handler set first is taken
+/// out before its turn, and the new one is a new listener, added after the
+/// ones `load` was dispatched to, so neither is called.
+#[test]
+fn an_onload_set_again_while_load_fires_is_a_new_listener() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("onloadagain", &read), wanted("onloadagain", &read));
+}
+
+/// A `signal` that is not an `AbortSignal` (a number, `null`, a string, a
+/// plain object, or what a getter returns after the other options are read)
+/// throws a `TypeError` from `addEventListener`, for a null callback too, at
+/// the top level, in a listener and in a module imported later. Options
+/// given as data first and then as getters still have each getter run once.
+#[test]
+fn a_signal_that_is_not_an_abort_signal_throws() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("signalthrow", &read), wanted("signalthrow", &read));
+}
+
+/// `DOMContentLoaded` and `load` listeners and `window.onload` set inside a
+/// function, a block or another listener are added where that code runs: one
+/// added before its event is dispatched is heard then, after those added
+/// before it, and one added while its event is dispatched is not.
+#[test]
+fn a_listener_added_in_a_function_is_heard_with_its_event() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("nestedlisten", &read), wanted("nestedlisten", &read));
+}
+
 /// `source.js` pushes to an array before copying it, and defines a getter
 /// that throws before destructuring the object it is on. Each initializer
 /// sees what ran before it: the copy has two items and the destructuring
