@@ -272,12 +272,11 @@ fn a_mostly_covered_group_fits_before_costlier_small_ones() {
     );
 }
 
-#[test]
-fn every_left_out_group_warns_and_keeps_its_own_worlds() {
-    // A hundred lists of three hover-shown items, one to a source line, add
-    // four worlds each to the elements' own: far past MAX_WORLDS, so the
-    // pass leaves some lists out. Each list it leaves out says so on its
-    // own line, and its last marker still renumbers for each hover alone.
+/// A hundred lists of three hover-shown items, each list after `sep`, add
+/// four worlds each to the elements' own: far past MAX_WORLDS, so the pass
+/// leaves some lists out. Each list it leaves out gets a warning of its
+/// own, and its last marker still renumbers for each hover alone.
+fn every_left_out_list_warns(sep: &str) {
     let lists = 100;
     let mut rules = String::new();
     let mut body = String::new();
@@ -290,7 +289,7 @@ fn every_left_out_group_warns_and_keeps_its_own_worlds() {
                 ".s{k}h{i}{{display:none}} .s{k}a{i}:hover + .s{k}h{i}{{display:list-item}} "
             ));
         }
-        body.push_str(&format!("\n<ol>{items}<li>c</li></ol>"));
+        body.push_str(&format!("{sep}<ol>{items}<li>c</li></ol>"));
     }
     let page = format!("<!DOCTYPE html><style>{rules}</style>{body}");
     let out = convert_str(&page, &Options::default());
@@ -324,6 +323,18 @@ fn every_left_out_group_warns_and_keeps_its_own_worlds() {
         .filter(|d| d.contains("3 classes and states show or hide numbered elements"))
         .count();
     assert_eq!(warned, left_out, "{:?}", out.diagnostics);
+}
+
+#[test]
+fn every_left_out_group_warns_and_keeps_its_own_worlds() {
+    every_left_out_list_warns("\n");
+}
+
+#[test]
+fn left_out_lists_on_one_line_warn_apart() {
+    // A minified page starts every list on line 1: warnings that read the
+    // same at one line would count as one.
+    every_left_out_list_warns("");
 }
 
 /// A table of `cells` cells, four to a row, each recoloured by its own
