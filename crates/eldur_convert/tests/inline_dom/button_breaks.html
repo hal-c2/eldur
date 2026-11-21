@@ -52,6 +52,12 @@ t0=Date.now();w.innerHTML="L"+"<a x".repeat(16000);
 L("many-runoff-fast",Date.now()-t0<500,JSON.stringify(w.textContent),w.childNodes.length);
 t0=Date.now();w.insertAdjacentHTML("beforeend","<p".repeat(16000)+">");
 L("many-p-fast",Date.now()-t0<500,w.textContent.charAt(0));
+// What an element holds before a start tag the input ends inside is still
+// markup: the `i` inside the unclosed `b` is an element.
+var k=byId("kept");k.insertAdjacentHTML("beforeend",'<b><i>OK</i><span title="unfinished</b>');
+L("unclosed-holder",k.childNodes.length,k.lastChild.nodeName,k.lastChild.childNodes.length,k.lastChild.firstChild.nodeName,JSON.stringify(k.textContent));
+k.innerHTML='<b><i>OK</i><span title="unfinished</b>';
+L("unclosed-holder-inner",k.childNodes.length,k.lastChild.nodeName,k.lastChild.childNodes.length,k.lastChild.firstChild.nodeName,JSON.stringify(k.textContent));
 // Characters of the private use area are text like any other, also the
 // ones a reading of rendered text could mark its own spaces with.
 function codes(t){return Array.prototype.map.call(t,function(c){return c.charCodeAt(0).toString(16);}).join(",");}
@@ -80,6 +86,7 @@ B<b>C</b></button></div>
 <div id="cut">Cut</div>
 <div id="open">O</div>
 <div id="many">M</div>
+<div id="kept">K</div>
 <div id="pd">P</div>
 <div><button id="pb" style="white-space:pre">P</button></div>
 </body></html>

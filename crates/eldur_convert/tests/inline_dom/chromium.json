@@ -85,6 +85,8 @@
    "LC many-lt-fast true L",
    "LC many-runoff-fast true \"L\" 1",
    "LC many-p-fast true L",
+   "LC unclosed-holder 2 B 1 I \"KOK\"",
+   "LC unclosed-holder-inner 1 B 1 I \"OK\"",
    "LC private-use 41,e011,42,e000,43,e012,e013,e010,44 41,e011,42,e000,43,e012,e013,e010,44"
   ],
   "clicks": []
