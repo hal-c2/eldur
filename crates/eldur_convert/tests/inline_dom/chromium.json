@@ -915,6 +915,7 @@
    "LC width 304 20",
    "LC min-width 304 20",
    "LC max-width 54 true",
+   "LC width-max 54 20",
    "LC auto 100 true"
   ],
   "clicks": []
