@@ -1,26 +1,47 @@
-<!DOCTYPE html><html><head><meta charset="utf-8"><title>append scaling</title></head><body>
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>append scaling</title>
+<style>#list { display: flex; flex-direction: column; height: 40000px; }</style></head><body>
 <p id="t">rows</p>
+<div id="list"></div>
 <script>
 // hal-c2/eldur#23: 300 appends to body took 8 s because each append walked
 // everything already there. A clock only hints at that, and a loaded machine
 // moves it, so the runtime counts instead: `Eldur._itemsWalked` is every child
 // its walks of an element's children visit, every key QV4 walks to find one in
-// a Map, and every record a walk of its whole item table visits. That table is
-// swept each time its records double, so one append now and then walks them
-// all; on average 600 appends walk a few items each. An append that walks its
-// siblings walks some 300 each on average. A script's text in the page sends
-// each append through the lines text takes, which once read every child of body
-// too.
+// a Map, and every record a walk of its whole item table visits. A script's
+// text in the page sends each append through the lines text takes, which once
+// read every child of body too. A flex container ends in a spacer, so an
+// append there goes before it, which once copied every child.
 function L(k){console.log("OB "+k)}
 document.getElementById("t").textContent = "rows below";
-function row(i) { var d = document.createElement("div"); d.textContent = "row " + i; document.body.appendChild(d); }
-var start = Eldur._itemsWalked;
-for (var i = 0; i < 600; ++i) {
-  row(i);
+function appends(name, into) {
+  var walked = [];
+  for (var i = 0; i < 600; ++i) {
+    var d = document.createElement("div");
+    d.className = "row";
+    d.textContent = "row " + i;
+    var before = Eldur._itemsWalked;
+    into.appendChild(d);
+    walked.push(Eldur._itemsWalked - before);
+  }
+  // The item table is swept each time its records double, so one append now
+  // and then walks them all; on average 600 appends walk a few items each. An
+  // append that walks its siblings walks some 300 each on average.
+  var each = walked.reduce(function(a, b) { return a + b; }, 0) / walked.length;
+  L(each <= 10 ? name + ": 600 appends walk at most 10 items each on average"
+    : name + ": 600 appends walk " + each + " items each on average");
+  // What grows slower than the page, as log n does, the average lets by; each
+  // append's own walk shows it. Of each hundred the five largest are left
+  // out, as a sweep is at most one of them.
+  function usual(from) {
+    var some = walked.slice(from, from + 100).sort(function(a, b) { return a - b; }).slice(0, 95);
+    return some.reduce(function(a, b) { return a + b; }, 0) / some.length;
+  }
+  var early = usual(0), late = usual(500);
+  L(late <= early + 0.5 ? name + ": the last 100 appends walk no more than the first 100"
+    : name + ": the last 100 appends walk " + late + " items each, the first 100 " + early);
 }
-var each = (Eldur._itemsWalked - start) / 600;
-L(each <= 10 ? "600 appends walk at most 10 items each on average"
-  : "600 appends walk " + each + " items each on average");
-L("rows " + document.querySelectorAll("div").length);
+appends("body", document.body);
+appends("flex", document.getElementById("list"));
+L("rows " + document.querySelectorAll("body > .row").length + " " + document.querySelectorAll("#list > .row").length);
 var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
 </script></body></html>

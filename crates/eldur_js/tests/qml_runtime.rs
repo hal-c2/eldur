@@ -5406,6 +5406,14 @@ Item {
         Item {}
     }
     Item { id: box; Item {} Item {} Item {} }
+    // Named items, then a spacer, which an append goes before.
+    Column {
+        id: spaced
+        Item { objectName: "a" }
+        Item { objectName: "b" }
+        Item { objectName: "c" }
+        Item {}
+    }
 
     // What `step` adds to the runtime's count against `want`, given how many
     // keys the table's Map holds and how many records it keeps by address.
@@ -5455,6 +5463,18 @@ Item {
         var fresh = made.createObject(root);
         walks("new", function() { table.get(fresh); table.has(fresh); }, function() { return 0; });
         walks("forEach", function() { table.forEach(function() {}); }, function(m, a) { return a + m; });
+        // A key `fn` deletes before the Map's turn is not visited there.
+        var spare = {};
+        table.set(spare, { n: -1 });
+        var dropped = false;
+        walks("forEach-delete", function() {
+            table.forEach(function() {
+                if (!dropped) {
+                    dropped = true;
+                    table.delete(spare);
+                }
+            });
+        }, function(m, a) { return a + m + (m - 1); });
         walks("deleteWhere", function() { table.deleteWhere(function() { return false; }); },
               function(m, a) { return a + m; });
         // Each of the two dropped keys is looked for in the Map as it shrinks.
@@ -5466,6 +5486,14 @@ Item {
         // Its own Text, its flow's items, then the boxes beside the flow.
         walks("corners", function() { R._rawKids(flexed, false, false, false); },
               function() { return flexed.children.length + flowed.children.length + flexed.children.length; });
+        // The spacer from the end, then the item before it, which ends the
+        // run of spacers; then the spacer is found and is the whole tail.
+        walks("append", function() { R._insertInFlow(spaced, [made.createObject(root)], null); },
+              function() { return 2 + 1 + 1; });
+        // Before "b", of five: from the end back to it, then it and the
+        // three after it.
+        walks("insert", function() { R._insertInFlow(spaced, [made.createObject(root)], spaced.children[1]); },
+              function() { return 4 + 4; });
         walks("text", function() { R._findTextChild(box); }, function() { return box.children.length; });
         walks("lines", function() { R._anonLinesOf(box); }, function() { return box.children.length; });
         var gone = made.createObject(root);
@@ -5481,8 +5509,8 @@ Item {
     let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
     assert!(
         output.contains(
-            "ELDUR_ITEMS_WALKED set|get|has|delete|new|forEach|deleteWhere|deleteWhere-drop\
-             |captions|corners|text|lines|adopt|gone|delete-gone"
+            "ELDUR_ITEMS_WALKED set|get|has|delete|new|forEach|forEach-delete|deleteWhere\
+             |deleteWhere-drop|captions|corners|append|insert|text|lines|adopt|gone|delete-gone"
         ),
         "a walk the count leaves out or counts short:\n{output}"
     );
