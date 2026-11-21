@@ -7060,10 +7060,25 @@ function _setInnerHTMLAt(item, html) {
 // after the nearest node it followed that is still there, else before the
 // nearest one that followed it, else at the start.
 function _linesText(raw) {
-    var kids = _rawChildNodes(raw);
-    var hidden = _meta(raw).linesHidden || [];
+    return _linesHiddenText(_meta(raw).linesHidden || [], _rawChildNodes(raw), getText);
+}
+
+// Hidden text the button held, `text` on its own: the nodes it followed,
+// nearest first, and the nodes that followed it, each with the number of
+// times it had been put in (`_insertChildren` counts them).
+function _hiddenRecord(text, after, before) {
+    var anchor = function(node) {
+        return { node: node, put: _meta(node).linesPut || 0 };
+    };
+    return { text: text, after: (after || []).map(anchor), before: (before || []).map(anchor) };
+}
+
+// `kids` read with `textOf`, and the `hidden` records' text between them. A
+// record missing a list of anchors has none on that side.
+function _linesHiddenText(hidden, kids, textOf) {
     // A node that left, or was put in again, is no longer next to it.
     var stayed = function(anchors) {
+        anchors = anchors || [];
         for (var i = 0; i < anchors.length; ++i) {
             var node = _gCurrent(anchors[i].node);
             if (kids.indexOf(node) !== -1 && (_meta(node).linesPut || 0) === anchors[i].put) {
@@ -7079,7 +7094,7 @@ function _linesText(raw) {
     };
     var text = hidden.filter(function(h, i) { return !after[i] && !before[i]; }).map(function(h) { return h.text; }).join("");
     kids.forEach(function(kid) {
-        text += held(before, kid) + getText(kid) + held(after, kid);
+        text += held(before, kid) + textOf(kid) + held(after, kid);
     });
     return text;
 }
@@ -12564,14 +12579,7 @@ function _btnBecomesLines(raw) {
     });
     var texts = leaves.map(_vToReal);
     m.linesHidden = (m.linesHidden || []).concat(hidden.map(function(h) {
-        var anchor = function(node) {
-            return { node: node, put: _meta(node).linesPut || 0 };
-        };
-        return {
-            text: h.text,
-            after: texts.slice(0, h.at + 1).reverse().map(anchor),
-            before: texts.slice(h.at + 1).map(anchor)
-        };
+        return _hiddenRecord(h.text, texts.slice(0, h.at + 1).reverse(), texts.slice(h.at + 1));
     }));
     _btnForget(raw);
     delete m.btnMarkup;
