@@ -5522,6 +5522,11 @@ Item {
 /// what follows the new items, not the whole layout, and leaves the spacers as
 /// a fresh pack would for every kind of packing. Packed and unchanged, a
 /// settle only counts its children.
+///
+/// A settle trusts its spacer count, so after every step the count is checked
+/// against the spacers there: for an append and inserts before the first and an
+/// inner item in each packing, and for a layout whose hidden items leave it a
+/// collapser, which looks like a spacer and must stay out of the count.
 #[test]
 fn qml6_packed_flex_inserts_walk_what_follows() {
     if !has_binary("qml6") {
@@ -5541,6 +5546,7 @@ import "eldur_runtime.js" as R
 Item {
     id: root
     Component { id: rect; Rectangle {} }
+    Component { id: column; ColumnLayout { property string eldurPack; property bool eldurPackRow: false; property real eldurPackGap: 6 } }
     property var seen: []
     property int made: 0
 
@@ -5566,9 +5572,57 @@ Item {
         var out = [];
         for (var i = 0; i < layout.children.length; ++i) {
             var c = layout.children[i];
-            out.push(c.objectName || "s" + (layout.eldurPackRow ? c.Layout.minimumWidth : c.Layout.minimumHeight));
+            out.push(c === R._meta(layout).collapser ? "collapser"
+                : c.objectName || "s" + (layout.eldurPackRow ? c.Layout.minimumWidth : c.Layout.minimumHeight));
         }
         return out.join(" ");
+    }
+    // What a settle trusts: the spacers it counts are the spacers there, and
+    // a collapser stays in its layout, last. Empty when they hold.
+    function broken(layout) {
+        var m = R._meta(layout);
+        var real = 0;
+        for (var i = 0; i < layout.children.length; ++i) {
+            var c = layout.children[i];
+            if (c !== m.collapser && R._isLayoutSpacer(c)) ++real;
+        }
+        var out = [];
+        if (m.packedSpacers !== real) out.push("spacers " + m.packedSpacers + "!=" + real);
+        if (m.collapser && m.collapser.parent !== layout) out.push("collapser lost");
+        if (m.collapser && layout.children[layout.children.length - 1] !== m.collapser) out.push("collapser moved");
+        return out.join(",");
+    }
+    // A packed column of two items, shown or not.
+    function packed(pack, visible) {
+        var layout = column.createObject(root, { eldurPack: pack });
+        fresh().parent = layout;
+        fresh().parent = layout;
+        layout.children[0].visible = visible;
+        layout.children[1].visible = visible;
+        R._packFlex(layout, true);
+        return layout;
+    }
+    // Runs `steps` on `layout`, checking `broken` after each and after a
+    // settle, then compares it with a fresh pack; "" when all of it holds.
+    function holds(layout, steps) {
+        var out = [];
+        steps.forEach(function(step) {
+            step[1](layout);
+            var after = broken(layout);
+            R._packFlex(layout, false);
+            var settled = broken(layout);
+            if (after || settled) out.push(step[0] + ": " + (after || "settle " + settled));
+        });
+        var got = shape(layout);
+        R._packFlex(layout, true);
+        if (got !== shape(layout)) out.push(got + " != " + shape(layout));
+        return out.join("; ");
+    }
+    function nth(layout, at) {
+        for (var i = 0; i < layout.children.length; ++i) {
+            if (!R._isLayoutSpacer(layout.children[i]) && at-- === 0) return layout.children[i];
+        }
+        return null;
     }
     function item(layout, name) {
         for (var i = 0; i < layout.children.length; ++i) {
@@ -5601,6 +5655,33 @@ Item {
             var want = shape(layout);
             seen.push(layout.eldurPack + (got === want ? "" : " " + got + " != " + want));
         });
+        // An append, an insert before the first item and one before an inner
+        // item, in each kind of packing, end as a fresh pack would.
+        var modes = ["between", "around", "evenly", "start", "end", "center"];
+        var table = [];
+        modes.forEach(function(pack) {
+            [["append", null], ["first", 0], ["inner", 1]].forEach(function(where) {
+                var layout = packed(pack, true);
+                var before = where[1] === null ? null : nth(layout, where[1]);
+                var why = holds(layout, [[where[0], function(l) { R._insertInFlow(l, [fresh()], before); }]]);
+                if (why) table.push(pack + " " + where[0] + ": " + why);
+            });
+        });
+        seen.push("table" + (table.length ? " " + table.join(" / ") : ""));
+        // A layout whose items are all hidden holds a collapser, shaped like
+        // a spacer: settles, repacks and an append keep it out of the count
+        // and in its place, and end as a fresh pack would.
+        var collapse = [];
+        ["none"].concat(modes).forEach(function(pack) {
+            var why = holds(packed(pack, false), [
+                ["collapse", function(l) { R._keepCollapsing(l); }],
+                ["repack", function(l) { R._packFlex(l, true); }],
+                ["append", function(l) { R._insertInFlow(l, [fresh()], null); }],
+                ["uncollapse", function(l) { R._keepCollapsing(l); }],
+            ]);
+            if (why) collapse.push(pack + ": " + why);
+        });
+        seen.push("collapse" + (collapse.length ? " " + collapse.join(" / ") : ""));
         console.log("ELDUR_PACK_WALKED", seen.join("|") + "|end");
         Qt.quit();
     }
@@ -5612,7 +5693,7 @@ Item {
     assert!(
         output.contains(
             "ELDUR_PACK_WALKED pack|pack-settle|pack-append|pack-insert\
-             |between|around|evenly|start|end|center|end"
+             |between|around|evenly|start|end|center|table|collapse|end"
         ),
         "a packed insert walks more than what follows it, or packs unlike a fresh pack:\n{output}"
     );
