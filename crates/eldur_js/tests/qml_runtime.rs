@@ -5440,7 +5440,8 @@ Item {
             // In the Map now, another lookup checks it and then looks there.
             walks("gone", function() { table.get(gone); }, function(m) { return 2 * m; });
             walks("delete-gone", function() { table.delete(gone); }, function(m) { return 2 * m; });
-            console.log("ELDUR_ITEMS_WALKED", seen.join("|"));
+            // The last name is followed too, so its mismatch can't pass.
+            console.log("ELDUR_ITEMS_WALKED", seen.join("|") + "|end");
             Qt.quit();
         }
     }
@@ -5503,6 +5504,7 @@ Item {
         later.start();
     }
 }
+
 "#,
     );
 
@@ -5510,8 +5512,107 @@ Item {
     assert!(
         output.contains(
             "ELDUR_ITEMS_WALKED set|get|has|delete|new|forEach|forEach-delete|deleteWhere\
-             |deleteWhere-drop|captions|corners|append|insert|text|lines|adopt|gone|delete-gone"
+             |deleteWhere-drop|captions|corners|append|insert|text|lines|adopt|gone|delete-gone|end"
         ),
         "a walk the count leaves out or counts short:\n{output}"
+    );
+}
+
+/// A packed flex layout takes an append or an insert where it lands: it walks
+/// what follows the new items, not the whole layout, and leaves the spacers as
+/// a fresh pack would for every kind of packing. Packed and unchanged, a
+/// settle only counts its children.
+#[test]
+fn qml6_packed_flex_inserts_walk_what_follows() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 packed flex test: qml6 not on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("packed_flex");
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+    dir.write_file("eldur_runtime.js", RUNTIME_JS);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r##"import QtQuick
+import QtQuick.Layouts
+import "eldur_runtime.js" as R
+
+Item {
+    id: root
+    Component { id: rect; Rectangle {} }
+    property var seen: []
+    property int made: 0
+
+    ColumnLayout { id: between; property string eldurPack: "between"; property bool eldurPackRow: false; property real eldurPackGap: 6; Rectangle { objectName: "p0" } Rectangle { objectName: "p1" } }
+    ColumnLayout { id: around; property string eldurPack: "around"; property bool eldurPackRow: false; property real eldurPackGap: 6; Rectangle { objectName: "p0" } Rectangle { objectName: "p1" } }
+    ColumnLayout { id: evenly; property string eldurPack: "evenly"; property bool eldurPackRow: false; property real eldurPackGap: 6; Rectangle { objectName: "p0" } Rectangle { objectName: "p1" } }
+    RowLayout { id: start; property string eldurPack: "start"; property bool eldurPackRow: true; property real eldurPackGap: 6; Rectangle { objectName: "p0" } Rectangle { objectName: "p1" } }
+    ColumnLayout { id: end; property string eldurPack: "end"; property bool eldurPackRow: false; property real eldurPackGap: 6; Rectangle { objectName: "p0" } Rectangle { objectName: "p1" } }
+    ColumnLayout { id: center; property string eldurPack: "center"; property bool eldurPackRow: false; property real eldurPackGap: 6; Rectangle { objectName: "p0" } Rectangle { objectName: "p1" } }
+    ColumnLayout { id: counted; property string eldurPack: "between"; property bool eldurPackRow: false; property real eldurPackGap: 6; Rectangle { objectName: "p0" } Rectangle { objectName: "p1" } }
+
+    function walks(name, step, wanted) {
+        var before = R._itemsWalked;
+        step();
+        var got = R._itemsWalked - before;
+        seen.push(name + (got === wanted ? "" : " " + got + "!=" + wanted));
+    }
+    function fresh() {
+        return rect.createObject(root, { objectName: "n" + made++ });
+    }
+    // Each child in order: an item's name, or a spacer's minimum.
+    function shape(layout) {
+        var out = [];
+        for (var i = 0; i < layout.children.length; ++i) {
+            var c = layout.children[i];
+            out.push(c.objectName || "s" + (layout.eldurPackRow ? c.Layout.minimumWidth : c.Layout.minimumHeight));
+        }
+        return out.join(" ");
+    }
+    function item(layout, name) {
+        for (var i = 0; i < layout.children.length; ++i) {
+            if (layout.children[i].objectName === name) return layout.children[i];
+        }
+        return null;
+    }
+
+    Component.onCompleted: {
+        // A first pack walks the children, then moves each item out and back.
+        walks("pack", function() { R._packFlex(counted, true); }, 2 + 2 + 2);
+        // Packed and unchanged, a settle only counts.
+        walks("pack-settle", function() { R._packFlex(counted, false); }, 0);
+        // The insert's search from the end, its one check that the new item
+        // is not a spacer, and the item moved out and back after its gap.
+        walks("pack-append", function() { R._insertInFlow(counted, [fresh()], null); }, 1 + 1 + 1);
+        // Before p1 the insert searches from the end to it and moves what
+        // follows; the pack checks the item, then moves it and what follows
+        // again, now with a gap after it.
+        walks("pack-insert", function() { R._insertInFlow(counted, [fresh()], item(counted, "p1")); }, 3 + 3 + 1 + 4);
+        // Appends and inserts leave each kind of packing as a fresh pack would.
+        [between, around, evenly, start, end, center].forEach(function(layout) {
+            R._packFlex(layout, true);
+            for (var k = 0; k < 3; ++k) R._insertInFlow(layout, [fresh()], null);
+            R._insertInFlow(layout, [fresh()], item(layout, "p1"));
+            R._insertInFlow(layout, [fresh(), fresh()], item(layout, "p1"));
+            var got = shape(layout);
+            R._packFlex(layout, true);
+            var want = shape(layout);
+            seen.push(layout.eldurPack + (got === want ? "" : " " + got + " != " + want));
+        });
+        console.log("ELDUR_PACK_WALKED", seen.join("|") + "|end");
+        Qt.quit();
+    }
+}
+"##,
+    );
+
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
+    assert!(
+        output.contains(
+            "ELDUR_PACK_WALKED pack|pack-settle|pack-append|pack-insert\
+             |between|around|evenly|start|end|center|end"
+        ),
+        "a packed insert walks more than what follows it, or packs unlike a fresh pack:\n{output}"
     );
 }
