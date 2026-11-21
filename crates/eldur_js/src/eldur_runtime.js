@@ -6551,7 +6551,8 @@ function _itCollect(raw, out) {
     if (raw.__eldurInline) {
         if (raw.vtext) {
             if (!raw.vparent || _vStyle(raw.vparent).visible !== false) {
-                out.push(_itLiteral(raw.data));
+                var data = _itLiteral(raw.data);
+                out.push(_itKeepsSpaces(raw) ? _itKept(data) : data);
             }
             return;
         }
@@ -6761,16 +6762,44 @@ function _contentName(raw) {
     }
 }
 
-// A button's label, or a run of text on the line a button holds its
-// elements on, keeps its spaces when the button's white-space does.
+// A button's label, a run of text on the line a button holds its elements
+// on, or a text node of such a run's model keeps its spaces when the
+// white-space it draws by does.
 function _itKeepsSpaces(raw) {
-    var button = _isTextButton(raw) ? raw : null;
-    for (var p = raw.parent, up = 0; !button && p && up < 4; p = p.parent, ++up) {
-        if (_meta(p).btnLines && _nodeTag(p) === "button") {
-            button = p;
+    return /^(pre|pre-wrap|break-spaces)$/.test(_itRunWhiteSpace(raw) || "");
+}
+
+// The `white-space` a button's label or a run on its line draws by, or null
+// for text on no button's line: the run's own computed one under a cascade;
+// on a page without one, that of the nearest element from the run up to the
+// button that sets its own, else the button's. A model's text node draws as
+// the element it is the content of.
+function _itRunWhiteSpace(raw) {
+    var item = raw.vtext ? (raw.model ? _vHostElement(raw.model) : null) : raw;
+    var set = null;
+    for (var p = item; p; p = p.parent) {
+        if (p === item ? _isTextButton(p) : _meta(p).btnLines && _nodeTag(p) === "button") {
+            if (_gHasCascade()) {
+                return _gFreshStyle(item)["white-space"];
+            }
+            return set !== null ? set : _btnWhiteSpace(p);
+        }
+        if (set === null) {
+            set = _ownWhiteSpace(p);
         }
     }
-    return Boolean(button) && /^(pre|pre-wrap|break-spaces)$/.test(_btnWhiteSpace(button));
+    return null;
+}
+
+// The `white-space` an element sets itself on a page without a cascade: a
+// script's own `style.whiteSpace`, over the converter's.
+function _ownWhiteSpace(raw) {
+    var own = String(_meta(raw).styles && _meta(raw).styles.whiteSpace || "")
+        .replace(/!\s*important\s*$/i, "").trim().toLowerCase();
+    if (/^(normal|nowrap|pre|pre-wrap|pre-line|break-spaces)$/.test(own)) {
+        return own;
+    }
+    return typeof raw.eldurWhiteSpace === "string" ? raw.eldurWhiteSpace : null;
 }
 
 // Spaces a box draws, kept from `_innerText`'s collapsing until its end.
@@ -12876,13 +12905,8 @@ function _btnWhiteSpace(raw) {
     if (_gHasCascade()) {
         return _gFreshStyle(raw)["white-space"];
     }
-    // A script's own `style.whiteSpace` is over the converter's.
-    var own = String(_meta(raw).styles && _meta(raw).styles.whiteSpace || "")
-        .replace(/!\s*important\s*$/i, "").trim().toLowerCase();
-    if (/^(normal|nowrap|pre|pre-wrap|pre-line|break-spaces)$/.test(own)) {
-        return own;
-    }
-    return typeof raw.eldurWhiteSpace === "string" ? raw.eldurWhiteSpace : "normal";
+    var own = _ownWhiteSpace(raw);
+    return own !== null ? own : "normal";
 }
 
 // What a button's Text nodes hold, with what it holds but does not draw

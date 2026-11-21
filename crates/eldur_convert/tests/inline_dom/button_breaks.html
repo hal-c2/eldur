@@ -91,6 +91,9 @@ L("title-holds-tag",JSON.stringify(q.textContent),q.childNodes.length,q.lastChil
 // holds what follows up to its end tag.
 q.innerHTML='<b>outer<b data-x=a/>inner</b>tail</b>';
 L("unquoted-slash",JSON.stringify(q.textContent),q.childNodes.length,q.firstChild.childNodes.length,q.firstChild.childNodes[1].getAttribute("data-x"),JSON.stringify(q.firstChild.childNodes[1].textContent));
+// A run that sets its own white-space draws its spaces by it, not by the
+// button's; one far below the button still keeps the button's.
+L("pre-normal-span",JSON.stringify(byId("pn").innerText),JSON.stringify(byId("pdeep").innerText));
 // Characters of the private use area are text like any other, also the
 // ones a reading of rendered text could mark its own spaces with.
 function codes(t){return Array.prototype.map.call(t,function(c){return c.charCodeAt(0).toString(16);}).join(",");}
@@ -125,4 +128,6 @@ B<b>C</b></button></div>
 <div id="deep">D</div>
 <div id="pd">P</div>
 <div><button id="pb" style="white-space:pre">P</button></div>
+<div><button id="pn" style="white-space:pre">A<span style="white-space:normal">x   y</span></button></div>
+<div><button id="pdeep" style="white-space:pre">A<span><span><span><span><span>x   y</span></span></span></span></span></button></div>
 </body></html>

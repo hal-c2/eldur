@@ -96,6 +96,7 @@
    "LC many-lt-in-value-fast true \"x\" 32000",
    "LC title-holds-tag \"OKtail\" 2 #text",
    "LC unquoted-slash \"outerinnertail\" 1 3 a/ \"inner\"",
+   "LC pre-normal-span \"Ax y\" \"Ax   y\"",
    "LC private-use 41,e011,42,e000,43,e012,e013,e010,44 41,e011,42,e000,43,e012,e013,e010,44"
   ],
   "clicks": []
@@ -109,7 +110,9 @@
    "LC pre-set \"Save K later\"",
    "LC clone-hidden \"AHB\"",
    "LC clone-hidden-left \"AH\"",
-   "LC text-spaces \"A  B\""
+   "LC text-spaces \"A  B\"",
+   "LC pre-normal-span \"Ax y\" \"Ax   y\"",
+   "LC pre-model-leaf \"A  B\""
   ],
   "clicks": []
  },
