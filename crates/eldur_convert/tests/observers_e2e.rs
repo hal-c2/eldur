@@ -60,6 +60,34 @@ fn run_patched(
     want: &[&str],
     patch: &[(&str, &str)],
 ) -> Result<String, String> {
+    let run = run_page(name, html, patch);
+    let mut problems = run.harness;
+    for i in 0..run.logged.len().max(want.len()) {
+        let (got, chromium) = (run.logged.get(i), want.get(i));
+        if got.map(String::as_str) != chromium.copied() {
+            problems.push(format!(
+                "line {i}\n    got      {}\n    Chromium {}",
+                got.map_or("(nothing)", String::as_str),
+                chromium.unwrap_or(&"(nothing)"),
+            ));
+        }
+    }
+    if problems.is_empty() {
+        Ok(run.text)
+    } else {
+        Err(format!("{name}:\n  {}", problems.join("\n  ")))
+    }
+}
+
+/// What one run of a page left: its whole log, what went wrong besides the
+/// page's own lines, and those lines.
+struct PageRun {
+    text: String,
+    harness: Vec<String>,
+    logged: Vec<String>,
+}
+
+fn run_page(name: &str, html: &str, patch: &[(&str, &str)]) -> PageRun {
     let options = Options {
         root: RootKind::Item,
         ..Options::default()
@@ -107,24 +135,14 @@ fn run_patched(
     if !output.status.success() {
         problems.push(format!("qmltestrunner exited with {}", output.status));
     }
-    let logged: Vec<_> = text
+    let logged = text
         .lines()
-        .filter_map(|l| l.find("OB ").map(|at| &l[at..]))
+        .filter_map(|l| l.find("OB ").map(|at| l[at..].to_owned()))
         .collect();
-    for i in 0..logged.len().max(want.len()) {
-        let (got, chromium) = (logged.get(i), want.get(i));
-        if got != chromium {
-            problems.push(format!(
-                "line {i}\n    got      {}\n    Chromium {}",
-                got.unwrap_or(&"(nothing)"),
-                chromium.unwrap_or(&"(nothing)"),
-            ));
-        }
-    }
-    if problems.is_empty() {
-        Ok(text)
-    } else {
-        Err(format!("{name}:\n  {}", problems.join("\n  ")))
+    PageRun {
+        text,
+        harness: problems,
+        logged,
     }
 }
 
@@ -322,22 +340,134 @@ fn every_append_cost_mutant_fails_the_scaling_page() {
     let page =
         Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/observers/scaling/append_scaling.html");
     let html = std::fs::read_to_string(page).expect("page");
-    let mut passed = Vec::new();
+    let mut wrong = Vec::new();
     for (name, patch) in &mutants {
-        match run_patched(
-            &format!("append_mutant_{name}"),
-            &html,
-            APPEND_SCALING_WANT,
-            patch,
-        ) {
-            Ok(_) => passed.push(*name),
-            Err(e) => println!("{name} fails the page, as it should:\n{e}\n"),
+        let run = run_page(&format!("append_mutant_{name}"), &html, patch);
+        match over_budget(&run) {
+            Ok(over) => println!(
+                "{name} fails the page, as it should:\n  {}\n",
+                over.join("\n  ")
+            ),
+            Err(why) => wrong.push(format!("{name}: {why}")),
         }
     }
     assert!(
-        passed.is_empty(),
-        "the scaling page passes these mutants: {passed:?}"
+        wrong.is_empty(),
+        "these mutants don't fail the scaling page on its budget alone:\n{}",
+        wrong.join("\n")
     );
+}
+
+/// Only a page that ran through and failed a budget counts as a mutant
+/// caught: a broken run, a page cut short, a NaN or a pass does not.
+#[test]
+fn a_mutant_is_caught_only_by_a_failed_budget() {
+    let page = |harness: &[&str], logged: &[&str]| PageRun {
+        text: String::new(),
+        harness: harness.iter().map(|l| l.to_string()).collect(),
+        logged: logged.iter().map(|l| l.to_string()).collect(),
+    };
+    let with = |i: usize, line: &str| {
+        let mut logged = APPEND_SCALING_WANT.to_vec();
+        logged[i] = line;
+        logged
+    };
+    let over = with(4, "OB flex: an append walks 1806 items besides sweeps");
+    assert_eq!(
+        over_budget(&page(&[], &over)),
+        Ok(vec![
+            "OB flex: an append walks 1806 items besides sweeps".to_owned()
+        ])
+    );
+    let growth = with(
+        2,
+        "OB body: the last 100 appends walk 5.9 items each, the first 100 3.67",
+    );
+    assert!(over_budget(&page(&[], &growth)).is_ok());
+    let average = with(3, "OB flex: 600 appends walk 304.505 items each on average");
+    assert!(over_budget(&page(&[], &average)).is_ok());
+    for (why, run) in [
+        ("passes", page(&[], APPEND_SCALING_WANT)),
+        ("broken run", page(&["qmltestrunner exited with 1"], &over)),
+        ("cut short", page(&[], &APPEND_SCALING_WANT[..3])),
+        (
+            "NaN",
+            page(
+                &[],
+                &with(0, "OB body: 600 appends walk NaN items each on average"),
+            ),
+        ),
+        (
+            "never swept",
+            page(&[], &with(6, "OB the appends never swept the item table")),
+        ),
+        ("rows lost", page(&[], &with(7, "OB rows 600 0"))),
+        (
+            "other section",
+            page(
+                &[],
+                &with(1, "OB flex: an append walks 12 items besides sweeps"),
+            ),
+        ),
+        (
+            "other check",
+            page(
+                &[],
+                &with(1, "OB body: 600 appends walk 12 items each on average"),
+            ),
+        ),
+    ] {
+        assert!(over_budget(&run).is_err(), "{why} counted as caught");
+    }
+}
+
+/// The budget lines a run of the scaling page failed, when it ran through
+/// and failed only those: a mutant that breaks the page, or crashes the
+/// runner, or passes, is `Err` with why.
+fn over_budget(run: &PageRun) -> Result<Vec<String>, String> {
+    if !run.harness.is_empty() {
+        return Err(format!("the run broke: {}", run.harness.join("; ")));
+    }
+    if run.logged.len() != APPEND_SCALING_WANT.len() {
+        return Err(format!("the page logged {:?}", run.logged));
+    }
+    let mut over = Vec::new();
+    for (i, (got, want)) in run.logged.iter().zip(APPEND_SCALING_WANT).enumerate() {
+        if got == want {
+            continue;
+        }
+        if i >= 6 || !budget_failure(i % 3, &want[..want.find(':').expect("a section")], got) {
+            return Err(format!("line {i} is not a budget failure: {got}"));
+        }
+        over.push(got.clone());
+    }
+    if over.is_empty() {
+        return Err("it passes the page".to_owned());
+    }
+    Ok(over)
+}
+
+/// Whether `got` is the scaling page's own failure of budget `check` (the
+/// average, the largest append, then growth) for `section`, with numbers.
+fn budget_failure(check: usize, section: &str, got: &str) -> bool {
+    let Some(rest) = got.strip_prefix(section).and_then(|r| r.strip_prefix(": ")) else {
+        return false;
+    };
+    let numbers: Option<Vec<f64>> = match check {
+        0 => rest
+            .strip_prefix("600 appends walk ")
+            .and_then(|r| r.strip_suffix(" items each on average"))
+            .and_then(|n| Some(vec![n.parse().ok()?])),
+        1 => rest
+            .strip_prefix("an append walks ")
+            .and_then(|r| r.strip_suffix(" items besides sweeps"))
+            .and_then(|n| Some(vec![n.parse().ok()?])),
+        _ => rest
+            .strip_prefix("the last 100 appends walk ")
+            .and_then(|r| r.split_once(" items each, the first 100 "))
+            .and_then(|(late, early)| Some(vec![late.parse().ok()?, early.parse().ok()?])),
+    };
+    numbers.is_some_and(|n| n.iter().all(|x| x.is_finite()))
 }
 
 /// The converter no longer calls the three unsupported: they run.
