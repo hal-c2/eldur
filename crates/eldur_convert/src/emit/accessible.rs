@@ -86,6 +86,8 @@ pub(crate) fn drawn_runs(
     }
     // The drawn text collapses a space the hidden text kept apart from
     // another, and trims its ends: those spaces are only in the hidden runs.
+    // A node then lacks a space it has in the DOM (`Save <kbd hidden>K</kbd>
+    // now` gives "now" for " now"), since each run draws what it holds.
     let mut after_space = true;
     for i in (1..runs.len()).step_by(2) {
         if runs[i].is_empty() {
