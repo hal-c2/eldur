@@ -1611,18 +1611,24 @@ impl Emitter<'_, '_> {
                 super::units::fmt_number(round(extra))
             ),
         };
-        if let Size::Length(w) = &style.width {
-            return Value::expr(px(w));
-        }
-        let mut cap = room.clone();
+        // As CSS bounds any width: `max-width` caps it, and `min-width` wins
+        // over both. Only the shrink-to-fit width is held to the fieldset.
+        let bound = |pick: &str, a: String, b: String| match (a.parse::<f64>(), b.parse::<f64>()) {
+            (Ok(x), Ok(y)) if pick == "min" => super::units::fmt_number(x.min(y)),
+            (Ok(x), Ok(y)) => super::units::fmt_number(x.max(y)),
+            _ => format!("Math.{pick}({a}, {b})"),
+        };
+        let mut width = match &style.width {
+            Size::Length(w) => px(w),
+            _ => format!("Math.min(implicitWidth, {room})"),
+        };
         if let Size::Length(max) = &style.max_width {
-            cap = format!("Math.min({cap}, {})", px(max));
+            width = bound("min", width, px(max));
         }
-        let mut width = format!("Math.min(implicitWidth, {cap})");
         if let Size::Length(min) = &style.min_width
             && min.as_px() != Some(0.0)
         {
-            width = format!("Math.max({}, {width})", px(min));
+            width = bound("max", px(min), width);
         }
         Value::expr(width)
     }
@@ -2104,7 +2110,8 @@ mod tests {
         let (q, _) = qml(
             "<fieldset id=a><legend style=width:300px>A</legend></fieldset>\
              <fieldset id=b><legend style=min-width:300px>B</legend></fieldset>\
-             <fieldset id=c><legend style=max-width:50px>C</legend></fieldset>",
+             <fieldset id=c><legend style=max-width:50px>C</legend></fieldset>\
+             <fieldset id=d><legend style=width:300px;max-width:50px>D</legend></fieldset>",
         );
         assert!(q.contains("width: 304\n"), "{q}");
         assert!(
@@ -2112,9 +2119,10 @@ mod tests {
             "{q}"
         );
         assert!(
-            q.contains("width: Math.min(implicitWidth, Math.min(c.availableWidth, 54))"),
+            q.contains("width: Math.min(Math.min(implicitWidth, c.availableWidth), 54)"),
             "{q}"
         );
+        assert!(q.contains("width: 54\n"), "{q}");
     }
 
     #[test]
