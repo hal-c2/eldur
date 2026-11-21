@@ -29,6 +29,11 @@ L("clone-hidden-left",JSON.stringify(ar.cloneNode(true).textContent));
 // A Text node's spaces are its own: the label collapses them as it draws.
 var ab=byId("ab");ab.appendChild(document.createTextNode("  B"));
 L("text-spaces",JSON.stringify(ab.textContent));
+// A run that sets its own white-space draws its spaces by it; one far below
+// the button keeps the button's; a span's text node, once read, keeps them.
+L("pre-normal-span",JSON.stringify(byId("pn").innerText),JSON.stringify(byId("pdeep").innerText));
+var pm=byId("pm");pm.firstElementChild.firstChild;
+L("pre-model-leaf",JSON.stringify(pm.innerText));
 });
 </script></head><body>
 <p id="pa"><button id="la">x</button></p>
@@ -38,4 +43,7 @@ L("text-spaces",JSON.stringify(ab.textContent));
 <p id="pah"><button id="ah">A<kbd style="display:none">H</kbd></button></p>
 <p id="par"><button id="ar">A<kbd style="display:none">H</kbd></button></p>
 <p id="pab"><button id="ab">A</button></p>
+<p id="ppn"><button id="pn" style="white-space:pre">A<span style="white-space:normal">x   y</span></button></p>
+<p id="ppd"><button id="pdeep" style="white-space:pre">A<span><span><span><span><span>x   y</span></span></span></span></span></button></p>
+<p id="ppm"><button id="pm" style="white-space:pre"><span>A  B</span></button></p>
 </body></html>

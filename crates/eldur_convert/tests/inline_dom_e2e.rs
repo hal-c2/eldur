@@ -625,7 +625,9 @@ fn a_wrapped_run_on_an_aligned_line_draws_where_chromium_does() {
 fn a_buttons_line_holds_its_text_nodes_as_chromium_does() {
     // `after`, a deep copy and a prepend read a button's line by its nodes,
     // Text ones too, and its hidden text keeps its place once its neighbours
-    // left, in a copy too; a Text node's spaces are its own.
+    // left, in a copy too; a Text node's spaces are its own, and its rendered
+    // text keeps them by the white-space of its own run, also through a
+    // span's text model (Chromium's innerText in the log).
     page_drawing_within(
         "button_line_nodes",
         &["Go", "!", " on", "X", "B", "Save  later", "A B"],
@@ -647,8 +649,9 @@ fn a_button_lays_out_its_lines_by_its_white_space_as_chromium_does() {
     // `nowrap` line, a `>` in a quoted attribute value does not end a tag,
     // and a tag the markup ends inside, or whose quoted value is never
     // closed, is no node, nor is anything after it, and is read fast; an end
-    // tag inside a quoted value closes nothing, and a bare value ending in `/`
-    // is no self-closing tag (Chromium's values in the log).
+    // tag inside a quoted value closes nothing, a bare value ending in `/` is
+    // no self-closing tag, and a run keeps its spaces by its own white-space
+    // (Chromium's values in the log).
     page("button_breaks");
 }
 
