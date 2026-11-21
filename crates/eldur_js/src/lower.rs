@@ -1519,6 +1519,22 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
     }
 
     fn visit_unary_expression(&mut self, it: &UnaryExpression<'a>) {
+        if it.operator == UnaryOperator::Delete {
+            let onload = match unwrap_parens(&it.argument) {
+                Expression::StaticMemberExpression(m) => {
+                    self.is_window_onload(&m.object, m.property.name.as_str())
+                }
+                Expression::ComputedMemberExpression(c) => extract_string_literal(&c.expression)
+                    .is_some_and(|prop| self.is_window_onload(&c.object, &prop)),
+                _ => false,
+            };
+            if onload {
+                let call = self.shared.window_onload();
+                self.editor
+                    .replace(it.span, format!("Eldur.deleteOnload({call})"));
+                return;
+            }
+        }
         if it.operator == UnaryOperator::Delete
             && let Expression::StaticMemberExpression(member) = unwrap_parens(&it.argument)
             && let Expression::StaticMemberExpression(ds_member) = unwrap_parens(&member.object)

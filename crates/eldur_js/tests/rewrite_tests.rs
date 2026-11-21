@@ -3814,7 +3814,8 @@ fn delete_window_onload_goes_through_the_runtime() {
     let out = run_rewrite(&[first], &resolver);
     let js = &out.page_js;
     assert_eq!(
-        js.matches("Eldur.deleteOnload(__eldur_call_window_onload)").count(),
+        js.matches("Eldur.deleteOnload(__eldur_call_window_onload)")
+            .count(),
         2,
         "{js}"
     );
