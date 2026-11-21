@@ -356,7 +356,12 @@ fn with_native_box(style: &ComputedStyle, control: Control) -> Option<ComputedSt
     native.border.right = side;
     native.border.bottom = side;
     native.border.left = side;
-    let radius = eldur_css::LengthPercentage::px(2.0);
+    // Chromium's theme rounds a button more than a field: its corner's grey
+    // is Qt's at radius 3 (button_corner_e2e), a field's at radius 2.
+    let radius = eldur_css::LengthPercentage::px(match control {
+        Control::Button { .. } => 3.0,
+        _ => 2.0,
+    });
     native.border_radius = eldur_css::Corners {
         top_left: radius,
         top_right: radius,
