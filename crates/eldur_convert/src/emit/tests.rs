@@ -2625,3 +2625,53 @@ document.getElementById('t').addEventListener('click', () => {
         assert!(!hides(id), "#{id}: {qml}");
     }
 }
+
+/// A run has no item to fade, so an inline element's `opacity` goes into the
+/// alpha of its text's colour, multiplied by the elements around it.
+#[test]
+fn opacity_on_an_inline_element_fades_its_text() {
+    let (qml, diags) = convert(&page(
+        "",
+        r#"<p>a <span style="opacity:.5;color:#dc2626">F</span> b</p>"#,
+    ));
+    assert!(
+        qml.contains(r##"<font color=\"#80dc2626\">F</font>"##),
+        "{qml}"
+    );
+    assert!(!diags.iter().any(|d| d.contains("opacity")), "{diags:?}");
+    let (nested, _) = convert(&page(
+        "",
+        r#"<p>a <span style="opacity:.5">b <span style="opacity:.5;color:#ff0000">c</span></span></p>"#,
+    ));
+    assert!(
+        nested.contains(r##"<font color=\"#80000000\">b"##),
+        "{nested}"
+    );
+    assert!(
+        nested.contains(r##"<font color=\"#40ff0000\">c</font>"##),
+        "{nested}"
+    );
+    // A span that is the whole text gives the `Text` its colour, faded.
+    let (whole, _) = convert(&page("", r#"<p><span style="opacity:.5">x</span></p>"#));
+    assert!(whole.contains("#80000000"), "{whole}");
+    assert!(!whole.contains("opacity: 0.5"), "{whole}");
+}
+
+/// The text of a positioned inline element is in its block's `Text`, at the
+/// block's level, so a `z-index` it has is reported rather than lost.
+#[test]
+fn a_level_on_inline_text_is_reported() {
+    let (_, diags) = convert(&page(
+        "",
+        r#"<p>x <span style="position:relative;z-index:2">y</span></p>"#,
+    ));
+    assert!(
+        diags
+            .iter()
+            .any(|d| d.contains("`z-index` on an inline element")),
+        "{diags:?}"
+    );
+    // `z-index` applies only to a positioned box.
+    let (_, diags) = convert(&page("", r#"<p>x <span style="z-index:2">y</span></p>"#));
+    assert!(!diags.iter().any(|d| d.contains("z-index")), "{diags:?}");
+}
