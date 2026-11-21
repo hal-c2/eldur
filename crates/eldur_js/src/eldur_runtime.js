@@ -13195,6 +13195,8 @@ function _insertChildrenAt(raw, nodes, ref) {
     // walks everything already in it.
     var texts = real.filter(function(n) { return _isTextNode(n) && typeof n.text === "string"; });
     if (texts.length === 0) {
+        // An element put on a button's line still takes the button's font.
+        _btnLineStyle(raw);
         return;
     }
     var own = _gIsBox(raw) ? null : _findTextChild(raw);
