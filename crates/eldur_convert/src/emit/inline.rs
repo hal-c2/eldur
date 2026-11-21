@@ -526,6 +526,16 @@ fn each_span<'b, 'a>(items: &'b [Inline<'a>], out: &mut Vec<&'b Span<'a>>) {
     }
 }
 
+/// The opacity `span` and the elements in `items` around it fade it by,
+/// multiplied; `None` when it is not in `items`.
+fn faded_by(items: &[Inline<'_>], span: &Span<'_>) -> Option<f32> {
+    items.iter().find_map(|item| match item {
+        Inline::Span(s) if std::ptr::addr_eq(s, span) => Some(s.style.opacity),
+        Inline::Span(s) => faded_by(&s.children, span).map(|a| a * s.style.opacity),
+        _ => None,
+    })
+}
+
 fn end_run<'a>(run: &mut Vec<Inline<'a>>, out: &mut Vec<Piece<'_, 'a>>) {
     if !run.is_empty() {
         out.push(Piece::Run(std::mem::take(run)));
@@ -953,6 +963,8 @@ impl Emitter<'_, '_> {
         let mut painted = Vec::new();
         for (span, opens, closes) in boxes.iter().rev() {
             let st = span.style;
+            // Each element around a box fades it, as it fades its own text.
+            let alpha = faded_by(items, span).unwrap_or(1.0);
             let pad = |l: &Length| l.as_px().unwrap_or(0.0).max(0.0);
             let (opens, closes) = (*opens, *closes);
             if opens {
@@ -985,6 +997,9 @@ impl Emitter<'_, '_> {
             }
             if !st.background_color.is_transparent() {
                 paint.set("fill", super::units::color(st.background_color));
+            }
+            if alpha < 1.0 {
+                paint.set("opacity", number(alpha));
             }
             let radii = self.corner_radii(st, line);
             if radii.iter().any(|r| *r != 0.0) {
