@@ -178,6 +178,29 @@ fn a_runaway_mutation_loop_stops() {
     );
 }
 
+/// 600 appends to body: the last walk no more items than the first, by the
+/// runtime's own count, so a loaded machine cannot pass a quadratic append or
+/// fail a linear one. Chromium has no such count, so this page has no recording.
+#[test]
+fn appends_walk_no_more_items_as_the_page_grows() {
+    if support::no_qt() {
+        return;
+    }
+    let page = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/observers/scaling/append_scaling.html");
+    let html = std::fs::read_to_string(page).expect("page");
+    if let Err(e) = run(
+        "append_scaling",
+        &html,
+        &[
+            "OB appends walk no more at the 600th than at the first",
+            "OB rows 600",
+        ],
+    ) {
+        panic!("{e}");
+    }
+}
+
 /// The converter no longer calls the three unsupported: they run.
 #[test]
 fn observers_convert_without_warnings() {

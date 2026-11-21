@@ -766,6 +766,12 @@ var _explicitDocumentUrl = "";
 // QML QObjects reject ad-hoc JS property assignments, so the records live in a
 // table beside them.
 var _itemMeta = new _ItemTable();
+
+// Items the runtime has stepped over: each child a walk of an element's
+// children visits, and each key QV4 walks to find one in a Map. A cost that
+// grows with the page shows here exactly, where a clock only hints at it under
+// load. Tests read it; nothing else does.
+var _itemsWalked = 0;
 var _warnedMissingTemplates = {};
 var _componentProbeCache = new Map();
 
@@ -839,6 +845,7 @@ _ItemTable.prototype._adoptDestroyed = function(key) {
         return;
     }
     var addresses = Object.keys(this._byAddress);
+    _itemsWalked += addresses.length;
     for (var i = 0; i < addresses.length; ++i) {
         var slot = this._byAddress[addresses[i]];
         if (slot.key === key) {
@@ -856,6 +863,7 @@ _ItemTable.prototype.get = function(key) {
         return slot.value;
     }
     this._adoptDestroyed(key);
+    _itemsWalked += this._others.size;
     return this._others.get(key);
 };
 
@@ -864,12 +872,14 @@ _ItemTable.prototype.has = function(key) {
         return true;
     }
     this._adoptDestroyed(key);
+    _itemsWalked += this._others.size;
     return this._others.has(key);
 };
 
 _ItemTable.prototype.set = function(key, value) {
     var address = _itemAddress(key);
     if (!address) {
+        _itemsWalked += this._others.size;
         this._others.set(key, value);
         return this;
     }
@@ -5686,6 +5696,7 @@ function _rawKids(raw, withText, withPseudo, asRuns) {
     // A box cut out of an inline element is that element's child; the line
     // still places it, so layout input keeps it where it stands.
     var cutLine = !asRuns && _isLines(container) && _vSlotLine(container);
+    _itemsWalked += container.children.length;
     for (var i = 0; i < container.children.length; ++i) {
         var child = container.children[i];
         if (!child) {
