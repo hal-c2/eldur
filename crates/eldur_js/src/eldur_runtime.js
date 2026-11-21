@@ -768,7 +768,8 @@ var _explicitDocumentUrl = "";
 var _itemMeta = new _ItemTable();
 
 // Items the runtime has stepped over: each child a walk of an element's
-// children visits, and each key QV4 walks to find one in a Map. A cost that
+// children visits (`_rawKids`), each key QV4 walks to find one in the item
+// table's Map, and each record `_adoptDestroyed` scans. A cost that
 // grows with the page shows here exactly, where a clock only hints at it under
 // load. Tests read it; nothing else does.
 var _itemsWalked = 0;
@@ -841,7 +842,11 @@ _ItemTable.prototype._slot = function(key) {
 // address moves to the Map, which then answers for them all, as it did when
 // it held every record.
 _ItemTable.prototype._adoptDestroyed = function(key) {
-    if (_itemAddress(key) !== null || this._others.has(key)) {
+    if (_itemAddress(key) !== null) {
+        return;
+    }
+    _itemsWalked += this._others.size;
+    if (this._others.has(key)) {
         return;
     }
     var addresses = Object.keys(this._byAddress);
@@ -851,6 +856,7 @@ _ItemTable.prototype._adoptDestroyed = function(key) {
         if (slot.key === key) {
             delete this._byAddress[addresses[i]];
             --this._addressed;
+            _itemsWalked += this._others.size;
             this._others.set(key, slot.value);
             return;
         }
@@ -903,6 +909,7 @@ _ItemTable.prototype.delete = function(key) {
     if (address === null) {
         this._adoptDestroyed(key);
     }
+    _itemsWalked += this._others.size;
     return this._others.delete(key);
 };
 

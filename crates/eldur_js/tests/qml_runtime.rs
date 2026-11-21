@@ -5364,3 +5364,82 @@ Item {
         "unexpected qml6 item record output:\n{output}"
     );
 }
+
+/// `_itemsWalked` is what the append-scaling page counts, so every lookup that
+/// walks the item table's Map adds at least as many as the Map holds: `set`,
+/// `get`, `has` and `delete`, and a destroyed item's lookups, which check the
+/// Map before scanning the addressed records and walk it after. One left out
+/// would let a cost that grows only through it past that page.
+#[test]
+fn qml6_every_item_table_map_walk_is_counted() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 items walked test: qml6 not on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("items_walked");
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+    dir.write_file("eldur_runtime.js", RUNTIME_JS);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import "eldur_runtime.js" as R
+
+Item {
+    id: root
+    Component { id: made; Item {} }
+    property var held: []
+    property var seen: []
+
+    // How many items `step` adds to the runtime's count, against how many keys
+    // the table's Map holds when it starts.
+    function walks(name, step) {
+        var size = R._itemMeta._others.size;
+        var before = R._itemsWalked;
+        step();
+        seen.push(name + (R._itemsWalked - before >= size ? "" : " " + (R._itemsWalked - before) + "<" + size));
+    }
+
+    Timer {
+        id: later
+        interval: 50
+        onTriggered: {
+            var table = R._itemMeta;
+            var gone = root.held[0];
+            // The first lookup of a destroyed item checks the Map, then scans
+            // the addressed records and moves its record to the Map.
+            walks("adopt", function() { table.has(gone); });
+            // Now in the Map, another destroyed lookup walks it.
+            walks("gone", function() { table.get(gone); });
+            walks("delete-gone", function() { table.delete(gone); });
+            console.log("ELDUR_ITEMS_WALKED", seen.join("|"));
+            Qt.quit();
+        }
+    }
+
+    Component.onCompleted: {
+        var table = R._itemMeta;
+        for (var i = 0; i < 20; ++i) {
+            table.set({}, { n: i });
+        }
+        var plain = {};
+        walks("set", function() { table.set(plain, { mark: "plain" }); });
+        walks("get", function() { table.get(plain); });
+        walks("has", function() { table.has(plain); });
+        walks("delete", function() { table.delete(plain); });
+        var a = made.createObject(root);
+        held.push(a);
+        table.set(a, { mark: "a" });
+        a.destroy();
+        later.start();
+    }
+}
+"#,
+    );
+
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
+    assert!(
+        output.contains("ELDUR_ITEMS_WALKED set|get|has|delete|adopt|gone|delete-gone"),
+        "a Map walk the count leaves out:\n{output}"
+    );
+}
