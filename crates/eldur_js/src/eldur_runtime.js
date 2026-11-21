@@ -13557,11 +13557,15 @@ var _SVG_ATTR_CASE = (function() {
     return map;
 })();
 
+// One attribute of a start tag: its name, then its value quoted either way or
+// bare, so a name-like word inside a quoted value is part of that value.
+var _HTML_ATTR = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+
 function _applyAttrsFromHtml(el, attrStr, svg) {
     if (!attrStr) {
         return;
     }
-    var re = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+    var re = new RegExp(_HTML_ATTR.source, "g");
     var match;
     while ((match = re.exec(attrStr)) !== null) {
         var val = match[2] !== undefined ? match[2] : (match[3] !== undefined ? match[3] : (match[4] !== undefined ? match[4] : ""));
@@ -13608,8 +13612,20 @@ function _svgContext(raw) {
 var _SVG_BREAKOUT = /^(b|big|blockquote|body|br|center|code|dd|div|dl|dt|em|embed|h[1-6]|head|hr|i|img|li|listing|menu|meta|nobr|ol|p|pre|ruby|s|small|span|strong|strike|sub|sup|table|tt|u|ul|var)$/;
 
 function _breaksOutOfSvg(tag, attrStr) {
-    return _SVG_BREAKOUT.test(tag)
-        || (tag === "font" && /(^|\s)(color|face|size)(\s*=|\s|$)/i.test(attrStr || ""));
+    if (_SVG_BREAKOUT.test(tag)) {
+        return true;
+    }
+    if (tag !== "font" || !attrStr) {
+        return false;
+    }
+    var re = new RegExp(_HTML_ATTR.source, "g");
+    var match;
+    while ((match = re.exec(attrStr)) !== null) {
+        if (/^(color|face|size)$/i.test(match[1])) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // SVG elements whose content is HTML again: the HTML integration points.
