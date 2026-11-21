@@ -15991,8 +15991,12 @@ function wrap(rawItem) {
                 var copies = kidsOf.map(function(kid) {
                     var copy = wrap(kid).cloneNode(true);
                     clone.appendChild(copy);
-                    return _gCurrent(_unwrap(copy));
+                    return _unwrap(copy);
                 });
+                // A later copy can turn the earlier ones into Text nodes of
+                // their own, and a layout read forgets what replaced what:
+                // the hidden text is placed among them as they are now.
+                copies = copies.map(_gCurrent);
                 _btnCloneHidden(rawItem, kidsOf, _unwrap(clone), copies);
             } else if (Boolean(deep)) {
                 var kids = _rawElementChildren(rawItem);
