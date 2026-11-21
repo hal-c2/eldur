@@ -539,8 +539,10 @@ fn faded_by(items: &[Inline<'_>], span: &Span<'_>) -> Option<f32> {
 }
 
 /// Fades a box on the line by the opacity of the elements around it, which
-/// have no item of their own to carry it, on top of the box's own.
-fn fade_atomic(placed: &mut Object, fade: f32) {
+/// have no item of their own to carry it, on top of the box's own. On a page
+/// with a runtime the fade is declared too, so an opacity a script writes or
+/// reads is the box's own (`_fadedOpacity`).
+fn fade_atomic(placed: &mut Object, fade: f32, runtime: bool) {
     if fade >= 1.0 {
         return;
     }
@@ -552,6 +554,18 @@ fn fade_atomic(placed: &mut Object, fade: f32) {
         _ => number(fade),
     };
     placed.set("opacity", faded);
+    if runtime {
+        placed.members.insert(
+            0,
+            Member::PropertyDecl {
+                ty: "real".to_owned(),
+                name: "eldurInlineFade".to_owned(),
+                value: Some(number(fade)),
+                readonly: true,
+                required: false,
+            },
+        );
+    }
     // QML multiplies the opacity into each thing drawn; CSS fades the box as
     // one picture.
     if super::paints_count(placed) > 1 {
@@ -897,7 +911,7 @@ impl Emitter<'_, '_> {
                         placed.members.insert(0, pseudo);
                     }
                     vertical_align(&mut placed, &a.style);
-                    fade_atomic(&mut placed, fade);
+                    fade_atomic(&mut placed, fade, self.runtime_dom);
                     if let Some(link) = a.node.and_then(|n| self.inline_link(n)) {
                         let first = named_links.insert(link);
                         self.atomic_link(&mut placed, a.node, link, first);

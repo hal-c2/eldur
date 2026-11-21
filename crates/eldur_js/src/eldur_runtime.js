@@ -8181,6 +8181,18 @@ function _shownByAttribute(raw, hidden) {
     }
 }
 
+// A box on a line inside an inline element with an opacity paints faded by
+// that element too, which has no item of its own: conversion puts the fade in
+// `eldurInlineFade`. What is written goes in with it, what is read leaves it out.
+function _fadedOpacity(raw, opacity) {
+    return typeof raw.eldurInlineFade === "number" ? opacity * raw.eldurInlineFade : opacity;
+}
+
+function _ownOpacity(raw) {
+    var fade = raw.eldurInlineFade;
+    return typeof fade === "number" && fade > 0 ? Math.round(raw.opacity / fade * 1e6) / 1e6 : raw.opacity;
+}
+
 // `visibility` has no property of its own here: it paints as no opacity.
 function _inlineOpacity(raw, m) {
     if (typeof raw.opacity !== "number") {
@@ -8203,7 +8215,7 @@ function _inlineOpacity(raw, m) {
     } else if (hidden) {
         shown = hidden !== "hidden";
     }
-    _inlineHold(raw, raw, "opacity", !shown ? 0 : isNaN(opacity) ? 1 : opacity);
+    _inlineHold(raw, raw, "opacity", !shown ? 0 : _fadedOpacity(raw, isNaN(opacity) ? 1 : opacity));
     if (typeof raw.enabled === "boolean") {
         _inlineHold(raw, raw, "enabled", shown);
     }
@@ -8698,7 +8710,7 @@ function getComputedStyle(item) {
             return raw.opacity === 0 ? "hidden" : "visible";
         }
         if (camel === "opacity") {
-            return typeof raw.opacity === "number" ? String(raw.opacity) : "1";
+            return typeof raw.opacity === "number" ? String(_ownOpacity(raw)) : "1";
         }
         if (camel === "width") {
             return typeof raw.width === "number" ? raw.width + "px" : "0px";
@@ -27199,7 +27211,7 @@ function _gPaintBox(raw, s, e) {
     var painted = _meta(raw).gPainted === true;
     var radius = _gPx(s["border-top-left-radius"], raw.width, s.fontSize, s.rootSize) || 0;
     _gSet(raw, "radius", radius);
-    _gSet(raw, "opacity", s.visibility === "hidden" ? 0 : _gNumber(s.opacity));
+    _gSet(raw, "opacity", s.visibility === "hidden" ? 0 : _fadedOpacity(raw, _gNumber(s.opacity)));
     var uniform = e.bt === e.br && e.bt === e.bb && e.bt === e.bl
         && s["border-top-color"] === s["border-right-color"] && s["border-top-color"] === s["border-bottom-color"]
         && s["border-top-color"] === s["border-left-color"];
@@ -31843,7 +31855,7 @@ function _gInFlight(raw, prop, settled) {
     }
     var name = _camelToKebab(prop);
     var read = {
-        "opacity": function() { return String(raw.opacity); },
+        "opacity": function() { return String(_ownOpacity(raw)); },
         "width": function() { return raw.width + "px"; },
         "height": function() { return raw.height + "px"; },
         "background-color": function() {

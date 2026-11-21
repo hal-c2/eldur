@@ -6318,3 +6318,42 @@ Item {
         "unexpected qml6 folded var display output:\n{output}"
     );
 }
+
+/// A box inside a faded inline element is converted with the element's fade
+/// folded into its `opacity` and declared as `eldurInlineFade`. An opacity a
+/// script writes keeps that fade, and what it reads back is the box's own.
+#[test]
+fn qml6_an_opacity_a_script_writes_keeps_an_inline_elements_fade() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("box", 1, "box", TargetKind::Box);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verify() {
+    const box = document.getElementById("box");
+    const before = getComputedStyle(box).opacity;
+    box.style.opacity = "0.6";
+    return before + " " + getComputedStyle(box).opacity;
+}
+"##,
+        r#"Item {
+    id: root
+    Rectangle {
+        id: box
+        objectName: "box"
+        readonly property real eldurInlineFade: 0.5
+        width: 4; height: 4; color: "red"
+        opacity: 0.4
+    }
+    Component.onCompleted: {
+        (Page.__eldur_init || Eldur.init)(root);
+        console.log("ELDUR_OK_FADE", Page.verify(), box.opacity.toFixed(2));
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(output.contains("ELDUR_OK_FADE 0.8 0.6 0.30"), "{output}");
+}
