@@ -67,6 +67,18 @@
   ],
   "clicks": []
  },
+ "button_breaks": {
+  "log": [
+   "LC pre-lines true true",
+   "LC pre-line-lines true",
+   "LC fixed-pre-wrap true true",
+   "LC pre-element true \"A      BC\"",
+   "LC nowrap-element true",
+   "LC quoted-gt \"Save\" a>b 1",
+   "LC unquoted-apos \"Go\" it's"
+  ],
+  "clicks": []
+ },
  "button_line_nodes": {
   "log": [
    "LC after-element B,\"!\",\" on\" \"Go! on\"",

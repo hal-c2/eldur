@@ -1252,13 +1252,14 @@ impl Emitter<'_, '_> {
             } else {
                 whole
             };
-            if white != WhiteSpace::Normal && white != WhiteSpace::NoWrap {
+            if white != WhiteSpace::Normal {
                 // On a page without a cascade the runtime has only this to
-                // draw its nodes by.
+                // draw its nodes by, and to lay out a line it is given.
                 obj.members.push(Member::PropertyDecl {
                     ty: "string".to_owned(),
                     name: "eldurWhiteSpace".to_owned(),
                     value: Some(Value::string(match white {
+                        WhiteSpace::NoWrap => "nowrap",
                         WhiteSpace::Pre => "pre",
                         WhiteSpace::PreWrap => "pre-wrap",
                         WhiteSpace::PreLine => "pre-line",
@@ -1317,6 +1318,11 @@ impl Emitter<'_, '_> {
         label.set("horizontalAlignment", Value::expr("Text.AlignHCenter"));
         label.set("verticalAlignment", Value::expr("Text.AlignVCenter"));
         obj.set("contentItem", object_value(label));
+        // A label that draws its line breaks makes the button as tall as
+        // its lines; one that may also wrap is sized where it wraps.
+        if !is_input && !matches!(style.white_space, WhiteSpace::Normal | WhiteSpace::NoWrap) {
+            self.label_lines(&mut obj, style, id, false);
+        }
         let scale = text_scale(style);
         if (scale - 1.0).abs() > 0.001 {
             obj.set(
@@ -1961,6 +1967,33 @@ mod tests {
             q.contains(r#"property var eldurDomRuns: ["", "Save", "Ctrl S"]"#),
             "{q}"
         );
+    }
+
+    #[test]
+    fn a_button_is_as_tall_as_the_lines_its_label_draws() {
+        // Chromium's `pre` button draws "A" and "B" on two lines; a
+        // fixed-width `pre-wrap` one wraps at its spaces and a `pre` one
+        // does not.
+        let (q, _) = qml(r#"<p><button id=p style="white-space:pre">A
+B</button>
+               <button id=w style="white-space:pre-wrap;width:40px">Aa    Bb</button>
+               <button id=n style="white-space:pre;width:40px">Aa    Bb</button></p>"#);
+        // Each button's members run from its id to the next button's.
+        let at = |id: &str| {
+            q.find(&format!("id: {id}\n"))
+                .unwrap_or_else(|| panic!("{id}: {q}"))
+        };
+        let (p, w, n) = (at("p"), at("w"), at("n"));
+        let part = |id: &str| match id {
+            "p" => &q[p..w],
+            "w" => &q[w..n],
+            _ => &q[n..],
+        };
+        assert!(part("p").contains("Math.max(1, pLabel.lineCount)"), "{q}");
+        assert!(!part("p").contains("Text.WordWrap"), "{q}");
+        assert!(part("w").contains("Text.WordWrap"), "{q}");
+        assert!(part("w").contains("Math.max(1, wLabel.lineCount)"), "{q}");
+        assert!(!part("n").contains("Text.WordWrap"), "{q}");
     }
 
     #[test]

@@ -1,0 +1,37 @@
+<!doctype html><html><head><meta charset="utf-8"><script>
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function R(e){var r=e.getBoundingClientRect();return {l:Math.round(r.left),t:Math.round(r.top),r:Math.round(r.right),b:Math.round(r.bottom),w:Math.round(r.width),h:Math.round(r.height)}}
+function near(a,b){return Math.abs(a-b)<=3}
+document.addEventListener("DOMContentLoaded",function(){
+var byId=function(s){return document.getElementById(s)};
+var one=R(byId("bn")).h;
+// A button that draws its line breaks is as tall as the lines it draws.
+L("pre-lines",R(byId("p")).h>one+10,near(R(byId("p")).h,R(byId("pl")).h));
+L("pre-line-lines",R(byId("pl")).h>one+10);
+// A fixed-width button whose spaces may break wraps its label there.
+L("fixed-pre-wrap",R(byId("fw")).h>one+10,near(R(byId("fn")).h,one));
+// A button that takes an element keeps its white-space: pre keeps its
+// spaces, nowrap stays on one line.
+var ps=byId("ps"),pc=document.createElement("span");pc.textContent="C";ps.append(pc);
+L("pre-element",near(R(ps).w,R(byId("pr")).w),JSON.stringify(ps.textContent));
+var nr=byId("nr"),nc=document.createElement("span");nc.textContent=" Ccc";nr.append(nc);
+L("nowrap-element",near(R(nr).h,one));
+// A `>` inside a quoted attribute value is the attribute's, not the tag's end.
+var q=byId("q");q.innerHTML='<span title="a>b">Save</span>';
+L("quoted-gt",JSON.stringify(q.textContent),q.firstChild.title,q.childNodes.length);
+q.innerHTML="<span title=it's>Go</span>";
+L("unquoted-apos",JSON.stringify(q.textContent),q.firstChild.title);
+});
+</script></head><body style="margin:0;font:16px/20px sans-serif">
+<div><button id="bn">One</button></div>
+<div><button id="p" style="white-space:pre">A
+B</button></div>
+<div><button id="pl" style="white-space:pre-line">A
+B</button></div>
+<div><button id="fw" style="white-space:pre-wrap;width:40px">Aa          Bb</button></div>
+<div><button id="fn" style="white-space:pre;width:40px">Aa          Bb</button></div>
+<div><button id="ps" style="white-space:pre">A      B</button></div>
+<div><button id="pr" style="white-space:pre">A      BC</button></div>
+<div><button id="nr" style="white-space:nowrap;width:40px">Aaa Bbb</button></div>
+<div><button id="q">X</button></div>
+</body></html>

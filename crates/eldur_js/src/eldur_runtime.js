@@ -12648,6 +12648,10 @@ function _btnBecomesLines(raw) {
     lines.font = Qt.binding(function() { return raw.font; });
     lines.color = Qt.binding(function() { return raw.palette.buttonText; });
     lines.textAlign = 4; // Text.AlignHCenter
+    // The line wraps and keeps spaces as the button's own label did.
+    var white = _btnWhiteSpace(raw);
+    lines.noWrap = white === "nowrap" || white === "pre";
+    lines.preserveSpace = white !== "normal" && white !== "nowrap";
     // What it holds but does not draw stays in its textContent where it
     // was, between the nodes around it (see _linesText); leaves index the
     // nodes made from them below.

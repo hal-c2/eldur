@@ -640,6 +640,16 @@ fn a_buttons_line_holds_its_text_nodes_as_chromium_does() {
 }
 
 #[test]
+fn a_button_lays_out_its_lines_by_its_white_space_as_chromium_does() {
+    // A `pre` or `pre-line` button is as tall as the lines it draws, a
+    // fixed-width `pre-wrap` one wraps at its spaces, a button given an
+    // element keeps its `pre` spaces and its `nowrap` line, and a `>` in a
+    // quoted attribute value does not end a tag (Chromium's values in the
+    // log).
+    page("button_breaks");
+}
+
+#[test]
 fn a_button_keeps_its_spaces_by_its_style_attribute_as_chromium_does() {
     // No style sheet, so the runtime has only the converter's
     // `eldurWhiteSpace` to draw by: a `pre` button draws both nodes' spaces
