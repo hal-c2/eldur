@@ -2683,6 +2683,13 @@ fn opacity_on_an_inline_element_fades_the_boxes_it_holds() {
         r#"<p>a <span>b <span style="display:inline-block;width:4px;height:4px;background:red"></span></span></p>"#,
     ));
     assert!(!opaque.contains("opacity: "), "{opaque}");
+    assert!(!block.contains("eldurInlineFade"), "{block}");
+    // A runtime keeps the fade apart, so what a script writes is the box's own.
+    let (runtime, _) = convert(&page(
+        "",
+        r#"<details><summary>s</summary></details><p>a <span style="opacity:.5">b <span style="display:inline-block;width:4px;height:4px;background:red"></span></span></p>"#,
+    ));
+    assert!(runtime.contains("eldurInlineFade: 0.5"), "{runtime}");
 }
 
 /// The text of a positioned inline element is in its block's `Text`, at the
