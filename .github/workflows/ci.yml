@@ -5,6 +5,11 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Nightly, and by hand: the qml-e2e job then also runs the tests too slow
+  # for every push (#[ignore]d ones, such as the scaling page's mutants).
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -37,8 +42,9 @@ jobs:
   qml-e2e:
     runs-on: ubuntu-24.04
     # The suite takes minutes; a qmltestrunner that never exits must fail
-    # the job, not hold the runner for six hours.
-    timeout-minutes: 45
+    # the job, not hold the runner for six hours. A nightly or hand run also
+    # runs the slow tests below, so it gets longer.
+    timeout-minutes: ${{ (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && 90 || 45 }}
     env:
       ELDUR_REQUIRE_QT: "1"
       QT_QPA_PLATFORM: offscreen
@@ -152,3 +158,12 @@ jobs:
             ls -d "${TMPDIR:-/tmp}"/eldur-* || true
           fi
           wait "$tests"
+      # Too slow for every push: each append-cost mutant of the runtime must
+      # fail a budget line of the scaling page (observers/scaling), or the
+      # page no longer guards the cost it claims to. Pushes and PRs skip it.
+      - name: The scaling page catches every append-cost mutant
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        timeout-minutes: 40
+        run: |
+          mise run test -- -p eldur_convert --test observers_e2e \
+            -- --ignored --exact every_append_cost_mutant_fails_the_scaling_page --nocapture
