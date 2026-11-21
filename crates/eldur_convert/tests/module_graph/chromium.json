@@ -366,6 +366,57 @@
     },
     "errors": []
   },
+  "onloadagain": {
+    "lines": [
+      "listener sets onload again",
+      "load after"
+    ],
+    "text": {
+      "out": "waiting after"
+    },
+    "errors": []
+  },
+  "signalthrow": {
+    "lines": [
+      "data options added",
+      "data options again added",
+      "reads capture",
+      "reads once",
+      "reads passive",
+      "reads signal",
+      "getter options threw TypeError true",
+      "number signal threw TypeError true",
+      "null signal on a null callback threw TypeError true",
+      "reads capture",
+      "reads once",
+      "reads passive",
+      "reads signal",
+      "getter signal threw TypeError true",
+      "top level threw TypeError",
+      "ready string signal threw TypeError true",
+      "load",
+      "lazy threw TypeError true",
+      "lazy runs"
+    ],
+    "text": {
+      "out": "load"
+    },
+    "errors": []
+  },
+  "nestedlisten": {
+    "lines": [
+      "ready from a function",
+      "ready",
+      "load from a block",
+      "load",
+      "load added by ready",
+      "onload set by ready"
+    ],
+    "text": {
+      "out": "load"
+    },
+    "errors": []
+  },
   "readlater": {
     "lines": [
       "copy 2",

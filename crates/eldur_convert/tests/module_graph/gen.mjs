@@ -74,6 +74,9 @@ const out = {
   loadvalue: await record("loadvalue", ["out"]),
   loadtwice: await record("loadtwice", ["out"]),
   loadoptions: await record("loadoptions", ["out"]),
+  onloadagain: await record("onloadagain", ["out"]),
+  signalthrow: await record("signalthrow", ["out"]),
+  nestedlisten: await record("nestedlisten", ["out"]),
   readlater: await record("readlater", ["out"]),
 };
 await browser.close();
