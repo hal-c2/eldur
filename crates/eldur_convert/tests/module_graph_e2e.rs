@@ -566,6 +566,20 @@ fn a_window_onload_that_is_not_an_object_reads_as_null() {
     assert_eq!(run("onloadvalue", &read), wanted("onloadvalue", &read));
 }
 
+/// `window.onload` as the target of `||=`, `&&=`, `??=`, `+=`, `++`, an array
+/// or object pattern, or a `for … of` head is read and then set, as a browser
+/// gets and sets its event handler: each expression has Chromium's value, a
+/// logical assignment that short-circuits sets nothing, and the handler last
+/// set is called at load.
+#[test]
+fn a_window_onload_assigned_by_operator_or_pattern_is_read_then_set() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("onloadassign", &read), wanted("onloadassign", &read));
+}
+
 /// A `signal` that is not an `AbortSignal` (a number, `null`, a string, a
 /// plain object, or what a getter returns after the other options are read)
 /// throws a `TypeError` from `addEventListener`, for a null callback too, at

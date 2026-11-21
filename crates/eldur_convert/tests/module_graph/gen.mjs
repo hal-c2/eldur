@@ -76,6 +76,7 @@ const out = {
   loadoptions: await record("loadoptions", ["out"]),
   onloadagain: await record("onloadagain", ["out"]),
   onloadvalue: await record("onloadvalue", ["out"]),
+  onloadassign: await record("onloadassign", ["out"]),
   signalthrow: await record("signalthrow", ["out"]),
   nestedlisten: await record("nestedlisten", ["out"]),
   readlater: await record("readlater", ["out"]),
