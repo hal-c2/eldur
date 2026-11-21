@@ -12369,6 +12369,18 @@ function _dressLineText(lines, node) {
     node.textFormat = 0; // Text.PlainText; a library script has no `Text`
     node.wrapMode = _meta(lines).wrapMode || 1; // Text.WordWrap
     node.renderType = 1; // Text.NativeRendering
+    // A `pre-line` line draws a node's runs of spaces as one, and the node
+    // keeps them in its data (`runText`, which getText reads).
+    if (_meta(lines).keepsBreaks) {
+        var m = _meta(node);
+        if (m.runText === undefined) {
+            m.runText = node.text;
+        }
+        var form = _runText(m.runText, lines);
+        if (node.text !== form) {
+            node.text = form;
+        }
+    }
 }
 
 // The text a block already shows starts its first line: from here on the line
@@ -12651,7 +12663,9 @@ function _btnBecomesLines(raw) {
     // The line wraps and keeps spaces as the button's own label did.
     var white = _btnWhiteSpace(raw);
     lines.noWrap = white === "nowrap" || white === "pre";
-    lines.preserveSpace = white !== "normal" && white !== "nowrap";
+    // `pre-line` keeps its breaks but collapses runs of spaces (_runText).
+    lines.preserveSpace = white !== "normal" && white !== "nowrap" && white !== "pre-line";
+    _meta(lines).keepsBreaks = white === "pre-line";
     // What it holds but does not draw stays in its textContent where it
     // was, between the nodes around it (see _linesText); leaves index the
     // nodes made from them below.
@@ -13910,6 +13924,9 @@ function _runText(str, line) {
         return String(str);
     }
     var lines = line && typeof line.setRunBox === "function";
+    if (lines && _meta(line).keepsBreaks) {
+        return String(str).replace(/[ \t\r\f]*\n[ \t\r\f]*/g, "\n").replace(/[ \t\r\f]+/g, " ");
+    }
     return String(str).replace(/[ \t\n\r\f]+/g, lines || !line ? " " : "\u00a0");
 }
 
@@ -14376,6 +14393,12 @@ function _parseFragment(src, inSvg) {
         var m = tagOpenRe.exec(src);
         if (!m) {
             var trailing = src.slice(pos);
+            // A tag the input ends inside, before its `>` or in a quoted
+            // value, is no node: HTML's tokenizer drops it at the end.
+            var cut = trailing.search(/<[a-zA-Z]/);
+            if (cut !== -1) {
+                trailing = trailing.slice(0, cut);
+            }
             if (trailing.trim()) {
                 nodes.push(document.createTextNode(_unescapeHtmlText(trailing)));
             } else {

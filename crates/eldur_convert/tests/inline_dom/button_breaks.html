@@ -14,6 +14,10 @@ L("fixed-pre-wrap",R(byId("fw")).h>one+10,near(R(byId("fn")).h,one));
 // spaces, nowrap stays on one line.
 var ps=byId("ps"),pc=document.createElement("span");pc.textContent="C";ps.append(pc);
 L("pre-element",near(R(ps).w,R(byId("pr")).w),JSON.stringify(ps.textContent));
+// pre-line keeps line breaks but collapses runs of spaces, also once the
+// button holds an element.
+var lx=byId("lx"),lc=document.createElement("span");lc.textContent="C";lx.append(lc);
+L("pre-line-element",near(R(lx).w,R(byId("lr")).w),JSON.stringify(lx.textContent));
 var nr=byId("nr"),nc=document.createElement("span");nc.textContent=" Ccc";nr.append(nc);
 L("nowrap-element",near(R(nr).h,one));
 // A `>` inside a quoted attribute value is the attribute's, not the tag's end.
@@ -21,6 +25,10 @@ var q=byId("q");q.innerHTML='<span title="a>b">Save</span>';
 L("quoted-gt",JSON.stringify(q.textContent),q.firstChild.title,q.childNodes.length);
 q.innerHTML="<span title=it's>Go</span>";
 L("unquoted-apos",JSON.stringify(q.textContent),q.firstChild.title);
+// A tag cut short before its `>`, with many quoted attributes, is read in
+// time proportional to its length, and is no node.
+var t0=Date.now();byId("cut").insertAdjacentHTML("beforeend","<span"+' a="x"'.repeat(30));
+L("unclosed-fast",Date.now()-t0<500,JSON.stringify(byId("cut").textContent),byId("cut").childNodes.length);
 });
 </script></head><body style="margin:0;font:16px/20px sans-serif">
 <div><button id="bn">One</button></div>
@@ -32,6 +40,9 @@ B</button></div>
 <div><button id="fn" style="white-space:pre;width:40px">Aa          Bb</button></div>
 <div><button id="ps" style="white-space:pre">A      B</button></div>
 <div><button id="pr" style="white-space:pre">A      BC</button></div>
+<div><button id="lx" style="white-space:pre-line">X   Y</button></div>
+<div><button id="lr">X YC</button></div>
 <div><button id="nr" style="white-space:nowrap;width:40px">Aaa Bbb</button></div>
 <div><button id="q">X</button></div>
+<div id="cut">Cut</div>
 </body></html>
