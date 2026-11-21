@@ -5364,3 +5364,50 @@ Item {
         "unexpected qml6 item record output:\n{output}"
     );
 }
+
+/// A button's hidden text is read between its nodes from records that each
+/// name the nodes on both sides. Every record the runtime makes comes from
+/// `_hiddenRecord`, which sets both lists; a record missing one reads as one
+/// with no anchors there, never as an error.
+#[test]
+fn qml6_button_hidden_text_reads_between_nodes_from_any_record() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 hidden text test: qml6 not on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("hidden_text");
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+    dir.write_file("eldur_runtime.js", RUNTIME_JS);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import "eldur_runtime.js" as R
+
+Item {
+    Component.onCompleted: {
+        var a = { t: "A" };
+        var b = { t: "B" };
+        var textOf = function(n) { return n.t; };
+        var made = R._hiddenRecord("H", [a], [b]);
+        var seen = [Array.isArray(made.after) && Array.isArray(made.before),
+            R._hiddenRecord("E").after.length + R._hiddenRecord("E").before.length];
+        var hidden = [made, { text: "K", after: [] }, { text: "Z" }, R._hiddenRecord("Y", [], [b])];
+        seen.push(R._linesHiddenText(hidden, [a, b], textOf));
+        // `a` put in again after `b`: H no longer follows it, so it goes
+        // before `b`, the node that followed it.
+        R._meta(a).linesPut = (R._meta(a).linesPut || 0) + 1;
+        seen.push(R._linesHiddenText(hidden, [b, a], textOf));
+        console.log("ELDUR_OK_HIDDEN_TEXT", seen.join("|"));
+        Qt.quit();
+    }
+}
+"#,
+    );
+
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
+    assert!(
+        output.contains("ELDUR_OK_HIDDEN_TEXT true|0|KZAHYB|KZHYBA"),
+        "unexpected qml6 hidden text output:\n{output}"
+    );
+}
