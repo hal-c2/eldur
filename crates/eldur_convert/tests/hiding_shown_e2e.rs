@@ -1161,6 +1161,58 @@ url(/*);display:none;--b:*/;color:red">B</p><p id="c">C</p>"##,
         toggle: "",
         back: &[],
     },
+    Case {
+        name: "edge_dropped_bad_string",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="--a"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:&quot;a
+;display:none;--b:&quot;">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[8.0, 48.0],
+    },
+    Case {
+        name: "edge_dropped_stray_bang",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="--a"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:a!b;display:none">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[8.0, 48.0],
+    },
+    Case {
+        name: "edge_dropped_closer_in_block",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="--a"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:(a]);display:none">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[8.0, 48.0],
+    },
+    Case {
+        name: "edge_kept_empty_custom",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="--a"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:;display:none">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
+    Case {
+        name: "edge_kept_bad_redeclaration",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="--a"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:1;--a:&quot;x
+;display:none">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
 ];
 
 fn page(case: &Case) -> String {
@@ -1766,4 +1818,34 @@ fn tokenizer_edge_hash_name() {
 #[test]
 fn tokenizer_edge_bracket_block() {
     run(case("edge_bracket_block"));
+}
+
+/// A bad string makes clearing `display` drop its declaration, so `[style*="--a"]` no longer matches.
+#[test]
+fn tokenizer_edge_dropped_bad_string() {
+    run(case("edge_dropped_bad_string"));
+}
+
+/// A `!` other than `!important` makes clearing drop its declaration.
+#[test]
+fn tokenizer_edge_dropped_stray_bang() {
+    run(case("edge_dropped_stray_bang"));
+}
+
+/// A `]` inside `(` closes no block and makes clearing drop its declaration.
+#[test]
+fn tokenizer_edge_dropped_closer_in_block() {
+    run(case("edge_dropped_closer_in_block"));
+}
+
+/// An empty custom property is a declaration clearing keeps.
+#[test]
+fn tokenizer_edge_kept_empty_custom() {
+    run(case("edge_kept_empty_custom"));
+}
+
+/// A bad redeclaration is dropped, so the one before it stays.
+#[test]
+fn tokenizer_edge_kept_bad_redeclaration() {
+    run(case("edge_kept_bad_redeclaration"));
 }
