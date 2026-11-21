@@ -5373,7 +5373,10 @@ fn qml6_an_opacity_a_script_writes_keeps_an_inline_elements_fade() {
     if !has_binary("qml6") {
         return;
     }
-    let resolver = FakeResolver::default().with_id("box", 1, "box", TargetKind::Box);
+    let resolver = FakeResolver::default()
+        .with_id("box", 1, "box", TargetKind::Box)
+        .with_id("uneven", 2, "uneven", TargetKind::Box)
+        .with_id("hidden", 3, "hidden", TargetKind::Box);
 
     let (output, _) = run_page(
         &resolver,
@@ -5382,7 +5385,11 @@ function verify() {
     const box = document.getElementById("box");
     const before = getComputedStyle(box).opacity;
     box.style.opacity = "0.6";
-    return before + " " + getComputedStyle(box).opacity;
+    // .75 in .5 is declared 0.375, which divides back to .75 exactly; a
+    // fade of 0 has the own opacity declared beside it.
+    const uneven = getComputedStyle(document.getElementById("uneven")).opacity;
+    const hidden = getComputedStyle(document.getElementById("hidden")).opacity;
+    return [before, getComputedStyle(box).opacity, uneven, hidden].join(" ");
 }
 "##,
         r#"Item {
@@ -5394,6 +5401,21 @@ function verify() {
         width: 4; height: 4; color: "red"
         opacity: 0.4
     }
+    Rectangle {
+        id: uneven
+        objectName: "uneven"
+        readonly property real eldurInlineFade: 0.5
+        width: 4; height: 4; color: "red"
+        opacity: 0.375
+    }
+    Rectangle {
+        id: hidden
+        objectName: "hidden"
+        readonly property real eldurInlineFade: 0
+        readonly property real eldurOwnOpacity: 0.75
+        width: 4; height: 4; color: "red"
+        opacity: 0
+    }
     Component.onCompleted: {
         (Page.__eldur_init || Eldur.init)(root);
         console.log("ELDUR_OK_FADE", Page.verify(), box.opacity.toFixed(2));
@@ -5401,5 +5423,8 @@ function verify() {
     }
 }"#,
     );
-    assert!(output.contains("ELDUR_OK_FADE 0.8 0.6 0.30"), "{output}");
+    assert!(
+        output.contains("ELDUR_OK_FADE 0.8 0.6 0.75 0.75 0.30"),
+        "{output}"
+    );
 }

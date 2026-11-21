@@ -7512,9 +7512,17 @@ function _fadedOpacity(raw, opacity) {
     return typeof raw.eldurInlineFade === "number" ? opacity * raw.eldurInlineFade : opacity;
 }
 
+// A fade of 0 leaves nothing to divide by: conversion declares the box's own
+// opacity beside it then.
 function _ownOpacity(raw) {
     var fade = raw.eldurInlineFade;
-    return typeof fade === "number" && fade > 0 ? Math.round(raw.opacity / fade * 1e6) / 1e6 : raw.opacity;
+    if (typeof fade !== "number") {
+        return raw.opacity;
+    }
+    if (fade > 0) {
+        return Math.round(raw.opacity / fade * 1e6) / 1e6;
+    }
+    return typeof raw.eldurOwnOpacity === "number" ? raw.eldurOwnOpacity : raw.opacity;
 }
 
 // `visibility` has no property of its own here: it paints as no opacity.

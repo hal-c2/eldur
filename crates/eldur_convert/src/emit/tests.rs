@@ -2690,6 +2690,22 @@ fn opacity_on_an_inline_element_fades_the_boxes_it_holds() {
         r#"<details><summary>s</summary></details><p>a <span style="opacity:.5">b <span style="display:inline-block;width:4px;height:4px;background:red"></span></span></p>"#,
     ));
     assert!(runtime.contains("eldurInlineFade: 0.5"), "{runtime}");
+    // The runtime divides the fade back out, so neither is rounded to 1/100
+    // there: .75 in .5 stays 0.375, not 0.38.
+    let (uneven, _) = convert(&page(
+        "",
+        r#"<details><summary>s</summary></details><p>a <span style="opacity:.5">b <span style="opacity:.5">c <span style="opacity:.5">d <span style="display:inline-block;width:4px;height:4px;background:red;opacity:.75"></span></span></span></span></p>"#,
+    ));
+    assert!(uneven.contains("eldurInlineFade: 0.125"), "{uneven}");
+    assert!(uneven.contains("opacity: 0.09375"), "{uneven}");
+    // A fade of 0 cannot be divided out: the box's own opacity is declared.
+    let (hidden, _) = convert(&page(
+        "",
+        r#"<details><summary>s</summary></details><p>a <span style="opacity:0">b <span style="display:inline-block;width:4px;height:4px;background:red;opacity:.75"></span></span></p>"#,
+    ));
+    assert!(hidden.contains("eldurInlineFade: 0\n"), "{hidden}");
+    assert!(hidden.contains("eldurOwnOpacity: 0.75"), "{hidden}");
+    assert!(!uneven.contains("eldurOwnOpacity"), "{uneven}");
 }
 
 /// The text of a positioned inline element is in its block's `Text`, at the
