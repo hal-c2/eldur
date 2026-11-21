@@ -769,7 +769,7 @@ var _itemMeta = new _ItemTable();
 
 // Items the runtime has stepped over: each child a walk of an element's
 // children visits (`_rawKids`, `_tableCaptions`, `_findTextChild`,
-// `_anonLinesOf`), each key QV4 walks to find one in the item table's Map, and each record a walk of the whole table
+// `_anonLinesOf`, `_insertInFlow`), each key QV4 walks to find one in the item table's Map, and each record a walk of the whole table
 // visits (`_adoptDestroyed`, `deleteWhere`, `forEach`). A cost that
 // grows with the page shows here exactly, where a clock only hints at it under
 // load. Tests read it; nothing else does.
@@ -956,13 +956,15 @@ _ItemTable.prototype.deleteWhere = function(drop) {
 // Visits a snapshot, so `fn` may delete what it is shown.
 _ItemTable.prototype.forEach = function(fn) {
     var addresses = Object.keys(this._byAddress);
-    _itemsWalked += addresses.length + this._others.size;
+    _itemsWalked += addresses.length;
     for (var i = 0; i < addresses.length; ++i) {
         var slot = this._byAddress[addresses[i]];
         if (slot) {
             fn(slot.value, slot.key);
         }
     }
+    // After the records by address, whose `fn` may have deleted some here.
+    _itemsWalked += this._others.size;
     var others = [];
     this._others.forEach(function(value, key) { others.push([key, value]); });
     for (var n = 0; n < others.length; ++n) {
@@ -12289,6 +12291,7 @@ function _insertInFlow(container, rawNodes, rawRef) {
         var isLayout = typeof container.spacing === "number" || typeof container.columnSpacing === "number";
         // The end of an element is before its `::after` box.
         for (var s = container.children.length - 1; s >= 0; --s) {
+            ++_itemsWalked;
             var last = container.children[s];
             if (!(isLayout && _isLayoutSpacer(last))
                 && !(_pseudoBoxSide(last) === "after" && rawNodes.indexOf(last) === -1)) {
@@ -12305,11 +12308,18 @@ function _insertInFlow(container, rawNodes, rawRef) {
             }
         }
     } else {
-        var kids = [];
-        for (var i = 0; i < container.children.length; ++i) {
-            kids.push(container.children[i]);
+        // `rawRef` is mostly near the end (a trailing spacer or `::after`
+        // box), so it is looked for from there: an append walks what follows
+        // it, not everything before.
+        var kids = container.children;
+        var idx = -1;
+        for (var i = kids.length - 1; i >= 0; --i) {
+            ++_itemsWalked;
+            if (kids[i] === rawRef) {
+                idx = i;
+                break;
+            }
         }
-        var idx = kids.indexOf(rawRef);
         if (idx === -1) {
             for (var b = 0; b < rawNodes.length; ++b) {
                 if (rawNodes[b] && rawNodes[b].parent !== undefined) {
@@ -12319,6 +12329,7 @@ function _insertInFlow(container, rawNodes, rawRef) {
             }
         } else {
             var tail = [];
+            _itemsWalked += kids.length - idx;
             for (var t = idx; t < kids.length; ++t) {
                 if (rawNodes.indexOf(kids[t]) === -1) {
                     tail.push(kids[t]);
