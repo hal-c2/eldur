@@ -8185,11 +8185,17 @@ function _shownByAttribute(raw, hidden) {
 // that element too, which has no item of its own: conversion puts the fade in
 // `eldurInlineFade`. What is written goes in with it, what is read leaves it out.
 function _fadedOpacity(raw, opacity) {
-    return typeof raw.eldurInlineFade === "number" ? opacity * raw.eldurInlineFade : opacity;
+    if (typeof raw.eldurInlineFade !== "number") {
+        return opacity;
+    }
+    // The declared own opacity is readonly, so what a script writes is kept
+    // here for a fade of 0 to read back.
+    _meta(raw).ownOpacity = opacity;
+    return opacity * raw.eldurInlineFade;
 }
 
-// A fade of 0 leaves nothing to divide by: conversion declares the box's own
-// opacity beside it then.
+// A fade of 0 leaves nothing to divide by: the own opacity a script wrote, or
+// the one conversion declared beside it, is read then.
 function _ownOpacity(raw) {
     var fade = raw.eldurInlineFade;
     if (typeof fade !== "number") {
@@ -8197,6 +8203,10 @@ function _ownOpacity(raw) {
     }
     if (fade > 0) {
         return Math.round(raw.opacity / fade * 1e6) / 1e6;
+    }
+    var written = _meta(raw).ownOpacity;
+    if (typeof written === "number") {
+        return written;
     }
     return typeof raw.eldurOwnOpacity === "number" ? raw.eldurOwnOpacity : raw.opacity;
 }
