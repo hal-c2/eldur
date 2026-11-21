@@ -147,6 +147,28 @@ fn a_url_name_written_with_escapes_is_a_url_too() {
 }
 
 #[test]
+fn url_after_an_escape_goes_on_that_name() {
+    // A hex escape takes the space after it, so `a\75 url(` is the one name
+    // `auurl`, a function: its `/*` opens a comment that runs to `*/`, no
+    // `display` is declared, and the attribute keeps the text the selector
+    // finds (Chromium 158 keeps all three hidden).
+    let page = r#"<!DOCTYPE html>
+<style>
+  [style*="display"] { display: none; }
+</style>
+<div id="spaced" style="--a:a\75 url(/*);display:none */">a</div>
+<div id="joined" style="--a:a\75url(/*);display:none */">b</div>
+<div id="letter" style="--a:\61 url(/*);display:none */">c</div>
+"#;
+    let doc = Document::parse(page);
+    let viewport = Viewport::default();
+    let (sheets, _) = collect_stylesheets(&doc, &mut NoSheets, &viewport);
+    let id = |name: &str| doc.element_by_id(name).expect(name);
+    let nodes: BTreeSet<_> = [id("spaced"), id("joined"), id("letter")].into();
+    assert_eq!(rules_hide(&doc, &sheets, &viewport, &nodes), nodes);
+}
+
+#[test]
 fn a_variable_display_hides_when_it_resolves_to_none() {
     let none: BTreeMap<String, String> = [("--d".to_owned(), "none".to_owned())].into();
     let block: BTreeMap<String, String> = [("--d".to_owned(), "block".to_owned())].into();

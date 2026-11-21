@@ -800,6 +800,38 @@ const CASES: &[Case] = &[
         toggle: "",
         back: &[],
     },
+    // `url(` right after an escape goes on that name, a function, so its
+    // `/*` is a comment and no `display` is declared to clear.
+    Case {
+        name: "escape_space_continues_name",
+        body: r#"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:a\75 url(/*);display:none */">B</p><p id="c">C</p>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
+    Case {
+        name: "escape_continues_name",
+        body: r#"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:a\75url(/*);display:none */">B</p><p id="c">C</p>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
+    Case {
+        name: "escaped_letter_continues_name",
+        body: r#"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:\61 url(/*);display:none */">B</p><p id="c">C</p>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
     // In the world a class makes, the custom property is what that class's
     // rule declares, not the value as loaded.
     Case {
@@ -1520,4 +1552,19 @@ fn a_url_name_written_with_a_hex_escape_keeps_its_comment_opener() {
 #[test]
 fn a_url_name_written_with_a_spaced_escape_keeps_its_comment_opener() {
     run(case("spaced_escape_url_comment_display_cleared"));
+}
+
+#[test]
+fn url_after_a_spaced_escape_goes_on_that_name() {
+    run(case("escape_space_continues_name"));
+}
+
+#[test]
+fn url_after_an_escape_goes_on_that_name() {
+    run(case("escape_continues_name"));
+}
+
+#[test]
+fn url_after_an_escaped_letter_goes_on_that_name() {
+    run(case("escaped_letter_continues_name"));
 }

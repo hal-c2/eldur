@@ -883,12 +883,16 @@ fn without_comments(style: &str) -> std::borrow::Cow<'_, str> {
     }
     let mut out = String::with_capacity(style.len());
     let mut quote = None::<char>;
+    // Whether what came last continues a name, escapes included: in
+    // `a\75 url(` the space ends the escape, so `url(` goes on `auurl`.
+    let mut in_name = false;
     let mut chars = style.chars().peekable();
     while let Some(c) = chars.next() {
         // An unquoted `url(` reads to its `)` as one token, comments and all:
         // `url(/*)` names `/*` (CSS Syntax 3, 4.3.6).
         if quote.is_none()
-            && let Some(name) = unquoted_url(c, &chars, &out)
+            && !in_name
+            && let Some(name) = unquoted_url(c, &chars)
         {
             out.push(c);
             out.extend(chars.by_ref().take(name));
@@ -900,21 +904,30 @@ fn without_comments(style: &str) -> std::borrow::Cow<'_, str> {
                     _ => {}
                 }
             }
+            in_name = false;
             continue;
         }
         match (quote, c) {
-            (_, '\\') => {
+            (None, '\\') => {
+                // The whole escape, hex digits and the space after them too.
+                let mut taken = 0;
+                let read = ident_char(&mut std::iter::once(c).chain(chars.clone()), &mut taken);
                 out.push(c);
-                if let Some(next) = chars.next() {
-                    out.push(next);
-                }
+                out.extend(chars.by_ref().take(taken - 1));
+                in_name = read.is_some();
+            }
+            (Some(_), '\\') => {
+                out.push(c);
+                out.extend(chars.next());
             }
             (Some(q), c) if c == q => {
                 quote = None;
                 out.push(c);
             }
+            (Some(_), _) => out.push(c),
             (None, '"' | '\'') => {
                 quote = Some(c);
+                in_name = false;
                 out.push(c);
             }
             (None, '/') if chars.peek() == Some(&'*') => {
@@ -926,30 +939,24 @@ fn without_comments(style: &str) -> std::borrow::Cow<'_, str> {
                     }
                     last = c;
                 }
+                in_name = false;
                 out.push(' ');
             }
-            _ => out.push(c),
+            (None, c) => {
+                in_name = c.is_alphanumeric() || matches!(c, '-' | '_') || !c.is_ascii();
+                out.push(c);
+            }
         }
     }
     out.into()
 }
 
-/// When `first` and then `rest` open an unquoted `url(` token, how many of
-/// `rest` run to and with its `(`: the name `url` in any case and written
-/// with any escapes (`\75rl(`, `u\72 l(`), where it starts a name rather
-/// than continuing one (`myurl(` is a function), then `(` and a first
-/// non-space that is not a quote (`url("…")` is a function too).
-fn unquoted_url(
-    first: char,
-    rest: &std::iter::Peekable<std::str::Chars<'_>>,
-    before: &str,
-) -> Option<usize> {
-    if !matches!(first, 'u' | 'U' | '\\')
-        || before
-            .chars()
-            .next_back()
-            .is_some_and(|c| c.is_alphanumeric() || matches!(c, '-' | '_') || !c.is_ascii())
-    {
+/// When `first` and then `rest`, outside a name, open an unquoted `url(`
+/// token, how many of `rest` run to and with its `(`: the name `url` in any
+/// case and written with any escapes (`\75rl(`, `u\72 l(`), then `(` and a
+/// first non-space that is not a quote (`url("…")` is a function).
+fn unquoted_url(first: char, rest: &std::iter::Peekable<std::str::Chars<'_>>) -> Option<usize> {
+    if !matches!(first, 'u' | 'U' | '\\') {
         return None;
     }
     let mut it = std::iter::once(first).chain(rest.clone());
