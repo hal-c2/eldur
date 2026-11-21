@@ -618,6 +618,22 @@ fn a_wrapped_run_on_an_aligned_line_draws_where_chromium_does() {
 }
 
 #[test]
+fn a_buttons_line_holds_its_text_nodes_as_chromium_does() {
+    // `after`, a deep copy and a prepend read a button's line by its nodes,
+    // Text ones too, and its hidden text keeps its place once its neighbours
+    // left.
+    page_drawing_within(
+        "button_line_nodes",
+        &["Go", "!", " on", "X", "B", "Save later"],
+        &[
+            ("la", &["Go", "!", " on"], &[]),
+            ("lh", &["X", "B"], &["H"]),
+            ("bpre", &["Save later"], &["K"]),
+        ],
+    );
+}
+
+#[test]
 fn a_button_holding_lines_keeps_them_as_chromium_does() {
     // What a button holds but does not draw stays undrawn once it holds lines.
     page_drawing_within(
