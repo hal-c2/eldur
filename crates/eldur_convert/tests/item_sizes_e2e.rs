@@ -544,8 +544,21 @@ impl Drop for KillOnDrop {
     }
 }
 
+/// Whether `pid` is still a live process. A zombie is not: it has exited and
+/// only waits for its parent to reap it, which a subreaper may never do, and
+/// `kill -0` still succeeds on it. So on Linux this reads `/proc/<pid>/stat`,
+/// whose state field follows the last `)` (the command name may hold any).
 #[cfg(unix)]
 fn is_running(pid: u32) -> bool {
+    if std::path::Path::new("/proc/self/stat").exists() {
+        return match std::fs::read_to_string(format!("/proc/{pid}/stat")) {
+            Err(_) => false,
+            Ok(stat) => stat
+                .rsplit_once(')')
+                .and_then(|(_, rest)| rest.split_whitespace().next())
+                .is_some_and(|state| state != "Z"),
+        };
+    }
     std::process::Command::new("kill")
         .args(["-0", &pid.to_string()])
         .stderr(std::process::Stdio::null())
@@ -591,7 +604,7 @@ fn a_pipe_held_open_outside_the_group_is_not_a_finished_run() {
         "partial output read as a finished run"
     );
     drop(guard);
-    // Its parent is gone, so whoever adopted it reaps it soon after the kill.
+    // The kill lands at once, but the state shows it a moment later.
     let gone = std::time::Instant::now() + std::time::Duration::from_secs(5);
     while is_running(holder) && std::time::Instant::now() < gone {
         std::thread::sleep(std::time::Duration::from_millis(50));
