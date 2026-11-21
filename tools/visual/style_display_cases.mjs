@@ -1,6 +1,7 @@
 /**
  * Records, in headless Chromium, whether each of a set of `style` attribute
- * texts declares `display`, and writes them as the Rust table that
+ * texts declares `display` and which properties clearing it leaves, and
+ * writes them as the Rust table that
  * `eldur_css`'s `style_display_chromium` test checks the converter against.
  *
  *   node tools/visual/style_display_cases.mjs > crates/eldur_css/src/cascade/style_display_chromium.rs
@@ -99,6 +100,28 @@ const named = [
   "--a:/***/;display:none",
   "--a:/* */;display/**/:none",
   "display/**/:/**/none",
+  // Declarations clearing drops: Chromium writes back only the ones it
+  // parsed, so a bad string, a bad url or an unmatched closer goes.
+  '--a:"a\n;--b:x;display:none',
+  "--a:url(a b);--b:x;display:none",
+  "--a:a);--b:x;display:none",
+  "--a:a];--b:x;display:none",
+  "--a:a};--b:x;display:none",
+  "--a:(a]);--b:x;display:none",
+  "--a:a!b;--b:x;display:none",
+  "--a:a !important;--b:x !important x;display:none",
+  "--a:;--b: ;display:none",
+  "--a:\\;--b:x;display:none",
+  "--a:(a!b);--b:[!];display:none",
+  "--a:a ! important;--b:x;display:none",
+  "--a:x !important;--b:x;display:none;color:red",
+  "--a:1;--b:x;--a:2;display:none",
+  "--a:url(a b);--b:url(a\\\n);--c:url(a(b);display:none",
+  "--a:url( a );--b:url(a\\)b);display:none",
+  "--a:url(a\x01b);--b:x;display:none",
+  "display:none \"a\n;color:red",
+  "display:none);color:red",
+  "color:red;display:none !important x",
 ];
 
 // Pieces the generated texts are made of.
@@ -106,7 +129,7 @@ const pieces = [
   '"', "'", "\\", '\\"', "\\'", "/*", "*/", "/", "*", "url(", "URL(", "u\\72 l(",
   "\\75rl(", "\\75 ", "\\000075", "\\000075 ", "\\u", ")", "(", "[", "]", "{", "}",
   " ", "\n", "\\\n", "a", "5", "-", "--", "#", "@", "\r\n", "\r", "\f", "\t", ";",
-  "x;", ".", "%",
+  "x;", ".", "%", "!", "!important", " ! important",
 ];
 const tails = ["*/", '"', "'", ")", "]", "}", " ", "a", "\n", "/*"];
 
@@ -140,7 +163,9 @@ const declared = await page.evaluate((texts) => {
   document.body.append(el);
   return texts.map((text) => {
     el.setAttribute("style", text);
-    return el.style.getPropertyValue("display") !== "";
+    if (el.style.getPropertyValue("display") === "") return null;
+    el.style.display = "";
+    return [...el.style].join(" ");
   });
 }, texts);
 const version = browser.version();
@@ -162,19 +187,26 @@ function rust(text) {
 }
 
 const rows = (list, from) =>
-  list.map((text, i) => `    (${rust(text)}, ${declared[from + i]}),`).join("\n");
-process.stdout.write(`//! Whether a \`style\` attribute's text declares \`display\`, as Chromium
-//! ${version} reads it, recorded by \`tools/visual/style_display_cases.mjs\`.
-//! Regenerate with that script rather than editing by hand.
+  list
+    .map((text, i) => {
+      const kept = declared[from + i];
+      return `    (${rust(text)}, ${kept === null ? "None" : `Some(${rust(kept)})`}),`;
+    })
+    .join("\n");
+process.stdout.write(`//! Whether a \`style\` attribute's text declares \`display\` and, when it
+//! does, the properties \`el.style.display = ''\` leaves in it, in order, as
+//! Chromium ${version} reads it. Recorded by
+//! \`tools/visual/style_display_cases.mjs\`; regenerate with that script
+//! rather than editing by hand.
 
 /// The tokenizer's edges, one case each.
-pub(super) const NAMED: &[(&str, bool)] = &[
+pub(super) const NAMED: &[(&str, Option<&str>)] = &[
 ${rows(named, 0)}
 ];
 
 /// Seed 51's run of strings, quotes, escapes, comments, \`url(\` and blocks
 /// around one \`display:none\`.
-pub(super) const GENERATED: &[(&str, bool)] = &[
+pub(super) const GENERATED: &[(&str, Option<&str>)] = &[
 ${rows([...generated], named.length)}
 ];
 `);
