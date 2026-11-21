@@ -237,6 +237,11 @@ fn run(
                     "#{id} draws {run:?} {left} px into its box, over what comes before"
                 ));
             }
+            // No ink at all in its box: the run drew outside it (or not at
+            // all), which the text checks above cannot see.
+            if !run.trim().is_empty() && left < 0 {
+                problems.push(format!("#{id} draws no ink for {run:?} in its box"));
+            }
         }
     }
     // Each line after a wrapped run's first is placed by its paragraph's
