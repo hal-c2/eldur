@@ -300,3 +300,146 @@ fn sheet_custom_properties_take_the_winning_rules_tokens() {
         [("--e".to_owned(), Some("var(--d, block)".to_owned()))].into()
     );
 }
+
+/// The tokenizer's edges, each as Chromium 158 reads it: whether the element
+/// is still `[style*="display"]`-hidden once a script clears its `display`,
+/// that is whether its `style` text declares none.
+const TOKENIZER_EDGES: &[(&str, &str, bool)] = &[
+    (
+        "escaped_quote_in_string",
+        "--a:\"a\\\"/*\";display:none;--b:*/;color:red",
+        false,
+    ),
+    (
+        "escaped_quote_outside",
+        "--a:\\\"/*;display:none;--b:*/;color:red",
+        true,
+    ),
+    (
+        "backslash_newline_in_string",
+        "--a:\"a\\\n/*\";display:none;--b:*/;color:red",
+        false,
+    ),
+    (
+        "newline_ends_string",
+        "--a:\"a\n;display:none;--b:\"",
+        false,
+    ),
+    (
+        "form_feed_ends_string",
+        "--a:'a\u{c};display:none;--b:'",
+        false,
+    ),
+    ("backslash_at_end", "display:none;--a:\\", false),
+    (
+        "non_hex_escape",
+        "--a:\\u\\72 l(/*);display:none;--b:*/;color:red",
+        false,
+    ),
+    (
+        "six_digit_escape_space",
+        "--a:\\000075 rl(/*);display:none;--b:*/;color:red",
+        false,
+    ),
+    (
+        "six_digit_escape_digit",
+        "--a:\\0000755rl(/*);display:none;--b:*/;color:red",
+        true,
+    ),
+    (
+        "escape_crlf_continues_name",
+        "--a:a\\75\r\nurl(/*);display:none;--b:*/;color:red",
+        true,
+    ),
+    (
+        "escaped_slash",
+        "--a:\\/*;display:none;--b:*/;color:red",
+        false,
+    ),
+    (
+        "escaped_star",
+        "--a:/\\*;display:none;--b:*/;color:red",
+        false,
+    ),
+    (
+        "url_in_string",
+        "--a:\"url(/*\";display:none;--b:*/;color:red",
+        false,
+    ),
+    (
+        "url_spaces_comment",
+        "--a:url(   /*);display:none;--b:*/;color:red",
+        false,
+    ),
+    (
+        "url_quoted_arg_comment",
+        "--a:url( \"/*\" /* x */);display:none;--b:*/;color:red",
+        false,
+    ),
+    ("unclosed_url", "--a:url(/*;display:none", true),
+    ("unclosed_string", "--a:\"/*;display:none", true),
+    (
+        "comment_after_quote_in_url",
+        "--a:url(a\"/*);display:none;--b:*/;color:red",
+        false,
+    ),
+    (
+        "digit_led_name",
+        "--a:5url(/*);display:none;--b:*/;color:red",
+        true,
+    ),
+    (
+        "dash_ident",
+        "--a:-url(/*);display:none;--b:*/;color:red",
+        true,
+    ),
+    (
+        "double_dash_ident",
+        "--a:--url(/*);display:none;--b:*/;color:red",
+        true,
+    ),
+    (
+        "hash_name",
+        "--a:#url(/*);display:none;--b:*/;color:red",
+        true,
+    ),
+    ("bracket_block", "--a:[;display:none;--b:];color:red", true),
+    ("brace_block", "--a:{;display:none;--b:};color:red", true),
+];
+
+#[test]
+fn each_tokenizer_edge_hides_as_chromium_reads_it() {
+    fn attribute(text: &str) -> String {
+        text.replace('&', "&amp;")
+            .replace('"', "&quot;")
+            .replace('<', "&lt;")
+            .replace('\r', "&#13;")
+            .replace('\x0c', "&#12;")
+    }
+    let mut page = String::from(
+        "<!DOCTYPE html>\n<style>\n  [style*=\"display\"] { display: none; }\n</style>\n",
+    );
+    for (name, style, _) in TOKENIZER_EDGES {
+        page += &format!(
+            "<div id=\"{name}\" style=\"{}\">x</div>\n",
+            attribute(style)
+        );
+    }
+    let doc = Document::parse(&page);
+    let viewport = Viewport::default();
+    let (sheets, _) = collect_stylesheets(&doc, &mut NoSheets, &viewport);
+    let node = |name: &str| doc.element_by_id(name).expect(name);
+    let nodes: BTreeSet<_> = TOKENIZER_EDGES
+        .iter()
+        .map(|(name, ..)| node(name))
+        .collect();
+    let hidden = rules_hide(&doc, &sheets, &viewport, &nodes);
+    let differ: Vec<_> = TOKENIZER_EDGES
+        .iter()
+        .filter(|(name, _, chromium)| hidden.contains(&node(name)) != *chromium)
+        .collect();
+    assert!(
+        differ.is_empty(),
+        "differ from Chromium (name, style, hidden): {differ:#?}"
+    );
+}
