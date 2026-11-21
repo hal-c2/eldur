@@ -1,0 +1,33 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif} #cbx,#cex{color:rgb(0,0,200)}</style><script>
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
+function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?JSON.stringify(n.data):I(n)}).join(",")}
+function R(e){var r=e.getBoundingClientRect();return {l:Math.round(r.left),t:Math.round(r.top),r:Math.round(r.right),b:Math.round(r.bottom),w:Math.round(r.width),h:Math.round(r.height)}}
+function near(a,b){return Math.abs(a-b)<=3}
+document.addEventListener("DOMContentLoaded",function(){
+var byId=function(s){return document.getElementById(s)};
+// A button's own text appended with an element is still one Text node.
+var ba=byId("ba"),sp=document.createElement("span");sp.textContent="x";ba.append(ba.firstChild,sp);
+L("append-own",N(ba),JSON.stringify(ba.textContent),near(R(ba).h,R(byId("bn")).h));
+// A created button holding a line keeps the line's height when restyled.
+var pcd=document.createElement("div");byId("pc").append(pcd);
+var cb=document.createElement("button");cb.style.width="60px";pcd.append(cb);
+cb.innerHTML="<b>Go</b> many words that wrap";cb.id="cbx";
+L("created-wrap",R(cb).h>40,N(cb));
+var ce=document.createElement("button");pcd.append(ce);ce.append(document.createElement("span"));ce.id="cex";
+L("created-empty",R(ce).h<R(byId("bn")).h,N(ce));
+// A control put in a disabled fieldset (whose legend holds a field, so each
+// control answers for itself) and moved out is enabled again.
+byId("dfsl").append(document.createElement("input"));
+var mv=document.createElement("input");mv.id="mv";byId("dfs").append(mv);byId("pm").append(mv);
+mv.addEventListener("focus",function(){L("focus",I(mv))});
+// Once the page has been painted again, the restyled buttons keep those heights.
+mv.addEventListener("input",function(){L("typed",JSON.stringify(mv.value),R(cb).h>40,R(ce).h<R(byId("bn")).h)});
+L("moved-out",mv.matches(":disabled"),mv.disabled);
+});
+</script></head><body data-clicks="#mv key:k">
+<p><button id="ba">A</button> <button id="bn">Save</button></p>
+<div id="pc"></div>
+<fieldset id="dfs" disabled><legend id="dfsl">off</legend></fieldset>
+<p id="pm"></p>
+</body></html>

@@ -6993,6 +6993,19 @@ function _setInnerHTMLAt(item, html) {
     if (str === "" && !raw.__eldurInline) {
         _rawElementChildren(raw).forEach(_detachNode);
     }
+    // A button given elements holds them as nodes, on a line of its own. A
+    // created button with no text yet has no label to draw it.
+    if (/<[a-z]/i.test(str) && (_isTextButton(raw) || _isEmptyCreatedButton(raw))) {
+        // What it held goes: its Text nodes are no line's yet.
+        _btnForget(raw);
+        _meta(raw).btnNodes = [];
+        _meta(raw).btnDrawn = raw.text;
+        _btnBecomesLines(raw);
+        _replaceWithMarkup(raw, str);
+        _btnLineStyle(raw);
+        _rememberMarkup(raw, str);
+        return;
+    }
     var vHtml = raw.__eldurInline ? raw : _vExisting(raw);
     if (!vHtml && _vHasRules() && !_markupMakesElements(raw) && typeof raw.text === "string") {
         vHtml = _vOwnModel(raw);
@@ -7020,18 +7033,6 @@ function _setInnerHTMLAt(item, html) {
     var elementsInBox = _gIsBox(raw) && /<(?!br\b)[a-z]/i.test(str);
     if (blockInBox || elementsInBox || _markupMakesElements(raw)) {
         _replaceWithMarkup(raw, str);
-        _rememberMarkup(raw, str);
-        return;
-    }
-    // A button given elements holds them as nodes, on a line of its own.
-    if (_isTextButton(raw) && /<[a-z]/i.test(str)) {
-        // What it held goes: its Text nodes are no line's yet.
-        _btnForget(raw);
-        _meta(raw).btnNodes = [];
-        _meta(raw).btnDrawn = raw.text;
-        _btnBecomesLines(raw);
-        _replaceWithMarkup(raw, str);
-        _btnLineStyle(raw);
         _rememberMarkup(raw, str);
         return;
     }
@@ -12539,6 +12540,13 @@ function _btnBecomesLines(raw) {
     return lines;
 }
 
+// A created button whose template shows no label until it has text.
+function _isEmptyCreatedButton(raw) {
+    return _nodeTag(raw) === "button" && Boolean(_meta(raw).createdTag) && raw.text === ""
+        && raw.background !== undefined && typeof raw.clicked === "function"
+        && Boolean(raw.contentItem) && typeof raw.contentItem.text !== "string";
+}
+
 function _isTextButton(raw) {
     return _nodeTag(raw) === "button" && typeof raw.text === "string" && raw.background !== undefined && typeof raw.clicked === "function"
         && Boolean(raw.contentItem) && typeof raw.contentItem.text === "string";
@@ -12747,11 +12755,13 @@ function _insertChildren(raw, nodes, ref, going, atStart) {
         });
         return;
     }
-    if (nodes.length > 0 && !nodes.every(_isTextNode) && _drawsOwnText(raw)) {
+    if (nodes.length > 0 && !nodes.every(_isTextNode) && (_drawsOwnText(raw) || _isEmptyCreatedButton(raw))) {
         _btnBecomesLines(raw);
     }
     if (_meta(raw).btnLines) {
-        // Its Text nodes are a line's now, each the same node.
+        // Its Text nodes are a line's now, each the same node: one of its own
+        // being moved is that node, not a second copy of it.
+        nodes = nodes.map(_gCurrent);
         ref = ref ? _gCurrent(ref) : ref;
         going = going ? _gCurrent(going) : going;
     }
@@ -12899,6 +12909,8 @@ function _btnLineStyle(raw) {
     for (var i = 0; i < lines.children.length; ++i) {
         var kid = lines.children[i];
         var tag = _meta(kid).createdTag;
+        // Its Text nodes wrap at the button's width as a paragraph's do.
+        _dressLineText(lines, kid);
         if (!tag || tag === "#text" || !_isPlainTextItem(kid)) {
             continue;
         }
@@ -13859,20 +13871,31 @@ function _fieldsetHolds(raw) {
             break;
         }
     }
-    if (!fieldset) {
-        return;
-    }
     var isControl = function(node) {
         return !node.__eldurInline && /^(button|input|select|textarea)$/.test(_nodeTag(node));
     };
     var controls = isControl(raw) ? [raw] : _elementsUnder(raw, isControl, false);
+    if (!fieldset) {
+        // One a fieldset held off and that left it is enabled again, unless
+        // it is disabled itself.
+        controls.forEach(function(c) {
+            if (_meta(c).fieldsetHeld) {
+                delete _meta(c).fieldsetHeld;
+                c.enabled = !_isDisabled(c) && _meta(c).explicitDisabled !== true;
+            }
+        });
+        return;
+    }
     if (fieldset.enabled === false) {
         if (controls.some(function(c) { return !_isDisabled(c); })) {
             _fieldsetTurned(fieldset);
         }
         return;
     }
-    controls.forEach(function(c) { c.enabled = !_isDisabled(c); });
+    controls.forEach(function(c) {
+        c.enabled = !_isDisabled(c);
+        _meta(c).fieldsetHeld = !c.enabled;
+    });
 }
 
 function _unescapeHtmlText(str) {
@@ -29206,8 +29229,12 @@ function _gPaintControl(raw, s, e) {
                     line = Math.max(line, raw.contentItem.implicitHeight);
                 }
             }
-            var frame = e.pt + e.pb + e.bt + e.bb;
-            _gSet(raw, "implicitHeight", line + frame);
+            // A button holding lines is as tall as they are: its height is
+            // the binding `_btnBecomesLines` installed, not one line.
+            if (!_meta(raw).btnLines) {
+                var frame = e.pt + e.pb + e.bt + e.bb;
+                _gSet(raw, "implicitHeight", line + frame);
+            }
         }
         // Native until the page sets a border or background, as with
         // `appearance: auto`: the source's own line then stands for the UA's.
