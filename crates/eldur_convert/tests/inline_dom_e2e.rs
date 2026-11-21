@@ -485,6 +485,7 @@ fn a_button_holding_lines_keeps_them_as_chromium_does() {
             ("bh", &["x"], &["hidden"]),
             ("bm", &["B", "A"], &["H"]),
             ("bk", &["y", "Save", "x"], &["K"]),
+            ("bp", &["y", "B", "x", "A"], &["K"]),
         ],
     );
 }

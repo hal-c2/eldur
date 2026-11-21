@@ -12660,22 +12660,66 @@ function _btnNodes(raw) {
         var own = _pseudoOwn(raw, raw.text);
         m.btnNodes = [];
         if (own !== "") {
-            var leaf = _btnOwn(_vLeaf(own, null, null), raw);
             // What it holds but does not draw (a hidden `<kbd>`) stays where
-            // it is in `textContent`, before or after its text.
+            // it is in `textContent`: before, between or after its text, which
+            // is a Text node on each side of it, as in the DOM.
             var dom = typeof raw.eldurDomText === "string" && !m.ownText ? raw.eldurDomText : own;
-            var at = dom.indexOf(own);
-            if (at !== -1) {
-                leaf.btnBefore = dom.slice(0, at);
-                leaf.btnAfter = dom.slice(at + own.length);
-            }
-            m.btnNodes.push(leaf);
+            var runs = _btnRuns(dom, own);
+            runs.texts.forEach(function(text, i) {
+                var leaf = _btnOwn(_vLeaf(text, null, null), raw);
+                if (i === 0 && runs.before !== "") {
+                    leaf.btnBefore = runs.before;
+                }
+                if (runs.after[i] !== "") {
+                    leaf.btnAfter = runs.after[i];
+                }
+                m.btnNodes.push(leaf);
+            });
         } else if (typeof raw.eldurDomText === "string" && !m.ownText) {
             m.btnHidden = raw.eldurDomText;
         }
         m.btnDrawn = raw.text;
     }
     return m.btnNodes;
+}
+
+// `own`, what a button draws, as the runs of text between what `dom`, its
+// textContent, holds but does not draw: `before` the first run, and
+// `after[i]` each run. Text drawn whole in `dom` is one run; text that is
+// not in it in order is one run with nothing hidden.
+function _btnRuns(dom, own) {
+    var at = dom.indexOf(own);
+    if (at !== -1) {
+        return { before: dom.slice(0, at), texts: [own], after: [dom.slice(at + own.length)] };
+    }
+    var runs = { before: "", texts: [], after: [] };
+    var text = "";
+    var hidden = "";
+    var j = 0;
+    for (var i = 0; i < dom.length; ++i) {
+        if (j < own.length && dom[i] === own[j]) {
+            if (hidden !== "") {
+                if (text === "") {
+                    runs.before = hidden;
+                } else {
+                    runs.texts.push(text);
+                    runs.after.push(hidden);
+                    text = "";
+                }
+                hidden = "";
+            }
+            text += dom[i];
+            ++j;
+        } else {
+            hidden += dom[i];
+        }
+    }
+    if (j < own.length) {
+        return { before: "", texts: [own], after: [""] };
+    }
+    runs.texts.push(text);
+    runs.after.push(hidden);
+    return runs;
 }
 
 function _btnOwn(leaf, raw) {
