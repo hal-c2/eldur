@@ -413,10 +413,17 @@ fn the_drives_drawn_gaps_match_chromium() {
     );
 }
 
+// A legend's own width, min-width and max-width hold in a narrower fieldset;
+// with none it wraps at the fieldset's content width.
 #[test]
 fn a_legend_keeps_its_width_bounds_as_chromium_does() {
     page_drawing(
         "legend_sizes",
         &["Wide", "Min", "Max legend text", "a long legend that wraps"],
     );
+}
+
+#[test]
+fn a_button_holding_lines_keeps_them_as_chromium_does() {
+    page_drawing("button_lines", &["A", "x", "Go", " many words that wrap"]);
 }
