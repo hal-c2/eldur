@@ -419,11 +419,20 @@ fn the_drives_drawn_gaps_match_chromium() {
 fn a_legend_keeps_its_width_bounds_as_chromium_does() {
     page_drawing(
         "legend_sizes",
-        &["Wide", "Min", "Max legend text", "Both", "a long legend that wraps"],
+        &[
+            "Wide",
+            "Min",
+            "Max legend text",
+            "Both",
+            "a long legend that wraps",
+        ],
     );
 }
 
 #[test]
 fn a_button_holding_lines_keeps_them_as_chromium_does() {
-    page_drawing("button_lines", &["A", "x", "Go", " many words that wrap"]);
+    page_drawing(
+        "button_lines",
+        &["A", "x", "Go", " many words that wrap", "Go", " on"],
+    );
 }
