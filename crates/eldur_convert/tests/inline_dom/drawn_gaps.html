@@ -47,12 +47,12 @@ L("emptied-text",N(ge),JSON.stringify(ge.textContent),near(R(ge).h,R(gn).h));
 // A button's one Text node appended to it again stays its own, and drawn.
 var gq=document.getElementById("gq");gq.appendChild(gq.firstChild);
 L("self-append",N(gq),JSON.stringify(gq.textContent),near(R(gq).w,R(gn).w),near(R(gq).h,R(gn).h));
-// A long run of text put in a legend wraps inside its fieldset.
+// A long run of text put in a legend wraps inside its fieldset, near its full width.
 var gw=document.getElementById("gw"),gwl=document.getElementById("gwl"),gwt=document.createElement("span");gwt.textContent="word ".repeat(30);gwl.append(gwt);
-L("wrap",R(gwt).h>40,R(gwl).r<=R(gw).r,R(gwt).r<=R(gw).r);
+L("wrap",R(gwt).h>40,R(gwl).r<=R(gw).r,R(gwt).r<=R(gw).r,R(gwt).w>150);
 // So does one put after a box in a legend, which lays the legend out as a column.
 var gv=document.getElementById("gv"),gvl=document.getElementById("gvl"),gvt=document.createElement("span");gvt.textContent="word ".repeat(30);gvl.append(document.createElement("input"));gvl.append(gvt);
-L("wrap-box",R(gvt).h>40,R(gvl).r<=R(gv).r,R(gvt).r<=R(gv).r);
+L("wrap-box",R(gvt).h>40,R(gvl).r<=R(gv).r,R(gvt).r<=R(gv).r,R(gvt).w>150);
 var gs2=document.getElementById("gs2"),last=document.getElementById("last");document.body.append(gs2);
 L("to-body",N(last),R(gs2).t>=R(last).b,near(R(gs2).l,0));
 </script></body></html>
