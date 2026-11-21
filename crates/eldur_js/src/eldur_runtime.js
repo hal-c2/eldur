@@ -5798,6 +5798,15 @@ function getText(item) {
     if (typeof raw.eldurDomText === "string" && !_meta(raw).ownText) {
         return raw.eldurDomText;
     }
+    // A created element whose children could not become a line (a host with
+    // no EldurLines) holds them as items of its Text: its text is theirs too,
+    // as its child nodes say.
+    if (typeof raw.text === "string" && _meta(raw).createdTag && _isPlainTextItem(raw)
+            && _rawKids(raw, true).length > 0) {
+        // Text with no model of its own is no node among them: it comes first.
+        var bare = _vOwnModel(raw) || _vCreatedTextModel(raw) ? "" : _pseudoOwn(raw, raw.text);
+        return bare + _rawChildNodes(raw).map(getText).join("");
+    }
     if (typeof raw.text === "string") {
         return _pseudoOwn(raw, raw.text);
     }
