@@ -1941,7 +1941,8 @@ mod tests {
     #[test]
     fn a_buttons_runs_split_where_its_nodes_do() {
         // String matching would split "ABB" as "AB" + "B" and "Saave" as
-        // "Sa" + "a" + "ve".
+        // "Sa" + "a" + "ve". A node keeps the space before it (" B"), as in
+        // Chromium, though the label draws one.
         let (q, _) = qml(r#"<button>A<kbd style="display:none">B</kbd>B</button>
                <button>S<kbd style="display:none">a</kbd>ave</button>
                <button><kbd style="display:none">Go</kbd>Go</button>
@@ -1950,7 +1951,7 @@ mod tests {
             r#"["", "A", "B", "B", ""]"#,
             r#"["", "S", "a", "ave", ""]"#,
             r#"["Go", "Go", ""]"#,
-            r#"["", "A ", "K ", "B", ""]"#,
+            r#"["", "A ", "K", " B", ""]"#,
         ] {
             assert!(
                 q.contains(&format!("property var eldurDomRuns: {runs}")),

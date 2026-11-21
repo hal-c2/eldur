@@ -70,6 +70,34 @@ TestCase {
             }
             console.log("INKIN " + names[names.length - 1] + " " + left + " " + item.text)
         }
+        // A run that wraps on a line: where each of its lines draws ink in the
+        // line's box, in the page's pixels.
+        if (item.lineCount > 1 && typeof item.text === "string" && item.parent
+                && typeof item.parent.firstBaseline === "number") {
+            const box = item.parent.mapToItem(host, 0, 0)
+            const top = item.mapToItem(host, 0, 0)
+            const bx = Math.max(0, Math.round(box.x)), bw = Math.min(Math.round(item.parent.width), img.width - bx)
+            const band = item.height / item.lineCount
+            for (let i = 0; i < item.lineCount; ++i) {
+                // The middle of its band: a taller box on the line reaches into
+                // the band's edges.
+                const y0 = Math.round(top.y + (i + 0.25) * band), y1 = Math.min(Math.round(top.y + (i + 0.75) * band), img.height)
+                let left = -1, right = -1
+                for (let x = bx; x < bx + bw; ++x) {
+                    for (let y = y0; y < y1; ++y) {
+                        const c = img.pixel(x, y)
+                        if ((c.r + c.g + c.b) / 3 < 0.5) {
+                            if (left < 0) {
+                                left = x
+                            }
+                            right = x + 1
+                            break
+                        }
+                    }
+                }
+                console.log("INKLINE " + i + " " + left + " " + right + " " + item.text)
+            }
+        }
         for (let i = 0; i < item.children.length; ++i) {
             inkIn(item.children[i], names, img)
         }
@@ -100,6 +128,10 @@ TestCase {
 /// What one element draws: texts it must draw, in order, and texts it must not.
 type Within<'a> = (&'a str, &'a [&'a str], &'a [&'a str]);
 
+/// A wrapped run's text and Chromium's box for each of its lines, left and
+/// right (`<body data-ink>`).
+type Ink = (String, Vec<(i64, i64)>);
+
 /// Runs one page; `Err` has what went wrong.
 fn run(
     name: &str,
@@ -108,6 +140,7 @@ fn run(
     clicks: &str,
     drawn: &[&str],
     within: &[Within],
+    ink: &[Ink],
 ) -> Result<(), String> {
     if support::no_qt() {
         return Ok(());
@@ -206,6 +239,38 @@ fn run(
             }
         }
     }
+    // Each line after a wrapped run's first is placed by its paragraph's
+    // alignment alone; its ink lies in Chromium's box for it. The first
+    // shares its row with what comes before, and its box ends in a space.
+    for (run, lines) in ink {
+        let drew: Vec<(usize, i64, i64)> = text
+            .lines()
+            .filter_map(|l| {
+                let rest = &l[l.find("INKLINE ")? + 8..];
+                let mut parts = rest.splitn(4, ' ');
+                let i = parts.next()?.parse().ok()?;
+                let left = parts.next()?.parse().ok()?;
+                let right = parts.next()?.parse().ok()?;
+                (parts.next()? == run).then_some((i, left, right))
+            })
+            .collect();
+        if drew.len() != lines.len() {
+            problems.push(format!(
+                "{run:?} draws {} lines, Chromium {}: {drew:?}",
+                drew.len(),
+                lines.len()
+            ));
+            continue;
+        }
+        for &(i, left, right) in drew.iter().skip(1) {
+            let (want_left, want_right) = lines[i];
+            if (left - want_left).abs() > 3 || (right - want_right).abs() > 3 {
+                problems.push(format!(
+                    "line {i} of {run:?} draws ink from {left} to {right}; Chromium's box is {want_left} to {want_right}"
+                ));
+            }
+        }
+    }
     if problems.is_empty() {
         Ok(())
     } else {
@@ -246,7 +311,23 @@ fn page_drawing_within(name: &str, drawn: &[&str], within: &[Within]) {
         })
         .collect();
     let clicks = format!("[{}]", clicks.join(","));
-    if let Err(e) = run(name, &html, &want, &clicks, drawn, within) {
+    let ink: Vec<Ink> = chromium[name]["ink"]
+        .as_array()
+        .map(|runs| {
+            runs.iter()
+                .map(|r| {
+                    let lines = r["lines"].as_array().expect("lines").iter();
+                    let lines = lines
+                        .map(|l| (l[0].as_i64().expect("left"), l[1].as_i64().expect("right")));
+                    (
+                        r["text"].as_str().expect("text").to_owned(),
+                        lines.collect(),
+                    )
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    if let Err(e) = run(name, &html, &want, &clicks, drawn, within, &ink) {
         panic!("{e}");
     }
 }
@@ -519,6 +600,19 @@ fn a_legend_keeps_its_width_bounds_as_chromium_does() {
 }
 
 #[test]
+fn a_wrapped_run_on_an_aligned_line_draws_where_chromium_does() {
+    // A run's own `text-align` is not used on a line (`_gPaintText`); the
+    // line places each of its lines, centred or right-aligned.
+    page_drawing(
+        "centred_runs",
+        &[
+            "alpha beta gamma delta epsilon zeta eta theta",
+            "one two three four five six seven eight",
+        ],
+    );
+}
+
+#[test]
 fn a_button_holding_lines_keeps_them_as_chromium_does() {
     // What a button holds but does not draw stays undrawn once it holds lines.
     page_drawing_within(
@@ -532,6 +626,7 @@ fn a_button_holding_lines_keeps_them_as_chromium_does() {
             ("bb", &["AC"], &["B"]),
             ("bs", &["Sip"], &["a"]),
             ("bg", &["Z"], &["Go"]),
+            ("bw", &["Save ", " later", "!"], &["K"]),
             ("cbx", &["Go", " many words that wrap"], &[]),
             ("pc", &["Go", " on"], &[]),
         ],

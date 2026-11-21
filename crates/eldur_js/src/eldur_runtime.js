@@ -12668,7 +12668,7 @@ function _btnNodes(raw) {
             // it is in `textContent`: before, between or after its text, which
             // is a Text node on each side of it, as in the DOM.
             var paged = typeof raw.eldurDomText === "string" && !m.ownText;
-            var runs = _btnRuns(paged ? raw.eldurDomText : own, own, paged ? raw.eldurDomRuns : null);
+            var runs = _btnRuns(raw, paged ? raw.eldurDomText : own, own, paged ? raw.eldurDomRuns : null);
             runs.texts.forEach(function(text, i) {
                 var leaf = _btnOwn(_vLeaf(text, null, null), raw);
                 if (i === 0 && runs.before !== "") {
@@ -12694,8 +12694,9 @@ function _btnNodes(raw) {
 // tell which "B" of "A<kbd hidden>B</kbd>B" is drawn. A button with no
 // split from the page, or one that no longer joins to its text, is one run
 // with what it hides after it when it draws its text whole, else nothing
-// hidden.
-function _btnRuns(dom, own, split) {
+// hidden. Its nodes keep their spaces (" now" after "Save "), which the
+// label collapses as it draws them (`_btnDrawn`).
+function _btnRuns(raw, dom, own, split) {
     if (split && split.length % 2 === 1) {
         var runs = { before: split[0], texts: [], after: [] };
         var all = split[0];
@@ -12704,7 +12705,7 @@ function _btnRuns(dom, own, split) {
             runs.after.push(split[i + 1]);
             all += split[i] + split[i + 1];
         }
-        if (runs.texts.join("") === own && all === dom) {
+        if (_btnDrawn(raw, runs.texts.join("")) === own && all === dom) {
             return runs;
         }
     }
@@ -12713,6 +12714,17 @@ function _btnRuns(dom, own, split) {
         return { before: dom.slice(0, at), texts: [own], after: [dom.slice(at + own.length)] };
     }
     return { before: "", texts: [own], after: [""] };
+}
+
+// What a button's Text nodes draw: as a browser lays out a line, a run of
+// spaces is one and the line's ends have none, unless `white-space` keeps
+// them. The nodes keep theirs, as a page's do.
+function _btnDrawn(raw, str) {
+    var white = _gHasCascade() ? _gFreshStyle(raw)["white-space"] : null;
+    if (white && white !== "normal" && white !== "nowrap") {
+        return str;
+    }
+    return str.replace(/[ \t\n\r\f]+/g, " ").replace(/^ | $/g, "");
 }
 
 // The split `_btnRuns` reads, kept as a script changes what it holds.
@@ -12778,7 +12790,7 @@ function _btnTakeOut(leaf, staying) {
 
 function _btnDraw(raw) {
     var m = _meta(raw);
-    var own = (m.btnNodes || []).map(function(leaf) { return leaf.data; }).join("");
+    var own = _btnDrawn(raw, (m.btnNodes || []).map(function(leaf) { return leaf.data; }).join(""));
     if (typeof raw.eldurDomText === "string" && !m.ownText) {
         raw.eldurDomText = (m.btnHidden || "") + (m.btnNodes || []).map(function(leaf) {
             return (leaf.btnBefore || "") + leaf.data + (leaf.btnAfter || "");
