@@ -20,7 +20,8 @@ var lx=byId("lx"),lc=document.createElement("span");lc.textContent="C";lx.append
 L("pre-line-element",near(R(lx).w,R(byId("lr")).w),JSON.stringify(lx.textContent));
 var nr=byId("nr"),nc=document.createElement("span");nc.textContent=" Ccc";nr.append(nc);
 L("nowrap-element",near(R(nr).h,one));
-// A button the page gives breaks and an element is as tall as its lines.
+// A button the page gives breaks and an inline-block is as tall as its
+// lines.
 L("pre-line-markup",near(R(byId("bm")).h,R(byId("pl")).h),R(byId("bm")).h>one+10);
 // A script that changes the button's white-space later changes how its
 // line keeps spaces, and what it holds stays as it is.
@@ -80,7 +81,7 @@ B</button></div>
 <div><button id="sw" style="white-space:pre-line">X   Y</button></div>
 <div><button id="sr" style="white-space:pre">X   YC</button></div>
 <div><button id="bm" style="white-space:pre-line">A
-B<b>C</b></button></div>
+B<b style="display:inline-block">C</b></button></div>
 <div><button id="nr" style="white-space:nowrap;width:40px">Aaa Bbb</button></div>
 <div><button id="q">X</button></div>
 <div id="cut">Cut</div>
