@@ -77,17 +77,6 @@ struct PageBuffers {
     pure_top_vars: HashMap<String, PureKind>,
     handler_fns: Vec<String>,
     init_stmts: Vec<String>,
-    /// The page's `DOMContentLoaded` listeners, an array each top-level
-    /// listener is pushed to where its script or module adds it, with the
-    /// callback's value at that point; called in that order once every script
-    /// has run.
-    ready_queue: Option<String>,
-    /// The same for `load`, called after them.
-    load_queue: Option<String>,
-    /// The variable holding `window.onload`'s value, set where each
-    /// assignment to it runs, and the function that calls it from the load
-    /// queue, where the assignment that made it a handler put it.
-    window_onload: Option<(String, String)>,
     /// Emitting a lazy module: nothing it declares exists until it runs, so
     /// its bindings are assigned in its run function, never set at load.
     in_lazy_module: bool,
@@ -1212,9 +1201,12 @@ impl<'a> PageBuilder<'a> {
         }
     }
 
-    fn finish(self) -> JsOutput {
+    fn finish(mut self) -> JsOutput {
         let mut sections: Vec<String> = Vec::new();
         sections.push(".import \"eldur_runtime.js\" as Eldur".to_string());
+
+        // Those named only by code in a function or a block.
+        self.out.top_decls.append(&mut self.shared.lifecycle.decls);
 
         if !self.out.top_decls.is_empty() {
             sections.push(self.out.top_decls.join("\n"));
@@ -1232,9 +1224,12 @@ impl<'a> PageBuilder<'a> {
         debug_assert_no_top_declaration(&self.out.init_stmts);
         let mut all_init_lines: Vec<String> = Vec::new();
         all_init_lines.extend(self.out.init_stmts);
-        for queue in [&self.out.ready_queue, &self.out.load_queue]
-            .into_iter()
-            .flatten()
+        for queue in [
+            &self.shared.lifecycle.ready_queue,
+            &self.shared.lifecycle.load_queue,
+        ]
+        .into_iter()
+        .flatten()
         {
             all_init_lines.push(format!("Eldur.fireListeners({queue});"));
         }
@@ -1935,24 +1930,20 @@ impl PageBuffers {
         }
     }
 
-    /// The page's `load` listener array, declared on first use.
+    /// The page's `load` listener array, declared on first use. Each
+    /// top-level listener is pushed to it where its script or module adds
+    /// it, with the callback's value at that point.
     fn load_queue(&mut self, shared: &mut SharedRewriteState) -> String {
-        if self.load_queue.is_none() {
-            let queue = shared.alloc_fn_name("__eldur_load_listeners");
-            self.top_decls.push(format!("var {queue} = [];"));
-            self.load_queue = Some(queue);
-        }
-        self.load_queue.clone().unwrap_or_default()
+        let queue = shared.lifecycle_queue(true);
+        self.top_decls.append(&mut shared.lifecycle.decls);
+        queue
     }
 
     /// The page's `DOMContentLoaded` listener array, declared on first use.
     fn ready_queue(&mut self, shared: &mut SharedRewriteState) -> String {
-        if self.ready_queue.is_none() {
-            let queue = shared.alloc_fn_name("__eldur_ready_listeners");
-            self.top_decls.push(format!("var {queue} = [];"));
-            self.ready_queue = Some(queue);
-        }
-        self.ready_queue.clone().unwrap_or_default()
+        let queue = shared.lifecycle_queue(false);
+        self.top_decls.append(&mut shared.lifecycle.decls);
+        queue
     }
 
     fn try_handle_special_top_expr<'b>(
@@ -2046,19 +2037,8 @@ impl PageBuffers {
                     // while replaced, and loses it to `null`, so one set again
                     // is heard after the listeners added in between.
                     let queue = self.load_queue(lowerer.shared);
-                    let (slot, call) = match &self.window_onload {
-                        Some(pair) => pair.clone(),
-                        None => {
-                            let slot = lowerer.shared.alloc_fn_name("__eldur_window_onload");
-                            let call = lowerer.shared.alloc_fn_name("__eldur_call_window_onload");
-                            self.top_decls.push(format!("var {slot} = null;"));
-                            self.top_decls.push(format!(
-                                "function {call}() {{\n    if (typeof {slot} === \"function\") {{\n        {slot}.call(Eldur.window, Eldur.event(\"load\", Eldur.window, null));\n    }}\n}}"
-                            ));
-                            self.window_onload = Some((slot.clone(), call.clone()));
-                            (slot, call)
-                        }
-                    };
+                    let (slot, call) = lowerer.shared.window_onload();
+                    self.top_decls.append(&mut lowerer.shared.lifecycle.decls);
                     let value = if is_null_or_undefined(&assign.right, scoping) {
                         "null".to_string()
                     } else {
