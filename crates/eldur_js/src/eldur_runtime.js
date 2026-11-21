@@ -528,6 +528,10 @@ function reportError(err) {
 // the handler kept in `call.handler`; the value assigned is returned, as an
 // assignment's value.
 function setOnload(listeners, call, value) {
+    if (call.deleted) {
+        call.plain = value;
+        return value;
+    }
     var handler = value !== null && (typeof value === "object" || typeof value === "function");
     call.handler = handler ? value : null;
     var entry = call.entry || null;
@@ -547,7 +551,16 @@ function setOnload(listeners, call, value) {
 
 // `window.onload` read where it runs: the handler `setOnload` kept, or `null`.
 function getOnload(call) {
-    return call.handler || null;
+    return call.deleted ? call.plain : call.handler || null;
+}
+
+// `delete window.onload`, which in a browser deletes the window's own
+// accessor: the handler set before stays a `load` listener, a read gives
+// `undefined`, and what is assigned after is a plain value, never called.
+function deleteOnload(call) {
+    call.deleted = true;
+    call.plain = undefined;
+    return true;
 }
 
 // `window.onload` as a place a pattern, a `for` head or `++` assigns to.
