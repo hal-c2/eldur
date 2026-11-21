@@ -367,7 +367,7 @@ fn a_mutant_is_caught_only_by_a_failed_budget() {
         harness: harness.iter().map(|l| l.to_string()).collect(),
         logged: logged.iter().map(|l| l.to_string()).collect(),
     };
-    let with = |i: usize, line: &str| {
+    let with = |i: usize, line: &'static str| {
         let mut logged = APPEND_SCALING_WANT.to_vec();
         logged[i] = line;
         logged
@@ -457,11 +457,11 @@ fn budget_failure(check: usize, section: &str, got: &str) -> bool {
         0 => rest
             .strip_prefix("600 appends walk ")
             .and_then(|r| r.strip_suffix(" items each on average"))
-            .and_then(|n| Some(vec![n.parse().ok()?])),
+            .and_then(|n| n.parse().ok().map(|x| vec![x])),
         1 => rest
             .strip_prefix("an append walks ")
             .and_then(|r| r.strip_suffix(" items besides sweeps"))
-            .and_then(|n| Some(vec![n.parse().ok()?])),
+            .and_then(|n| n.parse().ok().map(|x| vec![x])),
         _ => rest
             .strip_prefix("the last 100 appends walk ")
             .and_then(|r| r.split_once(" items each, the first 100 "))
