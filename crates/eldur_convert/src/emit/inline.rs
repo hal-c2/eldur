@@ -293,13 +293,14 @@ enum Piece<'b, 'a> {
     /// A run of text between boxes, its spans kept.
     Run(Vec<Inline<'a>>),
     /// A box, with the innermost element around it that has its own node,
-    /// the outermost one that makes a stacking context, and the elements
-    /// around it, outermost first.
+    /// the outermost one that makes a stacking context, the elements around
+    /// it, outermost first, and the opacity they fade it by, multiplied.
     Atomic(
         &'b LayoutBox<'a>,
         Option<NodeId>,
         Option<&'b ComputedStyle>,
         Vec<NodeId>,
+        f32,
     ),
 }
 
@@ -338,7 +339,8 @@ fn pieces<'b, 'a>(
                     .find(|span| super::flow::is_context(span.style))
                     .map(|span| span.style);
                 let around = chain.iter().filter_map(|span| span.node).collect();
-                out.push(Piece::Atomic(b, owner, kept, around));
+                let fade = chain.iter().map(|span| span.style.opacity).product();
+                out.push(Piece::Atomic(b, owner, kept, around, fade));
             }
             Inline::Span(span)
                 if has_atomic(&span.children)
@@ -534,6 +536,27 @@ fn faded_by(items: &[Inline<'_>], span: &Span<'_>) -> Option<f32> {
         Inline::Span(s) => faded_by(&s.children, span).map(|a| a * s.style.opacity),
         _ => None,
     })
+}
+
+/// Fades a box on the line by the opacity of the elements around it, which
+/// have no item of their own to carry it, on top of the box's own.
+fn fade_atomic(placed: &mut Object, fade: f32) {
+    if fade >= 1.0 {
+        return;
+    }
+    let faded = match placed.get("opacity") {
+        Some(Value::Number(own)) => {
+            Value::Number(((own * f64::from(fade)) * 100.0).round() / 100.0)
+        }
+        Some(Value::Expr(own)) => Value::Expr(format!("({own}) * {}", fmt_number(round(fade)))),
+        _ => number(fade),
+    };
+    placed.set("opacity", faded);
+    // QML multiplies the opacity into each thing drawn; CSS fades the box as
+    // one picture.
+    if super::paints_count(placed) > 1 {
+        placed.set("layer.enabled", true);
+    }
 }
 
 fn end_run<'a>(run: &mut Vec<Inline<'a>>, out: &mut Vec<Piece<'_, 'a>>) {
@@ -814,7 +837,7 @@ impl Emitter<'_, '_> {
                     }
                     flow.push_child(text);
                 }
-                Piece::Atomic(a, owner, kept, around) => {
+                Piece::Atomic(a, owner, kept, around, fade) => {
                     let before = self.above_flow.take();
                     let part = self.atomic(a, decoration, &flow_id);
                     // A span that makes a stacking context keeps a level the
@@ -874,6 +897,7 @@ impl Emitter<'_, '_> {
                         placed.members.insert(0, pseudo);
                     }
                     vertical_align(&mut placed, &a.style);
+                    fade_atomic(&mut placed, fade);
                     if let Some(link) = a.node.and_then(|n| self.inline_link(n)) {
                         let first = named_links.insert(link);
                         self.atomic_link(&mut placed, a.node, link, first);
