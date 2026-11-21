@@ -889,6 +889,15 @@
    }
   ]
  },
+ "legend_sizes": {
+  "log": [
+   "LC width 304 20",
+   "LC min-width 304 20",
+   "LC max-width 54 true",
+   "LC auto 100 true"
+  ],
+  "clicks": []
+ },
  "lookups": {
   "log": [
    "LC id count bold link count null",
