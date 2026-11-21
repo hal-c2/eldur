@@ -840,14 +840,9 @@ fn walked_ancestors(doc: &Document, node: NodeId) -> impl Iterator<Item = NodeId
 /// `display: none; color: red;` reads `color: red;`). Values stay as
 /// written, so one CSSOM would normalize (`0` as `0px`) can still differ.
 fn without_display(style: &str) -> Option<String> {
-    let kept = kept_declarations(style)?;
-    let (important, normal): (Vec<_>, Vec<_>) = kept
+    let serialized: Vec<String> = kept_declarations(style)?
         .into_iter()
         .filter(|(name, _, _)| name != "display")
-        .partition(|(_, _, important)| *important);
-    let serialized: Vec<String> = normal
-        .iter()
-        .chain(&important)
         .map(|(name, value, important)| match important {
             true => format!("{name}: {value} !important;"),
             false => format!("{name}: {value};"),
@@ -861,7 +856,10 @@ fn without_display(style: &str) -> Option<String> {
 /// keeps only the ones it parsed: not one holding a bad string, a bad url,
 /// a closer of no open block or a `!` other than a last `!important` (CSS
 /// Syntax 3, 5.4.6), and not an empty one but a custom property's. A name
-/// declared twice stays once, where it was declared last. Measured in
+/// declared twice stays once, where it was declared last, except that a
+/// normal declaration never replaces an `!important` one. The normal ones
+/// come first and the important ones after, each in its own order, as
+/// CSSOM serializes them. Measured in
 /// Chromium 158, the cases in `cascade/style_display_chromium.rs`.
 fn kept_declarations(style: &str) -> Option<Vec<(String, String, bool)>> {
     let mut kept: Vec<(String, String, bool)> = Vec::new();
@@ -883,10 +881,20 @@ fn kept_declarations(style: &str) -> Option<Vec<(String, String, bool)>> {
             true => name.to_owned(),
             false => name.to_ascii_lowercase(),
         };
+        let important = important.is_some();
+        if !important && kept.iter().any(|(n, _, i)| *i && *n == name) {
+            continue;
+        }
         kept.retain(|(n, _, _)| *n != name);
-        kept.push((name, value.to_owned(), important.is_some()));
+        kept.push((name, value.to_owned(), important));
     }
-    kept.iter().any(|(name, _, _)| name == "display").then_some(kept)
+    if !kept.iter().any(|(name, _, _)| name == "display") {
+        return None;
+    }
+    let (mut normal, important): (Vec<_>, Vec<_>) =
+        kept.into_iter().partition(|(_, _, important)| !*important);
+    normal.extend(important);
+    Some(normal)
 }
 
 /// One declaration of a `style` attribute as [`declarations`] reads it.
@@ -921,7 +929,9 @@ fn declarations(style: &str) -> Vec<Declaration> {
         if !in_name && let Some(name) = unquoted_url(c, &chars) {
             out.push(c);
             out.extend(chars.by_ref().take(name));
-            out.extend(std::iter::from_fn(|| chars.next_if(char::is_ascii_whitespace)));
+            out.extend(std::iter::from_fn(|| {
+                chars.next_if(char::is_ascii_whitespace)
+            }));
             // Past the spaces that may open and close it, a space before
             // more, a quote, `(`, a non-printable or an escaped newline
             // makes it a bad url (4.3.6).
@@ -2701,6 +2711,31 @@ mod variant_work;
 mod tests {
     use super::*;
     use crate::{Length, LengthAuto, LengthPercentage, Rgba, Size};
+
+    /// Clearing `display` writes the normal declarations, then the
+    /// important ones, and a later normal one never replaces an important
+    /// one: what Chromium 158 writes back for each.
+    #[test]
+    fn clearing_display_writes_back_what_chromium_writes() {
+        for (style, chromium) in [
+            (
+                "color:red !important;display:none;color:blue",
+                "color: red !important;",
+            ),
+            ("--a:x !important;--a:y;display:none", "--a: x !important;"),
+            ("--a:y;--a:x !important;display:none", "--a: x !important;"),
+            (
+                "--a:x !important;--a:y !important;display:none",
+                "--a: y !important;",
+            ),
+            (
+                "--a:x !important;--b:x;display:none;color:red",
+                "--b: x; color: red; --a: x !important;",
+            ),
+        ] {
+            assert_eq!(without_display(style).as_deref(), Some(chromium), "{style}");
+        }
+    }
 
     /// Each recorded `style` text declares `display` here when it does in
     /// Chromium: the tokenizer's edges by name, then seed 51's generated run.
