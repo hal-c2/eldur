@@ -14544,6 +14544,9 @@ function _parseFragment(src, inSvg) {
             el.textContent = _unescapeHtmlText(inner);
         }
         nodes.push(el);
+        if (closeStart === -1) {
+            break;
+        }
         pos = closeEnd;
     }
     return nodes;
