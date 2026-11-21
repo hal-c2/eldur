@@ -643,9 +643,10 @@ fn a_buttons_line_holds_its_text_nodes_as_chromium_does() {
 fn a_button_lays_out_its_lines_by_its_white_space_as_chromium_does() {
     // A `pre` or `pre-line` button is as tall as the lines it draws, a
     // fixed-width `pre-wrap` one wraps at its spaces, a button given an
-    // element keeps its `pre` spaces and its `nowrap` line, and a `>` in a
-    // quoted attribute value does not end a tag (Chromium's values in the
-    // log).
+    // element keeps its `pre` spaces, its `pre-line` single spaces and its
+    // `nowrap` line, a `>` in a quoted attribute value does not end a tag,
+    // and a tag the markup ends inside is no node and is read fast
+    // (Chromium's values in the log).
     page("button_breaks");
 }
 

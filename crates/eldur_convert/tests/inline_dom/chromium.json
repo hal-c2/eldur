@@ -73,9 +73,11 @@
    "LC pre-line-lines true",
    "LC fixed-pre-wrap true true",
    "LC pre-element true \"A      BC\"",
+   "LC pre-line-element true \"X   YC\"",
    "LC nowrap-element true",
    "LC quoted-gt \"Save\" a>b 1",
-   "LC unquoted-apos \"Go\" it's"
+   "LC unquoted-apos \"Go\" it's",
+   "LC unclosed-fast true \"Cut\" 1"
   ],
   "clicks": []
  },
