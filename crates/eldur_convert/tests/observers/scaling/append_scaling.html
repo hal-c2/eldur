@@ -10,38 +10,44 @@
 // a Map, and every record a walk of its whole item table visits. A script's
 // text in the page sends each append through the lines text takes, which once
 // read every child of body too. A flex container ends in a spacer, so an
-// append there goes before it, which once copied every child.
+// append there goes before it, which once copied every child, and the
+// layout's packing spacers were rebuilt around every child on each append.
 function L(k){console.log("OB "+k)}
 document.getElementById("t").textContent = "rows below";
 function appends(name, into) {
-  var walked = [];
+  var walked = [], swept = [];
   for (var i = 0; i < 600; ++i) {
     var d = document.createElement("div");
     d.className = "row";
     d.textContent = "row " + i;
-    var before = Eldur._itemsWalked;
+    var before = Eldur._itemsWalked, sweeps = Eldur._itemsSwept;
     into.appendChild(d);
-    walked.push(Eldur._itemsWalked - before);
+    swept.push(Eldur._itemsSwept - sweeps);
+    walked.push(Eldur._itemsWalked - before - swept[i]);
   }
+  function sum(a) { return a.reduce(function(x, y) { return x + y; }, 0); }
   // The item table is swept each time its records double, so one append now
   // and then walks them all; on average 600 appends walk a few items each. An
   // append that walks its siblings walks some 300 each on average.
-  var each = walked.reduce(function(a, b) { return a + b; }, 0) / walked.length;
+  var each = (sum(walked) + sum(swept)) / walked.length;
   L(each <= 10 ? name + ": 600 appends walk at most 10 items each on average"
     : name + ": 600 appends walk " + each + " items each on average");
-  // What grows slower than the page, as log n does, the average lets by; each
-  // append's own walk shows it. Of each hundred the five largest are left
-  // out, as a sweep is at most one of them.
-  function usual(from) {
-    var some = walked.slice(from, from + 100).sort(function(a, b) { return a - b; }).slice(0, 95);
-    return some.reduce(function(a, b) { return a + b; }, 0) / some.length;
-  }
-  var early = usual(0), late = usual(500);
+  // Without the sweeps' walks, which the runtime counts on their own, every
+  // append is a few steps, wherever the sweeps fall.
+  var most = Math.max.apply(null, walked);
+  L(most <= 10 ? name + ": no append walks more than 10 items besides sweeps"
+    : name + ": an append walks " + most + " items besides sweeps");
+  // What grows slower than the page, as log n does, the average lets by; the
+  // first and last hundred, sweeps taken out, show it.
+  var early = sum(walked.slice(0, 100)) / 100, late = sum(walked.slice(500)) / 100;
   L(late <= early + 0.5 ? name + ": the last 100 appends walk no more than the first 100"
     : name + ": the last 100 appends walk " + late + " items each, the first 100 " + early);
+  return sum(swept);
 }
-appends("body", document.body);
-appends("flex", document.getElementById("list"));
+var swept = appends("body", document.body) + appends("flex", document.getElementById("list"));
+// The appends make enough records that the sweeps above are taken out, not
+// missing.
+L(swept > 0 ? "the appends swept the item table" : "the appends never swept the item table");
 L("rows " + document.querySelectorAll("body > .row").length + " " + document.querySelectorAll("#list > .row").length);
 var d = document.createElement("div"); d.id = "obdone"; document.body.appendChild(d);
 </script></body></html>
