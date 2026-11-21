@@ -78,6 +78,18 @@ pub(crate) fn has_atomic(items: &[Inline<'_>]) -> bool {
     })
 }
 
+/// Whether a span in `items`, at any depth, sets a `white-space` other than
+/// `white`. A button's label is one `Text` drawn by the button's own, so such a
+/// span needs a line of runs, each drawing its spaces as it says.
+pub(crate) fn sets_own_white_space(items: &[Inline<'_>], white: WhiteSpace) -> bool {
+    items.iter().any(|item| match item {
+        Inline::Span(span) => {
+            span.style.white_space != white || sets_own_white_space(&span.children, white)
+        }
+        Inline::Text(_) | Inline::Atomic(_) | Inline::LineBreak => false,
+    })
+}
+
 /// Whether a span's box on the line differs from its parent's: its own font,
 /// line height or alignment. One `Text` has one of each, so such a span is a run
 /// of its own, and `EldurLines` makes the line box from all of them (layout.md §1.3).

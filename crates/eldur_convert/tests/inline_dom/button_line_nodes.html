@@ -37,7 +37,7 @@ L("text-spaces",JSON.stringify(ab.textContent));
 // A run that sets its own white-space draws its spaces by it; one far below
 // the button keeps the button's; a span's text node, once read, keeps them.
 L("pre-normal-span",JSON.stringify(byId("pn").innerText),JSON.stringify(byId("pdeep").innerText));
-var pm=byId("pm");pm.firstElementChild.firstChild;
+var pm=byId("pm");pm.innerHTML="<span>A  B</span>";pm.firstElementChild.firstChild;
 L("pre-model-leaf",JSON.stringify(pm.innerText));
 });
 </script></head><body>
@@ -51,5 +51,5 @@ L("pre-model-leaf",JSON.stringify(pm.innerText));
 <p id="pcx"><button id="cx">A<kbd style="display:none">H</kbd>C</button></p>
 <p id="ppn"><button id="pn" style="white-space:pre">A<span style="white-space:normal">x   y</span></button></p>
 <p id="ppd"><button id="pdeep" style="white-space:pre">A<span><span><span><span><span>x   y</span></span></span></span></span></button></p>
-<p id="ppm"><button id="pm" style="white-space:pre"><span>A  B</span></button></p>
+<p id="ppm"><button id="pm" style="white-space:pre">x</button></p>
 </body></html>
