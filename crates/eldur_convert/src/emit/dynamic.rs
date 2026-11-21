@@ -1417,8 +1417,8 @@ impl Dynamic<'_, '_> {
         // group of its own, and only when its markers show numbers. A
         // counter is page-wide: one group, which takes in the blocks that
         // hide a counting element with themselves too. Each group keeps its
-        // list's line, so a warning about it points there.
-        let mut groups: BTreeMap<Option<usize>, (Option<u32>, BTreeSet<u16>)> = BTreeMap::new();
+        // list, so a warning about it points there.
+        let mut groups: BTreeMap<Option<usize>, (Option<NodeId>, BTreeSet<u16>)> = BTreeMap::new();
         for e in &self.found.elements {
             let Some(&display) = shown.get(&e.node) else {
                 continue;
@@ -1443,7 +1443,7 @@ impl Dynamic<'_, '_> {
             {
                 groups
                     .entry(Some(list.index()))
-                    .or_insert_with(|| (crate::boxes::node_line(doc, list), BTreeSet::new()))
+                    .or_insert_with(|| (Some(list), BTreeSet::new()))
                     .1
                     .extend(deps);
             }
@@ -1487,7 +1487,7 @@ impl Dynamic<'_, '_> {
         // group that adds the fewest worlds not yet in the set and still
         // fits, so a large group the elements' own worlds mostly cover
         // goes before smaller ones that cost more; ties keep page order.
-        type Group = (Option<u32>, Vec<u16>);
+        type Group = (Option<NodeId>, Vec<u16>);
         let (groups, too_large): (Vec<Group>, Vec<Group>) = groups
             .into_values()
             .filter(|(_, g)| g.len() > 1)
@@ -1525,14 +1525,19 @@ impl Dynamic<'_, '_> {
             }
         }
         left_out.extend(pending.into_iter().map(|(g, _)| g));
-        // One warning per group, at its list: groups of one size would
-        // otherwise read the same and count as one.
-        for (line, group) in left_out {
+        // One warning per group, at its list. Groups of one size would
+        // otherwise read the same and count as one, so a list that shares
+        // its line also says which one it is.
+        let lists: Vec<NodeId> = left_out.iter().filter_map(|(list, _)| *list).collect();
+        let mut places = which_on_line(doc, &lists);
+        for (list, group) in left_out {
+            let line = list.and_then(|l| crate::boxes::node_line(doc, l));
+            let which = list.and_then(|l| places.remove(&l)).unwrap_or_default();
             self.diags.warning(
                 "css",
                 line,
                 format!(
-                    "{} classes and states show or hide numbered elements; a marker or counter is right only while one of them differs from the document",
+                    "{} classes and states show or hide numbered elements{which}; a marker or counter is right only while one of them differs from the document",
                     group.len()
                 ),
             );
@@ -2498,3 +2503,40 @@ fn broken_constraint(id: &str, element: &Element, control: Option<Control>) -> O
 // WHATWG's valid e-mail address, and a scheme for a URL.
 const EMAIL: &str = r"/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/";
 const URL: &str = r"/^[a-zA-Z][a-zA-Z0-9+.-]*:\S*$/";
+
+/// For each of `lists` that shares its start line with other elements of
+/// its tag, which of them it is, in document order: a minified page starts
+/// every list on one line, and warnings that read the same at one line
+/// count as one. One walk of the document serves every list.
+fn which_on_line(doc: &Document, lists: &[NodeId]) -> HashMap<NodeId, String> {
+    let key = |n: NodeId| doc.element(n).map(|e| (e.line, e.local_name()));
+    let wanted: HashSet<_> = lists.iter().filter_map(|&l| key(l)).collect();
+    if wanted.is_empty() {
+        return HashMap::new();
+    }
+    let mut same: HashMap<(u64, &str), Vec<NodeId>> = HashMap::new();
+    for d in doc.descendants(doc.root()) {
+        if let Some(k) = key(d).filter(|k| wanted.contains(k)) {
+            same.entry(k).or_default().push(d);
+        }
+    }
+    lists
+        .iter()
+        .filter_map(|&l| {
+            let k = key(l)?;
+            let on_line = same.get(&k)?;
+            let i = on_line.iter().position(|&d| d == l)?;
+            (on_line.len() > 1).then(|| {
+                (
+                    l,
+                    format!(
+                        " in `<{}>` {} of {} on this line",
+                        k.1,
+                        i + 1,
+                        on_line.len()
+                    ),
+                )
+            })
+        })
+        .collect()
+}
