@@ -272,6 +272,60 @@ fn a_mostly_covered_group_fits_before_costlier_small_ones() {
     );
 }
 
+#[test]
+fn every_left_out_group_warns_and_keeps_its_own_worlds() {
+    // A hundred lists of three hover-shown items, one to a source line, add
+    // four worlds each to the elements' own: far past MAX_WORLDS, so the
+    // pass leaves some lists out. Each list it leaves out says so on its
+    // own line, and its last marker still renumbers for each hover alone.
+    let lists = 100;
+    let mut rules = String::new();
+    let mut body = String::new();
+    for k in 0..lists {
+        let items: String = (0..3)
+            .map(|i| format!("<li class=s{k}a{i}>a</li><li class=s{k}h{i}>h</li>"))
+            .collect();
+        for i in 0..3 {
+            rules.push_str(&format!(
+                ".s{k}h{i}{{display:none}} .s{k}a{i}:hover + .s{k}h{i}{{display:list-item}} "
+            ));
+        }
+        body.push_str(&format!("\n<ol>{items}<li>c</li></ol>"));
+    }
+    let page = format!("<!DOCTYPE html><style>{rules}</style>{body}");
+    let out = convert_str(&page, &Options::default());
+    let qml = out.main_qml().expect("Main.qml");
+    let mut left_out = 0;
+    for k in 0..lists {
+        let hovers: Vec<String> = (0..3).map(|i| format!("s{k}a{i}Hover")).collect();
+        // The last item's marker is the last line bound to all three.
+        let line = qml
+            .lines()
+            .rfind(|l| l.contains("\"5. \"") && hovers.iter().all(|h| l.contains(h.as_str())))
+            .unwrap_or_else(|| panic!("list {k}'s last marker is not bound to its hovers"));
+        // A list that fits numbers two hovers at once; one left out does not.
+        if line.contains("\"7. \"") {
+            continue;
+        }
+        left_out += 1;
+        for h in &hovers {
+            assert!(
+                line.contains(&format!("{h}.hovered ? \"5. \"")),
+                "list {k} lost the world of {h} alone: {line}"
+            );
+        }
+    }
+    assert!(left_out > 0, "the budget never binds");
+    assert!(left_out < lists, "no list fits");
+    let warned = out
+        .diagnostics
+        .iter()
+        .map(ToString::to_string)
+        .filter(|d| d.contains("3 classes and states show or hide numbered elements"))
+        .count();
+    assert_eq!(warned, left_out, "{:?}", out.diagnostics);
+}
+
 /// A table of `cells` cells, four to a row, each recoloured by its own
 /// `:hover`, with borders `collapse` or `separate`.
 fn table_hovers(cells: usize, borders: &str) -> String {

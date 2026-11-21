@@ -1416,8 +1416,9 @@ impl Dynamic<'_, '_> {
         // A list item's number counts only its siblings, so each list is a
         // group of its own, and only when its markers show numbers. A
         // counter is page-wide: one group, which takes in the blocks that
-        // hide a counting element with themselves too.
-        let mut groups: BTreeMap<Option<usize>, BTreeSet<u16>> = BTreeMap::new();
+        // hide a counting element with themselves too. Each group keeps its
+        // list's line, so a warning about it points there.
+        let mut groups: BTreeMap<Option<usize>, (Option<u32>, BTreeSet<u16>)> = BTreeMap::new();
         for e in &self.found.elements {
             let Some(&display) = shown.get(&e.node) else {
                 continue;
@@ -1431,7 +1432,7 @@ impl Dynamic<'_, '_> {
                 styles.computed(d).is_some_and(|s| counts(&s.style))
                     || by_node.get(&d).is_some_and(|m| m.iter().any(|s| counts(s)))
             }) {
-                groups.entry(None).or_default().extend(deps.clone());
+                groups.entry(None).or_default().1.extend(deps.clone());
             }
             if display == Display::ListItem
                 && let Some(list) = doc.parent_element(e.node)
@@ -1440,7 +1441,11 @@ impl Dynamic<'_, '_> {
                         .children(list)
                         .any(|c| styles.computed(c).is_some_and(|s| numbered(&s.style))))
             {
-                groups.entry(Some(list.index())).or_default().extend(deps);
+                groups
+                    .entry(Some(list.index()))
+                    .or_insert_with(|| (crate::boxes::node_line(doc, list), BTreeSet::new()))
+                    .1
+                    .extend(deps);
             }
         }
         fn subsets(deps: &[u16]) -> impl Iterator<Item = (usize, Vec<u16>)> + '_ {
@@ -1482,12 +1487,13 @@ impl Dynamic<'_, '_> {
         // group that adds the fewest worlds not yet in the set and still
         // fits, so a large group the elements' own worlds mostly cover
         // goes before smaller ones that cost more; ties keep page order.
-        let (groups, too_large): (Vec<Vec<u16>>, Vec<Vec<u16>>) = groups
+        type Group = (Option<u32>, Vec<u16>);
+        let (groups, too_large): (Vec<Group>, Vec<Group>) = groups
             .into_values()
-            .filter(|g| g.len() > 1)
-            .map(|g| g.into_iter().collect())
+            .filter(|(_, g)| g.len() > 1)
+            .map(|(line, g)| (line, g.into_iter().collect()))
             // 2^10 is past MAX_WORLDS on its own.
-            .partition(|g: &Vec<u16>| g.len() <= 9);
+            .partition(|g: &Group| g.1.len() <= 9);
         let mut left_out = too_large;
         // A world's flipped conditions, keyed by how many there are.
         type World = (usize, Vec<u16>);
@@ -1495,10 +1501,10 @@ impl Dynamic<'_, '_> {
             subsets(g).filter(|w| !set.contains(w)).collect()
         };
         // Page order, each group with the worlds it would add.
-        let mut pending: Vec<(Vec<u16>, Vec<World>)> = groups
+        let mut pending: Vec<(Group, Vec<World>)> = groups
             .into_iter()
             .map(|g| {
-                let new = fresh(&set, &g);
+                let new = fresh(&set, &g.1);
                 (g, new)
             })
             .collect();
@@ -1509,20 +1515,22 @@ impl Dynamic<'_, '_> {
             .min_by_key(|(i, (_, new))| (new.len(), *i))
             .map(|(i, _)| i)
         {
-            let (added, new) = pending.remove(i);
+            let ((_, added), new) = pending.remove(i);
             set.extend(new);
             // Only a group that shares a condition gains worlds from it.
-            for (g, new) in &mut pending {
+            for ((_, g), new) in &mut pending {
                 if g.iter().any(|c| added.binary_search(c).is_ok()) {
                     *new = fresh(&set, g);
                 }
             }
         }
         left_out.extend(pending.into_iter().map(|(g, _)| g));
-        for group in left_out {
+        // One warning per group, at its list: groups of one size would
+        // otherwise read the same and count as one.
+        for (line, group) in left_out {
             self.diags.warning(
                 "css",
-                None,
+                line,
                 format!(
                     "{} classes and states show or hide numbered elements; a marker or counter is right only while one of them differs from the document",
                     group.len()
