@@ -2668,8 +2668,10 @@ function verify() {
 /// `<desc>` or `<title>`, and what follows goes on in it. Markup set into an
 /// SVG element by `innerHTML`, `insertAdjacentHTML` or `outerHTML` has nothing
 /// of its own to close, so such an element is an HTML child of the SVG one.
-/// The expected string is Chromium's, for the same script: `svg:` marks an
-/// element that kept `viewBox` in its case, as only SVG ones do.
+/// A `<font>` breaks out by its attribute names alone: one whose `title`
+/// mentions a size stays SVG. The expected string is Chromium 158's, for the
+/// same script run through Playwright: `svg:` marks an element that kept
+/// `viewBox` in its case, as only SVG ones do.
 #[test]
 fn qml6_html_elements_in_inserted_svg_markup_break_out_as_chromium_parses_them() {
     if !has_binary("qml6") {
@@ -2704,7 +2706,9 @@ function verify() {
         + '<font color="red"' + v + '>c</font><font' + v + '>k</font></svg>');
     const f = made('<svg' + v + '><desc' + v + '><p' + v + '>d</p></desc></svg><p' + v + '>q</p>');
     const g = made('<svg' + v + '><font' + v + '>n</font></svg>');
-    return [a, b, c, d, e, f, g].map(x => Array.from(x.children).map(show).join(",")).join(" ")
+    const h = made('<svg' + v + '><font title="pick a size here"' + v + '>t</font>'
+        + '<font size=3' + v + '>u</font></svg>');
+    return [a, b, c, d, e, f, g, h].map(x => Array.from(x.children).map(show).join(",")).join(" ")
         + " " + a.children[1].textContent + "|" + a.textContent;
 }
 "##,
@@ -2722,7 +2726,7 @@ function verify() {
         output.contains(
             "ELDUR_OK_BREAKOUT svg:svg[svg:circle,svg:g],p,rect svg:svg[svg:circle,p,b] \
              svg:svg[svg:g[div]] svg:svg[span] svg:svg[svg:foreignobject[p]],font,font \
-             svg:svg[svg:desc[p]],p svg:svg[svg:font] para|paraafter"
+             svg:svg[svg:desc[p]],p svg:svg[svg:font] svg:svg[svg:font],font para|paraafter"
         ),
         "{output}"
     );
