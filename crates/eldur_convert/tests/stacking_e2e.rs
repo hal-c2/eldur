@@ -1165,6 +1165,74 @@ fn a_span_with_a_level_lifts_a_box_with_no_position_it_holds() {
     }
 }
 
+/// A span that makes a stacking context with no level of its own
+/// (`opacity`, `filter`, `sticky`), around an `#ix` with no position, after
+/// an overlay at `auto` (`#ox`) and before a box at level 1 (`#lx`).
+/// Chromium paints the span in the positioned layer after `#ox`, so `#ix`
+/// is over `#ox` (5,50), while the block around it paints its background
+/// under `#ox` (30,50, `ox` in a static `#rx`, `rx` in a relative one, which
+/// is positioned itself) and `#lx` is over both (`c-<kind>-<rx>`).
+/// The block takes no level for the span: it would tie `#ox`'s host and
+/// paint its background over `#ox` (30,50; 75,50). A relative `#rx` rises
+/// over `#ox` with `#ix` in it. In a static one, `#ix` stays under `#ox`
+/// (5,50), where Chromium has `#ix`: only `#ix` out of its block, at the
+/// span's place in its stop, would paint over `#ox` there, the known limit
+/// this PR names.
+#[test]
+fn a_span_that_makes_a_context_at_auto_paints_what_it_holds_after_an_earlier_overlay() {
+    let flat = INLINE_BLOCK.replace("position: relative; ", "");
+    let static_rx = RELATIVE.replace("position: relative; ", "");
+    let mut failed = Vec::new();
+    for (kind, span) in [
+        ("opacity", "opacity: .5"),
+        ("filter", "filter: blur(0px)"),
+        ("sticky", "position: sticky"),
+    ] {
+        for (at, rx, held, under) in [
+            ("rel", RELATIVE, "ix", "rx"),
+            ("static", static_rx.as_str(), "ox", "ox"),
+        ] {
+            let page = inline_level_page(
+                &flat,
+                &format!("<span id=wx style=\"{span}\"><span id=ix></span></span>"),
+                rx,
+                LATER_AT_1,
+            )
+            .replace(
+                "document.getElementById('ix').classList.add('up');",
+                "var ix = document.getElementById('ix');",
+            );
+            assert!(!page.contains("display: inline-block; position"));
+            let fronts = format!(
+                "5,30=ox 5,50={held} 5,70=lx 30,50={under} 30,70=lx 75,50=ox 75,70=lx 150,50=bx"
+            );
+            let test = pages_test(
+                "ContextAtAuto",
+                &format!(
+                    r#"
+    function test_the_span_paints_after_the_overlay() {{
+        page = make("Main.qml")
+        var got = []
+        var want = "{fronts}".split(" ")
+        for (var i = 0; i < want.length; ++i) {{
+            var xy = want[i].split("=")[0].split(",")
+            got.push(xy[0] + "," + xy[1] + "=" + front(page, Number(xy[0]), Number(xy[1])))
+        }}
+        compare(got.join(" "), want.join(" "), "the fronts Chromium paints")
+    }}
+"#
+                ),
+            );
+            let name = format!("context-at-auto-{kind}-{at}");
+            // Every kind runs, so one failure shows the others too.
+            if std::panic::catch_unwind(|| run_pages(&[("Main", &page)], &test, &name)).is_err() {
+                failed.push(name);
+            }
+        }
+    }
+    assert!(failed.is_empty(), "differ from Chromium: {failed:?}");
+}
+
 /// The span of the test before last, whose `class` attribute a timer
 /// removes: the level the class gave `#ix` goes with it, so `#lx` is over
 /// `#ix` again (5,70), as Chromium paints the page with the class gone

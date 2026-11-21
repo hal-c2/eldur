@@ -308,6 +308,12 @@ enum Piece<'b, 'a> {
 /// `z-index` over the flow, or over the flow and no higher at `auto`. One
 /// under 0 stays in the flow, as a block's does. The span is the one in the
 /// world being emitted, so a level a class gives it counts.
+/// Whether a span has a `z-index` that applies to it, from its rules or a
+/// class, rather than making a stacking context at `auto`.
+fn has_own_level(span: &ComputedStyle) -> bool {
+    span.z_index.is_some() && crate::boxes::is_containing_block(span)
+}
+
 fn context_level(span: &ComputedStyle) -> Option<Level> {
     match span.z_index {
         Some(z) if crate::boxes::is_containing_block(span) => (z >= 0).then(|| Level::from(z) + 1),
@@ -801,11 +807,16 @@ impl Emitter<'_, '_> {
                 Piece::Atomic(a, owner, kept, around) => {
                     let before = self.above_flow.take();
                     let part = self.atomic(a, decoration, &flow_id);
-                    // A span that makes a stacking context paints what it
-                    // holds at its own level, whether the box has a level,
-                    // a class gives it one, or it has none: the block takes
-                    // the span's level in the box's place.
-                    if let Some(span) = kept {
+                    // A span that makes a stacking context keeps a level the
+                    // box has, or a class gives it, inside, and lifts a box
+                    // with none by a level of its own: the block takes the
+                    // span's level in the box's place. One at `auto` with no
+                    // level for the box lifts nothing, as a block at `auto`
+                    // does not (`stack_above_flow`): the block would tie an
+                    // earlier overlay and paint its background over it.
+                    if let Some(span) = kept
+                        && (self.above_flow.is_some() || has_own_level(span))
+                    {
                         self.above_flow = context_level(span);
                     }
                     self.above_flow = match (before, self.above_flow) {
