@@ -835,9 +835,9 @@ fn walked_ancestors(doc: &Document, node: NodeId) -> impl Iterator<Item = NodeId
 }
 
 /// `style` as clearing its `display` leaves it: unchanged when it declares
-/// none, else the rest as CSSOM serializes a declaration block, each
-/// `name: value;` and the important ones last (measured in Chromium 158:
-/// `display: none; color: red;` reads `color: red;`). Values stay as
+/// none, else the declarations CSSOM keeps, each `name: value;` (measured in
+/// Chromium 158: `display: none; color: red;` reads `color: red;`). A custom
+/// property's value goes back as Chromium writes it; another's stays as
 /// written, so one CSSOM would normalize (`0` as `0px`) can still differ.
 fn without_display(style: &str) -> Option<String> {
     let serialized: Vec<String> = kept_declarations(style)?
@@ -852,28 +852,36 @@ fn without_display(style: &str) -> Option<String> {
 }
 
 /// The declarations CSSOM keeps of `style`, each `(name, value, important)`
-/// in the order it writes them back, or `None` when none is `display`. It
-/// keeps only the ones it parsed: not one holding a bad string, a bad url,
-/// a closer of no open block or a `!` other than a last `!important` (CSS
-/// Syntax 3, 5.4.6), and not an empty one but a custom property's. A name
-/// declared twice stays once, where it was declared last, except that a
-/// normal declaration never replaces an `!important` one. The normal ones
-/// come first and the important ones after, each in its own order, as
-/// CSSOM serializes them. Measured in
-/// Chromium 158, the cases in `cascade/style_display_chromium.rs`.
+/// in the order it writes them back, the important ones last, or `None`
+/// when none is `display`. It keeps only the ones it parsed: not one holding
+/// a bad string, a bad url, a closer of no open block or a `!` other than a
+/// last `!important` (CSS Syntax 3, 5.4.6), and not an empty one but a
+/// custom property's. A name declared twice stays once, where it was
+/// declared last, unless only the first is important. Measured in Chromium
+/// 158, the cases in `cascade/style_display_chromium.rs`.
 fn kept_declarations(style: &str) -> Option<Vec<(String, String, bool)>> {
     let mut kept: Vec<(String, String, bool)> = Vec::new();
     for part in declarations(style) {
-        let Some((name, value)) = part.text.split_once(':') else {
+        let Some((colon, raw_colon)) = part.colon else {
             continue;
         };
-        let (name, value) = (name.trim(), value.trim());
-        let important = strip_important(value);
+        let (name, value) = (part.text[..colon].trim(), part.text[colon + 1..].trim());
+        // Only a `!` outside strings and blocks with nothing but `important`
+        // after it makes one important.
+        let important = part
+            .bang
+            .filter(|&bang| custom_value(&part.raw[bang + 1..]).eq_ignore_ascii_case("important"));
         if part.bad || part.bangs > usize::from(important.is_some()) {
             continue;
         }
-        let value = important.unwrap_or(value);
         let custom = name.starts_with("--");
+        let value = match (custom, important) {
+            (true, _) => {
+                custom_value(&part.raw[raw_colon + 1..important.unwrap_or(part.raw.len())])
+            }
+            (false, Some(_)) => strip_important(value).unwrap_or(value).to_owned(),
+            (false, None) => value.to_owned(),
+        };
         if value.is_empty() && !custom {
             continue;
         }
@@ -882,40 +890,129 @@ fn kept_declarations(style: &str) -> Option<Vec<(String, String, bool)>> {
             false => name.to_ascii_lowercase(),
         };
         let important = important.is_some();
-        if !important && kept.iter().any(|(n, _, i)| *i && *n == name) {
+        if !important && kept.iter().any(|(n, _, i)| *n == name && *i) {
             continue;
         }
         kept.retain(|(n, _, _)| *n != name);
-        kept.push((name, value.to_owned(), important));
+        kept.push((name, value, important));
     }
     if !kept.iter().any(|(name, _, _)| name == "display") {
         return None;
     }
-    let (mut normal, important): (Vec<_>, Vec<_>) =
-        kept.into_iter().partition(|(_, _, important)| !*important);
-    normal.extend(important);
-    Some(normal)
+    let (normal, important): (Vec<_>, Vec<_>) = kept.into_iter().partition(|(_, _, i)| !*i);
+    Some(normal.into_iter().chain(important).collect())
+}
+
+/// A custom property's value, its text after the `:` with comments kept, as
+/// Chromium 158 writes it back: as written but for whitespace and comments
+/// at either end, found reading `url(` as text (`url(a/*b)` goes back as
+/// `url(a`, `url(a/*b*/c)` whole). A last `\` that escapes nothing turns
+/// into the quote of a string it ends, else U+FFFD; but after a `/` one left
+/// before a newline stays, with that newline.
+fn custom_value(raw: &str) -> String {
+    let at = |i: usize| raw[i..].chars().next();
+    let (mut i, mut start, mut end) = (0, None, 0);
+    // Whether the last token is a string the text ends, and its quote; or
+    // a `\` no escape follows.
+    let (mut open_quote, mut lone) = (None, false);
+    while let Some(c) = at(i) {
+        if raw[i..].starts_with("/*") {
+            i = raw[i + 2..].find("*/").map_or(raw.len(), |j| i + j + 4);
+            continue;
+        }
+        if c.is_ascii_whitespace() {
+            i += 1;
+            continue;
+        }
+        start.get_or_insert(i);
+        (open_quote, lone) = (None, false);
+        i += c.len_utf8();
+        if c == '"' || c == '\'' {
+            loop {
+                match at(i) {
+                    None => {
+                        open_quote = Some(c);
+                        break;
+                    }
+                    Some(s) if s == c => {
+                        i += 1;
+                        break;
+                    }
+                    Some('\\') => i += 1 + at(i + 1).map_or(0, char::len_utf8),
+                    Some(s) => i += s.len_utf8(),
+                }
+            }
+        } else if c == '\\' {
+            match at(i) {
+                Some(e) if !is_newline(e) => i += e.len_utf8(),
+                _ => lone = true,
+            }
+        }
+        end = i;
+    }
+    let Some(start) = start else {
+        return String::new();
+    };
+    let mut value = raw[start..end].to_owned();
+    if value.ends_with('\\') {
+        match at(end) {
+            Some(newline) if lone && value.contains('/') => value.push(newline),
+            _ => {
+                value.pop();
+                value.push(open_quote.unwrap_or('\u{fffd}'));
+            }
+        }
+    }
+    value
 }
 
 /// One declaration of a `style` attribute as [`declarations`] reads it.
 struct Declaration {
-    /// Its text, comments a space each and trimmed.
+    /// Its text, comments a space each.
     text: String,
+    /// Its text as written, comments too.
+    raw: String,
+    /// Where its first `:` is in `text` and in `raw`.
+    colon: Option<(usize, usize)>,
+    /// Where its last `!` outside strings, escapes and blocks is in `raw`.
+    bang: Option<usize>,
     /// It holds a bad string, a bad url or a closer of no open block.
     bad: bool,
     /// Its `!`s outside strings, escapes and blocks.
     bangs: usize,
 }
 
-/// The declarations of a `style` attribute as CSS Syntax 3 reads them, each
-/// with its comments turned into a space (which keeps the tokens on either
-/// side apart): split at a `;` outside strings, escapes, `url(` tokens and
-/// `()`, `[]` and `{}` blocks. Measured in Chromium 158, the cases in
+/// A declaration's text as [`declarations`] reads it, with and without its
+/// comments.
+#[derive(Default)]
+struct Texts {
+    text: String,
+    raw: String,
+}
+
+impl Texts {
+    fn push(&mut self, c: char) {
+        self.text.push(c);
+        self.raw.push(c);
+    }
+}
+
+impl Extend<char> for Texts {
+    fn extend<I: IntoIterator<Item = char>>(&mut self, chars: I) {
+        for c in chars {
+            self.push(c);
+        }
+    }
+}
+
+/// The declarations of a `style` attribute as CSS Syntax 3 reads them: split
+/// at a `;` outside strings, escapes, comments, `url(` tokens and `()`, `[]`
+/// and `{}` blocks. Measured in Chromium 158, the cases in
 /// `cascade/style_display_chromium.rs`.
 fn declarations(style: &str) -> Vec<Declaration> {
     let mut parts = Vec::new();
-    let mut out = String::with_capacity(style.len());
-    let (mut bad, mut bangs) = (false, 0);
+    let mut out = Texts::default();
+    let (mut colon, mut bang, mut bad, mut bangs) = (None, None, false, 0);
     // The closers of the blocks open here, innermost last: a `]` inside
     // `(` closes nothing, and one with no block open is a token.
     let mut closers = Vec::new();
@@ -990,21 +1087,27 @@ fn declarations(style: &str) -> Vec<Declaration> {
                 }
                 in_name = false;
             }
+            // A comment is a space between the tokens on either side.
             '/' if chars.peek() == Some(&'*') => {
-                chars.next();
+                out.raw.push(c);
+                out.raw.push(chars.next().unwrap_or('*'));
                 let mut last = ' ';
                 for c in chars.by_ref() {
+                    out.raw.push(c);
                     if last == '*' && c == '/' {
                         break;
                     }
                     last = c;
                 }
                 in_name = false;
-                out.push(' ');
+                out.text.push(' ');
             }
             ';' if closers.is_empty() => {
                 parts.push(Declaration {
-                    text: std::mem::take(&mut out),
+                    text: std::mem::take(&mut out.text),
+                    raw: std::mem::take(&mut out.raw),
+                    colon: colon.take(),
+                    bang: bang.take(),
                     bad: std::mem::take(&mut bad),
                     bangs: std::mem::take(&mut bangs),
                 });
@@ -1019,7 +1122,11 @@ fn declarations(style: &str) -> Vec<Declaration> {
                         true => _ = closers.pop(),
                         false => bad = true,
                     },
-                    '!' if closers.is_empty() => bangs += 1,
+                    '!' if closers.is_empty() => {
+                        bangs += 1;
+                        bang = Some(out.raw.len());
+                    }
+                    ':' if colon.is_none() => colon = Some((out.text.len(), out.raw.len())),
                     _ => {}
                 }
                 // `#` and `@` lead a hash or at-keyword's name: `#url(` is
@@ -1031,14 +1138,14 @@ fn declarations(style: &str) -> Vec<Declaration> {
         }
     }
     parts.push(Declaration {
-        text: out,
+        text: out.text,
+        raw: out.raw,
+        colon,
+        bang,
         bad,
         bangs,
     });
-    for part in &mut parts {
-        part.text = part.text.trim().to_owned();
-    }
-    parts.retain(|part| !part.text.is_empty());
+    parts.retain(|part| !part.text.trim().is_empty());
     parts
 }
 
@@ -2745,21 +2852,11 @@ mod tests {
         let differ: Vec<_> = NAMED
             .iter()
             .chain(GENERATED)
-            .filter(|(style, kept)| {
-                let names = kept_declarations(style).map(|kept| {
-                    let names: Vec<_> = kept
-                        .into_iter()
-                        .map(|(name, _, _)| name)
-                        .filter(|name| name != "display")
-                        .collect();
-                    names.join(" ")
-                });
-                names.as_deref() != *kept
-            })
+            .filter(|(style, written)| without_display(style).as_deref() != *written)
             .collect();
         assert!(
             differ.is_empty(),
-            "{} of {} recorded texts differ from Chromium (text, what clearing display keeps): {differ:#?}",
+            "{} of {} recorded texts differ from Chromium (text, what Chromium writes back): {differ:#?}",
             differ.len(),
             NAMED.len() + GENERATED.len(),
         );
