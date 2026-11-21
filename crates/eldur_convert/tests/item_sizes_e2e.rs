@@ -151,6 +151,7 @@ body { margin: 0 }
 <div class=r id=m><div id=m1><div class=k id=m1k style="height:100%;margin-top:10px"></div></div><div class=s id=m2></div></div>
 <div class=r id=n><div id=n1><div class=k id=n1k style="min-height:5px"></div></div><div class=s id=n2></div></div>
 <div class=r id=p><div id=p1><div class=k id=p1k style="height:100%;min-height:5px"></div></div><div class=s id=p2></div></div>
+<div class=r id=q><div id=q1><input class=k id=q1k style="display:block;padding:0;border:0"><div class=k id=q1d></div></div><div class=s id=q2></div></div>
 <script>var named = Array.from(document.querySelectorAll('[id]'));</script>
 </body></html>"#;
 
@@ -208,6 +209,12 @@ TestCase {
     function test_a_child_with_a_min_height_still_resolves() {
         check("n1k", 0, 741, 40, 15)
         check("p1k", 0, 793, 40, 30)
+    }
+    // A form control with a percentage height resolves against the line like
+    // an empty box, so its percentage sibling still does.
+    function test_a_form_control_leaves_its_sibling_resolving() {
+        check("q1k", 0, 845, 40, 15)
+        check("q1d", 0, 860, 40, 15)
     }
 
 }
