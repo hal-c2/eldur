@@ -5113,6 +5113,7 @@ function _packAdded(layout, m, added) {
         tail.push(kids[t]);
     }
     for (var u = 0; u < tail.length; ++u) {
+        ++_itemsWalked;
         tail[u].parent = null;
     }
     var source = _packSpacerSource(layout) + layout.eldurPackGap / gaps + " }";
@@ -5122,6 +5123,7 @@ function _packAdded(layout, m, added) {
                 Qt.createQmlObject(source, layout);
             }
         }
+        ++_itemsWalked;
         tail[r].parent = layout;
         if (r < k && beforeItem) {
             for (var h = 0; h < gaps; ++h) {
