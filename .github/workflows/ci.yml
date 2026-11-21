@@ -159,13 +159,12 @@ jobs:
             ls -d "${TMPDIR:-/tmp}"/eldur-* || true
           fi
           wait "$tests"
-      # The mutant test is minutes long, so it runs where it can catch
-      # something: on a push or PR that touches what it guards (the runtime
-      # and the converter, whose output the page runs; the scaling page; the
-      # test itself) or how it is run (the tests' support module, this
-      # workflow, mise.toml, mise-tasks/test and the _lib it sources), so a
-      # regression fails this job in the change that makes it; and nightly
-      # and by hand as a backstop for the rest.
+      # The mutant test is minutes long, so a push or PR runs it only when it
+      # touches something the test can depend on: crates/, Cargo.toml,
+      # Cargo.lock, mise.toml, mise-tasks/, rust-toolchain* or this workflow.
+      # A regression there then fails this job in the change that makes it.
+      # Other changes (docs, feature files) skip it; the nightly and hand
+      # runs always run it, as a backstop.
       - name: Does the change touch what the mutant test guards
         id: guarded
         env:
@@ -182,7 +181,7 @@ jobs:
           fi
           changed=$(git diff --name-only "$BASE" HEAD)
           echo "$changed"
-          if grep -qxE 'crates/eldur_js/src/.*|crates/eldur_convert/src/.*|crates/eldur_convert/tests/observers/scaling/.*|crates/eldur_convert/tests/observers_e2e\.rs|crates/eldur_convert/tests/support/.*|\.github/workflows/ci\.yml|mise\.toml|mise-tasks/test|mise-tasks/_lib/.*' <<<"$changed"; then
+          if grep -qxE 'crates/.*|Cargo\.(toml|lock)|mise\.toml|mise-tasks/.*|rust-toolchain.*|\.github/workflows/ci\.yml' <<<"$changed"; then
             echo "run=true" >>"$GITHUB_OUTPUT"
           else
             echo "run=false" >>"$GITHUB_OUTPUT"
