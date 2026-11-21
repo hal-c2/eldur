@@ -7,7 +7,7 @@ use std::collections::BTreeSet;
 use eldur_dom::Document;
 
 use super::sheet_custom_properties;
-use crate::work::base_passes;
+use crate::work::{ancestor_steps, base_passes};
 use crate::{StylesheetLoader, Viewport, collect_stylesheets, compute_styles};
 
 struct NoSheets;
@@ -63,13 +63,24 @@ fn sibling_cards_share_one_pass() {
 }
 
 #[test]
-fn thousands_of_sibling_cards_still_share_one_pass() {
-    // Grouping by how many needing ancestors a node has keeps this
-    // O(n · depth); the pass count stays one however many siblings.
-    let (count, xs) = passes(&page(5000, false));
-    assert_eq!(count, 1);
-    assert_eq!(xs.len(), 5000);
-    assert!(xs.iter().all(|x| x.as_deref() == Some("none")));
+fn grouping_cost_grows_with_the_cards_not_their_pairs() {
+    // Twice the sibling cards walk twice the ancestors, a handful per card:
+    // pairing every card with every other one (bf821ae) walked millions.
+    let (small, one) = grouping(1000);
+    let (big, also_one) = grouping(2000);
+    assert_eq!((one, also_one), (1, 1));
+    assert!(small <= 1000 * 6, "{small} ancestor steps for 1000 cards");
+    assert!(
+        big <= 2 * small,
+        "{big} steps for 2000 cards, {small} for 1000"
+    );
+}
+
+/// (ancestors the grouping walked, passes) for `cards` sibling cards.
+fn grouping(cards: usize) -> (usize, usize) {
+    let ((count, xs), steps) = ancestor_steps(|| passes(&page(cards, false)));
+    assert_eq!(xs.len(), cards);
+    (steps, count)
 }
 
 #[test]

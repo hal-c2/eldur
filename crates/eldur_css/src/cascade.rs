@@ -765,7 +765,9 @@ pub(crate) fn sheet_custom_properties(
     let needing: std::collections::HashSet<NodeId> = needs_pass.iter().copied().collect();
     let mut groups: Vec<Vec<NodeId>> = Vec::new();
     for node in needs_pass {
-        let depth = doc.ancestors(node).filter(|a| needing.contains(a)).count();
+        let depth = walked_ancestors(doc, node)
+            .filter(|a| needing.contains(a))
+            .count();
         if groups.len() <= depth {
             groups.resize_with(depth + 1, Vec::new);
         }
@@ -823,6 +825,15 @@ pub(crate) fn sheet_custom_properties(
         .collect()
 }
 
+/// `node`'s ancestors, each one counted in the tests that pin how many the
+/// pass grouping walks.
+fn walked_ancestors(doc: &Document, node: NodeId) -> impl Iterator<Item = NodeId> + '_ {
+    doc.ancestors(node).inspect(|_| {
+        #[cfg(test)]
+        crate::work::count_ancestor_step();
+    })
+}
+
 /// `style` as clearing its `display` leaves it: unchanged when it declares
 /// none, else the rest as CSSOM serializes a declaration block, each
 /// `name: value;` and the important ones last (measured in Chromium 158:
@@ -874,6 +885,23 @@ fn without_comments(style: &str) -> std::borrow::Cow<'_, str> {
     let mut quote = None::<char>;
     let mut chars = style.chars().peekable();
     while let Some(c) = chars.next() {
+        // An unquoted `url(` reads to its `)` as one token, comments and all:
+        // `url(/*)` names `/*` (CSS Syntax 3, 4.3.6).
+        if quote.is_none()
+            && let Some(name) = unquoted_url(c, &chars, &out)
+        {
+            out.push(c);
+            out.extend(chars.by_ref().take(name));
+            while let Some(c) = chars.next() {
+                out.push(c);
+                match c {
+                    '\\' => out.extend(chars.next()),
+                    ')' => break,
+                    _ => {}
+                }
+            }
+            continue;
+        }
         match (quote, c) {
             (_, '\\') => {
                 out.push(c);
@@ -888,22 +916,6 @@ fn without_comments(style: &str) -> std::borrow::Cow<'_, str> {
             (None, '"' | '\'') => {
                 quote = Some(c);
                 out.push(c);
-            }
-            // An unquoted `url(` reads to its `)` as one token, comments and
-            // all: `url(/*)` names `/*` (CSS Syntax 3, 4.3.6).
-            (None, 'u' | 'U') if unquoted_url(&chars, &out) => {
-                out.push(c);
-                for _ in 0..3 {
-                    out.extend(chars.next());
-                }
-                while let Some(c) = chars.next() {
-                    out.push(c);
-                    match c {
-                        '\\' => out.extend(chars.next()),
-                        ')' => break,
-                        _ => {}
-                    }
-                }
             }
             (None, '/') if chars.peek() == Some(&'*') => {
                 chars.next();
@@ -922,24 +934,76 @@ fn without_comments(style: &str) -> std::borrow::Cow<'_, str> {
     out.into()
 }
 
-/// Whether `chars`, just past a `u`, go on as an unquoted `url(` token: `rl(`
-/// in any case, then a first non-space that is not a quote, where the `u`
-/// starts a name rather than continuing one (`myurl(` is a function).
-fn unquoted_url(chars: &std::iter::Peekable<std::str::Chars<'_>>, before: &str) -> bool {
-    if before
-        .chars()
-        .next_back()
-        .is_some_and(|c| c.is_alphanumeric() || matches!(c, '-' | '_' | '\\') || !c.is_ascii())
+/// When `first` and then `rest` open an unquoted `url(` token, how many of
+/// `rest` run to and with its `(`: the name `url` in any case and written
+/// with any escapes (`\75rl(`, `u\72 l(`), where it starts a name rather
+/// than continuing one (`myurl(` is a function), then `(` and a first
+/// non-space that is not a quote (`url("…")` is a function too).
+fn unquoted_url(
+    first: char,
+    rest: &std::iter::Peekable<std::str::Chars<'_>>,
+    before: &str,
+) -> Option<usize> {
+    if !matches!(first, 'u' | 'U' | '\\')
+        || before
+            .chars()
+            .next_back()
+            .is_some_and(|c| c.is_alphanumeric() || matches!(c, '-' | '_') || !c.is_ascii())
     {
-        return false;
+        return None;
     }
-    let mut ahead = chars.clone();
-    let named = ahead
-        .by_ref()
-        .take(3)
-        .map(|c| c.to_ascii_lowercase())
-        .eq("rl(".chars());
-    named && !matches!(ahead.find(|c| !c.is_ascii_whitespace()), Some('"' | '\''))
+    let mut it = std::iter::once(first).chain(rest.clone());
+    let mut taken = 0;
+    for want in ['u', 'r', 'l'] {
+        if !ident_char(&mut it, &mut taken)?.eq_ignore_ascii_case(&want) {
+            return None;
+        }
+    }
+    (it.next()? == '(').then_some(())?;
+    taken += 1;
+    match it.find(|c| !c.is_ascii_whitespace()) {
+        Some('"' | '\'') => None,
+        _ => Some(taken - 1),
+    }
+}
+
+/// The next character of a name as CSS reads it, with `\` escapes decoded:
+/// up to six hex digits and one whitespace after them, or the character
+/// itself. `taken` counts the characters it reads; `None` when none is left
+/// or an escaped newline ends the name.
+fn ident_char(it: &mut (impl Iterator<Item = char> + Clone), taken: &mut usize) -> Option<char> {
+    let c = it.next()?;
+    *taken += 1;
+    if c != '\\' {
+        return Some(c);
+    }
+    let mut hex = 0_u32;
+    let mut digits = 0;
+    while digits < 6 {
+        match it.clone().next() {
+            Some(h) if h.is_ascii_hexdigit() => {
+                hex = hex * 16 + h.to_digit(16)?;
+                digits += 1;
+                it.next();
+                *taken += 1;
+            }
+            _ => break,
+        }
+    }
+    if digits == 0 {
+        let e = it.next()?;
+        *taken += 1;
+        return (e != '\n').then_some(e);
+    }
+    if it.clone().next().is_some_and(|w| w.is_ascii_whitespace()) {
+        it.next();
+        *taken += 1;
+    }
+    Some(
+        char::from_u32(hex)
+            .filter(|&c| c != '\0')
+            .unwrap_or('\u{FFFD}'),
+    )
 }
 
 /// `value` without a trailing `!important`, when it has one.
