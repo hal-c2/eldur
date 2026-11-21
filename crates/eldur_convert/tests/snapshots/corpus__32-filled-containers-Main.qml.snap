@@ -87,7 +87,7 @@ ApplicationWindow {
                         font.pixelSize: 14
                         background: Rectangle {
                             color: "#efefef"
-                            radius: 2
+                            radius: 3
                             border.width: 1
                             border.color: "#767676"
                             antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
@@ -153,7 +153,7 @@ ApplicationWindow {
                             font.pixelSize: 14
                             background: Rectangle {
                                 color: "#efefef"
-                                radius: 2
+                                radius: 3
                                 border.width: 1
                                 border.color: "#767676"
                                 antialiasing: Math.round(x * 64) % 64 === 0 && Math.round(y * 64) % 64 === 0 && Math.round(width * 64) % 64 === 0 && Math.round(height * 64) % 64 === 0
