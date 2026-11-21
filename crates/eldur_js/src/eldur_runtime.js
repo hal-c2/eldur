@@ -571,17 +571,25 @@ function reportError(err) {
 // `window.onload = value` where it runs. As a browser's event handler
 // attribute, a handler takes its place among the `load` listeners when it is
 // set, keeps that place while it is replaced, and loses it when set to anything
-// that is not an object, so one set again is heard after the listeners added in
-// between. `call` is the page's function that calls the current handler.
+// that is not an object. One set again is a new listener: it is heard after
+// the listeners added in between, and not at all if `load` is being dispatched
+// when it is set. `call` is the page's function that calls the current
+// handler; the value assigned is returned, as an assignment's value.
 function setOnload(listeners, call, value) {
     var handler = value !== null && (typeof value === "object" || typeof value === "function");
-    var at = listeners.indexOf(call);
+    var entry = call.entry || null;
+    var at = entry ? listeners.indexOf(entry) : -1;
     if (handler && at < 0) {
-        listeners.push(call);
+        entry = function() {
+            return call();
+        };
+        call.entry = entry;
+        listeners.push(entry);
     } else if (!handler && at >= 0) {
         listeners.splice(at, 1);
+        call.entry = null;
     }
-    return handler ? value : null;
+    return value;
 }
 
 // A top-level `DOMContentLoaded` or `load` listener, added where the
@@ -10970,6 +10978,13 @@ function _isCapture(options) {
 // order `capture`, `once`, `passive`, `signal`, before anything else, a null
 // callback included, since a getter among them may run the page's code. A
 // value that is not an object is the capture flag.
+// One option of `addEventListener`, read once.
+// Qt 6.11: a named read (`options.signal`) at a site that has only seen a data
+// property calls a getter found there twice; a computed read calls it once.
+function _listenerOption(options, name) {
+    return options[name];
+}
+
 function _listenerOptions(options) {
     var said = { capture: false, once: false, passive: undefined, signal: undefined };
     if (options === null || options === undefined) {
@@ -10979,11 +10994,11 @@ function _listenerOptions(options) {
         said.capture = Boolean(options);
         return said;
     }
-    said.capture = Boolean(options.capture);
-    said.once = Boolean(options.once);
-    var passive = options.passive;
+    said.capture = Boolean(_listenerOption(options, "capture"));
+    said.once = Boolean(_listenerOption(options, "once"));
+    var passive = _listenerOption(options, "passive");
     said.passive = passive === undefined ? undefined : Boolean(passive);
-    var signal = options.signal;
+    var signal = _listenerOption(options, "signal");
     if (signal !== undefined
         && (signal === null || typeof signal !== "object" || typeof signal.addEventListener !== "function")) {
         throw new TypeError("Failed to execute 'addEventListener' on 'EventTarget': "

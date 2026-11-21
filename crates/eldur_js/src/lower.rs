@@ -63,6 +63,22 @@ pub(crate) struct SharedRewriteState {
     /// in page.js for an error, so these are `var`s.
     pub tdz_names: HashSet<String>,
     pub tdz: Option<TdzHelpers>,
+    /// What the page's `DOMContentLoaded` and `load` listeners and
+    /// `window.onload` are kept in, named the first time any script uses
+    /// them, at its top level or in a function.
+    pub lifecycle: Lifecycle,
+}
+
+/// The page's `DOMContentLoaded` and `load` listener arrays, fired in that
+/// order once every script has run, and `window.onload`'s variable with the
+/// function the `load` array calls it by. `decls` holds the declarations of
+/// the names made since the page last took them.
+#[derive(Default)]
+pub(crate) struct Lifecycle {
+    pub ready_queue: Option<String>,
+    pub load_queue: Option<String>,
+    pub window_onload: Option<(String, String)>,
+    pub decls: Vec<String>,
 }
 
 /// The functions page.js checks a lazy module's lexical bindings with. All
@@ -100,6 +116,46 @@ pub(crate) struct TdzBinding {
 }
 
 impl SharedRewriteState {
+    /// The page's `load` listener array, or its `DOMContentLoaded` one.
+    pub(crate) fn lifecycle_queue(&mut self, load: bool) -> String {
+        let named = if load {
+            self.lifecycle.load_queue.clone()
+        } else {
+            self.lifecycle.ready_queue.clone()
+        };
+        if let Some(queue) = named {
+            return queue;
+        }
+        let queue = self.alloc_fn_name(if load {
+            "__eldur_load_listeners"
+        } else {
+            "__eldur_ready_listeners"
+        });
+        self.lifecycle.decls.push(format!("var {queue} = [];"));
+        if load {
+            self.lifecycle.load_queue = Some(queue.clone());
+        } else {
+            self.lifecycle.ready_queue = Some(queue.clone());
+        }
+        queue
+    }
+
+    /// `window.onload`'s variable and the function the `load` listeners call
+    /// its handler by.
+    pub(crate) fn window_onload(&mut self) -> (String, String) {
+        if let Some(pair) = &self.lifecycle.window_onload {
+            return pair.clone();
+        }
+        let slot = self.alloc_fn_name("__eldur_window_onload");
+        let call = self.alloc_fn_name("__eldur_call_window_onload");
+        self.lifecycle.decls.push(format!("var {slot} = null;"));
+        self.lifecycle.decls.push(format!(
+            "function {call}() {{\n    if (typeof {slot} === \"function\") {{\n        {slot}.call(Eldur.window, Eldur.event(\"load\", Eldur.window, null));\n    }}\n}}"
+        ));
+        self.lifecycle.window_onload = Some((slot.clone(), call.clone()));
+        (slot, call)
+    }
+
     pub(crate) fn fresh_id(&mut self) -> u32 {
         let id = self.next_uid;
         self.next_uid += 1;
@@ -582,6 +638,27 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
 
     /// Rewrites a function/callback expression while binding `this` inside a direct
     /// non-arrow `FunctionExpression` to `this_target`.
+    /// A `DOMContentLoaded` or `load` listener added in a function or a
+    /// block, before the page has loaded: added where the call runs, as at
+    /// the top level, so one added before its event is dispatched is heard
+    /// then and one added while or after it is not.
+    fn lifecycle_listener(
+        &mut self,
+        ev: &str,
+        target_js: &str,
+        cb: &Expression<'a>,
+        arguments: &[oxc_ast::ast::Argument<'a>],
+    ) -> String {
+        let queue = self.shared.lifecycle_queue(ev == "load");
+        let cb_str = self.rewrite_listener_callback_expr(cb, None);
+        let options = arguments
+            .get(2)
+            .and_then(|a| a.as_expression())
+            .map(|o| format!(", {}", self.rewrite_listener_callback_expr(o, None)))
+            .unwrap_or_default();
+        format!("Eldur.queueListener({queue}, {target_js}, {ev:?}, {cb_str}{options})")
+    }
+
     pub(crate) fn rewrite_listener_callback_expr(
         &mut self,
         expr: &Expression<'a>,
@@ -720,9 +797,16 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
             && op == AssignmentOperator::Assign
         {
             if !self.after_load && is_global_window(member_obj, self.scoping) && ev == "load" {
+                // Set where it runs, as at the top level: a handler set while
+                // `load` is dispatched is a new listener it is not dispatched
+                // to, and the assignment's value is the value assigned.
+                let queue = self.shared.lifecycle_queue(true);
+                let (slot, call) = self.shared.window_onload();
                 let rhs_str = self.rewrite_listener_callback_expr(right, None);
-                self.editor
-                    .replace(full_span, format!("Eldur.queueMicrotask({rhs_str})"));
+                self.editor.replace(
+                    full_span,
+                    format!("({slot} = Eldur.setOnload({queue}, {call}, {rhs_str}))"),
+                );
                 return true;
             }
             if let Some(target) = self.resolve_single_target(member_obj) {
@@ -1475,9 +1559,8 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                     && matches!(ev.as_str(), "DOMContentLoaded" | "load")
                     && let Some(cb) = it.arguments.get(1).and_then(|a| a.as_expression())
                 {
-                    let cb_str = self.rewrite_listener_callback_expr(cb, None);
-                    self.editor
-                        .replace(it.span, format!("Eldur.queueMicrotask({cb_str})"));
+                    let call = self.lifecycle_listener(&ev, "Eldur.document", cb, &it.arguments);
+                    self.editor.replace(it.span, call);
                     return;
                 }
                 let args_str = self.render_call_args(&it.arguments);
@@ -1498,9 +1581,8 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
                 && matches!(ev.as_str(), "DOMContentLoaded" | "load")
                 && let Some(cb) = it.arguments.get(1).and_then(|a| a.as_expression())
             {
-                let cb_str = self.rewrite_listener_callback_expr(cb, None);
-                self.editor
-                    .replace(it.span, format!("Eldur.queueMicrotask({cb_str})"));
+                let call = self.lifecycle_listener(&ev, "Eldur.window", cb, &it.arguments);
+                self.editor.replace(it.span, call);
                 return;
             }
 
