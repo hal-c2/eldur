@@ -5002,7 +5002,7 @@ function _packFlex(layout, force, added) {
     var m = _meta(layout);
     // Only this function makes or drops spacers once a layout is packed, so
     // what it holds besides them is a count, not a walk.
-    if (!force && m.packedSpacers !== undefined && layout.children.length - m.packedSpacers === m.packedFor) {
+    if (!force && m.packedSpacers !== undefined && _packItemCount(layout, m) === m.packedFor) {
         return;
     }
     if (added && _packAdded(layout, m, added)) {
@@ -5012,7 +5012,9 @@ function _packFlex(layout, force, added) {
     var spacers = [];
     for (var i = 0; i < layout.children.length; ++i) {
         ++_itemsWalked;
-        (_isLayoutSpacer(layout.children[i]) ? spacers : kids).push(layout.children[i]);
+        if (layout.children[i] !== m.collapser) {
+            (_isLayoutSpacer(layout.children[i]) ? spacers : kids).push(layout.children[i]);
+        }
     }
     if (!force && m.packedFor === kids.length) {
         m.packedSpacers = spacers.length;
@@ -5043,6 +5045,22 @@ function _packFlex(layout, force, added) {
         }
     }
     m.packedSpacers = made;
+    // The collapser keeps an empty layout's size; it stays, and stays last.
+    if (_packCollapsed(layout, m)) {
+        ++_itemsWalked;
+        m.collapser.parent = null;
+        m.collapser.parent = layout;
+    }
+}
+
+// An empty layout's collapser (`_keepCollapsing`) is shaped like a spacer
+// but is neither a spacer nor an item of the pack.
+function _packCollapsed(layout, m) {
+    return Boolean(m.collapser) && m.collapser.parent === layout;
+}
+
+function _packItemCount(layout, m) {
+    return layout.children.length - m.packedSpacers - (_packCollapsed(layout, m) ? 1 : 0);
 }
 
 function _packOf(layout, n) {
@@ -5080,7 +5098,7 @@ function _packAdded(layout, m, added) {
         return false;
     }
     var kids = layout.children;
-    var k = kids.length - m.packedSpacers - old;
+    var k = _packItemCount(layout, m) - old;
     if (k <= 0 || k !== added.count || _packOf(layout, old) !== _packOf(layout, old + k)) {
         return false;
     }
