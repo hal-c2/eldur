@@ -81,6 +81,9 @@
    "LC split-letter-set \"Saip\"",
    "LC split-same \"Go\"",
    "LC split-same-set \"GoZ\"",
+   "LC split-space [\"Save \",\" now\"]",
+   "LC split-space-set \"Save K later\"",
+   "LC split-space-lines \"Save \" \"Save K later!\"",
    "LC created-wrap true B,\" many words that wrap\"",
    "LC created-empty true SPAN",
    "LC swapped B,\" on\" \"Go on\" true true",
@@ -162,6 +165,40 @@
    {
     "name": "key:ArrowUp",
     "key": "ArrowUp"
+   }
+  ]
+ },
+ "centred_runs": {
+  "log": [
+   "LC made \"alpha beta gamma delta epsilon zeta eta theta\" \"one two three four five six seven eight\""
+  ],
+  "clicks": [],
+  "ink": [
+   {
+    "text": "alpha beta gamma delta epsilon zeta eta theta",
+    "lines": [
+     [
+      59,
+      230
+     ],
+     [
+      44,
+      196
+     ]
+    ]
+   },
+   {
+    "text": "one two three four five six seven eight",
+    "lines": [
+     [
+      58,
+      240
+     ],
+     [
+      158,
+      240
+     ]
+    ]
    }
   ]
  },

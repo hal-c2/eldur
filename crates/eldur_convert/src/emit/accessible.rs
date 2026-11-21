@@ -40,7 +40,7 @@ pub(crate) fn content_text(
 /// whitespace collapsed as each reading collapses it. The runtime makes a
 /// Text node of each drawn run and keeps each hidden one between them, so it
 /// never has to find the split by matching strings. `None` when the drawn
-/// runs do not join to `drawn` or the whole to `dom` (a box that stands
+/// runs, collapsed, do not join to `drawn` or the whole to `dom` (a box that stands
 /// apart adds a space only the drawn text has).
 pub(crate) fn drawn_runs(
     doc: &Document,
@@ -84,31 +84,11 @@ pub(crate) fn drawn_runs(
     for (c, i) in chars {
         runs[i].push(c);
     }
-    // The drawn text collapses a space the hidden text kept apart from
-    // another, and trims its ends: those spaces are only in the hidden runs.
-    // A node then lacks a space it has in the DOM (`Save <kbd hidden>K</kbd>
-    // now` gives "now" for " now"), since each run draws what it holds.
-    let mut after_space = true;
-    for i in (1..runs.len()).step_by(2) {
-        if runs[i].is_empty() {
-            continue;
-        }
-        if after_space && runs[i].starts_with(' ') {
-            runs[i].remove(0);
-            runs[i - 1].push(' ');
-        }
-        after_space = runs[i].ends_with(' ');
-    }
-    if let Some(i) = (1..runs.len())
-        .step_by(2)
-        .rev()
-        .find(|&i| !runs[i].is_empty())
-        && runs[i].ends_with(' ')
-    {
-        runs[i].pop();
-        runs[i + 1].insert(0, ' ');
-    }
+    // Each node keeps its spaces, as in the DOM (`Save <kbd hidden>K</kbd>
+    // now` gives "Save " and " now"); the label collapses the two as it draws
+    // them, so the drawn runs join to the label once collapsed.
     let shown: String = runs.iter().skip(1).step_by(2).map(String::as_str).collect();
+    let shown = shown.split_ascii_whitespace().collect::<Vec<_>>().join(" ");
     (shown == drawn && runs.concat() == dom).then_some(runs)
 }
 
