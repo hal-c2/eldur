@@ -3742,17 +3742,26 @@ function _appendTarget(raw) {
         return extra + (text.text === "" ? 0 : text.implicitHeight) + flow.implicitHeight;
     });
     // A box no layout stretches (a legend, a float) was as wide as its text;
-    // it is as wide as the wider of its text and what it holds now. A control
-    // has a `spacing` too, and places what it holds itself.
+    // it shrinks to fit what it holds now: as wide as the wider of its text and
+    // its column, but no wider than its parent gives it (a fieldset's content
+    // box), where a long line wraps. A control has a `spacing` too, and places
+    // what it holds itself.
     var extraW = raw.implicitWidth - text.implicitWidth;
     var laidOut = raw.parent && _gIsLayout(raw.parent) && raw.parent.contentItem === undefined;
     if (raw.parent && !laidOut && extraW >= 0) {
-        raw.implicitWidth = Qt.binding(function() {
-            return extraW + Math.max(text.text === "" ? 0 : text.implicitWidth, flow.implicitWidth);
-        });
+        var host = raw.parent;
+        var room = function() {
+            return (typeof host.availableWidth === "number" ? host.availableWidth : host.width) - extraW;
+        };
+        var wants = function() {
+            var wide = Math.max(text.text === "" ? 0 : text.implicitWidth, flow.implicitWidth);
+            var most = room();
+            return most > 0 ? Math.min(wide, most) : wide;
+        };
+        raw.implicitWidth = Qt.binding(function() { return extraW + wants(); });
         // Its column is as wide too: an emptied text is no width to keep to.
         flow.width = Qt.binding(function() {
-            return Math.max(text.text === "" ? 0 : text.width, flow.implicitWidth);
+            return Math.max(text.text === "" ? 0 : text.width, wants());
         });
     }
     // `textContent = x` replaces every child; rendering a model's runs does not.
@@ -17422,6 +17431,11 @@ function _vPutRuns(line, models, runs, base, model) {
             }
         });
         m.kids = kept;
+    });
+    // Each run is drawn once every run holds its entries: an element that
+    // spans two runs draws in the first only what is not the second's.
+    runs.forEach(function(entries, i) {
+        var m = made[i];
         var boxes = _vRunLevels(entries, base);
         var font = m.text.font;
         font.pixelSize = Math.max(1, Math.round(boxes.leaf.size));

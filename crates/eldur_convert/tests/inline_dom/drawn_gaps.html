@@ -13,6 +13,8 @@ function near(a,b){return Math.abs(a-b)<=3}
 <form id="gf"><fieldset id="gd" disabled><legend><span id="gl">l </span></legend><p><input id="gx" value="2"></p></fieldset></form>
 <p id="sc">one</p>
 <p><button id="gk">Save</button> <button id="ge">Save</button> <button id="gq">Save</button></p>
+<fieldset id="gw" style="width:200px"><legend><span id="gwl">w </span></legend></fieldset>
+<fieldset id="gv" style="width:200px"><legend><span id="gvl">v </span></legend></fieldset>
 <p id="last">end <span id="gs2">moved</span></p>
 <script>
 // A span put before a button's text is drawn before it, on the label's line.
@@ -45,6 +47,12 @@ L("emptied-text",N(ge),JSON.stringify(ge.textContent),near(R(ge).h,R(gn).h));
 // A button's one Text node appended to it again stays its own, and drawn.
 var gq=document.getElementById("gq");gq.appendChild(gq.firstChild);
 L("self-append",N(gq),JSON.stringify(gq.textContent),near(R(gq).w,R(gn).w),near(R(gq).h,R(gn).h));
+// A long run of text put in a legend wraps inside its fieldset.
+var gw=document.getElementById("gw"),gwl=document.getElementById("gwl"),gwt=document.createElement("span");gwt.textContent="word ".repeat(30);gwl.append(gwt);
+L("wrap",R(gwt).h>40,R(gwl).r<=R(gw).r,R(gwt).r<=R(gw).r);
+// So does one put after a box in a legend, which lays the legend out as a column.
+var gv=document.getElementById("gv"),gvl=document.getElementById("gvl"),gvt=document.createElement("span");gvt.textContent="word ".repeat(30);gvl.append(document.createElement("input"));gvl.append(gvt);
+L("wrap-box",R(gvt).h>40,R(gvl).r<=R(gv).r,R(gvt).r<=R(gv).r);
 var gs2=document.getElementById("gs2"),last=document.getElementById("last");document.body.append(gs2);
 L("to-body",N(last),R(gs2).t>=R(last).b,near(R(gs2).l,0));
 </script></body></html>

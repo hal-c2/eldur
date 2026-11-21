@@ -1634,6 +1634,14 @@ impl Emitter<'_, '_> {
         obj.set("background", object_value(background));
         let mut label = self.item(legend, decoration).obj;
         label.set("x", number(insets.left));
+        // A legend shrinks to fit within the fieldset's content box, where a long
+        // one wraps; a control never sizes the label it is given.
+        if label.get("width").is_none() {
+            label.set(
+                "width",
+                Value::expr(format!("Math.min(implicitWidth, {id}.availableWidth)")),
+            );
+        }
         obj.set("label", object_value(label));
         obj.set(
             "topPadding",
@@ -2041,6 +2049,16 @@ mod tests {
         assert!(q.contains("label: "), "{q}");
         assert!(q.contains("text: \"Plan\""), "{q}");
         assert!(q.contains("enabled: false"), "{q}");
+    }
+
+    // Chromium wraps a long legend at the fieldset's content width.
+    #[test]
+    fn a_legend_is_no_wider_than_its_fieldset_gives_it() {
+        let (q, _) = qml("<fieldset id=f><legend>Plan</legend><p>x</p></fieldset>");
+        assert!(
+            q.contains("width: Math.min(implicitWidth, f.availableWidth)"),
+            "{q}"
+        );
     }
 
     #[test]

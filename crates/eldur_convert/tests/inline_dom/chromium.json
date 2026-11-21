@@ -333,6 +333,8 @@
    "LC markup-content \"DDD\" \"DDD\" true",
    "LC emptied-text \"B2\" \"B2\" true",
    "LC self-append \"Save\" \"Save\" true true",
+   "LC wrap true true true",
+   "LC wrap-box true true true",
    "LC to-body \"end \" true true"
   ],
   "clicks": []
