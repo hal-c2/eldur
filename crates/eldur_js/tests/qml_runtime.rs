@@ -5401,7 +5401,19 @@ function verify() {
     hiddenBox.style.visibility = "visible";
     const visible = getComputedStyle(hiddenBox).opacity;
     hiddenBox.style.visibility = "";
-    return [before, getComputedStyle(box).opacity, uneven, hidden, rewritten, cleared, visible].join(" ");
+    // A fade above 0 reads the box's own opacity through the one it paints
+    // at: shown again, or with its opacity cleared while its visibility is
+    // still written, it is the declared one, not what was held.
+    const u = document.getElementById("uneven");
+    u.style.visibility = "hidden";
+    u.style.visibility = "visible";
+    const reshown = getComputedStyle(u).opacity;
+    u.style.opacity = "0.2";
+    u.style.opacity = "";
+    const uncleared = getComputedStyle(u).opacity;
+    u.style.visibility = "";
+    return [before, getComputedStyle(box).opacity, uneven, hidden, rewritten, cleared, visible,
+        reshown, uncleared].join(" ");
 }
 "##,
         r#"Item {
@@ -5436,7 +5448,7 @@ function verify() {
 }"#,
     );
     assert!(
-        output.contains("ELDUR_OK_FADE 0.8 0.6 0.75 0.75 0.6 0.75 0.75 0.30 0"),
+        output.contains("ELDUR_OK_FADE 0.8 0.6 0.75 0.75 0.6 0.75 0.75 0.75 0.75 0.30 0"),
         "{output}"
     );
 }

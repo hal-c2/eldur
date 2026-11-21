@@ -7561,7 +7561,9 @@ function _inlineOpacity(raw, m) {
     } else if (hidden) {
         shown = hidden !== "hidden";
         if (!written && typeof raw.eldurInlineFade === "number") {
-            // Only `visibility` was written: the box keeps its own opacity.
+            // Only `visibility` was written: the box keeps its own opacity,
+            // the declared one, not what the hold still has.
+            _inlineRelease(raw, raw, "opacity");
             opacity = _ownOpacity(raw);
         }
     }
