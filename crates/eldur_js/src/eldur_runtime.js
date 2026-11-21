@@ -790,6 +790,9 @@ function _ItemTable() {
     // comparing it with the last one asked about.
     this._lastKey = null;
     this._lastSlot = null;
+    // The last `_slot` missed a live QObject, which is never in the Map:
+    // `set` keeps those by address, and only destroyed ones move there.
+    this._missedLive = false;
 }
 
 var _objectTag = Object.prototype.toString;
@@ -820,6 +823,7 @@ function _itemAddress(key) {
 }
 
 _ItemTable.prototype._slot = function(key) {
+    this._missedLive = false;
     // Only while the last key is up: a destroyed one is `===` any other.
     if (key === this._lastKey && key && typeof key.objectName === "string") {
         return this._lastSlot;
@@ -831,6 +835,7 @@ _ItemTable.prototype._slot = function(key) {
     var slot = this._byAddress[address];
     // Qt may reuse a destroyed QObject's address; its old record is not this one's.
     if (!slot || slot.key !== key) {
+        this._missedLive = true;
         return null;
     }
     this._lastKey = key;
@@ -869,6 +874,10 @@ _ItemTable.prototype.get = function(key) {
     if (slot) {
         return slot.value;
     }
+    // Each item's first read misses; the Map need not be walked for it.
+    if (this._missedLive) {
+        return undefined;
+    }
     this._adoptDestroyed(key);
     _itemsWalked += this._others.size;
     return this._others.get(key);
@@ -877,6 +886,9 @@ _ItemTable.prototype.get = function(key) {
 _ItemTable.prototype.has = function(key) {
     if (this._slot(key) !== null) {
         return true;
+    }
+    if (this._missedLive) {
+        return false;
     }
     this._adoptDestroyed(key);
     _itemsWalked += this._others.size;
@@ -12216,12 +12228,18 @@ function _insertChildrenAt(raw, nodes, ref) {
     var real = _forRealItems(nodes);
     _insertRawNodesBefore(_appendTarget(raw), real, at);
     // A Text node standing in a column, below its boxes, is drawn as the
-    // column's own text or lines are.
+    // column's own text or lines are. Finding those walks the column's
+    // children, so only when a Text node comes: else each append to a column
+    // walks everything already in it.
+    var texts = real.filter(function(n) { return _isTextNode(n) && typeof n.text === "string"; });
+    if (texts.length === 0) {
+        return;
+    }
     var own = _gIsBox(raw) ? null : _findTextChild(raw);
     var lines = _gIsBox(raw) || own ? null : _anonLinesOf(raw);
     if ((own && typeof own.lineHeight === "number") || lines) {
-        real.forEach(function(n) {
-            if (!_isTextNode(n) || typeof n.text !== "string" || n === own) {
+        texts.forEach(function(n) {
+            if (n === own) {
                 return;
             }
             n.font = (own || lines).font;
