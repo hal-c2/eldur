@@ -3,12 +3,12 @@ use std::collections::{HashMap, HashSet};
 use oxc_ast::ast::{
     ArrowFunctionBody, ArrowFunctionExpression, AssignmentExpression, AssignmentTarget,
     AssignmentTargetPropertyIdentifier, AwaitExpression, BinaryExpression, BindingIdentifier,
-    BindingPattern, BindingProperty, CallExpression, CatchClause, Class, ClassElement, ClassType,
-    ComputedMemberExpression, Expression, ForInStatement, ForOfStatement, ForStatement, Function,
-    IdentifierReference, ImportExpression, MethodDefinition, MethodDefinitionKind,
-    ObjectExpression, ObjectProperty, ObjectPropertyKind, PropertyKey, ReturnStatement,
-    SimpleAssignmentTarget, Statement, StaticMemberExpression, UnaryExpression, UpdateExpression,
-    VariableDeclaration, VariableDeclarationKind, VariableDeclarator,
+    BindingPattern, BindingProperty, CallExpression, CatchClause, ChainElement, Class,
+    ClassElement, ClassType, ComputedMemberExpression, Expression, ForInStatement, ForOfStatement,
+    ForStatement, Function, IdentifierReference, ImportExpression, MethodDefinition,
+    MethodDefinitionKind, ObjectExpression, ObjectProperty, ObjectPropertyKind, PropertyKey,
+    ReturnStatement, SimpleAssignmentTarget, Statement, StaticMemberExpression, UnaryExpression,
+    UpdateExpression, VariableDeclaration, VariableDeclarationKind, VariableDeclarator,
 };
 use oxc_ast_visit::{Visit, walk};
 use oxc_semantic::{IsGlobalReference, Scoping, SymbolId};
@@ -790,6 +790,15 @@ impl<'a, 'b> AstLowerer<'a, 'b> {
             && known_dom_event_from_on_prop(prop) == Some("load")
     }
 
+    fn is_static_window_onload(&self, m: &StaticMemberExpression<'a>) -> bool {
+        self.is_window_onload(&m.object, m.property.name.as_str())
+    }
+
+    fn is_computed_window_onload(&self, c: &ComputedMemberExpression<'a>) -> bool {
+        extract_string_literal(&c.expression)
+            .is_some_and(|prop| self.is_window_onload(&c.object, &prop))
+    }
+
     /// `window.onload` as a place to assign to, for a pattern, a `for` head
     /// or `++`: an object whose `value` gets and sets the page's handler.
     fn window_onload_place(&mut self) -> String {
@@ -1520,12 +1529,16 @@ impl<'a> Visit<'a> for AstLowerer<'a, '_> {
 
     fn visit_unary_expression(&mut self, it: &UnaryExpression<'a>) {
         if it.operator == UnaryOperator::Delete {
+            // `delete window?.onload` parses, unlike an optional-chain
+            // assignment, and deletes the same property.
             let onload = match unwrap_parens(&it.argument) {
-                Expression::StaticMemberExpression(m) => {
-                    self.is_window_onload(&m.object, m.property.name.as_str())
-                }
-                Expression::ComputedMemberExpression(c) => extract_string_literal(&c.expression)
-                    .is_some_and(|prop| self.is_window_onload(&c.object, &prop)),
+                Expression::StaticMemberExpression(m) => self.is_static_window_onload(m),
+                Expression::ComputedMemberExpression(c) => self.is_computed_window_onload(c),
+                Expression::ChainExpression(chain) => match &chain.expression {
+                    ChainElement::StaticMemberExpression(m) => self.is_static_window_onload(m),
+                    ChainElement::ComputedMemberExpression(c) => self.is_computed_window_onload(c),
+                    _ => false,
+                },
                 _ => false,
             };
             if onload {

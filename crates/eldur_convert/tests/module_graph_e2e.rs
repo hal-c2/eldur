@@ -570,7 +570,8 @@ fn a_window_onload_that_is_not_an_object_reads_as_null() {
 /// or object pattern, or a `for … of` head is read and then set, as a browser
 /// gets and sets its event handler: each expression has Chromium's value, a
 /// logical assignment that short-circuits sets nothing, and the handler last
-/// set is called at load.
+/// set is called at load. `window?.onload` and `window?.["onload"]` read the
+/// same handler.
 #[test]
 fn a_window_onload_assigned_by_operator_or_pattern_is_read_then_set() {
     if support::no_qt() {
@@ -580,7 +581,8 @@ fn a_window_onload_assigned_by_operator_or_pattern_is_read_then_set() {
     assert_eq!(run("onloadassign", &read), wanted("onloadassign", &read));
 }
 
-/// `delete window.onload` removes the window's own `onload`, as in Chromium:
+/// `delete window.onload` (here through an optional chain, `window?.onload`)
+/// removes the window's own `onload`, as in Chromium:
 /// the handler set before is still heard at load, reads give `undefined`, and
 /// what is assigned after is a plain value, read back as it is and never
 /// called.
