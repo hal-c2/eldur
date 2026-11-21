@@ -8218,6 +8218,10 @@ function _inlineOpacity(raw, m) {
     }
     var hidden = m.styles.visibility;
     var written = m.styles.opacity;
+    if (!written) {
+        // A cleared opacity goes back to the declared one, not the last write.
+        delete m.ownOpacity;
+    }
     if (!hidden && !written) {
         _inlineRelease(raw, raw, "opacity");
         _inlineRelease(raw, raw, "enabled");
@@ -8232,6 +8236,10 @@ function _inlineOpacity(raw, m) {
         opacity = parseFloat(s.opacity);
     } else if (hidden) {
         shown = hidden !== "hidden";
+        if (!written && typeof raw.eldurInlineFade === "number") {
+            // Only `visibility` was written: the box keeps its own opacity.
+            opacity = _ownOpacity(raw);
+        }
     }
     _inlineHold(raw, raw, "opacity", !shown ? 0 : _fadedOpacity(raw, isNaN(opacity) ? 1 : opacity));
     if (typeof raw.enabled === "boolean") {
