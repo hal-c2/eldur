@@ -417,6 +417,22 @@
     },
     "errors": []
   },
+  "onloaddelete": {
+    "lines": [
+      "delete true",
+      "after delete, reads undefined undefined",
+      "set after delete, reads plain",
+      "string after delete, reads string x",
+      "delete again true",
+      "after delete again, reads undefined undefined",
+      "kept heard",
+      "load, reads undefined undefined"
+    ],
+    "text": {
+      "out": "kept"
+    },
+    "errors": []
+  },
   "signalthrow": {
     "lines": [
       "data options added",

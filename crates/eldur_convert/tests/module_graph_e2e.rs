@@ -580,6 +580,19 @@ fn a_window_onload_assigned_by_operator_or_pattern_is_read_then_set() {
     assert_eq!(run("onloadassign", &read), wanted("onloadassign", &read));
 }
 
+/// `delete window.onload` removes the window's own `onload`, as in Chromium:
+/// the handler set before is still heard at load, reads give `undefined`, and
+/// what is assigned after is a plain value, read back as it is and never
+/// called.
+#[test]
+fn a_deleted_window_onload_keeps_its_handler_and_reads_as_a_plain_property() {
+    if support::no_qt() {
+        return;
+    }
+    let read = ["out"];
+    assert_eq!(run("onloaddelete", &read), wanted("onloaddelete", &read));
+}
+
 /// A `signal` that is not an `AbortSignal` (a number, `null`, a string, a
 /// plain object, or what a getter returns after the other options are read)
 /// throws a `TypeError` from `addEventListener`, for a null callback too, at
