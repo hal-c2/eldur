@@ -4,7 +4,7 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::sync::OnceLock;
 
-use eldur_dom::{Document, Element, NodeId};
+use eldur_dom::{Document, Element, LocalName, NodeId, QualName, ns};
 
 use crate::media::MediaQueryList;
 use crate::parse::{
@@ -659,8 +659,8 @@ pub(crate) fn compute_styles_walking(
 }
 
 /// The `nodes` whose `display` is still `none` with their own `style`
-/// attribute's `display` and their `hidden` attribute taken away: what the
-/// stylesheets alone make of their own `display`.
+/// attribute's `display` (its text too) and their `hidden` attribute taken
+/// away: what the stylesheets alone make of their own `display`.
 pub(crate) fn rules_hide(
     doc: &Document,
     sheets: &[Stylesheet],
@@ -675,6 +675,16 @@ pub(crate) fn rules_hide(
     for &node in nodes {
         // Only elements have attributes; anything else stays as it is.
         let _ = doc.remove_attribute(node, "hidden");
+        // The attribute reads as a script's cleared display leaves it, so a
+        // selector on its text sees what the page's would.
+        if let Some(style) = doc
+            .element(node)
+            .and_then(|e| e.attr("style"))
+            .and_then(without_display)
+        {
+            let name = QualName::new(None, ns!(), LocalName::from("style"));
+            let _ = doc.set_attribute(node, name, style);
+        }
     }
     let mut prepared = prepare(&doc, sheets, viewport);
     for &node in nodes {
@@ -695,6 +705,535 @@ pub(crate) fn rules_hide(
                 .is_some_and(|s| s.style.display == Display::None)
         })
         .collect()
+}
+
+/// The custom properties an author or UA rule declares on each of `nodes`,
+/// as the stylesheets alone make them: with each node's own `style`
+/// attribute's custom properties taken away, so what a script's
+/// `removeProperty` falls back to. `None` for one that computes to the
+/// guaranteed-invalid value (`initial`). Inherited ones aren't named: they
+/// follow the parent's.
+pub(crate) fn sheet_custom_properties(
+    doc: &Document,
+    sheets: &[Stylesheet],
+    viewport: &Viewport,
+    computed: &StyleMap,
+    nodes: &BTreeSet<NodeId>,
+) -> BTreeMap<NodeId, BTreeMap<String, Option<String>>> {
+    if nodes.is_empty() {
+        return BTreeMap::new();
+    }
+    let _memo = properties::ParseMemo::enter();
+    let mut prepared = prepare(doc, sheets, viewport);
+    let match_ctx = MatchContext { doc, dynamic: None };
+    let declared: BTreeMap<NodeId, BTreeMap<String, Option<String>>> = nodes
+        .iter()
+        .filter_map(|&node| {
+            let rules = prepared.engine.rule_custom_declared(node, &match_ctx);
+            (!rules.is_empty()).then_some((node, rules))
+        })
+        .collect();
+    // A node's own `style` attribute changes what a pass gives it only for a
+    // name both declare where the rule's value is computed here (a `var()`
+    // stays as written). Any other name reads the same with the attribute
+    // as without: `inherit` takes the parent's, which keeps its attribute.
+    let custom_names = |decls: Option<&Vec<ParsedDecl>>| -> BTreeSet<String> {
+        decls
+            .into_iter()
+            .flatten()
+            .filter_map(|d| match &d.value {
+                DeclValue::Custom { name, .. } => Some(name.clone()),
+                _ => None,
+            })
+            .collect()
+    };
+    let needs_pass: Vec<NodeId> = declared
+        .iter()
+        .filter(|(node, rules)| {
+            let own = custom_names(prepared.engine.inline_styles.get(node.index()));
+            rules.iter().any(|(name, written)| {
+                own.contains(name) && !written.as_deref().is_some_and(contains_var_function)
+            })
+        })
+        .map(|(&node, _)| node)
+        .collect();
+    // Stripping a node's attribute reaches only it and what is under it, so
+    // nodes neither of which is under the other share one pass. A node's
+    // pass is the number of its ancestors that need one too: nodes at the
+    // same such depth are never under one another, and the passes are as
+    // many as such nodes nest, not as many as there are.
+    let needing: std::collections::HashSet<NodeId> = needs_pass.iter().copied().collect();
+    let mut groups: Vec<Vec<NodeId>> = Vec::new();
+    for node in needs_pass {
+        let depth = walked_ancestors(doc, node)
+            .filter(|a| needing.contains(a))
+            .count();
+        if groups.len() <= depth {
+            groups.resize_with(depth + 1, Vec::new);
+        }
+        groups[depth].push(node);
+    }
+    let mut stripped: BTreeMap<NodeId, BTreeMap<String, String>> = BTreeMap::new();
+    for group in groups {
+        let own: Vec<_> = group
+            .iter()
+            .map(|node| prepared.engine.inline_styles.get(node.index()).cloned())
+            .collect();
+        for node in &group {
+            if let Some(decls) = prepared.engine.inline_styles.get_mut(node.index()) {
+                decls.retain(|d| !matches!(d.value, DeclValue::Custom { .. }));
+            }
+        }
+        let base = prepared.engine.base_pass();
+        for (node, own) in group.into_iter().zip(own) {
+            let i = node.index();
+            if let (Some(decls), Some(own)) = (prepared.engine.inline_styles.get_mut(i), own) {
+                *decls = own;
+            }
+            let custom = base
+                .styles
+                .get(i)
+                .and_then(Option::as_ref)
+                .or_else(|| base.hidden.get(i).and_then(Option::as_ref))
+                .map(|s| s.style.custom_properties.clone())
+                .unwrap_or_default();
+            stripped.insert(node, custom);
+        }
+    }
+    declared
+        .into_iter()
+        .map(|(node, rules)| {
+            let custom = stripped.remove(&node).or_else(|| {
+                computed
+                    .computed(node)
+                    .map(|s| s.style.custom_properties.clone())
+            });
+            let values = rules
+                .into_iter()
+                .map(|(name, written)| {
+                    // A `var()` stays one, for the runtime to resolve
+                    // against what an ancestor holds after a script's write.
+                    let value = match written {
+                        Some(tokens) if contains_var_function(&tokens) => Some(tokens),
+                        _ => custom.as_ref().and_then(|c| c.get(&name)).cloned(),
+                    };
+                    (name, value)
+                })
+                .collect();
+            (node, values)
+        })
+        .collect()
+}
+
+/// `node`'s ancestors, each one counted in the tests that pin how many the
+/// pass grouping walks.
+fn walked_ancestors(doc: &Document, node: NodeId) -> impl Iterator<Item = NodeId> + '_ {
+    doc.ancestors(node).inspect(|_| {
+        #[cfg(test)]
+        crate::work::count_ancestor_step();
+    })
+}
+
+/// `style` as clearing its `display` leaves it: unchanged when it declares
+/// none, else the declarations CSSOM keeps, each `name: value;` (measured in
+/// Chromium 158: `display: none; color: red;` reads `color: red;`). A custom
+/// property's value goes back as Chromium writes it; another's stays as
+/// written, so one CSSOM would normalize (`0` as `0px`) can still differ.
+fn without_display(style: &str) -> Option<String> {
+    let serialized: Vec<String> = kept_declarations(style)?
+        .into_iter()
+        .filter(|(name, _, _)| name != "display")
+        .map(|(name, value, important)| match important {
+            true => format!("{name}: {value} !important;"),
+            false => format!("{name}: {value};"),
+        })
+        .collect();
+    Some(serialized.join(" "))
+}
+
+/// The declarations CSSOM keeps of `style`, each `(name, value, important)`
+/// in the order it writes them back, the important ones last, or `None`
+/// when none is `display`. It keeps only the ones it parsed: not one holding
+/// a bad string, a bad url, a closer of no open block or a `!` other than a
+/// last `!important` (CSS Syntax 3, 5.4.6), and not an empty one but a
+/// custom property's. A name declared twice stays once, where it was
+/// declared last, unless only the first is important. Measured in Chromium
+/// 158, the cases in `cascade/style_display_chromium.rs`.
+fn kept_declarations(style: &str) -> Option<Vec<(String, String, bool)>> {
+    let mut kept: Vec<(String, String, bool)> = Vec::new();
+    for part in declarations(style) {
+        let Some((colon, raw_colon)) = part.colon else {
+            continue;
+        };
+        let (name, value) = (part.text[..colon].trim(), part.text[colon + 1..].trim());
+        // Only a `!` outside strings and blocks with nothing but `important`
+        // after it makes one important.
+        let important = part
+            .bang
+            .filter(|&bang| custom_value(&part.raw[bang + 1..]).eq_ignore_ascii_case("important"));
+        if part.bad || part.bangs > usize::from(important.is_some()) {
+            continue;
+        }
+        let custom = name.starts_with("--");
+        let value = match (custom, important) {
+            (true, _) => {
+                custom_value(&part.raw[raw_colon + 1..important.unwrap_or(part.raw.len())])
+            }
+            (false, Some(_)) => strip_important(value).unwrap_or(value).to_owned(),
+            (false, None) => value.to_owned(),
+        };
+        if value.is_empty() && !custom {
+            continue;
+        }
+        let name = match custom {
+            true => name.to_owned(),
+            false => name.to_ascii_lowercase(),
+        };
+        let important = important.is_some();
+        if !important && kept.iter().any(|(n, _, i)| *n == name && *i) {
+            continue;
+        }
+        kept.retain(|(n, _, _)| *n != name);
+        kept.push((name, value, important));
+    }
+    if !kept.iter().any(|(name, _, _)| name == "display") {
+        return None;
+    }
+    let (normal, important): (Vec<_>, Vec<_>) = kept.into_iter().partition(|(_, _, i)| !*i);
+    Some(normal.into_iter().chain(important).collect())
+}
+
+/// A custom property's value, its text after the `:` with comments kept, as
+/// Chromium 158 writes it back: as written but for whitespace and comments
+/// at either end, found reading `url(` as text (`url(a/*b)` goes back as
+/// `url(a`, `url(a/*b*/c)` whole). A last `\` that escapes nothing turns
+/// into the quote of a string it ends, else U+FFFD; but after a `/` one left
+/// before a newline stays, with that newline.
+fn custom_value(raw: &str) -> String {
+    let at = |i: usize| raw[i..].chars().next();
+    let (mut i, mut start, mut end) = (0, None, 0);
+    // Whether the last token is a string the text ends, and its quote; or
+    // a `\` no escape follows.
+    let (mut open_quote, mut lone) = (None, false);
+    while let Some(c) = at(i) {
+        if raw[i..].starts_with("/*") {
+            i = raw[i + 2..].find("*/").map_or(raw.len(), |j| i + j + 4);
+            continue;
+        }
+        if c.is_ascii_whitespace() {
+            i += 1;
+            continue;
+        }
+        start.get_or_insert(i);
+        (open_quote, lone) = (None, false);
+        i += c.len_utf8();
+        if c == '"' || c == '\'' {
+            loop {
+                match at(i) {
+                    None => {
+                        open_quote = Some(c);
+                        break;
+                    }
+                    Some(s) if s == c => {
+                        i += 1;
+                        break;
+                    }
+                    Some('\\') => i += 1 + at(i + 1).map_or(0, char::len_utf8),
+                    Some(s) => i += s.len_utf8(),
+                }
+            }
+        } else if c == '\\' {
+            match at(i) {
+                Some(e) if !is_newline(e) => i += e.len_utf8(),
+                _ => lone = true,
+            }
+        }
+        end = i;
+    }
+    let Some(start) = start else {
+        return String::new();
+    };
+    let mut value = raw[start..end].to_owned();
+    if value.ends_with('\\') {
+        match at(end) {
+            Some(newline) if lone && value.contains('/') => value.push(newline),
+            _ => {
+                value.pop();
+                value.push(open_quote.unwrap_or('\u{fffd}'));
+            }
+        }
+    }
+    value
+}
+
+/// One declaration of a `style` attribute as [`declarations`] reads it.
+struct Declaration {
+    /// Its text, comments a space each.
+    text: String,
+    /// Its text as written, comments too.
+    raw: String,
+    /// Where its first `:` is in `text` and in `raw`.
+    colon: Option<(usize, usize)>,
+    /// Where its last `!` outside strings, escapes and blocks is in `raw`.
+    bang: Option<usize>,
+    /// It holds a bad string, a bad url or a closer of no open block.
+    bad: bool,
+    /// Its `!`s outside strings, escapes and blocks.
+    bangs: usize,
+}
+
+/// A declaration's text as [`declarations`] reads it, with and without its
+/// comments.
+#[derive(Default)]
+struct Texts {
+    text: String,
+    raw: String,
+}
+
+impl Texts {
+    fn push(&mut self, c: char) {
+        self.text.push(c);
+        self.raw.push(c);
+    }
+}
+
+impl Extend<char> for Texts {
+    fn extend<I: IntoIterator<Item = char>>(&mut self, chars: I) {
+        for c in chars {
+            self.push(c);
+        }
+    }
+}
+
+/// The declarations of a `style` attribute as CSS Syntax 3 reads them: split
+/// at a `;` outside strings, escapes, comments, `url(` tokens and `()`, `[]`
+/// and `{}` blocks. Measured in Chromium 158, the cases in
+/// `cascade/style_display_chromium.rs`.
+fn declarations(style: &str) -> Vec<Declaration> {
+    let mut parts = Vec::new();
+    let mut out = Texts::default();
+    let (mut colon, mut bang, mut bad, mut bangs) = (None, None, false, 0);
+    // The closers of the blocks open here, innermost last: a `]` inside
+    // `(` closes nothing, and one with no block open is a token.
+    let mut closers = Vec::new();
+    // Whether what came last continues a name, escapes included: in
+    // `a\75 url(` the space ends the escape, so `url(` goes on `auurl`.
+    let mut in_name = false;
+    let mut chars = style.chars().peekable();
+    while let Some(c) = chars.next() {
+        // An unquoted `url(` reads to its `)` as one token, comments, quotes
+        // and `;` too: `url(/*)` names `/*` (CSS Syntax 3, 4.3.6).
+        if !in_name && let Some(name) = unquoted_url(c, &chars) {
+            out.push(c);
+            out.extend(chars.by_ref().take(name));
+            out.extend(std::iter::from_fn(|| {
+                chars.next_if(char::is_ascii_whitespace)
+            }));
+            // Past the spaces that may open and close it, a space before
+            // more, a quote, `(`, a non-printable or an escaped newline
+            // makes it a bad url (4.3.6).
+            let mut spaced = false;
+            while let Some(c) = chars.next() {
+                out.push(c);
+                match c {
+                    ')' => break,
+                    _ if c.is_ascii_whitespace() => {
+                        spaced = true;
+                        continue;
+                    }
+                    '\\' => match chars.next_if(|e| !is_newline(*e)) {
+                        Some(e) => out.push(e),
+                        None => bad = true,
+                    },
+                    '"' | '\'' | '(' => bad = true,
+                    _ if is_non_printable(c) => bad = true,
+                    _ => {}
+                }
+                bad |= spaced;
+            }
+            in_name = false;
+            continue;
+        }
+        match c {
+            '\\' => {
+                // The whole escape, hex digits and the space after them too.
+                let mut taken = 0;
+                let read = ident_char(&mut std::iter::once(c).chain(chars.clone()), &mut taken);
+                out.push(c);
+                out.extend(chars.by_ref().take(taken - 1));
+                in_name = read.is_some();
+            }
+            '"' | '\'' => {
+                out.push(c);
+                // A newline ends a string unescaped, a bad string, and is the
+                // whitespace after it; the end of the text ends one well.
+                loop {
+                    let Some(s) = chars.next_if(|s| !is_newline(*s)) else {
+                        bad |= chars.peek().is_some();
+                        break;
+                    };
+                    out.push(s);
+                    if s == c {
+                        break;
+                    }
+                    if s == '\\'
+                        && let Some(e) = chars.next()
+                    {
+                        out.push(e);
+                        if e == '\r' {
+                            out.extend(chars.next_if_eq(&'\n'));
+                        }
+                    }
+                }
+                in_name = false;
+            }
+            // A comment is a space between the tokens on either side.
+            '/' if chars.peek() == Some(&'*') => {
+                out.raw.push(c);
+                out.raw.push(chars.next().unwrap_or('*'));
+                let mut last = ' ';
+                for c in chars.by_ref() {
+                    out.raw.push(c);
+                    if last == '*' && c == '/' {
+                        break;
+                    }
+                    last = c;
+                }
+                in_name = false;
+                out.text.push(' ');
+            }
+            ';' if closers.is_empty() => {
+                parts.push(Declaration {
+                    text: std::mem::take(&mut out.text),
+                    raw: std::mem::take(&mut out.raw),
+                    colon: colon.take(),
+                    bang: bang.take(),
+                    bad: std::mem::take(&mut bad),
+                    bangs: std::mem::take(&mut bangs),
+                });
+                in_name = false;
+            }
+            _ => {
+                match c {
+                    '(' => closers.push(')'),
+                    '[' => closers.push(']'),
+                    '{' => closers.push('}'),
+                    ')' | ']' | '}' => match closers.last() == Some(&c) {
+                        true => _ = closers.pop(),
+                        false => bad = true,
+                    },
+                    '!' if closers.is_empty() => {
+                        bangs += 1;
+                        bang = Some(out.raw.len());
+                    }
+                    ':' if colon.is_none() => colon = Some((out.text.len(), out.raw.len())),
+                    _ => {}
+                }
+                // `#` and `@` lead a hash or at-keyword's name: `#url(` is
+                // no `url(` token.
+                in_name =
+                    c.is_alphanumeric() || matches!(c, '-' | '_' | '#' | '@') || !c.is_ascii();
+                out.push(c);
+            }
+        }
+    }
+    parts.push(Declaration {
+        text: out.text,
+        raw: out.raw,
+        colon,
+        bang,
+        bad,
+        bangs,
+    });
+    parts.retain(|part| !part.text.trim().is_empty());
+    parts
+}
+
+/// A newline as CSS reads one: `\r` and form feed are preprocessed into it.
+fn is_newline(c: char) -> bool {
+    matches!(c, '\n' | '\r' | '\x0c')
+}
+
+/// A character CSS Syntax 3 calls non-printable (4.2): a control other than
+/// tab and the newlines, or delete.
+fn is_non_printable(c: char) -> bool {
+    matches!(c, '\0'..='\x08' | '\x0b' | '\x0e'..='\x1f' | '\x7f')
+}
+
+/// When `first` and then `rest`, outside a name, open an unquoted `url(`
+/// token, how many of `rest` run to and with its `(`: the name `url` in any
+/// case and written with any escapes (`\75rl(`, `u\72 l(`), then `(` and a
+/// first non-space that is not a quote (`url("…")` is a function).
+fn unquoted_url(first: char, rest: &std::iter::Peekable<std::str::Chars<'_>>) -> Option<usize> {
+    if !matches!(first, 'u' | 'U' | '\\') {
+        return None;
+    }
+    let mut it = std::iter::once(first).chain(rest.clone());
+    let mut taken = 0;
+    for want in ['u', 'r', 'l'] {
+        if !ident_char(&mut it, &mut taken)?.eq_ignore_ascii_case(&want) {
+            return None;
+        }
+    }
+    (it.next()? == '(').then_some(())?;
+    taken += 1;
+    match it.find(|c| !c.is_ascii_whitespace()) {
+        Some('"' | '\'') => None,
+        _ => Some(taken - 1),
+    }
+}
+
+/// The next character of a name as CSS reads it, with `\` escapes decoded:
+/// up to six hex digits and one whitespace after them, or the character
+/// itself. `taken` counts the characters it reads; `None` when none is left
+/// or an escaped newline ends the name.
+fn ident_char(it: &mut (impl Iterator<Item = char> + Clone), taken: &mut usize) -> Option<char> {
+    let c = it.next()?;
+    *taken += 1;
+    if c != '\\' {
+        return Some(c);
+    }
+    let mut hex = 0_u32;
+    let mut digits = 0;
+    while digits < 6 {
+        match it.clone().next() {
+            Some(h) if h.is_ascii_hexdigit() => {
+                hex = hex * 16 + h.to_digit(16)?;
+                digits += 1;
+                it.next();
+                *taken += 1;
+            }
+            _ => break,
+        }
+    }
+    if digits == 0 {
+        let e = it.next()?;
+        *taken += 1;
+        return (!is_newline(e)).then_some(e);
+    }
+    if let Some(w) = it.clone().next().filter(char::is_ascii_whitespace) {
+        it.next();
+        *taken += 1;
+        // CR LF is one newline, so one whitespace.
+        if w == '\r' && it.clone().next() == Some('\n') {
+            it.next();
+            *taken += 1;
+        }
+    }
+    Some(
+        char::from_u32(hex)
+            .filter(|&c| c != '\0')
+            .unwrap_or('\u{FFFD}'),
+    )
+}
+
+/// `value` without a trailing `!important`, when it has one.
+fn strip_important(value: &str) -> Option<&str> {
+    let bang = value.rfind('!')?;
+    value[bang + 1..]
+        .trim()
+        .eq_ignore_ascii_case("important")
+        .then(|| value[..bang].trim_end())
 }
 
 fn declares_display(decl: &ParsedDecl) -> bool {
@@ -874,6 +1413,51 @@ pub(crate) fn prepare<'a>(
 }
 
 impl CascadeEngine<'_> {
+    /// The custom properties the rules matching `node` declare, its
+    /// `style` attribute's left out, each with the tokens the winning
+    /// declaration wrote (`None` for a CSS-wide keyword).
+    fn rule_custom_declared(
+        &self,
+        node: NodeId,
+        match_ctx: &MatchContext<'_>,
+    ) -> BTreeMap<String, Option<String>> {
+        let mut won: BTreeMap<String, (CascadeKey, Option<String>)> = BTreeMap::new();
+        let Some(elem) = self.doc.element(node) else {
+            return BTreeMap::new();
+        };
+        let bloom = self.ancestor_blooms[node.index()] | self.dynamic_bloom;
+        self.element_rules.for_each_candidate_with(
+            elem,
+            bloom,
+            self.extra_classes(node),
+            |sel, rule| {
+                if matches_selector(sel, node, match_ctx) {
+                    for (offset, decl) in rule.declarations.iter().enumerate() {
+                        if let DeclValue::Custom { name, value } = &decl.value {
+                            let key = CascadeKey {
+                                tier: OriginTier::of(rule.origin, decl.important),
+                                is_inline_style: false,
+                                layer_key: rule.layer_key.clone(),
+                                specificity: rule.specificity,
+                                order: rule.base_order.saturating_add(offset as u32),
+                            };
+                            let tokens = match value {
+                                CustomDeclValue::Tokens(t) => Some(t.clone()),
+                                CustomDeclValue::Wide(_) => None,
+                            };
+                            if won.get(name).is_none_or(|(k, _)| *k < key) {
+                                won.insert(name.clone(), (key, tokens));
+                            }
+                        }
+                    }
+                }
+            },
+        );
+        won.into_iter()
+            .map(|(name, (_, tokens))| (name, tokens))
+            .collect()
+    }
+
     fn extra_classes(&self, node: NodeId) -> &[String] {
         self.dynamic_classes
             .get(node.index())
@@ -909,6 +1493,8 @@ impl CascadeEngine<'_> {
 
     /// The cascade of the document as loaded, in pre-order.
     pub(crate) fn base_pass(&self) -> BasePass {
+        #[cfg(test)]
+        crate::work::count_base_pass();
         let doc = self.doc;
         let mut styles: Vec<Option<ElementStyle>> = vec![None; doc.len()];
         let mut hidden: Vec<Option<ElementStyle>> = vec![None; doc.len()];
@@ -2221,12 +2807,60 @@ pub(crate) fn layer_ranks(sheets: &[Stylesheet], viewport: &Viewport) -> LayerRa
 }
 
 #[cfg(test)]
+mod sheet_vars_work;
+#[cfg(test)]
+#[rustfmt::skip]
+mod style_display_chromium;
+#[cfg(test)]
 mod variant_work;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::{Length, LengthAuto, LengthPercentage, Rgba, Size};
+
+    /// Clearing `display` writes the normal declarations, then the
+    /// important ones, and a later normal one never replaces an important
+    /// one: what Chromium 158 writes back for each.
+    #[test]
+    fn clearing_display_writes_back_what_chromium_writes() {
+        for (style, chromium) in [
+            (
+                "color:red !important;display:none;color:blue",
+                "color: red !important;",
+            ),
+            ("--a:x !important;--a:y;display:none", "--a: x !important;"),
+            ("--a:y;--a:x !important;display:none", "--a: x !important;"),
+            (
+                "--a:x !important;--a:y !important;display:none",
+                "--a: y !important;",
+            ),
+            (
+                "--a:x !important;--b:x;display:none;color:red",
+                "--b: x; color: red; --a: x !important;",
+            ),
+        ] {
+            assert_eq!(without_display(style).as_deref(), Some(chromium), "{style}");
+        }
+    }
+
+    /// Each recorded `style` text declares `display` here when it does in
+    /// Chromium: the tokenizer's edges by name, then seed 51's generated run.
+    #[test]
+    fn a_style_attribute_declares_display_where_chromium_reads_one() {
+        use super::style_display_chromium::{GENERATED, NAMED};
+        let differ: Vec<_> = NAMED
+            .iter()
+            .chain(GENERATED)
+            .filter(|(style, written)| without_display(style).as_deref() != *written)
+            .collect();
+        assert!(
+            differ.is_empty(),
+            "{} of {} recorded texts differ from Chromium (text, what Chromium writes back): {differ:#?}",
+            differ.len(),
+            NAMED.len() + GENERATED.len(),
+        );
+    }
 
     #[test]
     fn blockification_rules_per_css_display_3() {

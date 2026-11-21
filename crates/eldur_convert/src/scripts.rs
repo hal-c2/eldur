@@ -37,6 +37,10 @@ pub(crate) struct Scripts {
     /// their own `display` and `hidden` attribute gone: see
     /// `eldur_css::rules_hide`.
     pub(crate) rules_hide: HashSet<NodeId>,
+    /// What the stylesheets declare on the elements a script writes the
+    /// display of and on their ancestors: see
+    /// `eldur_css::sheet_custom_properties`.
+    pub(crate) sheet_vars: HashMap<NodeId, BTreeMap<String, Option<String>>>,
 }
 
 impl Scripts {
@@ -346,6 +350,7 @@ pub(crate) fn collect(
         has_details,
         attribute_displays: HashSet::new(),
         rules_hide: HashSet::new(),
+        sheet_vars: HashMap::new(),
     }
 }
 

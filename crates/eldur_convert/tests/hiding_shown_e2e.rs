@@ -419,6 +419,593 @@ const CASES: &[Case] = &[
   s.style.display = s.style.display === '' ? 'var(--d)' : '';",
         back: &[],
     },
+    // A bottom margin that varies meets a top margin that varies too: the
+    // gap takes both cases.
+    Case {
+        name: "varying_edges_meet",
+        body: r#"<div id="box"><p id="a" style="margin:0">A</p><p id="shy" style="margin:0 0 40px">Shy</p></div>
+<div id="r"><p id="shy2" style="margin:30px 0 0">S2</p><p id="after" style="margin:10px 0 0">After</p></div>"#,
+        ids: &["shy2", "after", "t"],
+        load: &[84.0, 112.0, 130.0],
+        toggled: &[56.0, 84.0, 102.0],
+        toggle: "const s = document.getElementById('shy');
+  s.style.display = s.style.display === '' ? 'none' : '';
+  if (s.dataset.never) document.getElementById('shy2').style.display = 'none';",
+        back: &[],
+    },
+    // A bottom margin that varies, past a box hidden as loaded, still
+    // varies at the block after.
+    Case {
+        name: "varying_edge_past_hidden",
+        body: r#"<div id="box"><p id="a" style="margin:0">A</p><p id="shy" style="margin:0 0 40px">Shy</p></div>
+<div id="mid" style="display:none;margin:0">Mid</div>
+<p id="after" style="margin:10px 0 0">After</p>"#,
+        ids: &["after", "t"],
+        load: &[84.0, 102.0],
+        toggled: &[36.0, 54.0],
+        toggle: "const s = document.getElementById('shy');
+  s.style.display = s.style.display === '' ? 'none' : '';
+  if (s.dataset.never) document.getElementById('mid').style.display = '';",
+        back: &[],
+    },
+    // A bottom margin that varies stays inside a parent with bottom padding
+    // only while the block giving it shows.
+    Case {
+        name: "varying_edge_closed",
+        body: r#"<div id="wrap" style="padding-bottom:1px"><div id="box"><p id="a" style="margin:0">A</p><p id="shy" style="margin:0 0 40px">Shy</p></div></div>
+<p id="after" style="margin:0">After</p>"#,
+        ids: &["after", "t"],
+        load: &[85.0, 103.0],
+        toggled: &[27.0, 45.0],
+        toggle: "const s = document.getElementById('shy');
+  s.style.display = s.style.display === '' ? 'none' : '';",
+        back: &[],
+    },
+    // A custom property a script changes shows the box whose display
+    // reads it, with nothing else written.
+    Case {
+        name: "variable_changed",
+        body: r#"<div id="host" style="--d:none"><p id="shy"><em>Shy</em></p></div>
+<p id="after">After</p>
+<script>document.getElementById('shy').style.display = 'var(--d)';</script>"#,
+        ids: &["after", "t"],
+        load: &[16.0, 50.0],
+        toggled: &[50.0, 84.0],
+        toggle: "const h = document.getElementById('host');
+  h.style.setProperty('--d', h.style.getPropertyValue('--d') === 'none' ? 'block' : 'none');",
+        back: &[],
+    },
+    // An inherited custom property is resolved where it is declared: the
+    // child's `--base` does not change what the parent's `--display` is.
+    Case {
+        name: "variable_resolved_first",
+        body: r#"<div id="host" style="--base:none;--display:var(--base)"><p id="shy" style="--base:block"><em>Shy</em></p></div>
+<p id="after">After</p>"#,
+        ids: &["after", "t"],
+        load: &[50.0, 84.0],
+        toggled: &[16.0, 50.0],
+        toggle: "const s = document.getElementById('shy');
+  s.style.display = s.style.display === '' ? 'var(--display)' : '';",
+        back: &[],
+    },
+    // A custom property on an inline ancestor is one a box's `var()`
+    // display reads.
+    Case {
+        name: "variable_on_inline",
+        body: r#"<p id="line"><span style="--d:none">Text <button id="shy" style="font-size:30px">Shy</button></span></p>
+<p id="after">After</p>"#,
+        ids: &["after", "t"],
+        load: &[72.0, 106.0],
+        toggled: &[50.0, 84.0],
+        toggle: "const s = document.getElementById('shy');
+  s.style.display = s.style.display === '' ? 'var(--d)' : '';",
+        back: &[],
+    },
+    // A class a script takes away no longer hides the block: clearing its
+    // `display` after that shows it, as the class world it is in says.
+    Case {
+        name: "class_gone_display_cleared",
+        body: r#"<style>p{margin:0;height:20px}.off{display:none}</style>
+<p id="a">A</p><p id="shy" class="off">B</p><p id="c">C</p>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const s = document.getElementById('shy');
+  if (s.classList.contains('off')) { s.classList.remove('off'); s.style.display = 'none'; } else { s.style.display = s.style.display ? '' : 'none'; }",
+        back: &[8.0, 48.0],
+    },
+    // The same through a class taken off an ancestor.
+    Case {
+        name: "ancestor_class_gone_display_cleared",
+        body: r#"<style>p{margin:0;height:20px}.off #shy{display:none}</style>
+<div id="w" class="off"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const s = document.getElementById('shy'); const w = document.getElementById('w');
+  if (w.classList.contains('off')) { w.classList.remove('off'); s.style.display = 'none'; } else { s.style.display = s.style.display ? '' : 'none'; }",
+        back: &[8.0, 48.0],
+    },
+    // A class a script adds hides the block once its own `display: none`
+    // is cleared, though no rule hid it as loaded.
+    Case {
+        name: "class_added_display_cleared",
+        body: r#"<style>p{margin:0;height:20px}.off{display:none}</style>
+<p id="a">A</p><p id="shy" style="display:none">B</p><p id="c">C</p>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const s = document.getElementById('shy');
+  if (!s.classList.contains('off')) { s.classList.add('off'); } else { s.style.display = s.style.display ? '' : 'none'; }",
+        back: &[],
+    },
+    // A `var()` display a script writes reads a custom property a
+    // stylesheet declares.
+    Case {
+        name: "sheet_variable",
+        body: r#"<style>p{margin:0;height:20px}:root{--d:none}</style>
+<p id="a">A</p><p id="shy">B</p><p id="c">C</p>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const s = document.getElementById('shy');
+  s.style.display = s.style.display ? '' : 'var(--d)';",
+        back: &[],
+    },
+    // A script's custom property on an ancestor's `style` wins over the
+    // one its stylesheet declares, until the script takes it away again.
+    Case {
+        name: "sheet_variable_overridden",
+        body: r#"<style>p{margin:0;height:20px}#w{--d:none}</style>
+<div id="w"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const s = document.getElementById('shy'); const w = document.getElementById('w');
+  if (!s.style.display) { s.style.display = 'var(--d)'; } else { w.style.setProperty('--d', w.style.getPropertyValue('--d') ? '' : 'block'); }",
+        back: &[],
+    },
+    // `initial` makes a custom property guaranteed-invalid, so one that
+    // reads it takes its fallback (#85).
+    Case {
+        name: "variable_initial_fallback",
+        body: r#"<style>p{margin:0;height:20px}</style>
+<div id="w" style="--a:initial;--b:var(--a, none)"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const s = document.getElementById('shy');
+  s.style.display = s.style.display ? '' : 'var(--b, block)';",
+        back: &[],
+    },
+    // A rule declaring the custom property on the child holds against an
+    // ancestor's later write, though both had the same value as loaded.
+    Case {
+        name: "variable_declared_on_child",
+        body: r#"<style>p{margin:0;height:20px}#w{--d:block}#in{--d:block}</style>
+<div id="w"><div id="in"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 48.0],
+        toggle: "const s = document.getElementById('shy'); const w = document.getElementById('w');
+  if (!s.style.display) { s.style.display = 'var(--d)'; w.style.setProperty('--d', 'none'); } else { s.style.display = ''; w.style.removeProperty('--d'); }",
+        back: &[],
+    },
+    // The stylesheet's value comes back once a script removes the `style`
+    // attribute's.
+    Case {
+        name: "sheet_variable_under_attribute",
+        body: r#"<style>p{margin:0;height:20px}#w{--d:none}</style>
+<div id="w" style="--d:block"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const s = document.getElementById('shy'); const w = document.getElementById('w');
+  if (!s.style.display) { s.style.display = 'var(--d)'; w.style.removeProperty('--d'); } else { s.style.display = ''; w.style.setProperty('--d', 'block'); }",
+        back: &[],
+    },
+    // A `;` and a name inside a string in the `style` attribute are part of
+    // a value, not a declaration of their own.
+    Case {
+        name: "attribute_string_holds_a_name",
+        body: r#"<style>p{margin:0;height:20px}#w{--d:none}</style>
+<div id="w" style='--note:"x;--d:1"'><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const s = document.getElementById('shy');
+  s.style.display = s.style.display ? '' : 'var(--d)';",
+        back: &[],
+    },
+    // An element a script makes with a `var()` display reads the custom
+    // property where it is put, as loaded and after a later write there.
+    Case {
+        name: "created_variable_display_follows",
+        body: r#"<style>p{margin:0;height:20px}#w{--d:block}</style>
+<div id="w"><p id="a">A</p><p id="c">C</p></div>
+<script>const made = document.createElement('p'); made.textContent = 'B'; made.style.display = 'var(--d)'; document.getElementById('w').insertBefore(made, document.getElementById('c'));</script>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const w = document.getElementById('w');
+  w.style.setProperty('--d', w.style.getPropertyValue('--d') ? '' : 'none');",
+        back: &[],
+    },
+    // The same, with the display written once the element is in place.
+    Case {
+        name: "appended_then_variable_display_follows",
+        body: r#"<style>p{margin:0;height:20px}#w{--d:block}</style>
+<div id="w"><p id="a">A</p><p id="c">C</p></div>
+<script>const made = document.createElement('p'); made.textContent = 'B'; document.getElementById('w').insertBefore(made, document.getElementById('c')); made.style.display = 'var(--d)';</script>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const w = document.getElementById('w');
+  w.style.setProperty('--d', w.style.getPropertyValue('--d') ? '' : 'none');",
+        back: &[],
+    },
+    // An element appended last, past the hiding host's other children,
+    // reads the custom property there and follows a later write (#85).
+    Case {
+        name: "appended_child_variable_display_follows",
+        body: r#"<style>p{margin:0;height:20px}#w{--d:block}</style>
+<div id="w"><p id="a">A</p></div><p id="c">C</p>
+<script>const made = document.createElement('p'); made.textContent = 'B'; made.style.display = 'var(--d)'; document.getElementById('w').appendChild(made);</script>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const w = document.getElementById('w');
+  w.style.setProperty('--d', w.style.getPropertyValue('--d') ? '' : 'none');",
+        back: &[],
+    },
+    // A button inside an inline span a script reaches reads the custom
+    // property the span declares over the block's, with the page's rules
+    // held at runtime (#85).
+    Case {
+        name: "virtual_span_reached_variable_display",
+        body: r#"<style>#w{--gate:block}</style><div id="w"><p id="a" style="margin:0">A</p><p style="margin:0">x<span id="s" style="--gate:none">y<button id="b" style="height:40px;margin:0;padding:0;border:0;vertical-align:top">B</button></span></p><p id="c" style="margin:0">C</p></div>
+<script>window.spanSeen = document.getElementById('s').textContent;</script>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 66.0],
+        toggled: &[8.0, 44.0],
+        toggle: "const b = document.getElementById('b');
+  b.style.display = b.style.display ? '' : 'var(--gate)';",
+        back: &[],
+    },
+    // The same with no stylesheet: the page's own rules still decide.
+    Case {
+        name: "virtual_span_reached_variable_display_no_sheet",
+        body: r#"<div id="w" style="--gate:block"><p id="a" style="margin:0">A</p><p style="margin:0">x<span id="s" style="--gate:none">y<button id="b" style="height:40px;margin:0;padding:0;border:0;vertical-align:top">B</button></span></p><p id="c" style="margin:0">C</p></div>
+<script>window.spanSeen = document.getElementById('s').textContent;</script>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 66.0],
+        toggled: &[8.0, 44.0],
+        toggle: "const b = document.getElementById('b');
+  b.style.display = b.style.display ? '' : 'var(--gate)';",
+        back: &[],
+    },
+    // And a custom property a script writes on the span, once the button's
+    // display reads it.
+    Case {
+        name: "virtual_span_written_variable_display",
+        body: r#"<style>#w{--gate:block}</style><div id="w"><p id="a" style="margin:0">A</p><p style="margin:0">x<span id="s">y<button id="b" style="height:40px;margin:0;padding:0;border:0;vertical-align:top">B</button></span></p><p id="c" style="margin:0">C</p></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 66.0],
+        toggled: &[8.0, 44.0],
+        toggle: "const b = document.getElementById('b'); const s = document.getElementById('s');
+  if (!b.style.display) { s.style.setProperty('--gate', 'none'); b.style.display = 'var(--gate)'; } else { b.style.display = ''; s.style.removeProperty('--gate'); }",
+        back: &[],
+    },
+    Case {
+        name: "virtual_span_written_variable_display_no_sheet",
+        body: r#"<div id="w" style="--gate:block"><p id="a" style="margin:0">A</p><p style="margin:0">x<span id="s">y<button id="b" style="height:40px;margin:0;padding:0;border:0;vertical-align:top">B</button></span></p><p id="c" style="margin:0">C</p></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 66.0],
+        toggled: &[8.0, 44.0],
+        toggle: "const b = document.getElementById('b'); const s = document.getElementById('s');
+  if (!b.style.display) { s.style.setProperty('--gate', 'none'); b.style.display = 'var(--gate)'; } else { b.style.display = ''; s.style.removeProperty('--gate'); }",
+        back: &[],
+    },
+    // A custom property only a class's rule declares is the inherited one
+    // where the class does not apply, and the rule's once a script adds the
+    // class (#85).
+    Case {
+        name: "class_only_variable_inherits_elsewhere",
+        body: r#"<style>p{margin:0;height:20px}#o{--d:block}#w.k{--d:none}</style>
+<div id="o"><div id="w"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 48.0],
+        toggle: "const s = document.getElementById('shy'); const w = document.getElementById('w');
+  if (!s.style.display) { s.style.display = 'var(--d)'; } else { w.classList.toggle('k'); }",
+        back: &[8.0, 28.0],
+    },
+    // The same, inheriting the host's `style` attribute.
+    Case {
+        name: "class_only_variable_inherits_inline_host",
+        body: r#"<style>p{margin:0;height:20px}#w.k{--d:none}</style>
+<div id="o" style="--d:block"><div id="w"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 48.0],
+        toggle: "const s = document.getElementById('shy'); const w = document.getElementById('w');
+  if (!s.style.display) { s.style.display = 'var(--d)'; } else { w.classList.toggle('k'); }",
+        back: &[8.0, 28.0],
+    },
+    // And for a display a rule reads it in.
+    Case {
+        name: "class_only_variable_written_display",
+        body: r#"<style>p{margin:0;height:20px}#o{--d:block}#w.k{--d:none}#shy{display:var(--d)}</style>
+<div id="o"><div id="w"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('w').classList.toggle('k');",
+        back: &[],
+    },
+    // The margins collapse around a rule's `var()` display as a class change
+    // leaves it: hidden, it keeps no 40px gap between its neighbours.
+    Case {
+        name: "class_variable_display_margins_close",
+        body: r#"<style>p{margin:0;height:20px}#o{--d:block}#w.k{--d:none}#shy{margin:40px 0;display:var(--d)}</style>
+<div id="o"><div id="w"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 128.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('w').classList.toggle('k');",
+        back: &[],
+    },
+    // The same for a script's `var()` display.
+    Case {
+        name: "written_variable_display_margins_close",
+        body: r#"<style>p{margin:0;height:20px}#o{--d:block}#w.k{--d:none}#shy{margin:40px 0}</style>
+<div id="o"><div id="w"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 128.0],
+        toggled: &[8.0, 128.0],
+        toggle: "const s = document.getElementById('shy'); const w = document.getElementById('w');
+  if (!s.style.display) { s.style.display = 'var(--d)'; } else { w.classList.toggle('k'); }",
+        back: &[8.0, 28.0],
+    },
+    // `url(/*)` names `/*`, so the `display:none` after it is the attribute's
+    // own and clearing it leaves nothing for `[style*="display"]` to match.
+    Case {
+        name: "url_comment_display_cleared",
+        body: r#"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="background-image:url(/*);display:none">B</p><p id="c">C</p>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "",
+        back: &[],
+    },
+    // The same with the name written with escapes, which CSS decodes first.
+    Case {
+        name: "escaped_url_comment_display_cleared",
+        body: r#"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="background-image:\75rl(/*);display:none">B</p><p id="c">C</p>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "",
+        back: &[],
+    },
+    Case {
+        name: "spaced_escape_url_comment_display_cleared",
+        body: r#"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="background-image:u\72 l(/*);display:none">B</p><p id="c">C</p>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "",
+        back: &[],
+    },
+    // The tokenizer's edges (Chromium 158, `out/g17/chromium/r85n`): clearing
+    // `display` shows `#shy` only when its `style` text declares one.
+    Case {
+        name: "edge_escaped_quote_in_string",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:&quot;a\&quot;/*&quot;;display:none;--b:*/;color:red">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[8.0, 48.0],
+    },
+    Case {
+        name: "edge_newline_ends_string",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:&quot;a
+;display:none;--b:&quot;">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[8.0, 48.0],
+    },
+    Case {
+        name: "edge_backslash_at_end",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="display:none;--a:\">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[8.0, 48.0],
+    },
+    Case {
+        name: "edge_six_digit_escape_space",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:\000075 rl(/*);display:none;--b:*/;color:red">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[8.0, 48.0],
+    },
+    Case {
+        name: "edge_escape_crlf_continues_name",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:a\75&#13;
+url(/*);display:none;--b:*/;color:red">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
+    Case {
+        name: "edge_escaped_slash",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:\/*;display:none;--b:*/;color:red">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[8.0, 48.0],
+    },
+    Case {
+        name: "edge_url_quoted_arg_comment",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:url( &quot;/*&quot; /* x */);display:none;--b:*/;color:red">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[8.0, 48.0],
+    },
+    Case {
+        name: "edge_unclosed_url",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:url(/*;display:none">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
+    Case {
+        name: "edge_comment_after_quote_in_url",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:url(a&quot;/*);display:none;--b:*/;color:red">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[8.0, 48.0],
+    },
+    Case {
+        name: "edge_digit_led_name",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:5url(/*);display:none;--b:*/;color:red">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
+    Case {
+        name: "edge_double_dash_ident",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:--url(/*);display:none;--b:*/;color:red">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
+    Case {
+        name: "edge_hash_name",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:#url(/*);display:none;--b:*/;color:red">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
+    Case {
+        name: "edge_bracket_block",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:[;display:none;--b:];color:red">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
+    // `url(` right after an escape goes on that name, a function, so its
+    // `/*` is a comment and no `display` is declared to clear.
+    Case {
+        name: "escape_space_continues_name",
+        body: r#"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:a\75 url(/*);display:none */">B</p><p id="c">C</p>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
+    Case {
+        name: "escape_continues_name",
+        body: r#"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:a\75url(/*);display:none */">B</p><p id="c">C</p>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
+    Case {
+        name: "escaped_letter_continues_name",
+        body: r#"<style>p{margin:0;height:20px}#shy[style*="display"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:\61 url(/*);display:none */">B</p><p id="c">C</p>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
+    // In the world a class makes, the custom property is what that class's
+    // rule declares, not the value as loaded.
+    Case {
+        name: "class_world_variable_display",
+        body: r#"<style>p{margin:0;height:20px}#w{--d:block}#w.off{--d:none}#shy{display:none}</style>
+<div id="w"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const w = document.getElementById('w'); const s = document.getElementById('shy');
+  if (!w.classList.contains('off')) { w.classList.add('off'); s.style.display = 'var(--d)'; } else { w.classList.remove('off'); s.style.display = ''; }",
+        back: &[],
+    },
+    // A rule's custom property that reads another one follows a later write
+    // of that one on an ancestor.
+    Case {
+        name: "sheet_variable_chain",
+        body: r#"<style>p{margin:0;height:20px}#w{--d:block}#in{--e:var(--d)}</style>
+<div id="w"><div id="in"><p id="a">A</p><p id="shy">B</p><p id="c">C</p></div></div>"#,
+        ids: &["a", "c"],
+        load: &[8.0, 48.0],
+        toggled: &[8.0, 28.0],
+        toggle: "const s = document.getElementById('shy'); const w = document.getElementById('w');
+  if (!s.style.display) { s.style.display = 'var(--e)'; w.style.setProperty('--d', 'none'); } else { s.style.display = ''; w.style.removeProperty('--d'); }",
+        back: &[],
+    },
+    // A padded column's last item, which a script may hide, keeps its last
+    // block's margin inside only while that block shows.
+    Case {
+        name: "padded_last_item_tail_hides",
+        body: r#"<style>p{margin:0;height:20px}#w{padding:1px 0}#tail{margin-bottom:20px}</style>
+<div id="w"><p id="a">A</p><div id="last"><p id="x">X</p><p id="tail">T</p></div></div><p id="c">C</p>
+<script>function hideLast() { document.getElementById('last').style.display = 'none'; }</script>"#,
+        ids: &["a", "c"],
+        load: &[9.0, 90.0],
+        toggled: &[9.0, 50.0],
+        toggle: "const t = document.getElementById('tail');
+  t.style.display = t.style.display === 'none' ? '' : 'none';",
+        back: &[],
+    },
     // `ruby` and `math` are valid displays that win over the `none` before
     // them: an inline box once `hidden` is removed. A script hiding an
     // inline box alone in its line isn't followed yet (as with `inline`),
@@ -572,6 +1159,58 @@ const CASES: &[Case] = &[
         load: &[16.0, 50.0],
         toggled: &[16.0, 50.0],
         toggle: "",
+        back: &[],
+    },
+    Case {
+        name: "edge_dropped_bad_string",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="--a"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:&quot;a
+;display:none;--b:&quot;">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[8.0, 48.0],
+    },
+    Case {
+        name: "edge_dropped_stray_bang",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="--a"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:a!b;display:none">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[8.0, 48.0],
+    },
+    Case {
+        name: "edge_dropped_closer_in_block",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="--a"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:(a]);display:none">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 48.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[8.0, 48.0],
+    },
+    Case {
+        name: "edge_kept_empty_custom",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="--a"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:;display:none">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
+        back: &[],
+    },
+    Case {
+        name: "edge_kept_bad_redeclaration",
+        body: r##"<style>p{margin:0;height:20px}#shy[style*="--a"]{display:none}</style>
+<p id="a">A</p><p id="shy" style="--a:1;--a:&quot;x
+;display:none">B</p><p id="c">C</p>"##,
+        ids: &["a", "c"],
+        load: &[8.0, 28.0],
+        toggled: &[8.0, 28.0],
+        toggle: "document.getElementById('shy').style.display = '';",
         back: &[],
     },
 ];
@@ -934,4 +1573,279 @@ fn a_class_rule_keeps_it_hidden_too() {
 #[test]
 fn a_rule_keeps_a_block_whose_hidden_attribute_is_removed_hidden() {
     run(case("rule_hides_hidden_removed"));
+}
+
+#[test]
+fn a_varying_bottom_margin_meets_a_varying_top_margin() {
+    run(case("varying_edges_meet"));
+}
+
+#[test]
+fn a_varying_bottom_margin_passes_a_block_hidden_as_loaded() {
+    run(case("varying_edge_past_hidden"));
+}
+
+#[test]
+fn a_varying_bottom_margin_stays_inside_a_padded_parent() {
+    run(case("varying_edge_closed"));
+}
+
+#[test]
+fn a_changed_custom_property_shows_the_block_again() {
+    run(case("variable_changed"));
+}
+
+#[test]
+fn a_parents_custom_property_is_resolved_before_a_child_overrides_what_it_reads() {
+    run(case("variable_resolved_first"));
+}
+
+#[test]
+fn a_custom_property_on_an_inline_ancestor_is_read() {
+    run(case("variable_on_inline"));
+}
+
+#[test]
+fn a_block_whose_hiding_class_is_gone_shows_once_its_display_is_cleared() {
+    run(case("class_gone_display_cleared"));
+}
+
+#[test]
+fn a_variable_display_reads_a_stylesheet_custom_property() {
+    run(case("sheet_variable"));
+}
+
+#[test]
+fn a_scripts_custom_property_wins_over_the_stylesheets_until_removed() {
+    run(case("sheet_variable_overridden"));
+}
+
+#[test]
+fn an_initial_custom_property_gives_way_to_the_fallback() {
+    run(case("variable_initial_fallback"));
+}
+
+#[test]
+fn a_custom_property_a_rule_declares_on_the_child_holds_against_the_ancestors_write() {
+    run(case("variable_declared_on_child"));
+}
+
+#[test]
+fn the_stylesheets_custom_property_comes_back_once_the_attributes_is_removed() {
+    run(case("sheet_variable_under_attribute"));
+}
+
+#[test]
+fn a_name_inside_a_string_in_the_style_attribute_declares_nothing() {
+    run(case("attribute_string_holds_a_name"));
+}
+
+#[test]
+fn a_created_elements_variable_display_reads_where_it_is_put_and_follows_writes_there() {
+    run(case("created_variable_display_follows"));
+}
+
+#[test]
+fn an_appended_elements_variable_display_follows_a_later_write() {
+    run(case("appended_then_variable_display_follows"));
+}
+
+#[test]
+fn a_class_worlds_custom_property_is_what_its_rule_declares() {
+    run(case("class_world_variable_display"));
+}
+
+#[test]
+fn a_rules_custom_property_reading_another_follows_a_write_of_that_one() {
+    run(case("sheet_variable_chain"));
+}
+
+#[test]
+fn a_padded_columns_hideable_last_item_keeps_its_last_blocks_margin_only_while_shown() {
+    run(case("padded_last_item_tail_hides"));
+}
+
+#[test]
+fn a_block_whose_ancestors_hiding_class_is_gone_shows_once_its_display_is_cleared() {
+    run(case("ancestor_class_gone_display_cleared"));
+}
+
+#[test]
+fn a_class_added_after_load_hides_the_block_once_its_display_is_cleared() {
+    run(case("class_added_display_cleared"));
+}
+
+#[test]
+fn an_appended_last_childs_variable_display_follows_a_later_write() {
+    run(case("appended_child_variable_display_follows"));
+}
+
+#[test]
+fn a_button_in_a_reached_inline_span_reads_the_spans_custom_property() {
+    run(case("virtual_span_reached_variable_display"));
+}
+
+#[test]
+fn a_button_in_a_reached_inline_span_reads_it_with_no_stylesheet_too() {
+    run(case("virtual_span_reached_variable_display_no_sheet"));
+}
+
+#[test]
+fn a_button_in_an_inline_span_follows_a_custom_property_written_on_the_span() {
+    run(case("virtual_span_written_variable_display"));
+}
+
+#[test]
+fn a_button_in_an_inline_span_follows_it_with_no_stylesheet_too() {
+    run(case("virtual_span_written_variable_display_no_sheet"));
+}
+
+#[test]
+fn a_custom_property_only_a_class_declares_is_inherited_until_the_class_is_added() {
+    run(case("class_only_variable_inherits_elsewhere"));
+}
+
+#[test]
+fn a_custom_property_only_a_class_declares_is_the_hosts_attribute_until_then() {
+    run(case("class_only_variable_inherits_inline_host"));
+}
+
+#[test]
+fn a_rules_variable_display_follows_a_custom_property_only_a_class_declares() {
+    run(case("class_only_variable_written_display"));
+}
+
+#[test]
+fn margins_close_around_a_rules_variable_display_a_class_hides() {
+    run(case("class_variable_display_margins_close"));
+}
+
+#[test]
+fn margins_close_around_a_scripts_variable_display_a_class_hides() {
+    run(case("written_variable_display_margins_close"));
+}
+
+#[test]
+fn a_comment_opener_in_an_unquoted_url_leaves_display_the_attributes_own() {
+    run(case("url_comment_display_cleared"));
+}
+
+#[test]
+fn a_url_name_written_with_a_hex_escape_keeps_its_comment_opener() {
+    run(case("escaped_url_comment_display_cleared"));
+}
+
+#[test]
+fn a_url_name_written_with_a_spaced_escape_keeps_its_comment_opener() {
+    run(case("spaced_escape_url_comment_display_cleared"));
+}
+
+#[test]
+fn url_after_a_spaced_escape_goes_on_that_name() {
+    run(case("escape_space_continues_name"));
+}
+
+#[test]
+fn url_after_an_escape_goes_on_that_name() {
+    run(case("escape_continues_name"));
+}
+
+#[test]
+fn url_after_an_escaped_letter_goes_on_that_name() {
+    run(case("escaped_letter_continues_name"));
+}
+
+#[test]
+fn tokenizer_edge_escaped_quote_in_string() {
+    run(case("edge_escaped_quote_in_string"));
+}
+
+#[test]
+fn tokenizer_edge_newline_ends_string() {
+    run(case("edge_newline_ends_string"));
+}
+
+#[test]
+fn tokenizer_edge_backslash_at_end() {
+    run(case("edge_backslash_at_end"));
+}
+
+#[test]
+fn tokenizer_edge_six_digit_escape_space() {
+    run(case("edge_six_digit_escape_space"));
+}
+
+#[test]
+fn tokenizer_edge_escape_crlf_continues_name() {
+    run(case("edge_escape_crlf_continues_name"));
+}
+
+#[test]
+fn tokenizer_edge_escaped_slash() {
+    run(case("edge_escaped_slash"));
+}
+
+#[test]
+fn tokenizer_edge_url_quoted_arg_comment() {
+    run(case("edge_url_quoted_arg_comment"));
+}
+
+#[test]
+fn tokenizer_edge_unclosed_url() {
+    run(case("edge_unclosed_url"));
+}
+
+#[test]
+fn tokenizer_edge_comment_after_quote_in_url() {
+    run(case("edge_comment_after_quote_in_url"));
+}
+
+#[test]
+fn tokenizer_edge_digit_led_name() {
+    run(case("edge_digit_led_name"));
+}
+
+#[test]
+fn tokenizer_edge_double_dash_ident() {
+    run(case("edge_double_dash_ident"));
+}
+
+#[test]
+fn tokenizer_edge_hash_name() {
+    run(case("edge_hash_name"));
+}
+
+#[test]
+fn tokenizer_edge_bracket_block() {
+    run(case("edge_bracket_block"));
+}
+
+/// A bad string makes clearing `display` drop its declaration, so `[style*="--a"]` no longer matches.
+#[test]
+fn tokenizer_edge_dropped_bad_string() {
+    run(case("edge_dropped_bad_string"));
+}
+
+/// A `!` other than `!important` makes clearing drop its declaration.
+#[test]
+fn tokenizer_edge_dropped_stray_bang() {
+    run(case("edge_dropped_stray_bang"));
+}
+
+/// A `]` inside `(` closes no block and makes clearing drop its declaration.
+#[test]
+fn tokenizer_edge_dropped_closer_in_block() {
+    run(case("edge_dropped_closer_in_block"));
+}
+
+/// An empty custom property is a declaration clearing keeps.
+#[test]
+fn tokenizer_edge_kept_empty_custom() {
+    run(case("edge_kept_empty_custom"));
+}
+
+/// A bad redeclaration is dropped, so the one before it stays.
+#[test]
+fn tokenizer_edge_kept_bad_redeclaration() {
+    run(case("edge_kept_bad_redeclaration"));
 }

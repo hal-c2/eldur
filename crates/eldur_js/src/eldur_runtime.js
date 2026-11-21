@@ -1048,6 +1048,8 @@ function init(rootItem, baseUrl, documentUrl) {
 // again when it is up again; its own callbacks still run in its own document
 // meanwhile (`_asPage`). The timer queue and custom elements stay shared.
 function _resetPageState() {
+    // It holds the last page's items; the next one starts with none.
+    _gVarDisplays.clear();
     _dropHelper(_timerWake);
     _dropHelper(_rafAnim);
     _dropHelper(_aTicker);
@@ -7267,12 +7269,16 @@ function _setStyleAt(item, prop, value) {
     var name = rawName.indexOf("--") === 0 ? rawName : _kebabToCamel(rawName);
     if (name === "display") {
         str = _displayWritten(str);
+        _gNoteVarDisplay(raw, str);
     }
     m.styles[name] = str;
     if (rawName !== name) {
         m.styles[rawName] = str;
     }
     _gTouch();
+    if (name.indexOf("--") === 0 && !_gActive()) {
+        _varDisplaysFollow(raw);
+    }
     if (_vBlockFont(raw, name)) {
         return;
     }
@@ -7317,7 +7323,9 @@ function _setStyleAt(item, prop, value) {
                     }
                 });
             } else {
-                _setShown(raw, !_displayHides(raw, str));
+                // A closed disclosure keeps it folded; `_detailsShow` reads
+                // this display when it opens.
+                _setShown(raw, !_displayHides(raw, str) && !_gFoldedAway(raw));
                 _gShownInline(raw, str === "inline");
             }
         }
@@ -7719,23 +7727,151 @@ function _displayHides(raw, value) {
     return got !== null && got.trim().toLowerCase() === "none";
 }
 
-// The custom properties the element and its ancestors declare themselves,
-// the nearest winning.
+// The custom properties the element and its ancestors declare, in their
+// `style` attributes or, as the converter resolved them, their stylesheets
+// (`eldurVars`), virtual inline ones too. Each element's are substituted before they pass
+// on, so a child's override does not change what its parent's resolved to.
 function _ownVars(raw) {
-    var vars = {};
-    for (var at = raw, depth = 0; at && depth < 256; at = _gParent(at), ++depth) {
-        if (typeof at !== "object" || at.__eldurInline) {
-            break;
-        }
-        var decls = _styleDecls(at, _meta(at));
-        for (var i = 0; i < decls.length; ++i) {
-            var k = decls[i][0];
-            if (k.indexOf("--") === 0 && vars[k] === undefined) {
-                vars[k] = String(decls[i][1]).replace(/!\s*important\s*$/i, "").trim();
+    var logical = [];
+    for (var at = raw; at && typeof at === "object" && logical.length < 256;) {
+        logical.push(at);
+        var up = _logicalParent(at);
+        at = up === at ? null : up;
+    }
+    // An untagged wrapper the logical walk steps over, the `html` element on
+    // a page with no runtime DOM, still holds what the stylesheets declare
+    // on it. Only those: a physical walk from an item under a virtual
+    // inline element passes the host the logical walk reaches anyway, and
+    // the host taken twice would override the inline element's value.
+    var onPath = new Set(logical);
+    var chain = [];
+    for (var l = 0; l < logical.length && chain.length < 256; ++l) {
+        chain.push(logical[l]);
+        for (var q = logical[l].parent; q && typeof q === "object" && !onPath.has(q) && chain.length < 256; q = q.parent) {
+            if (q.eldurVars && typeof q.eldurVars === "object") {
+                chain.push(q);
             }
         }
     }
+    var vars = {};
+    for (var c = chain.length - 1; c >= 0; --c) {
+        var decls = _styleDecls(chain[c], _meta(chain[c]));
+        var own = null;
+        // What the stylesheets declare on it, under its `style` attribute's.
+        var sheet = chain[c].eldurVars;
+        if (sheet && typeof sheet === "object") {
+            var sheetNames = Object.keys(sheet);
+            for (var s = 0; s < sheetNames.length; ++s) {
+                own = own || {};
+                own[sheetNames[s]] = sheet[sheetNames[s]] === null ? "initial" : String(sheet[sheetNames[s]]);
+            }
+        }
+        for (var i = 0; i < decls.length; ++i) {
+            if (decls[i][0].indexOf("--") === 0) {
+                own = own || {};
+                own[decls[i][0]] = String(decls[i][1]).replace(/!\s*important\s*$/i, "").trim();
+            }
+        }
+        if (own === null) {
+            continue;
+        }
+        // What a sibling's `var()` sees: CSS-wide keywords already applied,
+        // `initial` the guaranteed-invalid value its fallback replaces.
+        var env = Object.assign({}, vars);
+        var names = Object.keys(own);
+        for (var e = 0; e < names.length; ++e) {
+            var kw = own[names[e]];
+            if (kw === "initial") {
+                delete env[names[e]];
+            } else if (kw !== "inherit" && kw !== "unset" && kw !== "revert") {
+                env[names[e]] = kw;
+            }
+        }
+        var next = Object.assign({}, vars);
+        for (var n = 0; n < names.length; ++n) {
+            var k = names[n];
+            var written = own[k];
+            if (written === "inherit" || written === "unset" || written === "revert") {
+                continue;
+            }
+            var got = written === "initial" ? null : _gSubstitute(written, env, [k]);
+            if (got === null) {
+                delete next[k];
+            } else {
+                next[k] = got;
+            }
+        }
+        vars = next;
+    }
     return vars;
+}
+
+// The boxes whose script-written `display` takes a `var()`: only they follow
+// a custom property a script sets with no cascade, so a page that writes
+// `--x` on each pointer move but no such display checks nothing (#85).
+var _gVarDisplays = new Set();
+
+// Notes whether the element's script-written display now takes a `var()`.
+function _gNoteVarDisplay(raw, display) {
+    if (typeof display === "string" && /var\(/i.test(display)) {
+        _gVarDisplays.add(raw);
+    } else {
+        _gVarDisplays.delete(raw);
+    }
+}
+
+// Whether `raw` is `scope` or sits under it, by the logical tree `_ownVars`
+// takes custom properties along, wrappers it steps over included.
+function _gUnderVars(raw, scope) {
+    for (var at = raw, steps = 0; at && typeof at === "object" && steps < 256; ++steps) {
+        if (at === scope) {
+            return true;
+        }
+        var up = _logicalParent(at);
+        for (var q = at.parent; q && q !== up && typeof q === "object"; q = q.parent) {
+            if (q === scope) {
+                return true;
+            }
+        }
+        at = up === at ? null : up;
+    }
+    return false;
+}
+
+// With no live boxes, a custom property a script sets is not a style the
+// boxes recompute from: each box under `raw` whose script-written display
+// takes a `var()` is shown or hidden again by what it now resolves to, as
+// the rules have it when the page holds them. Returns how many boxes it
+// checked.
+function _varDisplaysFollow(raw) {
+    if (_gVarDisplays.size === 0) {
+        return 0;
+    }
+    var checked = 0;
+    var tracked = Array.from(_gVarDisplays);
+    for (var i = 0; i < tracked.length; ++i) {
+        var at = tracked[i];
+        var m = at && typeof at === "object" ? _meta(at) : null;
+        // Cleared or replaced since, or gone: no longer one to follow.
+        if (!m || typeof at.visible !== "boolean"
+            || !Object.prototype.hasOwnProperty.call(m.styles, "display")
+            || !/var\(/i.test(m.styles.display)) {
+            _gVarDisplays.delete(at);
+            continue;
+        }
+        if (!_gUnderVars(at, raw)) {
+            continue;
+        }
+        if (++checked === 1 && _gHasCascade()) {
+            ++_gGen;
+        }
+        if (_gHasCascade()) {
+            _gShowAsRules(at);
+        } else {
+            _setShown(at, !_displayHides(at, m.styles.display) && !_gFoldedAway(at));
+        }
+    }
+    return checked;
 }
 
 // Whether the element's own declaration says `display: none`. The
@@ -11465,7 +11601,9 @@ function _isLines(raw) {
 }
 
 // A text node or an inline-level element: what CSS puts on a line.
-function _joinsLine(node) {
+// Asked before an insertion, `into` and `ref` are where it is going: its
+// display may read a custom property only that place declares.
+function _joinsLine(node, into, ref) {
     if (node && node.__eldurInline) {
         return node.eldurTag === "#text";
     }
@@ -11483,7 +11621,7 @@ function _joinsLine(node) {
     var atomic = /^(button|input|textarea|select|img|canvas)$/.test(tag) || _vInlineTag(tag);
     if (_gHasCascade()) {
         ++_gGen;
-        var s = _gStyle(node);
+        var s = into ? _gStyleInto(node, into, ref) : _gStyle(node);
         // Hidden, it holds the place in the line its element would take when shown.
         return _gInlineLevel(s) || s.display === "none" && atomic;
     }
@@ -11671,7 +11809,7 @@ function _textStartsLine(raw, column, lines) {
 // The line `nodes` go on when `raw` takes them before `ref`, made if a box needs
 // it; null when they go where they always did.
 function _lineToJoin(raw, nodes, ref) {
-    if (_gIsBox(raw) || raw.__eldurInline || !nodes.every(_joinsLine)) {
+    if (_gIsBox(raw) || raw.__eldurInline || !nodes.every(function(n) { return _joinsLine(n, raw, ref); })) {
         return null;
     }
     if (ref && ref.__eldurInline) {
@@ -12136,7 +12274,7 @@ function _insertChildrenAt(raw, nodes, ref) {
     // Inline and block children together, as an element's kids are when it is
     // made again: each stretch of the inline ones goes on the line it would alone.
     if (nodes.length > 1 && !_gIsBox(raw)) {
-        var joins = nodes.map(_joinsLine);
+        var joins = nodes.map(function(n) { return _joinsLine(n, raw, ref); });
         if (joins.some(Boolean) && !joins.every(Boolean)) {
             var from = 0;
             for (var j = 1; j <= nodes.length; ++j) {
@@ -13016,6 +13154,13 @@ function _materializeSubtree(raw) {
             _syncUpPointersOnItem(cur);
         }
     }
+    // A template swap leaves a new item: it is the one whose `var()`
+    // display a custom property write rechecks.
+    var styled = _meta(cur).styles;
+    if (cur !== raw && styled && Object.prototype.hasOwnProperty.call(styled, "display")) {
+        _gVarDisplays.delete(raw);
+        _gNoteVarDisplay(cur, styled.display);
+    }
     var kids = _rawElementChildren(cur);
     for (var i = 0; i < kids.length; ++i) {
         _materializeSubtree(kids[i]);
@@ -13106,6 +13251,11 @@ function _fitGlyphs(item, turned) {
 // will sit under; only here is it known (layout.md §1.2).
 function _connectSubtree(raw) {
     var cur = _materializeSubtree(raw);
+    // Its `var()` display was decided where it was made, or not at all: it
+    // reads the custom properties of the place it is put, swapped or not.
+    if (!_gActive()) {
+        _varDisplaysFollow(cur);
+    }
     var turned = false;
     for (var up = cur.parent; up && !turned; up = up.parent) {
         turned = _resamples(up);
@@ -15262,16 +15412,25 @@ function _vSetStyle(v, prop, value) {
     var m = _meta(v);
     var name = String(prop);
     var str = value === null || value === undefined ? "" : String(value);
+    // A replacement can set or drop custom properties as well as a write.
+    var varsMoved = name === "cssText";
     if (name === "cssText") {
         m.styles = {};
         _vParseCss(m, str);
     } else {
         var camel = name.indexOf("--") === 0 ? name : _kebabToCamel(name);
+        if (camel === "display") {
+            str = _displayWritten(str);
+        }
         if (str === "") {
             delete m.styles[camel];
         } else {
             m.styles[camel] = str;
         }
+        varsMoved = camel.indexOf("--") === 0;
+    }
+    if (varsMoved && !_gActive()) {
+        _varDisplaysFollow(v);
     }
     _vChanged(v.model);
 }
@@ -23583,7 +23742,35 @@ function _gInlineDecls(raw, m) {
 }
 
 function _gVars(raw, parent) {
-    var inherited = parent ? _gStyle(parent).vars : {};
+    var inherited = parent ? _gStyle(parent).vars : _gVarsThroughInline(raw);
+    return _gVarsOver(raw, inherited);
+}
+
+// An item under a virtual inline element has no parent to inherit its styles
+// from, but a custom property still passes down through the inline elements
+// to it: the nearest box above them gives the ones it starts from, then each
+// inline element, outermost first, its own (#85).
+function _gVarsThroughInline(raw) {
+    var chain = [];
+    var at = _logicalParent(raw);
+    while (at && typeof at === "object" && at !== raw && at.__eldurInline && chain.length < 256) {
+        chain.push(at);
+        var up = _logicalParent(at);
+        at = up === at ? null : up;
+    }
+    if (chain.length === 0) {
+        return {};
+    }
+    var vars = at && typeof at === "object" && at !== raw && !at.__eldurInline ? _gStyle(at).vars : {};
+    for (var c = chain.length - 1; c >= 0; --c) {
+        vars = _gVarsOver(chain[c], vars);
+    }
+    return vars;
+}
+
+// The custom properties `raw` declares, by its rules and `style`, over the
+// ones it inherits.
+function _gVarsOver(raw, inherited) {
     var own = null;
     var rules = _gRules();
     var matched = _gMatched(raw);
@@ -24011,7 +24198,9 @@ function _gWeightNumber(text) {
 }
 
 function _gParent(raw) {
-    var p = _logicalParent(raw);
+    // Asked before an insertion (`_gStyleInto`), it inherits from the place it
+    // is going to: a `var()` there decides what it displays as.
+    var p = _gGoingInto && _gGoingInto.node === raw ? _gGoingInto.parent : _logicalParent(raw);
     if (p && p.__eldurInline) {
         return null;
     }
@@ -28910,6 +29099,10 @@ function _gSettle() {
         _gDirty = false;
         ++_gGen;
         _pseudoBoxes();
+        // A class change can change what a custom property is, and with it
+        // what a script's `var()` display shows as (#85); the margin pass
+        // then collapses around the boxes as they now show.
+        _varDisplaysFollow(_root);
         _gMarginPass();
         // Templates paint the states, but what a script reads comes from the rules.
         _gWatchStates();

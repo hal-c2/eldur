@@ -83,6 +83,20 @@ pub(crate) fn convert(input: &Input, options: &Options, resources: &mut dyn Reso
         scripts.rules_hide = eldur_css::rules_hide(&doc, &sheets, &options.viewport, &hidden)
             .into_iter()
             .collect();
+        // The custom properties a `var()` display may read come from these.
+        let mut scope = std::collections::BTreeSet::new();
+        for node in scripts.display_writes() {
+            let mut at = Some(node);
+            while let Some(n) = at
+                && scope.insert(n)
+            {
+                at = doc.parent_element(n);
+            }
+        }
+        scripts.sheet_vars =
+            eldur_css::sheet_custom_properties(&doc, &sheets, &options.viewport, &styles, &scope)
+                .into_iter()
+                .collect();
     }
 
     // 4–5: boxes, then QML.

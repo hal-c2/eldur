@@ -177,3 +177,25 @@ fn base_href_resolves_against_the_page() {
         [r#"property string baseUrl: "http://other.example/x/""#]
     );
 }
+
+#[test]
+fn a_custom_property_only_a_class_declares_is_not_the_documents() {
+    // `#w` declares `--d` only while it has the class `k`: as loaded it
+    // inherits `#o`'s, so its stylesheet custom properties pick by the class.
+    let qml = main_qml(
+        "<style>p{margin:0}#o{--d:block}#w.k{--d:none}</style>\
+         <div id=o><div id=w><p id=shy>B</p></div></div>\
+         <button id=t onclick=\"document.getElementById('shy').style.display = 'var(--d)';\
+         document.getElementById('w').classList.toggle('k')\">t</button>",
+        "file:///page.html",
+    );
+    let vars = lines_with(&qml, "eldurVars");
+    assert!(
+        vars.iter().any(|l| l.contains("({})") && l.contains("--d")),
+        "{vars:#?}\n{qml}"
+    );
+    assert!(
+        !vars.contains(&r#"property var eldurVars: ({"--d":"none"})"#.to_owned()),
+        "{vars:#?}"
+    );
+}

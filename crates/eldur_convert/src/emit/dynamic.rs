@@ -227,6 +227,7 @@ fn plain(cx: &Inputs<'_>, diags: &mut Diagnostics) -> Emission {
         emitter.writes_z_index = scripts.analysis.writes_z_index;
         emitter.script_hides = scripts.display_writes();
         emitter.rules_hide.clone_from(&scripts.rules_hide);
+        emitter.sheet_vars.clone_from(&scripts.sheet_vars);
         emitter.cascade_rules = scripts.analysis.needs_cascade();
         // Rows a script makes are sized by the same solver, table or no table.
         emitter.has_table = scripts.analysis.open_elements
@@ -631,6 +632,8 @@ struct Diffs {
     reshaped: BTreeSet<Option<NodeId>>,
     /// Properties only a world declares, such as the carry a margin there
     /// reads: its bindings come into the document's, so the declaration does.
+    /// What each world gives one is a change too, so where worlds give
+    /// different values the declaration takes the binding that picks them.
     decls: BTreeMap<(Path, String), Member>,
 }
 
@@ -668,15 +671,33 @@ impl Diffs {
                 .collect()
         }
         for m in &other.members {
-            if let Member::PropertyDecl { name, .. } = m
+            if let Member::PropertyDecl { name, value, .. } = m
                 && !base
                     .members
                     .iter()
                     .any(|b| matches!(b, Member::PropertyDecl { name: n, .. } if n == name))
             {
-                self.decls
-                    .entry((path.clone(), name.clone()))
-                    .or_insert_with(|| m.clone());
+                let key = (path.clone(), name.clone());
+                self.decls.entry(key.clone()).or_insert_with(|| m.clone());
+                if let Some(value) = value {
+                    // Where no world declares it nothing reads it, and the
+                    // first world's value stands for those; but one the
+                    // runtime reads either way, such as the custom properties
+                    // a class's rule declares, is its default there (#85).
+                    let base = default_value(&other.type_name, name)
+                        .is_none()
+                        .then(|| value.clone());
+                    self.changes
+                        .entry(key)
+                        .or_insert_with(|| Change {
+                            owner,
+                            ty: other.type_name.clone(),
+                            base,
+                            worlds: BTreeMap::new(),
+                        })
+                        .worlds
+                        .insert(world, Some(value.clone()));
+                }
             }
         }
         let (bp, op) = (props(base), props(other));
@@ -1133,7 +1154,11 @@ impl Dynamic<'_, '_> {
         let mut bindings: BTreeMap<Path, Vec<(String, String, Option<Member>)>> = BTreeMap::new();
         let gate = self.cx.scripts.is_some();
         let mut gated = false;
-        let changes = std::mem::take(&mut diffs.changes);
+        let mut changes = std::mem::take(&mut diffs.changes);
+        // A declaration every world gives the same value needs no binding.
+        changes.retain(|key, c| {
+            !diffs.decls.contains_key(key) || c.worlds.values().any(|v| *v != c.base)
+        });
         let index: HashMap<&[u16], usize> = worlds
             .iter()
             .enumerate()
@@ -1179,13 +1204,25 @@ impl Dynamic<'_, '_> {
             let Some(obj) = object_at(&mut root, &path) else {
                 continue;
             };
-            if !obj
+            if obj
                 .members
                 .iter()
                 .any(|m| matches!(m, Member::PropertyDecl { name: n, .. } if *n == name))
             {
-                obj.members.push(decl);
+                continue;
             }
+            let mut decl = decl;
+            // The binding that picks each world's value is the declaration's.
+            if let Some(at) = obj
+                .members
+                .iter()
+                .position(|m| matches!(m, Member::Property { name: n, .. } if *n == name))
+                && let Member::Property { value: picked, .. } = obj.members.remove(at)
+                && let Member::PropertyDecl { value, .. } = &mut decl
+            {
+                *value = Some(picked);
+            }
+            obj.members.push(decl);
         }
         let locals = std::mem::take(&mut sources.locals);
         sources.apply(&mut root, self.cx.doc, &mut ids, &mut imports);
@@ -1568,6 +1605,7 @@ impl Dynamic<'_, '_> {
             emitter.writes_z_index = scripts.analysis.writes_z_index;
             emitter.script_hides = scripts.display_writes();
             emitter.rules_hide.clone_from(&scripts.rules_hide);
+            emitter.sheet_vars.clone_from(&scripts.sheet_vars);
             emitter.gains.clone_from(&scripts.gains.nodes);
             emitter.live_tables.clone_from(&scripts.live_tables);
             emitter.gains_any_empty = scripts.gains.any_empty;
@@ -1981,6 +2019,8 @@ fn default_value(ty: &str, prop: &str) -> Option<Value> {
         "Layout.maximumWidth" | "Layout.maximumHeight" => {
             Some(Value::expr("Number.POSITIVE_INFINITY"))
         }
+        // No custom properties of its own (`metadata::declare_vars`).
+        "eldurVars" => Some(Value::expr("({})")),
         _ => None,
     }
 }
