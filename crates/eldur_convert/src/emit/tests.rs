@@ -2474,9 +2474,11 @@ fn a_button_with_a_drawn_icon_wraps_only_a_text_label() {
 fn a_button_with_breaks_and_elements_is_as_tall_as_its_line() {
     // Its label counted its lines; the line that holds the elements takes
     // the label's place, and the height may not name a label that is gone.
+    // An inline-block puts what it holds on a line; a plain `<b>` stays
+    // label text.
     let (qml, _) = convert(&page(
-        ".pl{white-space:pre-line}",
-        "<button class=pl>A\nB<b>C</b></button>",
+        ".pl{white-space:pre-line}.ib{display:inline-block}",
+        "<button class=pl>A\nB<b class=ib>C</b></button>",
     ));
     let button = object_after(&qml, "<button class=\"pl\">");
     assert!(!button.contains(".lineCount"), "{button}");
@@ -2485,7 +2487,10 @@ fn a_button_with_breaks_and_elements_is_as_tall_as_its_line() {
         "{button}"
     );
     // An ordinary button holding an element keeps the height it had.
-    let (qml, _) = convert(&page("", "<button>A<b>C</b></button>"));
+    let (qml, _) = convert(&page(
+        ".ib{display:inline-block}",
+        "<button>A<b class=ib>C</b></button>",
+    ));
     let button = object_after(&qml, "<button>");
     assert!(
         !button.contains("contentItem.implicitHeight + topPadding"),
