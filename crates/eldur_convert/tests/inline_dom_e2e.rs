@@ -645,7 +645,8 @@ fn a_button_lays_out_its_lines_by_its_white_space_as_chromium_does() {
     // fixed-width `pre-wrap` one wraps at its spaces, a button given an
     // element keeps its `pre` spaces, its `pre-line` single spaces and its
     // `nowrap` line, a `>` in a quoted attribute value does not end a tag,
-    // and a tag the markup ends inside is no node and is read fast
+    // and a tag the markup ends inside, or whose quoted value is never
+    // closed, is no node, nor is anything after it, and is read fast
     // (Chromium's values in the log).
     page("button_breaks");
 }
