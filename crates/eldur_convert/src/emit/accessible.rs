@@ -4,7 +4,7 @@
 //! over a native label or the element's own content; hidden content is no
 //! part of a name, and content marked `aria-hidden` is drawn but not read.
 
-use eldur_css::{Display, StyleMap, Visibility};
+use eldur_css::{Display, StyleMap, Visibility, WhiteSpace};
 use eldur_dom::{Document, NodeData, NodeId, collapse_whitespace};
 
 use super::controls::labeled_control;
@@ -35,9 +35,48 @@ pub(crate) fn content_text(
     text_of(doc, styles, node, skip, reading, false)
 }
 
+/// Whether a box with `white` draws every space it holds: `pre-line` keeps
+/// only its line breaks.
+pub(crate) fn keeps_spaces(white: WhiteSpace) -> bool {
+    matches!(
+        white,
+        WhiteSpace::Pre | WhiteSpace::PreWrap | WhiteSpace::BreakSpaces
+    )
+}
+
+/// `text` as a box with `white` draws it: every space kept, `pre-line`'s line
+/// breaks kept with the spaces around them gone and the rest collapsed, or
+/// each run of spaces one and none at the ends.
+pub(crate) fn collapse_as(white: WhiteSpace, text: &str) -> String {
+    if keeps_spaces(white) {
+        text.to_owned()
+    } else if white == WhiteSpace::PreLine {
+        text.split('\n')
+            .map(collapse_whitespace)
+            .collect::<Vec<_>>()
+            .join("\n")
+    } else {
+        collapse_whitespace(text)
+    }
+}
+
+/// What `node`, a control whose own text is drawn, draws: its content as
+/// [`Reading::Drawn`] sees it, collapsed as its `white-space` says.
+pub(crate) fn drawn_text(
+    doc: &Document,
+    styles: &StyleMap,
+    node: NodeId,
+    white: WhiteSpace,
+) -> String {
+    let mut out = String::new();
+    collect(doc, styles, node, None, Reading::Drawn, false, &mut out);
+    collapse_as(white, &out)
+}
+
 /// A button's text nodes as its `textContent` holds them, split where what
 /// is drawn meets what is not: `[hidden, drawn, hidden, …, drawn, hidden]`,
-/// whitespace collapsed as each reading collapses it. The runtime makes a
+/// whitespace collapsed as each reading collapses it, unless the button keeps
+/// its spaces (`white`), when each run is its nodes' text whole. The runtime makes a
 /// Text node of each drawn run and keeps each hidden one between them, so it
 /// never has to find the split by matching strings. `None` when the drawn
 /// runs, collapsed, do not join to `drawn` or the whole to `dom` (a box that stands
@@ -48,6 +87,7 @@ pub(crate) fn drawn_runs(
     node: NodeId,
     drawn: &str,
     dom: &str,
+    white: WhiteSpace,
 ) -> Option<Vec<String>> {
     let mut raw: Vec<(bool, String)> = Vec::new();
     runs_of(doc, styles, node, &mut raw);
@@ -61,6 +101,10 @@ pub(crate) fn drawn_runs(
     }
     if runs.len() % 2 == 0 {
         runs.push(String::new());
+    }
+    if keeps_spaces(white) || white == WhiteSpace::PreLine {
+        let shown: String = runs.iter().skip(1).step_by(2).map(String::as_str).collect();
+        return (collapse_as(white, &shown) == drawn && runs.concat() == dom).then_some(runs);
     }
     // Collapse the whole as `textContent` is collapsed; a space belongs to the
     // run its first whitespace is in.
