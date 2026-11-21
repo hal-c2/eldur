@@ -384,8 +384,31 @@ fn a_scripted_click_bubbles() {
 // #23: what the drive drew differently from Chromium: a span before a
 // button's text, an emptied button, whitespace runs, markup in a button, a
 // disabled fieldset's legend, a line after a paragraph, a span moved to the
-// body.
+// body; then a button given markup and text in turn, a button's own Text
+// appended to it again, and long text put in a legend.
 #[test]
 fn the_drives_drawn_gaps_match_chromium() {
-    page("drawn_gaps");
+    let words = "word ".repeat(30);
+    let after_box = words.as_str();
+    let after_text = format!("w {}", words.trim_end());
+    page_drawing(
+        "drawn_gaps",
+        &[
+            "GoSave",
+            "g bold ",
+            "Go",
+            " now",
+            "l ",
+            "one",
+            "yz",
+            "DDD",
+            "B2",
+            "Save",
+            &after_text,
+            "v ",
+            after_box,
+            "end",
+            "moved",
+        ],
+    );
 }
