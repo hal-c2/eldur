@@ -12096,6 +12096,10 @@ function _putMarkupText(raw, nodes, atStart) {
     var m = _meta(raw);
     if (typeof raw.eldurDomText === "string" && !m.ownText) {
         raw.eldurDomText = put(raw.eldurDomText, add);
+        if (Array.isArray(raw.eldurDomRuns)) {
+            var split = raw.eldurDomRuns;
+            _btnSetRuns(raw, atStart ? ["", add].concat(split) : split.concat([add, ""]));
+        }
     }
     if (typeof raw.eldurContentName === "string") {
         raw.eldurContentName = put(raw.eldurContentName, add);
@@ -12124,8 +12128,8 @@ function _btnNodes(raw) {
             // What it holds but does not draw (a hidden `<kbd>`) stays where
             // it is in `textContent`: before, between or after its text, which
             // is a Text node on each side of it, as in the DOM.
-            var dom = typeof raw.eldurDomText === "string" && !m.ownText ? raw.eldurDomText : own;
-            var runs = _btnRuns(dom, own);
+            var paged = typeof raw.eldurDomText === "string" && !m.ownText;
+            var runs = _btnRuns(paged ? raw.eldurDomText : own, own, paged ? raw.eldurDomRuns : null);
             runs.texts.forEach(function(text, i) {
                 var leaf = _btnOwn(_vLeaf(text, null, null), raw);
                 if (i === 0 && runs.before !== "") {
@@ -12146,41 +12150,37 @@ function _btnNodes(raw) {
 
 // `own`, what a button draws, as the runs of text between what `dom`, its
 // textContent, holds but does not draw: `before` the first run, and
-// `after[i]` each run. Text drawn whole in `dom` is one run; text that is
-// not in it in order is one run with nothing hidden.
-function _btnRuns(dom, own) {
+// `after[i]` each run. The converter says where its nodes split
+// (`eldurDomRuns`: hidden, drawn, hidden, …, hidden); text matching cannot
+// tell which "B" of "A<kbd hidden>B</kbd>B" is drawn. A button with no
+// split from the page, or one that no longer joins to its text, is one run
+// with what it hides after it when it draws its text whole, else nothing
+// hidden.
+function _btnRuns(dom, own, split) {
+    if (split && split.length % 2 === 1) {
+        var runs = { before: split[0], texts: [], after: [] };
+        var all = split[0];
+        for (var i = 1; i < split.length; i += 2) {
+            runs.texts.push(split[i]);
+            runs.after.push(split[i + 1]);
+            all += split[i] + split[i + 1];
+        }
+        if (runs.texts.join("") === own && all === dom) {
+            return runs;
+        }
+    }
     var at = dom.indexOf(own);
     if (at !== -1) {
         return { before: dom.slice(0, at), texts: [own], after: [dom.slice(at + own.length)] };
     }
-    var runs = { before: "", texts: [], after: [] };
-    var text = "";
-    var hidden = "";
-    var j = 0;
-    for (var i = 0; i < dom.length; ++i) {
-        if (j < own.length && dom[i] === own[j]) {
-            if (hidden !== "") {
-                if (text === "") {
-                    runs.before = hidden;
-                } else {
-                    runs.texts.push(text);
-                    runs.after.push(hidden);
-                    text = "";
-                }
-                hidden = "";
-            }
-            text += dom[i];
-            ++j;
-        } else {
-            hidden += dom[i];
-        }
+    return { before: "", texts: [own], after: [""] };
+}
+
+// The split `_btnRuns` reads, kept as a script changes what it holds.
+function _btnSetRuns(raw, runs) {
+    if (Array.isArray(raw.eldurDomRuns)) {
+        raw.eldurDomRuns = runs;
     }
-    if (j < own.length) {
-        return { before: "", texts: [own], after: [""] };
-    }
-    runs.texts.push(text);
-    runs.after.push(hidden);
-    return runs;
 }
 
 function _btnOwn(leaf, raw) {
@@ -12244,6 +12244,12 @@ function _btnDraw(raw) {
         raw.eldurDomText = (m.btnHidden || "") + (m.btnNodes || []).map(function(leaf) {
             return (leaf.btnBefore || "") + leaf.data + (leaf.btnAfter || "");
         }).join("");
+        var split = [m.btnHidden || ""];
+        (m.btnNodes || []).forEach(function(leaf) {
+            split[split.length - 1] += leaf.btnBefore || "";
+            split.push(leaf.data, leaf.btnAfter || "");
+        });
+        _btnSetRuns(raw, split);
     }
     if (typeof raw.eldurContentName === "string") {
         raw.eldurContentName = own;

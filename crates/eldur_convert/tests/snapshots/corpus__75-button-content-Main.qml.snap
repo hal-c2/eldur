@@ -212,6 +212,7 @@ ApplicationWindow {
                     Button {
                         id: buttonControl2
                         property string eldurDomText: "SaveCtrl S"
+                        property var eldurDomRuns: ["", "Save", "Ctrl S"]
 
                         text: "Save"
                         palette.buttonText: "#000000"
