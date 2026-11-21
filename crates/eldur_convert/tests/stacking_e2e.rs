@@ -1127,6 +1127,39 @@ fn a_level_a_class_gives_a_span_lifts_what_it_holds_with_no_level_of_its_own() {
     );
 }
 
+/// The span of the test before last, whose `class` attribute a timer
+/// removes: the level the class gave `#ix` goes with it, so `#lx` is over
+/// `#ix` again (5,70), as Chromium paints the page with the class gone
+/// (`x-wclsrm`).
+#[test]
+fn removing_a_spans_class_attribute_takes_back_the_level_it_gave() {
+    let page = inline_level_page(
+        &format!("{INLINE_BLOCK}\n.wup {{ z-index: 5 }}"),
+        "<span id=wx style=\"position: relative\"><span id=ix></span></span>",
+        RELATIVE,
+        LATER_AT_1,
+    )
+    .replace(
+        "document.getElementById('ix').classList.add('up');",
+        "var wx = document.getElementById('wx');\n\
+         wx.classList.add('wup');\n\
+         setTimeout(function () { wx.removeAttribute('class'); }, 300);",
+    );
+    assert_eq!(page.matches("removeAttribute('class')").count(), 1);
+    let test = pages_test(
+        "RemovedClass",
+        r#"
+    function test_removing_the_class_takes_back_its_level() {
+        page = make("Main.qml")
+        compare(front(page, 5, 70), "ix", "with the class")
+        wait(800)
+        compare(front(page, 5, 70), "lx", "with the class attribute gone")
+    }
+"#,
+    );
+    run_pages(&[("Main", &page)], &test, "removed-class");
+}
+
 /// The span of the test before, whose class a timer adds: `#wx` is held
 /// from the start, as a page whose timer runs under another page must.
 fn timed_span_page(rule: &str, class: &str) -> String {
