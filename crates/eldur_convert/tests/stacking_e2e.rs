@@ -1127,6 +1127,188 @@ fn a_level_a_class_gives_a_span_lifts_what_it_holds_with_no_level_of_its_own() {
     );
 }
 
+/// The span of the test before, whose class a timer adds: `#wx` is held
+/// from the start, as a page whose timer runs under another page must.
+fn timed_span_page(rule: &str, class: &str) -> String {
+    let page = inline_level_page(
+        &format!("{INLINE_BLOCK}\n{rule}"),
+        "<span id=wx style=\"position: relative\"><span id=ix></span></span>",
+        RELATIVE,
+        LATER_AT_1,
+    )
+    .replace(
+        "document.getElementById('ix').classList.add('up');",
+        &format!(
+            "var wx = document.getElementById('wx');\n\
+             setTimeout(function () {{ wx.classList.add('{class}'); }}, 300);"
+        ),
+    );
+    assert_eq!(page.matches("setTimeout").count(), 1);
+    page
+}
+
+/// A test of pages made in `body`, with `front` from [`TEST`].
+fn pages_test(name: &str, body: &str) -> String {
+    let from = TEST.find("    // The painted box nearest").expect("front");
+    let to = TEST.find("    function init()").expect("init");
+    format!(
+        r#"
+import QtQuick
+import QtTest
+import "eldur_runtime.js" as R
+
+Item {{
+    id: host
+    width: 900
+    height: 1200
+
+TestCase {{
+    name: "{name}"
+    when: windowShown
+
+    property var page
+    readonly property var painted: ["ax", "ox", "bx", "rx", "ix", "lx"]
+
+{}
+    function make(file) {{
+        const component = Qt.createComponent(file)
+        verify(component.status === Component.Ready, component.errorString())
+        const made = createTemporaryObject(component, host, {{ width: 900, height: 1200 }})
+        waitForRendering(made)
+        return made
+    }}
+{body}
+}}
+}}
+"#,
+        &TEST[from..to]
+    )
+}
+
+/// Converts each page into `dir`: the first as `Main.qml`, each other as
+/// `<name>.qml` with its own script.
+fn run_pages(pages: &[(&str, &str)], test: &str, dir_name: &str) {
+    if support::no_qt() {
+        return;
+    }
+    let options = Options {
+        root: RootKind::Item,
+        viewport: Viewport {
+            width: 900.0,
+            height: 1200.0,
+            ..Viewport::default()
+        },
+        ..Options::default()
+    };
+    let dir =
+        std::env::temp_dir().join(format!("eldur-stacking-{dir_name}-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("temp dir");
+    let mut qml = String::new();
+    for (i, (name, page)) in pages.iter().enumerate() {
+        let out = convert_str(page, &options);
+        if i == 0 {
+            write(&dir, &out);
+            qml.push_str(out.main_qml().unwrap_or_default());
+            continue;
+        }
+        // The pages share the runtime, and so its state.
+        let script = format!("{}_page.js", name.to_lowercase());
+        for file in &out.files {
+            match file.path.to_string_lossy().as_ref() {
+                "Main.qml" => std::fs::write(
+                    dir.join(format!("{name}.qml")),
+                    String::from_utf8_lossy(&file.contents)
+                        .replace("\"page.js\"", &format!("\"{script}\""))
+                        .replace("Main.qml", &format!("{name}.qml")),
+                ),
+                "page.js" => std::fs::write(dir.join(&script), &file.contents),
+                _ => Ok(()),
+            }
+            .expect("write page");
+        }
+    }
+    std::fs::write(dir.join("tst_stacking.qml"), test).expect("write test");
+    let output = support::qmltestrunner()
+        .args(["-platform", "offscreen", "-input"])
+        .arg(dir.join("tst_stacking.qml"))
+        .env("QT_FORCE_STDERR_LOGGING", "1")
+        .output()
+        .expect("run qmltestrunner");
+    let text = format!(
+        "{}\n{}\n{qml}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr),
+    );
+    std::fs::remove_dir_all(&dir).expect("remove temp dir");
+    assert!(output.status.success(), "{text}");
+}
+
+/// The page of the test before under another one like it, whose timer adds
+/// another class: the covered page's class lifts the covered page's box, as
+/// Chromium paints the page on its own (`x-wcls`: `#ix` at 5,70), and the
+/// page over it keeps `#lx` there.
+#[test]
+fn a_covered_pages_span_class_lifts_its_own_box() {
+    let test = pages_test(
+        "CoveredSpan",
+        r#"
+    function test_a_covered_pages_class_lifts_its_own_box() {
+        const first = make("Main.qml")
+        page = first
+        compare(front(first, 5, 70), "lx", "before the class")
+        const cover = make("Cover.qml")
+        wait(800)
+        page = first
+        compare(front(first, 5, 70), "ix", "the covered page's class lifts its own box")
+        page = cover
+        compare(front(cover, 5, 70), "lx", "and not the page over it")
+    }
+"#,
+    );
+    run_pages(
+        &[
+            ("Main", &timed_span_page(".wup { z-index: 5 }", "wup")),
+            ("Cover", &timed_span_page(".wup { z-index: 5 }", "nop")),
+        ],
+        &test,
+        "covered-span",
+    );
+}
+
+/// A class change on an inline element looks for a box to bind it on only
+/// when a class may make the element a stacking context: `#wx`'s class
+/// that gives a level (5) does, and one that gives a colour does not.
+#[test]
+fn a_class_looks_for_its_box_only_on_a_span_that_may_be_a_context() {
+    for (name, rule, walks) in [
+        (
+            "walks-level",
+            ".wup { z-index: 5 }",
+            "verify(R._carriedWalks > 0, R._carriedWalks)",
+        ),
+        (
+            "walks-colour",
+            ".wup { color: green }",
+            "compare(R._carriedWalks, 0)",
+        ),
+    ] {
+        let page = timed_span_page(rule, "wup");
+        let test = pages_test(
+            "CarriedWalks",
+            &format!(
+                "
+    function test_walks() {{
+        page = make(\"Main.qml\")
+        wait(800)
+        {walks}
+    }}
+"
+            ),
+        );
+        run_pages(&[("Main", &page)], &test, name);
+    }
+}
+
 /// The same, with the span at the top of the `z-index` range: one over it
 /// stays at `i32::MAX` rather than wrapping to the bottom.
 #[test]
