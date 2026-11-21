@@ -8,6 +8,7 @@ function said(what, value) {
   console.log("LC " + what + " " + show(value) + ", reads " + show(window.onload));
 }
 said("or", (window.onload ||= function orHandler() {}));
+console.log("LC optional reads " + show(window?.onload) + " " + show(window?.["onload"]));
 said("or again", (window.onload ||= "x"));
 said("and", (window.onload &&= function andHandler() {}));
 said("nullish", (window.onload ??= "y"));
@@ -31,6 +32,7 @@ function later() {
     console.log("LC late handler heard");
     document.getElementById("out").textContent = "late";
   }));
+  console.log("LC optional reads in a function " + show(window?.onload) + " " + show(window?.["onload"]));
 }
 later();
 window.addEventListener("load", function () {

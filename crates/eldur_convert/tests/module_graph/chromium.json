@@ -396,6 +396,7 @@
   "onloadassign": {
     "lines": [
       "or orHandler, reads orHandler",
+      "optional reads orHandler orHandler",
       "or again orHandler, reads orHandler",
       "and andHandler, reads andHandler",
       "nullish andHandler, reads andHandler",
@@ -409,6 +410,7 @@
       "loop undefined undefined, reads loopLast",
       "or in a function loopLast, reads loopLast",
       "or on null in a function lateHandler, reads lateHandler",
+      "optional reads in a function lateHandler lateHandler",
       "late handler heard",
       "load undefined undefined, reads lateHandler"
     ],
@@ -425,6 +427,9 @@
       "string after delete, reads string x",
       "delete again true",
       "after delete again, reads undefined undefined",
+      "optional reads string y string y",
+      "optional delete true",
+      "after optional delete, reads undefined undefined",
       "kept heard",
       "load, reads undefined undefined"
     ],

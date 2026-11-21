@@ -3822,6 +3822,37 @@ fn delete_window_onload_goes_through_the_runtime() {
     assert!(!js.contains("delete Eldur."), "{js}");
 }
 
+/// An optional chain on `window` is the same property: `delete
+/// window?.onload` deletes the page's handler, and `window?.onload` and
+/// `window?.["onload"]` read what it kept. (Assigning through an optional
+/// chain is a syntax error, so there is no assignment form.)
+#[test]
+fn window_onload_through_an_optional_chain_goes_through_the_runtime() {
+    let resolver = FakeResolver::default();
+    let first = classic(
+        "first.js",
+        "console.log(delete window?.onload, delete (window?.[\"onload\"]));\nconsole.log(window?.onload, window?.[\"onload\"]);\n",
+    );
+    let out = run_rewrite(&[first], &resolver);
+    let js = &out.page_js;
+    assert_eq!(
+        js.matches("Eldur.deleteOnload(__eldur_call_window_onload)")
+            .count(),
+        2,
+        "{js}"
+    );
+    assert_eq!(
+        js.matches("Eldur.getOnload(__eldur_call_window_onload)")
+            .count(),
+        2,
+        "{js}"
+    );
+    assert!(!js.contains("delete window"), "{js}");
+    assert!(!js.contains("delete Eldur."), "{js}");
+    assert!(!js.contains("delete ("), "{js}");
+    assert!(!js.contains("window?."), "{js}");
+}
+
 /// A `load` listener and `window.onload` each take their place among the
 /// `load` listeners where they run: the listener is queued where its module
 /// adds it, and each assignment goes through `Eldur.setOnload`, which adds the
