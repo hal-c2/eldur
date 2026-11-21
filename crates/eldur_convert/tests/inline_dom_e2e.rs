@@ -8,7 +8,8 @@
 //! `node crates/eldur_convert/tests/inline_dom/gen.mjs`. A QML warning or an
 //! uncaught script error fails the page. A page may also name texts it must
 //! draw, in order: what each visible `Text` shows once the script and clicks
-//! are done.
+//! are done; and, for an element (by id), texts drawn inside it and texts
+//! it must not draw.
 
 mod support;
 
@@ -29,15 +30,20 @@ TestCase {
     name: "InlineDom"
     when: windowShown
 
-    function drawnIn(item) {
+    function drawnIn(item, under) {
         if (!item.visible || item.opacity === 0) {
             return
         }
+        const names = item.objectName ? under.concat([item.objectName]) : under
         if (item.lineCount !== undefined && typeof item.text === "string" && item.text !== "") {
-            console.log("DRAWN " + item.text.replace(/<[^>]*>/g, ""))
+            const text = item.text.replace(/<[^>]*>/g, "")
+            console.log("DRAWN " + text)
+            for (const name of names) {
+                console.log("DRAWNIN " + name + " " + text)
+            }
         }
         for (let i = 0; i < item.children.length; ++i) {
-            drawnIn(item.children[i])
+            drawnIn(item.children[i], names)
         }
     }
 
@@ -56,14 +62,24 @@ TestCase {
             wait(50)
         }
         waitForRendering(page)
-        drawnIn(page)
+        drawnIn(page, [])
     }
 }
 }
 "##;
 
+/// What one element draws: texts it must draw, in order, and texts it must not.
+type Within<'a> = (&'a str, &'a [&'a str], &'a [&'a str]);
+
 /// Runs one page; `Err` has what went wrong.
-fn run(name: &str, html: &str, want: &[&str], clicks: &str, drawn: &[&str]) -> Result<(), String> {
+fn run(
+    name: &str,
+    html: &str,
+    want: &[&str],
+    clicks: &str,
+    drawn: &[&str],
+    within: &[Within],
+) -> Result<(), String> {
     if support::no_qt() {
         return Ok(());
     }
@@ -123,6 +139,30 @@ fn run(name: &str, html: &str, want: &[&str], clicks: &str, drawn: &[&str]) -> R
             }
         }
     }
+    for (id, must, never) in within {
+        let prefix = format!("DRAWNIN {id} ");
+        let drew_in: Vec<_> = text
+            .lines()
+            .filter_map(|l| l.find(&prefix).map(|at| &l[at + prefix.len()..]))
+            .collect();
+        let mut from = 0;
+        for want in *must {
+            match drew_in[from..].iter().position(|d| d == want) {
+                Some(at) => from += at + 1,
+                None => {
+                    problems.push(format!(
+                        "#{id} draws no {want:?} in order; drew {drew_in:?}"
+                    ));
+                    break;
+                }
+            }
+        }
+        for not in *never {
+            if drew_in.iter().any(|d| d.contains(not)) {
+                problems.push(format!("#{id} draws {not:?}; drew {drew_in:?}"));
+            }
+        }
+    }
     if problems.is_empty() {
         Ok(())
     } else {
@@ -136,6 +176,12 @@ fn page(name: &str) {
 
 /// `page`, and the page draws `drawn` in that order, others between allowed.
 fn page_drawing(name: &str, drawn: &[&str]) {
+    page_drawing_within(name, drawn, &[]);
+}
+
+/// `page_drawing`, and each element named in `within` draws what it says
+/// inside it, and nothing it rules out.
+fn page_drawing_within(name: &str, drawn: &[&str], within: &[Within]) {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/inline_dom");
     let chromium: serde_json::Value =
         serde_json::from_str(&std::fs::read_to_string(dir.join("chromium.json")).expect("json"))
@@ -157,7 +203,7 @@ fn page_drawing(name: &str, drawn: &[&str]) {
         })
         .collect();
     let clicks = format!("[{}]", clicks.join(","));
-    if let Err(e) = run(name, &html, &want, &clicks, drawn) {
+    if let Err(e) = run(name, &html, &want, &clicks, drawn, within) {
         panic!("{e}");
     }
 }
@@ -431,8 +477,10 @@ fn a_legend_keeps_its_width_bounds_as_chromium_does() {
 
 #[test]
 fn a_button_holding_lines_keeps_them_as_chromium_does() {
-    page_drawing(
+    // What a button holds but does not draw stays undrawn once it holds lines.
+    page_drawing_within(
         "button_lines",
         &["A", "x", "Go", " many words that wrap", "Go", " on"],
+        &[("bh", &["x"], &["hidden"]), ("bm", &["B", "A"], &["H"])],
     );
 }

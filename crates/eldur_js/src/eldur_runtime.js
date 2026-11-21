@@ -6667,10 +6667,12 @@ function _setInnerHTMLAt(item, html) {
 function _linesText(raw) {
     var kids = _rawChildNodes(raw);
     var hidden = _meta(raw).linesHidden || [];
+    // A node that left, or was put in again, is no longer what it followed.
     var place = function(h) {
         for (var i = 0; i < h.after.length; ++i) {
-            if (kids.indexOf(h.after[i]) !== -1) {
-                return h.after[i];
+            var node = _gCurrent(h.after[i].node);
+            if (kids.indexOf(node) !== -1 && (_meta(node).linesPut || 0) === h.after[i].put) {
+                return node;
             }
         }
         return null;
@@ -12022,7 +12024,12 @@ function _btnBecomesLines(raw) {
     });
     var texts = leaves.map(_vToReal);
     m.linesHidden = (m.linesHidden || []).concat(hidden.map(function(h) {
-        return { text: h.text, after: texts.slice(0, h.at + 1).reverse() };
+        return {
+            text: h.text,
+            after: texts.slice(0, h.at + 1).reverse().map(function(node) {
+                return { node: node, put: _meta(node).linesPut || 0 };
+            })
+        };
     }));
     _btnForget(raw);
     delete m.btnMarkup;
@@ -12270,6 +12277,11 @@ function _insertChildren(raw, nodes, ref, going, atStart) {
         nodes = nodes.map(_gCurrent);
         ref = ref ? _gCurrent(ref) : ref;
         going = going ? _gCurrent(going) : going;
+        // Hidden text put after one of them stays where it was.
+        nodes.forEach(function(n) {
+            var nm = _meta(n);
+            nm.linesPut = (nm.linesPut || 0) + 1;
+        });
     }
     if (nodes.length > 0 && nodes.every(_isTextNode) && _drawsOwnText(raw)
         && (!ref || ref.btnOf === raw) && (!going || going.btnOf === raw)) {
