@@ -1,0 +1,20 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;font:16px/20px sans-serif}</style><script>
+function L(){console.log("LC "+[].slice.call(arguments).join(" "))}
+function I(e){return e?(e.id||e.tagName||e.nodeName):"null"}
+function N(e){return [].map.call(e.childNodes,function(n){return n.nodeType===3?JSON.stringify(n.data):I(n)}).join(",")}
+function R(e){var r=e.getBoundingClientRect();return {l:Math.round(r.left),t:Math.round(r.top),r:Math.round(r.right),b:Math.round(r.bottom),w:Math.round(r.width),h:Math.round(r.height)}}
+function near(a,b){return Math.abs(a-b)<=3}
+</script></head><body>
+<fieldset id="fa" style="width:100px"><legend id="la" style="width:300px">Wide</legend></fieldset>
+<fieldset id="fb" style="width:100px"><legend id="lb" style="min-width:300px">Min</legend></fieldset>
+<fieldset id="fc" style="width:100px"><legend id="lc" style="max-width:50px">Max legend text</legend></fieldset>
+<fieldset id="fd" style="width:100px"><legend id="ld">a long legend that wraps</legend></fieldset>
+<script>
+// A legend's own width, min-width and max-width hold in a narrow fieldset;
+// with none of them it wraps at the fieldset's content width.
+var la=document.getElementById("la"),lb=document.getElementById("lb"),lc=document.getElementById("lc"),ld=document.getElementById("ld");
+L("width",R(la).w,R(la).h);
+L("min-width",R(lb).w,R(lb).h);
+L("max-width",R(lc).w,R(lc).h>20);
+L("auto",R(ld).w,R(ld).h>20);
+</script></body></html>

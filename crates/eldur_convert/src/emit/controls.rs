@@ -1591,6 +1591,42 @@ impl Emitter<'_, '_> {
         false
     }
 
+    /// A legend's border-box width as a binding, its percentages of the
+    /// fieldset's content width.
+    fn legend_width(&mut self, legend: &LayoutBox<'_>, fieldset: &str) -> Value {
+        let style = &*legend.style;
+        let line = legend
+            .node
+            .and_then(|n| crate::boxes::node_line(self.doc, n));
+        let extra = match style.box_sizing {
+            BoxSizing::ContentBox => self.insets(style, line).horizontal(),
+            BoxSizing::BorderBox => 0.0,
+        };
+        let room = format!("{fieldset}.availableWidth");
+        let px = |l: &Length| match l.as_px() {
+            Some(px) => super::units::fmt_number(round(px + extra)),
+            None => format!(
+                "({} + {})",
+                super::units::length_expr(l, &room),
+                super::units::fmt_number(round(extra))
+            ),
+        };
+        if let Size::Length(w) = &style.width {
+            return Value::expr(px(w));
+        }
+        let mut cap = room.clone();
+        if let Size::Length(max) = &style.max_width {
+            cap = format!("Math.min({cap}, {})", px(max));
+        }
+        let mut width = format!("Math.min(implicitWidth, {cap})");
+        if let Size::Length(min) = &style.min_width
+            && min.as_px() != Some(0.0)
+        {
+            width = format!("Math.max({}, {width})", px(min));
+        }
+        Value::expr(width)
+    }
+
     /// `<fieldset>` with a `<legend>`: a GroupBox, whose label sits on the
     /// top border and whose content starts below the taller of the two.
     pub(super) fn fieldset(
@@ -1634,13 +1670,13 @@ impl Emitter<'_, '_> {
         obj.set("background", object_value(background));
         let mut label = self.item(legend, decoration).obj;
         label.set("x", number(insets.left));
-        // A legend shrinks to fit within the fieldset's content box, where a long
-        // one wraps; a control never sizes the label it is given.
+        // A control never sizes the label it is given, so the legend's width is
+        // set here: its own `width`, else shrink-to-fit within the fieldset's
+        // content box (where a long one wraps), at most its `max-width` and at
+        // least its `min-width`.
         if label.get("width").is_none() {
-            label.set(
-                "width",
-                Value::expr(format!("Math.min(implicitWidth, {id}.availableWidth)")),
-            );
+            let width = self.legend_width(legend, &id);
+            label.set("width", width);
         }
         obj.set("label", object_value(label));
         obj.set(
@@ -2057,6 +2093,26 @@ mod tests {
         let (q, _) = qml("<fieldset id=f><legend>Plan</legend><p>x</p></fieldset>");
         assert!(
             q.contains("width: Math.min(implicitWidth, f.availableWidth)"),
+            "{q}"
+        );
+    }
+
+    // Chromium keeps a legend's own width, max-width and min-width in a
+    // narrower fieldset (legend_sizes in inline_dom), padding included.
+    #[test]
+    fn a_legend_keeps_its_own_width_bounds() {
+        let (q, _) = qml(
+            "<fieldset id=a><legend style=width:300px>A</legend></fieldset>\
+             <fieldset id=b><legend style=min-width:300px>B</legend></fieldset>\
+             <fieldset id=c><legend style=max-width:50px>C</legend></fieldset>",
+        );
+        assert!(q.contains("width: 304\n"), "{q}");
+        assert!(
+            q.contains("width: Math.max(304, Math.min(implicitWidth, b.availableWidth))"),
+            "{q}"
+        );
+        assert!(
+            q.contains("width: Math.min(implicitWidth, Math.min(c.availableWidth, 54))"),
             "{q}"
         );
     }
