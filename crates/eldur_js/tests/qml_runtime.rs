@@ -2732,6 +2732,78 @@ function verify() {
     );
 }
 
+/// A quoted attribute value in markup a script inserts runs to its closing
+/// quote, `>` and `<` included, and an unclosed one to the end of the markup,
+/// taking its tag with it, as in the HTML tokenizer's attribute-value states.
+/// An end tag the markup cuts off still ends its element, and an element
+/// whose end tag never comes holds the rest. So `<font title="size>x` is
+/// gone, not a `<font>` with a size that leaves the SVG, and `title="<p>"`
+/// opens no paragraph. The expected string is Chromium 158's, for the same
+/// script run through Playwright; `svg:` marks an element without `viewBox`.
+#[test]
+fn qml6_quoted_attribute_values_in_inserted_markup_run_as_chromium_tokenizes_them() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("box", 1, "box", TargetKind::Box);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verify() {
+    const box = document.getElementById("box");
+    const v = ' viewBox="v"';
+    const show = n => (n.getAttribute("viewbox") === null ? "svg:" : "")
+        + n.tagName.toLowerCase()
+        + (n.children.length ? "[" + Array.from(n.children).map(show).join(",") + "]" : "");
+    const made = markup => {
+        const d = document.createElement("div");
+        box.appendChild(d);
+        d.innerHTML = markup;
+        return d;
+    };
+    const cases = {
+        i: '<svg' + v + '><font title="size>x',
+        j: '<svg' + v + '><font title="a>b" size=3' + v + '>u</font></svg>',
+        k: "<svg" + v + "><font title='size>x</font></svg><p>q</p>",
+        l: '<svg' + v + '><font size=3' + v + '>u</font',
+        m: '<div title="a>b"' + v + '>w</div>',
+        n: '<svg' + v + '><font title=size>x</font></svg>',
+        o: '<svg' + v + '><g' + v + ' title="<p>"></g></svg>',
+    };
+    return Object.entries(cases).map(([k, m]) => {
+        const d = made(m);
+        const titled = d.querySelector("[title]");
+        return k + "=" + Array.from(d.children).map(show).join(",")
+            + " text=" + JSON.stringify(d.textContent)
+            + (titled ? " title=" + JSON.stringify(titled.getAttribute("title")) : "");
+    }).join(" ; ");
+}
+"##,
+        r#"Item {
+    id: root
+    Column { id: box; objectName: "box" }
+    Component.onCompleted: {
+        (Page.__eldur_init || Eldur.init)(root);
+        console.log("ELDUR_OK_QUOTES", Page.verify());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains(
+            "ELDUR_OK_QUOTES i=svg:svg text=\"\" ; \
+             j=svg:svg,font text=\"u\" title=\"a>b\" ; \
+             k=svg:svg text=\"\" ; \
+             l=svg:svg,font text=\"u\" ; \
+             m=div text=\"w\" title=\"a>b\" ; \
+             n=svg:svg[svg:font] text=\"x\" title=\"size\" ; \
+             o=svg:svg[svg:g] text=\"\" title=\"<p>\""
+        ),
+        "{output}"
+    );
+}
+
 #[test]
 fn qml6_anchor_href_resolves_against_document_base_and_preserves_raw_attribute() {
     if !has_binary("qml6") {

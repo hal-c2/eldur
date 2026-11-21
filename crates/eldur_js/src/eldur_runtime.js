@@ -12687,8 +12687,16 @@ var _SVG_ATTR_CASE = (function() {
 })();
 
 // One attribute of a start tag: its name, then its value quoted either way or
-// bare, so a name-like word inside a quoted value is part of that value.
-var _HTML_ATTR = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+// bare, so a name-like word inside a quoted value is part of that value. A
+// quoted value runs to its closing quote, or to the end of the tag's text when
+// there is none, as in the HTML tokenizer's attribute-value states.
+var _HTML_ATTR = /([a-zA-Z_:][-a-zA-Z0-9_:.]*)(?:\s*=\s*(?:"([^"]*)(?:"|$)|'([^']*)(?:'|$)|([^\s"'=<>`]+)))?/g;
+
+// What follows a tag's name up to its `>`: a `>` or `<` inside a quoted value
+// is part of the value, and an unclosed quote runs to the end of the markup.
+// Each tag pattern ends in `(>|$)`: a tag the markup ends inside of matches
+// with an empty last group, and the HTML parser drops such a tag.
+var _TAG_REST = "(?:[^>\"'=]|=\\s*\"[^\"]*(?:\"|$)|=\\s*'[^']*(?:'|$)|=|[\"'])*";
 
 function _applyAttrsFromHtml(el, attrStr, svg) {
     if (!attrStr) {
@@ -12772,13 +12780,16 @@ function _closeSvgBeforeHtml(src, inSvg) {
     if (!inSvg && !/<svg/i.test(src)) {
         return src;
     }
-    var tagRe = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)(\s[^>]*)?\s*(\/?)>/g;
+    var tagRe = new RegExp("<(\\/?)([a-zA-Z][a-zA-Z0-9-]*)(\\s" + _TAG_REST + ")?\\s*(\\/?)(>|$)", "g");
     var open = [];
     var dropped = {};
     var out = "";
     var last = 0;
     var m;
     while ((m = tagRe.exec(src)) !== null) {
+        if (m[5] === "") {
+            break;
+        }
         var tag = m[2].toLowerCase();
         if (m[1] === "/") {
             var at = open.length - 1;
@@ -12829,7 +12840,7 @@ function _parseFragment(src, inSvg) {
     var gap = "";
     var lastTag = "";
     var pos = 0;
-    var tagOpenRe = /<([a-zA-Z][a-zA-Z0-9-]*)(\s[^>]*)?\s*(\/?)>/g;
+    var tagOpenRe = new RegExp("<([a-zA-Z][a-zA-Z0-9-]*)(\\s" + _TAG_REST + ")?\\s*(\\/?)(>|$)", "g");
     var voidTags = _VOID_TAGS;
 
     while (pos < src.length) {
@@ -12855,6 +12866,9 @@ function _parseFragment(src, inSvg) {
                 gap = lead;
             }
         }
+        if (m[4] === "") {
+            break;
+        }
         lastTag = m[1];
         var tag = m[1].toLowerCase();
         var attrStr = m[2] || "";
@@ -12874,12 +12888,17 @@ function _parseFragment(src, inSvg) {
         // Find matching closing tag for `tag`
         var depth = 1;
         var scanPos = afterOpen;
-        var tokenRe = new RegExp("<(/?)" + tag + "\\b[^>]*>", "gi");
+        // Every tag is read whole, so one written inside another's quoted
+        // value is not taken for an end tag.
+        var tokenRe = new RegExp("<(/?)([a-zA-Z][a-zA-Z0-9-]*)" + _TAG_REST + "(?:>|$)", "g");
         tokenRe.lastIndex = scanPos;
         var tok;
         var closeStart = -1;
         var closeEnd = -1;
         while ((tok = tokenRe.exec(src)) !== null) {
+            if (tok[2].toLowerCase() !== tag) {
+                continue;
+            }
             var fullTok = tok[0];
             if (tok[1] === "/") {
                 depth -= 1;
@@ -12893,12 +12912,9 @@ function _parseFragment(src, inSvg) {
             }
         }
         if (closeStart === -1) {
-            var rest = src.slice(afterOpen);
-            if (rest) {
-                el.textContent = _unescapeHtmlText(rest);
-            }
-            nodes.push(el);
-            break;
+            // No end tag: the element holds the rest of the markup.
+            closeStart = src.length;
+            closeEnd = src.length;
         }
         var inner = src.slice(afterOpen, closeStart);
         if (/<[a-zA-Z]/.test(inner)) {
