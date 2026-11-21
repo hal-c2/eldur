@@ -2505,14 +2505,21 @@ const EMAIL: &str = r"/^[a-zA-Z0-9.!#$%&'*+\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0
 const URL: &str = r"/^[a-zA-Z][a-zA-Z0-9+.-]*:\S*$/";
 
 /// For each of `lists` that shares its start line with other elements of
-/// its tag, which of them it is, in document order: a minified page starts
-/// every list on one line, and warnings that read the same at one line
-/// count as one. One walk of the document serves every list.
+/// its tag, or with one of `lists` of another tag, which of them it is: its
+/// tag and its place among that tag's elements on the line, in document
+/// order. A minified page starts every list on one line, and warnings that
+/// read the same at one line count as one; the tag keeps an `<ol>` apart
+/// from a numbered `<ul>` that is the only one of its tag there too. One
+/// walk of the document serves every list.
 fn which_on_line(doc: &Document, lists: &[NodeId]) -> HashMap<NodeId, String> {
     let key = |n: NodeId| doc.element(n).map(|e| (e.line, e.local_name()));
     let wanted: HashSet<_> = lists.iter().filter_map(|&l| key(l)).collect();
     if wanted.is_empty() {
         return HashMap::new();
+    }
+    let mut tags_on_line: HashMap<u64, usize> = HashMap::new();
+    for (line, _) in &wanted {
+        *tags_on_line.entry(*line).or_default() += 1;
     }
     let mut same: HashMap<(u64, &str), Vec<NodeId>> = HashMap::new();
     for d in doc.descendants(doc.root()) {
@@ -2526,7 +2533,8 @@ fn which_on_line(doc: &Document, lists: &[NodeId]) -> HashMap<NodeId, String> {
             let k = key(l)?;
             let on_line = same.get(&k)?;
             let i = on_line.iter().position(|&d| d == l)?;
-            (on_line.len() > 1).then(|| {
+            let shared = on_line.len() > 1 || tags_on_line.get(&k.0).is_some_and(|&n| n > 1);
+            shared.then(|| {
                 (
                     l,
                     format!(
