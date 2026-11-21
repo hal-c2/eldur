@@ -1081,10 +1081,12 @@ impl Emitter<'_, '_> {
         };
         match px(&style.width) {
             Some(w) => {
+                self.wrapping_fixed(&mut obj, style);
                 obj.set("implicitWidth", number(w + extra_w));
                 obj.set("width", number(w + extra_w))
             }
             None if percent_width(style).is_some() => {
+                self.wrapping_fixed(&mut obj, style);
                 let (percent, px) = percent_width(style).unwrap_or_default();
                 let share = format!(
                     "{flow_id}.width * {} + {}",
@@ -1135,24 +1137,29 @@ impl Emitter<'_, '_> {
         }
     }
 
-    /// Lets a button's label wrap, and returns the width `limit` the button
-    /// can narrow to: never below its widest word, the min-content of CSS
-    /// shrink-to-fit.
-    fn wrapping_label(&mut self, obj: &mut Object, style: &ComputedStyle, limit: String) -> String {
-        let Some(id) = obj.id.clone() else {
-            return limit;
-        };
-        let mut stretch = None;
+    /// Makes a button's label (`wrap`: wrapping at its spaces) as tall as
+    /// the lines it draws, and the button with it, unless a height is
+    /// fixed. Returns the label's id; a label drawn as lines (an icon from
+    /// `::before`) sizes itself and has none.
+    pub(super) fn label_lines(
+        &mut self,
+        obj: &mut Object,
+        style: &ComputedStyle,
+        id: &str,
+        wrap: bool,
+    ) -> Option<String> {
+        let mut found = None;
         for m in &mut obj.members {
             if let Member::Property {
                 name,
                 value: Value::Object(label),
             } = m
                 && name == "contentItem"
-                // A label drawn as lines (an icon from `::before`) wraps itself.
                 && label.type_name == "Text"
             {
-                label.set("wrapMode", Value::expr("Text.WordWrap"));
+                if wrap {
+                    label.set("wrapMode", Value::expr("Text.WordWrap"));
+                }
                 // `contentItem` is typed Item, which has no `lineCount`; the
                 // label's own id is typed Text.
                 let label_id = match &label.id {
@@ -1163,12 +1170,10 @@ impl Emitter<'_, '_> {
                         claimed
                     }
                 };
-                stretch = Some(label_id);
+                found = Some(label_id);
             }
         }
-        let Some(label_id) = stretch else {
-            return limit;
-        };
+        let label_id = found?;
         if matches!(obj.get("implicitHeight"), Some(Value::Number(_)))
             && !matches!(style.height, Size::Length(_))
         {
@@ -1179,6 +1184,30 @@ impl Emitter<'_, '_> {
                     fmt_number(round(line_box(style).unwrap_or_else(|| normal_line(style))))
                 )),
             );
+        }
+        Some(label_id)
+    }
+
+    /// A button whose width is given wraps its label at the spaces its
+    /// `white-space` lets break, as Chromium's does.
+    fn wrapping_fixed(&mut self, obj: &mut Object, style: &ComputedStyle) {
+        if obj.type_name == "Button"
+            && !matches!(style.white_space, WhiteSpace::NoWrap | WhiteSpace::Pre)
+            && let Some(id) = obj.id.clone()
+        {
+            self.label_lines(obj, style, &id, true);
+        }
+    }
+
+    /// Lets a button's label wrap, and returns the width `limit` the button
+    /// can narrow to: never below its widest word, the min-content of CSS
+    /// shrink-to-fit.
+    fn wrapping_label(&mut self, obj: &mut Object, style: &ComputedStyle, limit: String) -> String {
+        let Some(id) = obj.id.clone() else {
+            return limit;
+        };
+        if self.label_lines(obj, style, &id, true).is_none() {
+            return limit;
         }
         let words = self.ids.claim(&format!("{id} words"));
         let mut measure = Object::new("FontMetrics");
