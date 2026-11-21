@@ -529,6 +529,30 @@ fn a_grandchild_that_holds_the_pipes_open_does_not_outlast_the_limit() {
     assert_eq!(String::from_utf8_lossy(&output.stdout), "started\n");
 }
 
+/// Kills a process when dropped, so a test leaves nothing behind even when
+/// it panics.
+#[cfg(unix)]
+struct KillOnDrop(u32);
+
+#[cfg(unix)]
+impl Drop for KillOnDrop {
+    fn drop(&mut self) {
+        let _ = std::process::Command::new("kill")
+            .args(["-s", "KILL", &self.0.to_string()])
+            .stderr(std::process::Stdio::null())
+            .status();
+    }
+}
+
+#[cfg(unix)]
+fn is_running(pid: u32) -> bool {
+    std::process::Command::new("kill")
+        .args(["-0", &pid.to_string()])
+        .stderr(std::process::Stdio::null())
+        .status()
+        .is_ok_and(|status| status.success())
+}
+
 #[cfg(unix)]
 #[test]
 fn a_pipe_held_open_outside_the_group_is_not_a_finished_run() {
@@ -538,26 +562,41 @@ fn a_pipe_held_open_outside_the_group_is_not_a_finished_run() {
     }
     let started = std::time::Instant::now();
     // `setsid` moves the holder out of the child's process group, so the
-    // group kill can't reach it.
+    // group kill can't reach it. It prints its pid on stdout and closes that,
+    // so the pid arrives, and holds stderr open while it sleeps.
     let child = std::process::Command::new("sh")
-        .args(["-c", "setsid sleep 30 & echo started"])
+        .args([
+            "-c",
+            r#"setsid sh -c 'echo $$; exec sleep 10 >/dev/null' &"#,
+        ])
         .process_group(0)
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::piped())
         .spawn()
         .expect("run sh");
     let (output, outcome) = wait_draining(child, std::time::Duration::from_secs(2));
+    let holder: u32 = String::from_utf8_lossy(&output.stdout)
+        .trim()
+        .parse()
+        .expect("the holder's pid");
+    let guard = KillOnDrop(holder);
     assert!(
-        started.elapsed() < std::time::Duration::from_secs(20),
+        started.elapsed() < std::time::Duration::from_secs(9),
         "waited {:?} for a pipe held outside the group",
         started.elapsed()
     );
     assert_eq!(
         outcome,
         Outcome::Incomplete,
-        "partial output read as a finished run: {:?}",
-        String::from_utf8_lossy(&output.stdout)
+        "partial output read as a finished run"
     );
+    drop(guard);
+    // Its parent is gone, so whoever adopted it reaps it soon after the kill.
+    let gone = std::time::Instant::now() + std::time::Duration::from_secs(5);
+    while is_running(holder) && std::time::Instant::now() < gone {
+        std::thread::sleep(std::time::Duration::from_millis(50));
+    }
+    assert!(!is_running(holder), "the holder {holder} outlived the test");
 }
 
 fn run(name: &str, page: &str, test: &str) -> String {
