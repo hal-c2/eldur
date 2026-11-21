@@ -481,6 +481,10 @@ fn a_button_holding_lines_keeps_them_as_chromium_does() {
     page_drawing_within(
         "button_lines",
         &["A", "x", "Go", " many words that wrap", "Go", " on"],
-        &[("bh", &["x"], &["hidden"]), ("bm", &["B", "A"], &["H"])],
+        &[
+            ("bh", &["x"], &["hidden"]),
+            ("bm", &["B", "A"], &["H"]),
+            ("bk", &["y", "Save", "x"], &["K"]),
+        ],
     );
 }

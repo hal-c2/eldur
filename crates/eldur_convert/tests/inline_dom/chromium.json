@@ -73,6 +73,7 @@
    "LC hidden-kept \"Savehiddenx\"",
    "LC hidden-left \"hiddenx\"",
    "LC hidden-stays \"HBA\"",
+   "LC hidden-first \"yKSavex\"",
    "LC created-wrap true B,\" many words that wrap\"",
    "LC created-empty true SPAN",
    "LC swapped B,\" on\" \"Go on\" true true",
