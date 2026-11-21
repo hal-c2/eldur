@@ -15218,6 +15218,11 @@ function _vRemoveAttr(v, name) {
     if (key === "id") {
         v.objectName = "";
     } else if (key === "class") {
+        // What the classes gave a box the element holds goes with them, as
+        // it does when a class is set to "".
+        for (var c = 0; c < m.classes.length; ++c) {
+            _syncClassProp(m.raw || v, m.classes[c], false);
+        }
         m.classes.length = 0;
     } else if (key === "style") {
         m.styles = {};
