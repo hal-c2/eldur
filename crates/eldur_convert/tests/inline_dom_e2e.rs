@@ -47,6 +47,34 @@ TestCase {
         }
     }
 
+    // Where a run on a line draws its first ink, from the left of its own box.
+    function inkIn(item, under, img) {
+        if (!item.visible || item.opacity === 0) {
+            return
+        }
+        const names = item.objectName ? under.concat([item.objectName]) : under
+        if (names.length > 0 && item.lineCount !== undefined && typeof item.text === "string"
+                && item.text !== "" && item.parent && typeof item.parent.firstBaseline === "number") {
+            const at = item.mapToItem(host, 0, 0)
+            const x0 = Math.round(at.x), y0 = Math.round(at.y)
+            const w = Math.min(Math.round(item.width), img.width - x0), h = Math.min(Math.round(item.height), img.height - y0)
+            let left = -1
+            for (let x = 0; x < w && left < 0; ++x) {
+                for (let y = 0; y < h; ++y) {
+                    const c = img.pixel(x0 + x, y0 + y)
+                    if ((c.r + c.g + c.b) / 3 < 0.5) {
+                        left = x
+                        break
+                    }
+                }
+            }
+            console.log("INKIN " + names[names.length - 1] + " " + left + " " + item.text)
+        }
+        for (let i = 0; i < item.children.length; ++i) {
+            inkIn(item.children[i], names, img)
+        }
+    }
+
     function test_page() {
         const component = Qt.createComponent("Main.qml")
         verify(component.status === Component.Ready, component.errorString())
@@ -63,6 +91,7 @@ TestCase {
         }
         waitForRendering(page)
         drawnIn(page, [])
+        inkIn(page, [], grabImage(host))
     }
 }
 }
@@ -160,6 +189,20 @@ fn run(
         for not in *never {
             if drew_in.iter().any(|d| d.contains(not)) {
                 problems.push(format!("#{id} draws {not:?}; drew {drew_in:?}"));
+            }
+        }
+        // Chromium draws each run in its own box. A run whose glyphs Qt
+        // aligns in a wider layout draws over its neighbour while its box
+        // is in place, so this reads the pixels.
+        let ink = format!("INKIN {id} ");
+        for l in text.lines() {
+            let Some(at) = l.find(&ink) else { continue };
+            let (left, run) = l[at + ink.len()..].split_once(' ').unwrap_or(("-1", ""));
+            let left: i32 = left.parse().unwrap_or(-1);
+            if !run.starts_with(char::is_whitespace) && left > 2 {
+                problems.push(format!(
+                    "#{id} draws {run:?} {left} px into its box, over what comes before"
+                ));
             }
         }
     }
@@ -486,6 +529,8 @@ fn a_button_holding_lines_keeps_them_as_chromium_does() {
             ("bm", &["B", "A"], &["H"]),
             ("bk", &["y", "Save", "x"], &["K"]),
             ("bp", &["y", "B", "x", "A"], &["K"]),
+            ("cbx", &["Go", " many words that wrap"], &[]),
+            ("pc", &["Go", " on"], &[]),
         ],
     );
 }

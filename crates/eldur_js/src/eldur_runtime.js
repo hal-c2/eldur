@@ -26776,7 +26776,9 @@ function _gPaintText(text, s, innerW, owner) {
     var line = own !== null ? own : EldurFonts.normalLine(text.font, s.fontSize, text.text);
     _gSet(text, "lineHeightMode", 1);
     _gSet(text, "lineHeight", line);
-    var align = s["text-align"];
+    // On a line, `text-align` places the run (the line's `textAlign`), not
+    // the glyphs in it: a run centred in itself draws off its place.
+    var align = _isLines(text.parent) ? "left" : s["text-align"];
     _gSet(text, "horizontalAlignment", align === "center" ? 4 : align === "right" || align === "end" ? 2 : align === "justify" ? 8 : 1);
     // A line as wide as its advances still has its ink to draw, which Qt
     // would otherwise break off onto another line; CSS lets ink overflow.
