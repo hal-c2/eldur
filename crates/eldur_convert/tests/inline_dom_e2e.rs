@@ -646,8 +646,9 @@ fn a_button_lays_out_its_lines_by_its_white_space_as_chromium_does() {
     // element keeps its `pre` spaces, its `pre-line` single spaces and its
     // `nowrap` line, a `>` in a quoted attribute value does not end a tag,
     // and a tag the markup ends inside, or whose quoted value is never
-    // closed, is no node, nor is anything after it, and is read fast
-    // (Chromium's values in the log).
+    // closed, is no node, nor is anything after it, and is read fast; an end
+    // tag inside a quoted value closes nothing, and a bare value ending in `/`
+    // is no self-closing tag (Chromium's values in the log).
     page("button_breaks");
 }
 
