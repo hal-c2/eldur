@@ -31,7 +31,7 @@ const ELDUR_FILTER_QML: &str = include_str!("EldurFilter.qml");
 const ELDUR_FILTER_QSB: &[u8] = include_bytes!("eldur_filter.frag.qsb");
 const ELDUR_TEXT_SHADOW_QML: &str = include_str!("EldurTextShadow.qml");
 use inline::{ELDUR_INLINE_BOX_QML, ELDUR_LINES_QML, ELDUR_RUN_QML};
-pub(crate) use inline::{has_atomic, name_runs, needs_lines_for_boxes};
+pub(crate) use inline::{has_atomic, name_runs, needs_lines_for_boxes, sets_own_white_space};
 mod inline_model;
 mod keyframes;
 mod links;
