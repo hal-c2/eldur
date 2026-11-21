@@ -272,12 +272,11 @@ fn a_mostly_covered_group_fits_before_costlier_small_ones() {
     );
 }
 
-#[test]
-fn every_left_out_group_warns_and_keeps_its_own_worlds() {
-    // A hundred lists of three hover-shown items, one to a source line, add
-    // four worlds each to the elements' own: far past MAX_WORLDS, so the
-    // pass leaves some lists out. Each list it leaves out says so on its
-    // own line, and its last marker still renumbers for each hover alone.
+/// A hundred lists of three hover-shown items, each list after `sep`, add
+/// four worlds each to the elements' own: far past MAX_WORLDS, so the pass
+/// leaves some lists out. Each list it leaves out gets a warning of its
+/// own, and its last marker still renumbers for each hover alone.
+fn every_left_out_list_warns(sep: &str) {
     let lists = 100;
     let mut rules = String::new();
     let mut body = String::new();
@@ -290,12 +289,18 @@ fn every_left_out_group_warns_and_keeps_its_own_worlds() {
                 ".s{k}h{i}{{display:none}} .s{k}a{i}:hover + .s{k}h{i}{{display:list-item}} "
             ));
         }
-        body.push_str(&format!("\n<ol>{items}<li>c</li></ol>"));
+        body.push_str(&format!("{sep}<ol>{items}<li>c</li></ol>"));
     }
     let page = format!("<!DOCTYPE html><style>{rules}</style>{body}");
+    // Each list's start line, counted in the page itself.
+    let starts: Vec<u32> = page
+        .match_indices("<ol>")
+        .map(|(at, _)| 1 + page[..at].matches('\n').count() as u32)
+        .collect();
+    let shared = starts.iter().filter(|&&l| l == starts[0]).count() > 1;
     let out = convert_str(&page, &Options::default());
     let qml = out.main_qml().expect("Main.qml");
-    let mut left_out = 0;
+    let mut expected = Vec::new();
     for k in 0..lists {
         let hovers: Vec<String> = (0..3).map(|i| format!("s{k}a{i}Hover")).collect();
         // The last item's marker is the last line bound to all three.
@@ -307,23 +312,92 @@ fn every_left_out_group_warns_and_keeps_its_own_worlds() {
         if line.contains("\"7. \"") {
             continue;
         }
-        left_out += 1;
         for h in &hovers {
             assert!(
                 line.contains(&format!("{h}.hovered ? \"5. \"")),
                 "list {k} lost the world of {h} alone: {line}"
             );
         }
+        // Alone on its line a list needs no more than the line; sharing
+        // it, it says which `<ol>` of the line it is.
+        let which = if shared {
+            format!(" in `<ol>` {} of {lists} on this line", k + 1)
+        } else {
+            String::new()
+        };
+        expected.push((Some(starts[k]), left_out_warning(3, &which)));
     }
-    assert!(left_out > 0, "the budget never binds");
-    assert!(left_out < lists, "no list fits");
-    let warned = out
-        .diagnostics
+    assert!(!expected.is_empty(), "the budget never binds");
+    assert!(expected.len() < lists, "no list fits");
+    assert_eq!(warnings_about_numbering(&out), expected);
+}
+
+fn left_out_warning(conditions: usize, which: &str) -> String {
+    format!(
+        "{conditions} classes and states show or hide numbered elements{which}; a marker or counter is right only while one of them differs from the document"
+    )
+}
+
+/// The line and text of each warning that a group was left out, in order.
+fn warnings_about_numbering(out: &Output) -> Vec<(Option<u32>, String)> {
+    out.diagnostics
         .iter()
-        .map(ToString::to_string)
-        .filter(|d| d.contains("3 classes and states show or hide numbered elements"))
-        .count();
-    assert_eq!(warned, left_out, "{:?}", out.diagnostics);
+        .filter(|d| d.message.contains("show or hide numbered elements"))
+        .map(|d| (d.line, d.message.clone()))
+        .collect()
+}
+
+#[test]
+fn every_left_out_group_warns_and_keeps_its_own_worlds() {
+    every_left_out_list_warns("\n");
+}
+
+#[test]
+fn left_out_lists_on_one_line_warn_apart() {
+    // A minified page starts every list on line 1: warnings that read the
+    // same at one line would count as one.
+    every_left_out_list_warns("");
+}
+
+#[test]
+fn an_ol_and_a_numbered_ul_on_one_line_warn_apart() {
+    // Each is the only list of its tag on the line, so only the tag tells
+    // their warnings apart. Ten conditions each is too many to number at
+    // all, so both are left out whatever the budget.
+    let mut rules = String::from(".d{list-style-type:decimal} ");
+    let mut lists = String::new();
+    for (k, (open, close)) in [("<ol>", "</ol>"), ("<ul class=d>", "</ul>")]
+        .into_iter()
+        .enumerate()
+    {
+        lists.push_str(open);
+        for i in 0..10 {
+            lists.push_str(&format!(
+                "<li class=s{k}a{i}>a</li><li class=s{k}h{i}>h</li>"
+            ));
+            rules.push_str(&format!(
+                ".s{k}h{i}{{display:none}} .s{k}a{i}:hover + .s{k}h{i}{{display:list-item}} "
+            ));
+        }
+        lists.push_str(&format!("<li>c</li>{close}"));
+    }
+    let page = format!("<!DOCTYPE html><style>{rules}</style>{lists}");
+    let out = convert_str(&page, &Options::default());
+    assert_eq!(
+        warnings_about_numbering(&out),
+        [
+            (
+                Some(1),
+                left_out_warning(10, " in `<ol>` 1 of 1 on this line")
+            ),
+            (
+                Some(1),
+                left_out_warning(10, " in `<ul>` 1 of 1 on this line")
+            ),
+        ],
+        "{:?}",
+        out.diagnostics
+    );
 }
 
 /// A table of `cells` cells, four to a row, each recoloured by its own
