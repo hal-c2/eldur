@@ -106,34 +106,52 @@ pub(crate) fn drawn_runs(
         let shown: String = runs.iter().skip(1).step_by(2).map(String::as_str).collect();
         return (collapse_as(white, &shown) == drawn && runs.concat() == dom).then_some(runs);
     }
-    // Collapse the whole as `textContent` is collapsed; a space belongs to the
-    // run its first whitespace is in.
-    let mut chars: Vec<(char, usize)> = Vec::new();
-    let mut space: Option<usize> = None;
-    for (i, run) in runs.iter().enumerate() {
-        for c in run.chars() {
-            if c.is_ascii_whitespace() {
-                space.get_or_insert(i);
-            } else {
-                if let Some(at) = space.take()
-                    && !chars.is_empty()
-                {
-                    chars.push((' ', at));
-                }
-                chars.push((c, i));
-            }
-        }
-    }
-    let mut runs: Vec<String> = vec![String::new(); runs.len()];
-    for (c, i) in chars {
-        runs[i].push(c);
-    }
     // Each node keeps its spaces, as in the DOM (`Save <kbd hidden>K</kbd>
     // now` gives "Save " and " now"); the label collapses the two as it draws
     // them, so the drawn runs join to the label once collapsed.
-    let shown: String = runs.iter().skip(1).step_by(2).map(String::as_str).collect();
-    let shown = shown.split_ascii_whitespace().collect::<Vec<_>>().join(" ");
-    (shown == drawn && runs.concat() == dom).then_some(runs)
+    let fits = |split: &Vec<String>| {
+        let shown: String = split
+            .iter()
+            .skip(1)
+            .step_by(2)
+            .map(String::as_str)
+            .collect();
+        let shown = shown.split_ascii_whitespace().collect::<Vec<_>>().join(" ");
+        shown == drawn && split.concat() == dom
+    };
+    // A space is the run's its first whitespace is in, unless that leaves the
+    // label without one it draws: `A<kbd hidden>K </kbd> B` draws "A B", so
+    // there the space is " B"'s.
+    Some(collapsed_runs(&runs, false))
+        .filter(fits)
+        .or_else(|| Some(collapsed_runs(&runs, true)).filter(fits))
+}
+
+/// `runs` collapsed as one text. The space of a stretch of whitespace goes to
+/// the run the stretch starts in or, `to_drawn`, to the first drawn (odd) run
+/// it is in.
+fn collapsed_runs(runs: &[String], to_drawn: bool) -> Vec<String> {
+    let mut out = vec![String::new(); runs.len()];
+    let mut space: Option<usize> = None;
+    let mut begun = false;
+    for (i, run) in runs.iter().enumerate() {
+        for c in run.chars() {
+            if c.is_ascii_whitespace() {
+                if space.is_none_or(|at| to_drawn && at % 2 == 0 && i % 2 == 1) {
+                    space = Some(i);
+                }
+            } else {
+                if let Some(at) = space.take()
+                    && begun
+                {
+                    out[at].push(' ');
+                }
+                out[i].push(c);
+                begun = true;
+            }
+        }
+    }
+    out
 }
 
 /// `node`'s text, each piece marked hidden (`display: none`) or drawn.

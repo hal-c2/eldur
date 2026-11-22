@@ -630,13 +630,15 @@ fn a_buttons_line_holds_its_text_nodes_as_chromium_does() {
     // span's text model (Chromium's innerText in the log).
     page_drawing_within(
         "button_line_nodes",
-        &["Go", "!", " on", "X", "B", "Save  later", "A B"],
+        &["Go", "!", " on", "X", "B", "Save  later", "A B", "C D!"],
         &[
             ("la", &["Go", "!", " on"], &[]),
             ("lh", &["X", "B"], &["H"]),
             // `white-space: pre` draws both nodes' spaces.
             ("bpre", &["Save  later"], &["K"]),
             ("ab", &["A B"], &[]),
+            // The space hidden text shares with a drawn node is that node's.
+            ("hs", &["C D!"], &["K"]),
         ],
     );
 }

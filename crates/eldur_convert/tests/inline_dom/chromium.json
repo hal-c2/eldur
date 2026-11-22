@@ -115,6 +115,8 @@
    "LC clone-hidden-left \"AH\"",
    "LC clone-hidden-read \"AHCB\"",
    "LC text-spaces \"A  B\"",
+   "LC hidden-space [\"C\",\" D\"]",
+   "LC hidden-space-set \"CK D!\"",
    "LC pre-normal-span \"Ax y\" \"Ax   y\"",
    "LC pre-model-leaf \"A  B\""
   ],
