@@ -85,6 +85,18 @@ L("unclosed-holder-inner",k.childNodes.length,k.lastChild.nodeName,k.lastChild.c
 // length a scan that starts again at each `<` takes seconds.
 t0=Date.now();q.innerHTML='<b><span title="'+'<a'.repeat(128000)+'">x</span></b>';
 L("many-lt-in-value-fast",Date.now()-t0<500,JSON.stringify(q.textContent),q.firstChild.firstChild.title.length);
+// Elements ending one after another before a long tag each leave their
+// parent to look for the next tag: that tag is read once, not once per end.
+t0=Date.now();dp.innerHTML='<i>'.repeat(600)+'x'+'</i>x'.repeat(600)+'<span title="'+'a'.repeat(1000000)+'">y</span>';
+L("many-ends-before-tag-fast",Date.now()-t0<500,dp.textContent.length,dp.getElementsByTagName("span")[0].title.length);
+// An end tag no open element has closes nothing, and is passed over without
+// looking through every open element.
+var vs=byId("vs");t0=Date.now();vs.innerHTML='<i>'.repeat(600)+'</q>'.repeat(50000)+'z';
+L("many-stray-ends-fast",Date.now()-t0<500,JSON.stringify(vs.textContent));
+// A tag may have the name of something every object has.
+dp.innerHTML='<constructor>a</constructor><b>b</b>';
+vs.innerHTML='<constructor>c</constructor>d';
+L("prototype-name",JSON.stringify(dp.textContent),dp.childNodes.length,dp.firstChild.childNodes.length,JSON.stringify(vs.textContent),vs.childNodes.length,vs.firstChild.childNodes.length);
 // An end tag written in a quoted value closes nothing.
 q.innerHTML='<b><span title="<b>">OK</span></b>tail';
 L("title-holds-tag",JSON.stringify(q.textContent),q.childNodes.length,q.lastChild.nodeName);
@@ -127,6 +139,7 @@ B<b>C</b></button></div>
 <div id="many">M</div>
 <div id="kept">K</div>
 <div id="deep">D</div>
+<p id="vp">a <span id="vs">s</span></p>
 <div id="pd">P</div>
 <div><button id="pb" style="white-space:pre">P</button></div>
 <div><button id="pn" style="white-space:pre">A<span style="white-space:normal">x   y</span></button></div>
