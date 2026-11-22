@@ -1164,6 +1164,13 @@ impl<'a> Visit<'a> for AnalysisVisitor<'_, '_> {
             {
                 self.analysis.open_elements = true;
             }
+            // A template is written for an element a script creates. A copy of
+            // any other is styled where it lands, from the rules.
+            if member.property.name == "cloneNode"
+                && !matches!(self.target(&member.object), ElementRef::Created(_))
+            {
+                self.analysis.open_elements = true;
+            }
             // An animation object answers from the live style of its element,
             // and what starts or ends one is told by the same clock.
             let moves = matches!(member.property.name.as_str(), "getAnimations" | "animate")
