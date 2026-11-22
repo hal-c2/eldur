@@ -91,6 +91,7 @@ fn property(longhand: Longhand) -> Option<&'static str> {
         Longhand::Display => "display",
         Longhand::BackgroundColor => "background-color",
         Longhand::Visibility => "visibility",
+        Longhand::Opacity => "opacity",
         Longhand::TextDecorationLine => "text-decoration-line",
         _ => return None,
     })

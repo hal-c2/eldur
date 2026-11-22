@@ -539,36 +539,39 @@ fn faded_by(items: &[Inline<'_>], span: &Span<'_>) -> Option<f32> {
 }
 
 /// Fades a box on the line by the opacity of the elements around it, which
-/// have no item of their own to carry it, on top of the box's own. On a page
-/// with a runtime the fade is declared too, so an opacity a script writes or
-/// reads is the box's own (`_fadedOpacity`, `_ownOpacity`). The runtime gets
-/// the own opacity back by dividing by the fade, so there both are kept to
-/// 1e-6 rather than 1/100, and a fade of 0, which no division undoes, has the
-/// own opacity declared beside it.
-fn fade_atomic(placed: &mut Object, fade: f32, runtime: bool) {
-    if fade >= 1.0 {
+/// have no item of their own to carry it, on top of the box's own. Where a
+/// script may write the box's style the fade is declared too (`declare`), so
+/// an opacity it writes or reads is the box's own (`_fadedOpacity`,
+/// `_ownOpacity`). The runtime gets the own opacity back by dividing by the
+/// fade, so there both are kept to 1e-6 rather than 1/100. A fade of 0 and
+/// `visibility: hidden` leave nothing to divide: the own opacity is declared.
+fn fade_atomic(placed: &mut Object, fade: f32, declare: bool, style: &ComputedStyle) {
+    let own = placed.get("opacity").cloned();
+    // A wrapper that places the box has no opacity of the box's to lose.
+    let hidden = declare && own.is_some() && style.visibility == eldur_css::Visibility::Hidden;
+    if fade >= 1.0 && !hidden {
         return;
     }
     let keep = |v: f64| {
-        let scale = if runtime { 1e6 } else { 100.0 };
+        let scale = if declare { 1e6 } else { 100.0 };
         (v * scale).round() / scale
     };
     let fade_value = keep(f64::from(fade));
-    let own = placed.get("opacity").cloned();
     let faded = match &own {
         Some(Value::Number(own)) => Value::Number(keep(own * f64::from(fade))),
         Some(Value::Expr(own)) => Value::Expr(format!("({own}) * {}", fmt_number(fade_value))),
         _ => Value::Number(fade_value),
     };
     placed.set("opacity", faded);
-    if runtime {
-        if fade_value == 0.0 {
+    if declare {
+        if fade_value == 0.0 || hidden {
             placed.members.insert(
                 0,
                 Member::PropertyDecl {
                     ty: "real".to_owned(),
                     name: "eldurOwnOpacity".to_owned(),
                     value: Some(match own {
+                        _ if hidden => Value::Number(keep(f64::from(style.opacity))),
                         Some(v @ (Value::Number(_) | Value::Expr(_))) => v,
                         _ => Value::Number(1.0),
                     }),
@@ -590,7 +593,7 @@ fn fade_atomic(placed: &mut Object, fade: f32, runtime: bool) {
     }
     // QML multiplies the opacity into each thing drawn; CSS fades the box as
     // one picture.
-    if super::paints_count(placed) > 1 {
+    if fade < 1.0 && super::paints_count(placed) > 1 {
         placed.set("layer.enabled", true);
     }
 }
@@ -933,7 +936,15 @@ impl Emitter<'_, '_> {
                         placed.members.insert(0, pseudo);
                     }
                     vertical_align(&mut placed, &a.style);
-                    fade_atomic(&mut placed, fade, self.runtime_dom);
+                    // Only a box in an inline element has a fade to follow.
+                    if fade < 1.0 || owner.is_some() {
+                        fade_atomic(
+                            &mut placed,
+                            fade,
+                            self.runtime_dom || self.hides_items,
+                            &a.style,
+                        );
+                    }
                     if let Some(link) = a.node.and_then(|n| self.inline_link(n)) {
                         let first = named_links.insert(link);
                         self.atomic_link(&mut placed, a.node, link, first);

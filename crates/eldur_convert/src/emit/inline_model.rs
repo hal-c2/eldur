@@ -69,6 +69,11 @@ fn computed(style: &ComputedStyle) -> Json {
     if radii.iter().any(|r| *r != 0.0) {
         out["rad"] = json!(radii);
     }
+    // Not inherited: each element's own, which the runtime multiplies down
+    // the line as it paints.
+    if style.opacity < 1.0 {
+        out["opacity"] = json!((f64::from(style.opacity) * 1e6).round() / 1e6);
+    }
     let (rel_x, rel_y) = super::inline::relative_offset(style);
     if (rel_x, rel_y) != (0.0, 0.0) {
         out["rel"] = json!([rel_x, rel_y]);
