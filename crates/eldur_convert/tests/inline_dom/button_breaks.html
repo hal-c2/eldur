@@ -85,14 +85,16 @@ L("unclosed-holder-inner",k.childNodes.length,k.lastChild.nodeName,k.lastChild.c
 // length a scan that starts again at each `<` takes seconds.
 t0=Date.now();q.innerHTML='<b><span title="'+'<a'.repeat(128000)+'">x</span></b>';
 L("many-lt-in-value-fast",Date.now()-t0<500,JSON.stringify(q.textContent),q.firstChild.firstChild.title.length);
-// Elements ending one after another before a long tag each leave their
-// parent to look for the next tag: that tag is read once, not once per end.
-t0=Date.now();dp.innerHTML='<i>'.repeat(600)+'x'+'</i>x'.repeat(600)+'<span title="'+'a'.repeat(1000000)+'">y</span>';
-L("many-ends-before-tag-fast",Date.now()-t0<500,dp.textContent.length,dp.getElementsByTagName("span")[0].title.length);
-// An end tag no open element has closes nothing, and is passed over without
-// looking through every open element.
-var vs=byId("vs");t0=Date.now();vs.innerHTML='<i>'.repeat(600)+'</q>'.repeat(50000)+'z';
-L("many-stray-ends-fast",Date.now()-t0<500,JSON.stringify(vs.textContent));
+// Elements ending one after another before a tag leave their text in their
+// parents, and the tag after them all. That the tag is looked for once is
+// counted in eldur_js's qml_runtime test.
+dp.innerHTML='<i>'.repeat(600)+'x'+'</i>x'.repeat(600)+'<span title="t">y</span>';
+L("many-ends-before-tag",dp.textContent.length,dp.getElementsByTagName("span")[0].title);
+// An end tag no open element has closes nothing, however many there are. That
+// each is passed over without looking through the open elements is counted in
+// eldur_js's qml_runtime test: a clock can't tell it from a loaded machine.
+var vs=byId("vs");vs.innerHTML='<i>'.repeat(600)+'</q>'.repeat(5000)+'z';
+L("many-stray-ends",JSON.stringify(vs.textContent));
 // A tag may have the name of something every object has.
 dp.innerHTML='<constructor>a</constructor><b>b</b>';
 vs.innerHTML='<constructor>c</constructor>d';
