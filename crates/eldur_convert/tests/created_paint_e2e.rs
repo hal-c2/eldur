@@ -180,6 +180,42 @@ fn computed_static() {
     page("computed_static");
 }
 
+/// A copy of an element of the page takes the look the rules give it.
+#[test]
+fn a_clone_of_a_page_element_has_its_look() {
+    if support::no_qt() {
+        return;
+    }
+    let html = r#"<!doctype html><html><head><style>
+body{margin:0}
+.b{display:block;box-sizing:border-box;margin:0;border:0;border-radius:0;width:120px;height:40px;padding:4px 10px;font-size:20px;background:rgb(10,120,200)}
+</style></head><body><div id="l"><button id="b" class="b">Go</button></div><script>
+var c=document.getElementById('b').cloneNode(true);
+document.getElementById('l').appendChild(c);
+var s=getComputedStyle(c);
+console.log('CS '+[c.offsetWidth,c.offsetHeight,s.fontSize,s.paddingLeft].join(' '));
+</script></body></html>"#;
+    // Clear of the label: the original's two ends, then the copy's under it.
+    let pixels: Vec<_> = [(4, 20), (116, 20), (4, 60), (116, 60)]
+        .into_iter()
+        .map(|(x, y)| {
+            let at = format!("{x},{y}");
+            serde_json::json!({"id": "button", "at": at, "x": x, "y": y, "rgb": [10, 120, 200]})
+        })
+        .collect();
+    let data = serde_json::json!({"pixels": pixels, "steps": []});
+    let text = run("clone_look", html, &data);
+    let problems = support::problem_lines(&text, |l| {
+        l.contains("FAIL!")
+            || l.contains("MISMATCH")
+            || l.contains("Warning:")
+            || l.contains("QWARN")
+            || l.contains("Error:")
+    });
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+    assert!(text.contains("CS 120 40 20px 10px"), "{text}");
+}
+
 /// What cannot be painted is said, naming the element and the property.
 #[test]
 fn unpaintable_warns() {
