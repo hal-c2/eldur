@@ -14403,10 +14403,10 @@ function _closeSvgBeforeHtml(src, inSvg) {
             continue;
         }
         var top = open.length > 0 ? open[open.length - 1] : null;
-        var foreign = top ? top.svg && !_SVG_HTML_POINTS[top.tag] : Boolean(inSvg);
+        var foreign = top ? top.svg && _SVG_HTML_POINTS[top.tag] !== true : Boolean(inSvg);
         if (foreign && _breaksOutOfSvg(tag, m[3])) {
             var closing = "";
-            while (open.length > 0 && open[open.length - 1].svg && !_SVG_HTML_POINTS[open[open.length - 1].tag]) {
+            while (open.length > 0 && open[open.length - 1].svg && _SVG_HTML_POINTS[open[open.length - 1].tag] !== true) {
                 var gone = open.pop().tag;
                 closing += "</" + gone + ">";
                 dropped[gone] = (dropped[gone] || 0) + 1;
@@ -14421,7 +14421,7 @@ function _closeSvgBeforeHtml(src, inSvg) {
             tagRe.lastIndex = _rawTextEnd(src, tag, tagRe.lastIndex)[1];
             continue;
         }
-        if (m[4] === "/" || _VOID_TAGS[tag]) {
+        if (m[4] === "/" || _VOID_TAGS[tag] === true) {
             continue;
         }
         open.push({ tag: tag, svg: tag === "svg" || foreign });
@@ -14481,7 +14481,8 @@ function _htmlCloses(src, inSvg) {
     var tokenRe = new RegExp("<(/?)([a-zA-Z][a-zA-Z0-9-]*)" + _TAG_REST + "(?:>|$)", "g");
     var openRe = new RegExp(_HTML_OPEN_TAG, "y");
     var found = {};
-    var open = {};
+    // No prototype: a tag may be named `constructor`.
+    var open = Object.create(null);
     // The namespace each element entered: an `<svg>` enters SVG, where the
     // raw-text names are ordinary elements, and its integration points and
     // the HTML elements that leave it go back to HTML.
@@ -14506,12 +14507,12 @@ function _htmlCloses(src, inSvg) {
         }
         openRe.lastIndex = tok.index;
         var whole = openRe.exec(src);
-        if ((whole ? whole[3] === "/" : tok[0].slice(-2) === "/>") || _VOID_TAGS[tag]) {
+        if ((whole ? whole[3] === "/" : tok[0].slice(-2) === "/>") || _VOID_TAGS[tag] === true) {
             continue;
         }
         if (tag === "svg") {
             spaces.push({ tag: tag, svg: true });
-        } else if (svgNow && (_SVG_HTML_POINTS[tag] || _breaksOutOfSvg(tag, tok[0]))) {
+        } else if (svgNow && (_SVG_HTML_POINTS[tag] === true || _breaksOutOfSvg(tag, tok[0]))) {
             spaces.push({ tag: tag, svg: false });
         }
         (open[tag] || (open[tag] = [])).push(tok.index);
@@ -14551,6 +14552,24 @@ function _parseFragment(src, inSvg) {
         gap = "";
         pos = cur.after;
     }
+    // The first start tag at or after `from`. An element ending before the
+    // next tag leaves its parent to search from a little further on, and the
+    // answer is the same tag, so it is kept: searching again from each of
+    // many nested ends would read the run up to that tag, and the tag itself,
+    // once per end.
+    var ahead = null;
+    var aheadFrom = -1;
+    var aheadEnd = 0;
+    function nextTag(from) {
+        if (aheadFrom === -1 || from < aheadFrom || (ahead !== null && from > ahead.index)) {
+            tagOpenRe.lastIndex = from;
+            ahead = tagOpenRe.exec(src);
+            aheadFrom = from;
+            aheadEnd = ahead ? tagOpenRe.lastIndex : src.length;
+        }
+        tagOpenRe.lastIndex = aheadEnd;
+        return ahead;
+    }
 
     while (open.length > 0) {
         var cur = open[open.length - 1];
@@ -14558,8 +14577,7 @@ function _parseFragment(src, inSvg) {
         var m = null;
         var runOff = false;
         if (pos < stop) {
-            tagOpenRe.lastIndex = pos;
-            m = tagOpenRe.exec(src);
+            m = nextTag(pos);
             if (m && m.index >= stop) {
                 m = null;
             } else if (m && (m[4] === "" || tagOpenRe.lastIndex > stop)) {
@@ -14608,7 +14626,7 @@ function _parseFragment(src, inSvg) {
         cur.lastTag = m[1];
         var tag = m[1].toLowerCase();
         var attrStr = m[2] || "";
-        var selfClosing = m[3] === "/" || Boolean(_VOID_TAGS[tag]);
+        var selfClosing = m[3] === "/" || _VOID_TAGS[tag] === true;
         var el = document.createElement(tag);
         var svg = tag === "svg" || (cur.svg && !_breaksOutOfSvg(tag, attrStr));
         _applyAttrsFromHtml(el, attrStr, svg);
@@ -14661,7 +14679,7 @@ function _parseFragment(src, inSvg) {
             pos = close ? close[1] : end;
             continue;
         }
-        open.push({ el: el, depth: at.depth + 1, up: at, end: end, after: close ? close[1] : stop, svg: svg && !_SVG_HTML_POINTS[tag], lastTag: "", placed: 0 });
+        open.push({ el: el, depth: at.depth + 1, up: at, end: end, after: close ? close[1] : stop, svg: svg && _SVG_HTML_POINTS[tag] !== true, lastTag: "", placed: 0 });
         pos = afterOpen;
     }
     return nodes;
@@ -16509,6 +16527,10 @@ function _vParseInto(c, html) {
     var parent = c.__eldurInline ? c : null;
     var model = _vModelFor(c);
     var stack = [{ node: parent, list: c.kids, depth: 0, up: null }];
+    // How many elements of each name are open, so an end tag no open element
+    // has is passed over without walking the stack: markup deep in unclosed
+    // elements followed by stray end tags stays linear.
+    var openCount = Object.create(null);
     // An unquoted value does not start with a quote, so each attribute is
     // read one way and a tag with no `>` fails in linear time.
     var re = /<(\/?)([a-zA-Z][a-zA-Z0-9-]*)((?:\s+[^\s=>\/]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>"'][^\s>]*))?)*)\s*(\/?)>/g;
@@ -16525,10 +16547,13 @@ function _vParseInto(c, html) {
         pos = hit.index + hit[0].length;
         var tag = hit[2].toLowerCase();
         if (hit[1]) {
-            for (var d = stack.length - 1; d > 0; --d) {
-                if (stack[d].node.eldurTag === tag) {
-                    stack.length = d;
-                    break;
+            if (openCount[tag] > 0) {
+                for (var d = stack.length - 1; d > 0; --d) {
+                    var shut = stack.pop().node.eldurTag;
+                    --openCount[shut];
+                    if (shut === tag) {
+                        break;
+                    }
                 }
             }
             continue;
@@ -16544,8 +16569,9 @@ function _vParseInto(c, html) {
         var at = top.depth >= _HTML_MAX_DEPTH ? top.up : top;
         var v = _vElement(tag, attrs, at.node, model);
         at.list.push(v);
-        if (!_vVoid[tag] && !hit[4]) {
+        if (_vVoid[tag] !== 1 && !hit[4]) {
             stack.push({ node: v, list: v.kids, depth: at.depth + 1, up: at });
+            openCount[tag] = (openCount[tag] || 0) + 1;
         }
     }
     addText(html.slice(pos));
@@ -16692,7 +16718,7 @@ function _vSerialize(v) {
         out += " " + names[i] + "=\"" + String(value).replace(/&/g, "&amp;").replace(/"/g, "&quot;") + "\"";
     }
     out += ">";
-    if (_vVoid[v.eldurTag]) {
+    if (_vVoid[v.eldurTag] === 1) {
         return out;
     }
     return out + _vInner(v) + "</" + v.eldurTag + ">";
