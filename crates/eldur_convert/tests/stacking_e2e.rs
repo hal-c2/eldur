@@ -1266,6 +1266,40 @@ fn removing_a_spans_class_attribute_takes_back_the_level_it_gave() {
     run_pages(&[("Main", &page)], &test, "removed-class");
 }
 
+/// The span of the test before last, whose box `animate()` replaces before
+/// the span gets its class: the block's level still follows the class, though
+/// what the class binds on has left the page.
+#[test]
+fn a_spans_class_lifts_the_box_that_replaced_the_one_it_held() {
+    let page = inline_level_page(
+        &format!("{INLINE_BLOCK}\n.wup {{ z-index: 5 }}"),
+        "<span id=wx style=\"position: relative\"><span id=ix></span></span>",
+        RELATIVE,
+        LATER_AT_1,
+    )
+    .replace(
+        "document.getElementById('ix').classList.add('up');",
+        "var ix = document.getElementById('ix');\n\
+         var wx = document.getElementById('wx');\n\
+         setTimeout(function () { ix.animate([{ opacity: .8 }, { opacity: .8 }], { duration: 4000 }); }, 20);\n\
+         setTimeout(function () { wx.classList.add('wup'); }, 300);",
+    );
+    assert_eq!(page.matches("ix.animate").count(), 1);
+    let test = pages_test(
+        "ReplacedHolder",
+        r#"
+    function test_the_class_reaches_past_the_replaced_box() {
+        page = make("Main.qml")
+        wait(150)
+        compare(front(page, 5, 70), "lx", "replaced, with no class")
+        wait(600)
+        compare(front(page, 5, 70), "ix", "with the class")
+    }
+"#,
+    );
+    run_pages(&[("Main", &page)], &test, "replaced-holder");
+}
+
 /// The span of the test before, whose class a timer adds: `#wx` is held
 /// from the start, as a page whose timer runs under another page must.
 fn timed_span_page(rule: &str, class: &str) -> String {
