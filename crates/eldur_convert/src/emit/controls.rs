@@ -2045,6 +2045,26 @@ B</button>
     }
 
     #[test]
+    fn a_label_collapses_a_spans_own_spaces_and_stays_one_text() {
+        // A line of runs in the label's place has no Text nodes for a script.
+        let (q, _) = qml(
+            r#"<style>.p{white-space:pre}.n{white-space:normal}.nw{white-space:nowrap}</style>
+               <button class=p>A   B<span class=n>x   y</span></button>
+               <button class=p>C <span class=n> z
+ w </span></button>
+               <button><span class=nw>Save</span></button>"#,
+        );
+        assert!(!q.contains("contentItem: Item"), "{q}");
+        assert!(q.contains(r#"text: "A   Bx y""#), "{q}");
+        assert!(
+            q.contains(r#"property var eldurDomRuns: ["", "A   Bx   y", ""]"#),
+            "{q}"
+        );
+        assert!(q.contains(r#"text: "C  z w""#), "{q}");
+        assert!(q.contains(r#"text: "Save""#), "{q}");
+    }
+
+    #[test]
     fn a_buttons_runs_split_where_its_nodes_do() {
         // String matching would split "ABB" as "AB" + "B" and "Saave" as
         // "Sa" + "a" + "ve". A node keeps the space before it (" B"), as in

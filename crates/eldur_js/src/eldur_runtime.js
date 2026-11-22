@@ -6778,7 +6778,7 @@ function _itRunWhiteSpace(raw) {
     var item = raw.vtext ? (raw.model ? _vHostElement(raw.model) : null) : raw;
     var set = null;
     for (var p = item; p; p = p.parent) {
-        if (p === item ? _isTextButton(p) : _meta(p).btnLines && _nodeTag(p) === "button") {
+        if (p === item ? _isTextButton(p) || _btnPageLine(p) : _meta(p).btnLines && _nodeTag(p) === "button") {
             if (_gHasCascade()) {
                 return _gFreshStyle(item)["white-space"];
             }
@@ -6789,6 +6789,21 @@ function _itRunWhiteSpace(raw) {
         }
     }
     return null;
+}
+
+// Whether a button draws the converter's line for a label (`button_lines`):
+// its `text` is then what that line draws.
+function _btnPageLine(raw) {
+    var held = raw.contentItem;
+    if (!held || !held.children || typeof raw.text !== "string" || _nodeTag(raw) !== "button") {
+        return false;
+    }
+    for (var i = 0; i < held.children.length; ++i) {
+        if (_isLines(held.children[i])) {
+            return true;
+        }
+    }
+    return false;
 }
 
 // The `white-space` an element sets itself on a page without a cascade: a
@@ -12871,7 +12886,12 @@ function _btnRuns(raw, dom, own, split) {
             runs.after.push(split[i + 1]);
             all += split[i] + split[i + 1];
         }
-        if (_btnDrawn(raw, runs.texts.join("")) === own && all === dom) {
+        var shown = runs.texts.join("");
+        // A label that keeps its spaces still collapses those of a span that
+        // does not: only the spaces differ from its nodes'.
+        if (all === dom && (_btnDrawn(raw, shown) === own
+                || /^(pre|pre-wrap|break-spaces)$/.test(_btnWhiteSpace(raw))
+                    && shown.replace(/[ \t\n\r\f]+/g, "") === own.replace(/[ \t\n\r\f]+/g, ""))) {
             return runs;
         }
     }

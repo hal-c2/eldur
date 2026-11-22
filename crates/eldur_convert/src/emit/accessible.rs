@@ -15,6 +15,9 @@ pub(crate) enum Reading {
     /// What is drawn: everything but `display: none` and the elements that
     /// never render. A control's text is this.
     Drawn,
+    /// [`Reading::Drawn`] by a control that keeps its spaces: those of a node
+    /// whose own `white-space` collapses them are marked [`COLLAPSIBLE`].
+    DrawnKept,
     /// What is read out: also without `aria-hidden="true"` and
     /// `visibility: hidden`, as AccName step 2A skips hidden nodes.
     Read,
@@ -22,6 +25,10 @@ pub(crate) enum Reading {
     /// `aria-labelledby` names is read whole, hidden parts and all (step 2A).
     Referenced,
 }
+
+/// A space that collapses in a [`Reading::DrawnKept`] text. The tokenizer
+/// leaves no NUL in a document's text.
+const COLLAPSIBLE: char = '\0';
 
 /// `node`'s text as `reading` sees it, with `skip`'s subtree left out (the
 /// control a label names is not part of its own name), whitespace collapsed.
@@ -61,7 +68,8 @@ pub(crate) fn collapse_as(white: WhiteSpace, text: &str) -> String {
 }
 
 /// What `node`, a control whose own text is drawn, draws: its content as
-/// [`Reading::Drawn`] sees it, collapsed as its `white-space` says.
+/// [`Reading::Drawn`] sees it, collapsed as its `white-space` says. Where it
+/// keeps its spaces, a span in it that does not collapses its own.
 pub(crate) fn drawn_text(
     doc: &Document,
     styles: &StyleMap,
@@ -69,8 +77,31 @@ pub(crate) fn drawn_text(
     white: WhiteSpace,
 ) -> String {
     let mut out = String::new();
+    if keeps_spaces(white) {
+        collect(doc, styles, node, None, Reading::DrawnKept, false, &mut out);
+        return collapse_marked(&out);
+    }
     collect(doc, styles, node, None, Reading::Drawn, false, &mut out);
     collapse_as(white, &out)
+}
+
+/// `text` with each stretch of [`COLLAPSIBLE`] spaces one space, and none at
+/// either end of a line.
+fn collapse_marked(text: &str) -> String {
+    let mut out = String::new();
+    let (mut space, mut line_start) = (false, true);
+    for c in text.chars() {
+        if c == COLLAPSIBLE {
+            space = !line_start;
+            continue;
+        }
+        if std::mem::take(&mut space) && c != '\n' {
+            out.push(' ');
+        }
+        out.push(c);
+        line_start = c == '\n';
+    }
+    out
 }
 
 /// A button's text nodes as its `textContent` holds them, split where what
@@ -102,7 +133,15 @@ pub(crate) fn drawn_runs(
     if runs.len() % 2 == 0 {
         runs.push(String::new());
     }
-    if keeps_spaces(white) || white == WhiteSpace::PreLine {
+    if keeps_spaces(white) {
+        // The label may collapse a span's spaces, so `drawn` is not the runs'
+        // text: they fit while no box apart adds to what is drawn.
+        let shown: String = runs.iter().skip(1).step_by(2).map(String::as_str).collect();
+        let mut kept = String::new();
+        collect(doc, styles, node, None, Reading::Drawn, false, &mut kept);
+        return (kept == shown && runs.concat() == dom).then_some(runs);
+    }
+    if white == WhiteSpace::PreLine {
         let shown: String = runs.iter().skip(1).step_by(2).map(String::as_str).collect();
         return (collapse_as(white, &shown) == drawn && runs.concat() == dom).then_some(runs);
     }
@@ -213,8 +252,20 @@ fn collect(
                     || styles
                         .computed(node)
                         .is_none_or(|c| c.style.visibility == Visibility::Visible);
-                if shown {
-                    out.push_str(t);
+                if !shown {
+                    continue;
+                }
+                let white = styles
+                    .computed(node)
+                    .map(|c| c.style.white_space)
+                    .filter(|w| reading == Reading::DrawnKept && !keeps_spaces(*w));
+                match white {
+                    Some(white) => out.extend(t.chars().map(|c| match c {
+                        '\n' if white == WhiteSpace::PreLine => c,
+                        c if c.is_ascii_whitespace() => COLLAPSIBLE,
+                        c => c,
+                    })),
+                    None => out.push_str(t),
                 }
             }
             NodeData::Element(e) => {
@@ -256,7 +307,7 @@ fn collect(
                 // its `aria-label` (2C), an image's `alt` (2D); one that is
                 // not shown says nothing, unless it is read because it is
                 // referenced.
-                let own = (reading != Reading::Drawn)
+                let own = (!matches!(reading, Reading::Drawn | Reading::DrawnKept))
                     .then(|| {
                         (!traversal)
                             .then(|| labelledby(doc, styles, child))
