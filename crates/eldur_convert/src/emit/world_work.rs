@@ -623,6 +623,59 @@ fn a_box_deep_in_class_made_contexts_makes_the_first_worlds_only() {
         out.diagnostics
     );
     assert!(made <= 512, "{made} emissions");
+    // Only combinations are cut here: each class alone has its world.
+    assert_eq!(left_out_alone(&out), Vec::<String>::new());
     // Making 2^71 worlds, or even listing them, takes no less than hours.
     assert!(took.as_secs() < 120, "{took:?}");
+}
+
+/// The warnings that count the classes and states with no world of their own.
+fn left_out_alone(out: &Output) -> Vec<String> {
+    out.diagnostics
+        .iter()
+        .filter(|d| d.message.contains("left out even on their own"))
+        .map(|d| d.message.clone())
+        .collect()
+}
+
+/// `classes` classes a script toggles, four to a box out of the flow, so
+/// each moves only its own box and the page stays small.
+fn boxes_classed(classes: usize) -> String {
+    let each: Vec<(usize, usize)> = (0..classes).map(|i| (i / 4, i % 4)).collect();
+    let rules: String = each
+        .iter()
+        .map(|(b, c)| format!("#b{b}.c{c}{{left:3px}} "))
+        .collect();
+    let boxes: String = (0..classes.div_ceil(4))
+        .map(|b| format!("<p id=b{b}></p>"))
+        .collect();
+    let toggles: String = each
+        .iter()
+        .map(|(b, c)| format!("document.getElementById('b{b}').classList.toggle('c{c}');\n"))
+        .collect();
+    format!(
+        "<!DOCTYPE html><style>p{{position:absolute}} {rules}</style>{boxes}<script>{toggles}</script>"
+    )
+}
+
+#[test]
+fn a_class_left_with_no_world_of_its_own_is_counted() {
+    // The document's world takes one of the 512, so 511 classes alone fit,
+    // though their combinations are cut either way.
+    let fits = convert_str(&boxes_classed(511), &Options::default());
+    assert!(
+        fits.diagnostics
+            .iter()
+            .any(|d| d.message.contains("combine in more than 512 ways")),
+        "{:?}",
+        fits.diagnostics
+    );
+    assert_eq!(left_out_alone(&fits), Vec::<String>::new());
+    let over = convert_str(&boxes_classed(512), &Options::default());
+    assert_eq!(
+        left_out_alone(&over),
+        [
+            "1 of 512 classes and states left out even on their own: only 511 fit beside the document"
+        ]
+    );
 }
