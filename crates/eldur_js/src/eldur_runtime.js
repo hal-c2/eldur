@@ -14478,7 +14478,7 @@ var _HTML_MAX_DEPTH = 512;
 // its own `/>`, not one ending a bare value. `inSvg` is the namespace `src`
 // starts in, which decides what raw text is.
 function _htmlCloses(src, inSvg) {
-    var tokenRe = new RegExp("<(/?)([a-zA-Z][a-zA-Z0-9-]*)" + _TAG_REST + "(?:>|$)", "g");
+    var tokenRe = new RegExp("<(/?)([a-zA-Z][a-zA-Z0-9-]*)" + _TAG_REST + "/?(?:>|$)", "g");
     var openRe = new RegExp(_HTML_OPEN_TAG, "y");
     var found = {};
     // No prototype: a tag may be named `constructor`.

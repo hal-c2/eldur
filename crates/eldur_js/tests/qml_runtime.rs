@@ -2804,6 +2804,54 @@ function verify() {
     );
 }
 
+/// A `/>` ends a tag in inserted markup, however many unquoted values holding
+/// `=` come before it; a `/` inside a quoted value ends none.
+#[test]
+fn qml6_a_self_closed_tag_ends_where_it_closes() {
+    if !has_binary("qml6") {
+        return;
+    }
+    let resolver = FakeResolver::default().with_id("box", 1, "box", TargetKind::Box);
+
+    let (output, _) = run_page(
+        &resolver,
+        r##"
+function verify() {
+    const box = document.getElementById("box");
+    const cases = {
+        query: '<div><img src="/i?w=640&h=480&fit=crop&auto=format&q=80&dpr=2&v=3" alt="" /></div><p>Next</p><p>End</p>',
+        quoted: '<b><input value="<i/></b>"/>tail</b>after',
+        close: '<b>x</b/>y',
+    };
+    return Object.entries(cases).map(([k, markup]) => {
+        const d = document.createElement("div");
+        box.appendChild(d);
+        d.innerHTML = markup;
+        return k + "=" + Array.from(d.children).map(n => n.tagName.toLowerCase() + ":" + n.textContent).join(",")
+            + " text=" + JSON.stringify(d.textContent);
+    }).join(" ; ");
+}
+"##,
+        r#"Item {
+    id: root
+    Column { id: box; objectName: "box" }
+    Component.onCompleted: {
+        (Page.__eldur_init || Eldur.init)(root);
+        console.log("ELDUR_OK_SELF_CLOSED", Page.verify());
+        Qt.quit();
+    }
+}"#,
+    );
+    assert!(
+        output.contains(
+            "ELDUR_OK_SELF_CLOSED query=div:,p:Next,p:End text=\"NextEnd\" ; \
+             quoted=b:tail text=\"tailafter\" ; \
+             close=b:x text=\"xy\""
+        ),
+        "{output}"
+    );
+}
+
 /// The content of a raw-text or RCDATA element in markup a script inserts is
 /// text up to the element's own end tag, as the HTML tokenizer reads it, so
 /// a `<b` in a script, a style or a textarea is no tag and the `<p>` after it
