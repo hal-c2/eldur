@@ -1536,6 +1536,22 @@ fn a_class_written_after_insertion_opens_the_page() {
 }
 
 #[test]
+fn cloning_what_no_template_can_name_opens_the_page() {
+    let opens = |source: &str| analyze(&[classic("clone.js", source)]).open_elements;
+    for source in [
+        r#"document.getElementById("b").cloneNode(true);"#,
+        r#"const b = document.querySelector(".b"); document.body.appendChild(b.cloneNode());"#,
+        "addEventListener(\"click\", (e) => e.target.cloneNode(true));",
+    ] {
+        assert!(opens(source), "{source}");
+    }
+    // A created element's templates are written for what its copy is.
+    assert!(!opens(
+        r#"const li = document.createElement("li"); li.className = "row"; li.cloneNode(true);"#
+    ));
+}
+
+#[test]
 fn computed_access_to_an_unknown_name_may_hear_anything() {
     let hears = |source: &str| analyze(&[classic("a.js", source)]).may_hear("submit");
     assert!(hears("var e = document.body; e[\"on\" + x] = f;"));
