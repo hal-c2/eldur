@@ -2052,12 +2052,16 @@ B</button>
         let (q, _) = qml(r#"<button>A<kbd style="display:none">B</kbd>B</button>
                <button>S<kbd style="display:none">a</kbd>ave</button>
                <button><kbd style="display:none">Go</kbd>Go</button>
-               <button>A <kbd style="display:none">K</kbd> B</button>"#);
+               <button>A <kbd style="display:none">K</kbd> B</button>
+               <button>C<kbd style="display:none">K </kbd> D</button>
+               <button>E <kbd style="display:none">L </kbd> F</button>"#);
         for runs in [
             r#"["", "A", "B", "B", ""]"#,
             r#"["", "S", "a", "ave", ""]"#,
             r#"["Go", "Go", ""]"#,
             r#"["", "A ", "K", " B", ""]"#,
+            r#"["", "C", "K", " D", ""]"#,
+            r#"["", "E ", "L ", "F", ""]"#,
         ] {
             assert!(
                 q.contains(&format!("property var eldurDomRuns: {runs}")),
