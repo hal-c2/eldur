@@ -5875,6 +5875,111 @@ Item {
     );
 }
 
+/// An end tag no open element has is passed over without reading the name of
+/// any open element, so markup deep in unclosed elements followed by stray end
+/// tags parses in linear time. The reads are counted, not timed: a loaded
+/// machine makes linear work look slow. A matching end tag does read a name,
+/// which shows the count sees the walk.
+#[test]
+fn qml6_stray_end_tags_read_no_open_element() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 stray end tag test: qml6 not on PATH");
+        return;
+    }
+
+    let dir = TempQmlDir::new("stray_ends");
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+    dir.write_file("eldur_runtime.js", RUNTIME_JS);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import "eldur_runtime.js" as R
+
+Item {
+    Component.onCompleted: {
+        var reads = 0;
+        Object.defineProperty(R._VProto, "eldurTag", {
+            configurable: true,
+            get: function() { ++reads; return this.countedTag; },
+            set: function(tag) { this.countedTag = tag; }
+        });
+        var parse = function(after) {
+            var holder = R._vElement("b", [], null, null);
+            reads = 0;
+            R._vParseInto(holder, "<i>".repeat(100) + after + "z");
+            var read = reads, depth = 0;
+            for (var k = holder.kids; k.length > 0 && k[0].kids; k = k[0].kids) {
+                ++depth;
+            }
+            return { reads: read, depth: depth };
+        };
+        var none = parse("");
+        var stray = parse("</q>".repeat(1000));
+        var closed = parse("</i>");
+        console.log("ELDUR_OK_STRAY_ENDS", stray.reads - none.reads, stray.depth, closed.reads - none.reads);
+        Qt.quit();
+    }
+}
+"#,
+    );
+
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
+    assert!(
+        output.contains("ELDUR_OK_STRAY_ENDS 0 100 1"),
+        "unexpected qml6 stray end tag output:\n{output}"
+    );
+}
+
+/// The element parser looks for each start tag once: elements ending one after
+/// another before a tag each leave their parent to go on from the same tag,
+/// which would otherwise be read again at every end. The searches are counted
+/// in a copy of the runtime, since QML's `RegExp` can't be patched.
+#[test]
+fn qml6_nested_ends_look_for_the_next_tag_once() {
+    if !has_binary("qml6") {
+        eprintln!("skipping qml6 next tag test: qml6 not on PATH");
+        return;
+    }
+
+    let search = "tagOpenRe.exec(src)";
+    assert_eq!(
+        RUNTIME_JS.matches(search).count(),
+        1,
+        "the parser's search moved"
+    );
+    let counted = format!(
+        "{}\nvar tagSearches = 0;\n",
+        RUNTIME_JS.replace(search, "(++tagSearches, tagOpenRe.exec(src))")
+    );
+    let dir = TempQmlDir::new("next_tag");
+    dir.write_file("eldur_fonts.js", FONTS_JS);
+    dir.write_file("eldur_runtime.js", &counted);
+    let main_qml = dir.write_file(
+        "Main.qml",
+        r#"import QtQuick
+import "eldur_runtime.js" as R
+
+Item {
+    Component.onCompleted: {
+        var searches = function(n) {
+            var before = R.tagSearches;
+            R._parseFragment("<i>".repeat(n) + "x" + "</i>x".repeat(n) + '<span title="t">y</span>');
+            return R.tagSearches - before;
+        };
+        console.log("ELDUR_OK_NEXT_TAG", searches(1), searches(100));
+        Qt.quit();
+    }
+}
+"#,
+    );
+
+    let output = run_qml6_offscreen(&main_qml, QML6_DEADLINE);
+    assert!(
+        output.contains("ELDUR_OK_NEXT_TAG 2 101"),
+        "each start tag is looked for once:\n{output}"
+    );
+}
+
 /// A packed flex layout takes an append or an insert where it lands: it walks
 /// what follows the new items, not the whole layout, and leaves the spacers as
 /// a fresh pack would for every kind of packing. Packed and unchanged, a
