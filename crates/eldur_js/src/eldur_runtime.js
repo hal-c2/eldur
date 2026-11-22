@@ -8183,22 +8183,36 @@ function _shownByAttribute(raw, hidden) {
 
 // A box on a line inside an inline element with an opacity paints faded by
 // that element too, which has no item of its own: conversion puts the fade in
-// `eldurInlineFade`. What is written goes in with it, what is read leaves it out.
+// `eldurInlineFade`, which follows class and state. An item that replaced the
+// box has only its owner's key, and takes the fade from the element's style.
+// What is written goes in with it, what is read leaves it out.
+function _fadeOf(raw) {
+    if (typeof raw.eldurInlineFade === "number") {
+        return raw.eldurInlineFade;
+    }
+    if (raw.eldurCreatedBox === true && raw.eldurInlineOwner !== undefined) {
+        var up = _logicalParent(raw);
+        return up && up.__eldurInline ? _vFadeOf(up) : 1;
+    }
+    return undefined;
+}
+
 function _fadedOpacity(raw, opacity) {
-    if (typeof raw.eldurInlineFade !== "number") {
+    var fade = _fadeOf(raw);
+    if (fade === undefined) {
         return opacity;
     }
     // The declared own opacity is readonly, so what a script writes is kept
     // here for a fade of 0 to read back.
     _meta(raw).ownOpacity = opacity;
-    return opacity * raw.eldurInlineFade;
+    return opacity * fade;
 }
 
 // A fade of 0 leaves nothing to divide by: the own opacity a script wrote, or
 // the one conversion declared beside it, is read then.
 function _ownOpacity(raw) {
-    var fade = raw.eldurInlineFade;
-    if (typeof fade !== "number") {
+    var fade = _fadeOf(raw);
+    if (fade === undefined) {
         return raw.opacity;
     }
     if (fade > 0) {
@@ -8240,10 +8254,21 @@ function _inlineOpacity(raw, m) {
             // Only `visibility` was written: the box keeps its own opacity,
             // the declared one, not what the hold still has.
             _inlineRelease(raw, raw, "opacity");
-            opacity = _ownOpacity(raw);
+            // Hidden, it paints at 0, which says nothing of its own.
+            opacity = raw.opacity === 0 && typeof raw.eldurOwnOpacity === "number"
+                ? raw.eldurOwnOpacity : _ownOpacity(raw);
         }
     }
-    _inlineHold(raw, raw, "opacity", !shown ? 0 : _fadedOpacity(raw, isNaN(opacity) ? 1 : opacity));
+    var held = 0;
+    if (shown) {
+        var own = isNaN(opacity) ? 1 : opacity;
+        held = _fadedOpacity(raw, own);
+        // The hold outlives the class or state that gave the fade.
+        if (typeof raw.eldurInlineFade === "number") {
+            held = Qt.binding(function() { return own * raw.eldurInlineFade; });
+        }
+    }
+    _inlineHold(raw, raw, "opacity", held);
     if (typeof raw.enabled === "boolean") {
         _inlineHold(raw, raw, "enabled", shown);
     }
@@ -13908,6 +13933,15 @@ function _swapRawItemCarried(oldRaw, component, fallbackQmlSrc) {
         delete m.tableGrid;
         _tableAdoptMade(next);
     }
+    // The inline element a box is cut out of lists it by item: a line built
+    // again would park one it doesn't list (`_vParkSlots`).
+    if (m.vSlotOf && m.vSlotOf.boxes) {
+        m.vSlotOf.boxes.forEach(function(b) {
+            if (b.item === oldRaw) {
+                b.item = next;
+            }
+        });
+    }
     // A pseudo-element's box that goes out of flow, or back, is another item.
     if (_pseudoBoxItems && _pseudoBoxItems.delete(oldRaw)) {
         _pseudoBoxItems.add(next);
@@ -16203,7 +16237,7 @@ var _vModels = [];
 var _vGen = 0;
 var _vSyncing = false;
 var _vVoid = { area: 1, base: 1, br: 1, col: 1, embed: 1, hr: 1, img: 1, input: 1, link: 1, meta: 1, source: 1, track: 1, wbr: 1 };
-var _vProps = ["line-height", "vertical-align", "color", "font-weight", "font-style", "font-size", "font-family", "display", "visibility", "background-color", "text-decoration-line"];
+var _vProps = ["line-height", "vertical-align", "color", "font-weight", "font-style", "font-size", "font-family", "display", "visibility", "opacity", "background-color", "text-decoration-line"];
 // What an inline element's own box takes on its line (`docs/spec/layout.md`
 // §1.3): none of it inherits, and it is worked out once the font is known.
 var _vBoxProps = ["margin-left", "margin-right", "padding-top", "padding-right", "padding-bottom", "padding-left",
@@ -17176,7 +17210,8 @@ function _vApply(out, prop, value, pc) {
     }
     var v = String(value).trim();
     var low = v.toLowerCase();
-    var inherits = prop !== "display" && prop !== "background-color" && prop !== "text-decoration-line";
+    var inherits = prop !== "display" && prop !== "opacity" && prop !== "background-color"
+        && prop !== "text-decoration-line";
     if (low === "inherit" || ((low === "unset" || low === "revert") && inherits)) {
         low = v = "\u0000inherit";
     } else if (low === "initial" || low === "unset" || low === "revert") {
@@ -17191,6 +17226,14 @@ function _vApply(out, prop, value, pc) {
         } else {
             out.underline = low.indexOf("underline") !== -1;
             out.strike = low.indexOf("line-through") !== -1;
+        }
+        return;
+    }
+    if (prop === "opacity") {
+        var alpha = low === "\u0000inherit" ? _vAlpha(pc) : low === "\u0000initial" ? 1
+            : parseFloat(low) / (low.slice(-1) === "%" ? 100 : 1);
+        if (!isNaN(alpha)) {
+            out.opacity = Math.max(0, Math.min(1, alpha));
         }
         return;
     }
@@ -17529,6 +17572,30 @@ function _vHex(css) {
     return fn[4] !== undefined ? "#" + two(Math.round(parseFloat(fn[4]) * 255)) + rgb : "#" + rgb;
 }
 
+// An element's own opacity. It has no item to carry it, so what it draws is
+// painted in its colours' alpha, as the converter writes it (`faded`).
+function _vAlpha(c) {
+    return c && typeof c.opacity === "number" ? c.opacity : 1;
+}
+
+// What `v` and the inline elements around it fade it by.
+function _vFadeOf(v) {
+    var fade = 1;
+    for (var at = v; at; at = at.vparent) {
+        fade *= _vAlpha(_vStyle(at));
+    }
+    return fade;
+}
+
+function _vFaded(css, fade) {
+    var fn = fade < 1 ? /^rgba?\((\d+), (\d+), (\d+)(?:, ([\d.]+))?\)$/.exec(css) : null;
+    if (!fn) {
+        return css;
+    }
+    var alpha = Math.round(Math.round((fn[4] === undefined ? 1 : parseFloat(fn[4])) * 255) * fade) / 255;
+    return "rgba(" + fn[1] + ", " + fn[2] + ", " + fn[3] + ", " + alpha + ")";
+}
+
 // Whether the node needs what only RichText has.
 function _vNeedsHtml(kids, pc, family, onLine) {
     for (var i = 0; i < kids.length; ++i) {
@@ -17658,17 +17725,20 @@ function _vWrap(st, c, pc, isLink, href, body) {
         st.out += "<" + tag + (attrs || "") + ">";
         close = "</" + tag + ">" + close;
     }
+    var around = pc.fade === undefined ? 1 : pc.fade;
+    var fade = _vAlpha(c) * around;
+    var color = _vFaded(c.color, fade);
     var wasLink = st.inLink;
     if (isLink && !st.twin) {
         if (st.bareLink) {
             st.inLink = false;
         } else {
             if (st.html) {
-                open("a", " href=\"" + href + "\" style=\"color:" + _vHex(c.color) + ";text-decoration:none\"");
+                open("a", " href=\"" + href + "\" style=\"color:" + _vHex(color) + ";text-decoration:none\"");
             } else {
                 open("a", " href=\"" + href + "\"");
                 if (st.linkColor === null) {
-                    st.linkColor = c.color;
+                    st.linkColor = color;
                 }
             }
             st.inLink = true;
@@ -17688,13 +17758,13 @@ function _vWrap(st, c, pc, isLink, href, body) {
     }
     if (!st.twin && !c.visible) {
         open("font", " color=\"#00000000\"");
-    } else if (!st.twin && c.color !== pc.color && !(st.inLink && !st.html)) {
-        open("font", " color=\"" + _vHex(c.color) + "\"");
+    } else if (!st.twin && color !== _vFaded(pc.color, around) && !(st.inLink && !st.html)) {
+        open("font", " color=\"" + _vHex(color) + "\"");
     }
     if (st.html && !st.boxed) {
         var css = [];
         if (c.bg !== "rgba(0, 0, 0, 0)" && c.bg !== "transparent") {
-            css.push("background-color:" + _vHex(c.bg));
+            css.push("background-color:" + _vHex(_vFaded(c.bg, fade)));
         }
         if (css.length > 0) {
             open("span", " style=\"" + css.join(";") + "\"");
@@ -17749,7 +17819,7 @@ function _vWriteKids(st, kids, pc, owner) {
 }
 
 function _vLined(c, pc) {
-    return { color: c.color, weight: c.weight, italic: c.italic, size: c.size, family: c.family, bg: c.bg,
+    return { fade: _vAlpha(c) * (pc.fade === undefined ? 1 : pc.fade), color: c.color, weight: c.weight, italic: c.italic, size: c.size, family: c.family, bg: c.bg,
         underline: c.underline || (pc.underline && pc.inlineLine), strike: c.strike || (pc.strike && pc.inlineLine),
         inlineLine: true, visible: c.visible, display: c.display };
 }
@@ -18261,14 +18331,14 @@ function _vRunBoxes(entries) {
     for (var at = _vUp(first); at; at = at.vparent) {
         var c = _vStyle(at);
         if (_vHasBox(c)) {
-            out.unshift({ node: at, c: c });
+            out.unshift({ node: at, c: c, fade: _vFadeOf(at) });
         }
     }
     if (entries.length === 1) {
         if (first.gen && !first.live && _vHasBox(first.gen.c)) {
-            out.push({ node: first, c: first.gen.c });
+            out.push({ node: first, c: first.gen.c, fade: _vAlpha(first.gen.c) * _vFadeOf(_vUp(first)) });
         } else if (first.kids && !first.gen && _vHasBox(_vStyle(first))) {
-            out.push({ node: first, c: _vStyle(first) });
+            out.push({ node: first, c: _vStyle(first), fade: _vFadeOf(first) });
         }
     }
     return out;
@@ -18339,14 +18409,14 @@ function _vSetRunBox(line, text, boxes, opensIn, closesIn) {
             paint.font = Qt.font({ pixelSize: Math.max(1, Math.round(c.size)), family: EldurFonts.family(c.family),
                 weight: c.weight, italic: c.italic });
             if (c.bg && c.bg !== "rgba(0, 0, 0, 0)") {
-                paint.fill = _gQtColor(c.bg);
+                paint.fill = _gQtColor(_vFaded(c.bg, b.fade));
             }
             if (c.rad) {
                 paint.radii = c.rad.map(Math.round);
             }
             if (c.bw) {
                 paint.borderWidths = bw.map(Math.round);
-                paint.borderColors = c.bc.map(_gQtColor);
+                paint.borderColors = c.bc.map(function(color) { return _gQtColor(_vFaded(color, b.fade)); });
             }
             paint.paddingTop = edge[0] - bw[0];
             paint.paddingBottom = edge[2] - bw[2];
@@ -25042,9 +25112,11 @@ function _gIsBox(raw) {
 
 // The one form of a created element that is neither a control nor a line of an
 // inline node. `eldurFlowForm` boxes wait in a slot: see `_leaveFlow`.
-function _gBoxSource(tag, outOfFlow) {
+function _gBoxSource(tag, outOfFlow, owner) {
     return "import QtQuick; import QtQuick.Layouts; Rectangle { color: \"transparent\"; "
         + "property bool eldurCreatedBox: true; property var eldurScrollPort: null; "
+        // Cut out of an inline element's line, it is that element's box still.
+        + (owner !== undefined ? "readonly property int eldurInlineOwner: " + Number(owner) + "; " : "")
         + (outOfFlow ? "property Item eldurSlot: null; property var eldurBlock: \"parent\"; " : "")
         + "property real eldurMt: 0; property real eldurMr: 0; property real eldurMb: 0; property real eldurMl: 0; "
         + "property real eldurPw: -1; property bool eldurFill: false; property int eldurAlign: 0; "
@@ -31495,7 +31567,7 @@ function _gAdopt(raw) {
     var slot = raw.eldurSlot;
     var risen = Boolean(slot) && slot.eldurRisen === true && Boolean(raw.parent) && raw.parent.eldurHoisted === true;
     m.gKeepReplaced = true;
-    var next = _swapRawItem(raw, null, _gBoxSource(tag, false));
+    var next = _swapRawItem(raw, null, _gBoxSource(tag, false, raw.eldurInlineOwner));
     delete m.gKeepReplaced;
     if (risen && slot.parent) {
         _insertInFlow(slot.parent, [next], slot);

@@ -2734,6 +2734,14 @@ fn opacity_on_an_inline_element_fades_the_boxes_it_holds() {
     assert!(hidden.contains("eldurInlineFade: 0\n"), "{hidden}");
     assert!(hidden.contains("eldurOwnOpacity: 0.75"), "{hidden}");
     assert!(!uneven.contains("eldurOwnOpacity"), "{uneven}");
+    // A script can write the box's style with no runtime DOM, and can show a
+    // box that is hidden, whose 0 says nothing of its own opacity.
+    let (written, _) = convert(&page(
+        "",
+        r#"<p>a <span style="opacity:.5">b <span id="box" style="display:inline-block;width:4px;height:4px;background:red;opacity:.75;visibility:hidden"></span></span></p><script>setTimeout(function(){document.getElementById('box').style.visibility='visible'},1)</script>"#,
+    ));
+    assert!(written.contains("eldurInlineFade: 0.5"), "{written}");
+    assert!(written.contains("eldurOwnOpacity: 0.75"), "{written}");
 }
 
 /// The text of a positioned inline element is in its block's `Text`, at the

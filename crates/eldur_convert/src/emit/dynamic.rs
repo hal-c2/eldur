@@ -680,8 +680,32 @@ impl Diffs {
                 })
                 .collect()
         }
+        for name in FADE_PARTS {
+            let (b, o) = (declared(base, name), declared(other, name));
+            let Some((_, decl)) = o.or(b) else { continue };
+            let key = (path.clone(), name.to_owned());
+            if b.is_none() {
+                self.decls
+                    .entry(key.clone())
+                    .or_insert_with(|| decl.clone());
+            }
+            let (from, to) = (fade_part(base, name), fade_part(other, name));
+            if from != to {
+                self.changes
+                    .entry(key)
+                    .or_insert_with(|| Change {
+                        owner,
+                        ty: base.type_name.clone(),
+                        base: from,
+                        worlds: BTreeMap::new(),
+                    })
+                    .worlds
+                    .insert(world, to);
+            }
+        }
         for m in &other.members {
             if let Member::PropertyDecl { name, value, .. } = m
+                && !FADE_PARTS.contains(&name.as_str())
                 && !base
                     .members
                     .iter()
@@ -1233,7 +1257,22 @@ impl Dynamic<'_, '_> {
                 continue;
             };
             for (prop, binding, behavior) in props {
-                obj.set(&prop, Value::Expr(binding));
+                // A readonly property takes no second assignment: a fade
+                // the document declares has the binding for its value.
+                let decl = obj.members.iter_mut().find_map(|m| match m {
+                    Member::PropertyDecl { name, value, .. }
+                        if *name == prop && FADE_PARTS.contains(&name.as_str()) =>
+                    {
+                        Some(value)
+                    }
+                    _ => None,
+                });
+                match decl {
+                    Some(value) => *value = Some(Value::Expr(binding)),
+                    None => {
+                        obj.set(&prop, Value::Expr(binding));
+                    }
+                }
                 if let Some(b) = behavior {
                     obj.members.push(b);
                 }
@@ -2104,6 +2143,42 @@ fn default_value(ty: &str, prop: &str) -> Option<Value> {
         "eldurVars" => Some(Value::expr("({})")),
         _ => None,
     }
+}
+
+/// What `fade_atomic` declares on a box in an inline element with an opacity:
+/// unlike other declarations these differ between worlds, both ways.
+const FADE_PARTS: [&str; 2] = ["eldurInlineFade", "eldurOwnOpacity"];
+
+/// `obj`'s declaration of `name`, with its value.
+fn declared<'o>(obj: &'o Object, name: &str) -> Option<(&'o Value, &'o Member)> {
+    obj.members.iter().find_map(|m| match m {
+        Member::PropertyDecl {
+            name: n,
+            value: Some(value),
+            ..
+        } if n == name => Some((value, m)),
+        _ => None,
+    })
+}
+
+/// The value of one of [`FADE_PARTS`] in the world `obj` was emitted for.
+/// Where it isn't declared the fade is 1, and the box's own opacity is what
+/// its opacity is with the fade taken out.
+fn fade_part(obj: &Object, name: &str) -> Option<Value> {
+    if let Some((value, _)) = declared(obj, name) {
+        return Some(value.clone());
+    }
+    if name == FADE_PARTS[0] {
+        return Some(Value::Number(1.0));
+    }
+    let number = |value: Option<&Value>| match value {
+        None => Some(1.0),
+        Some(Value::Number(n)) => Some(*n),
+        Some(_) => None,
+    };
+    let opacity = number(obj.get("opacity"))?;
+    let fade = number(declared(obj, FADE_PARTS[0]).map(|(v, _)| v))?;
+    (fade > 0.0).then(|| Value::Number((opacity / fade * 1e6).round() / 1e6))
 }
 
 /// The CSS longhands a QML property of an object of type `ty` shows, for

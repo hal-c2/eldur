@@ -6375,7 +6375,8 @@ function verify() {
     Rectangle {
         id: box
         objectName: "box"
-        readonly property real eldurInlineFade: 0.5
+        property real level: 0.5
+        readonly property real eldurInlineFade: level
         width: 4; height: 4; color: "red"
         opacity: 0.4
     }
@@ -6397,6 +6398,8 @@ function verify() {
     Component.onCompleted: {
         (Page.__eldur_init || Eldur.init)(root);
         console.log("ELDUR_OK_FADE", Page.verify(), box.opacity.toFixed(2), hidden.opacity);
+        box.level = 1;
+        console.log("ELDUR_OK_FADE_FOLLOWS", box.opacity.toFixed(2));
         Qt.quit();
     }
 }"#,
@@ -6405,4 +6408,6 @@ function verify() {
         output.contains("ELDUR_OK_FADE 0.8 0.6 0.75 0.75 0.6 0.75 0.75 0.75 0.75 0.30 0"),
         "{output}"
     );
+    // The held write is written again when a class or state changes the fade.
+    assert!(output.contains("ELDUR_OK_FADE_FOLLOWS 0.60"), "{output}");
 }
