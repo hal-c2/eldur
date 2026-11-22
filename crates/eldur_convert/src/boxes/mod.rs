@@ -438,8 +438,7 @@ impl<'a> Builder<'a, '_> {
         match inline_content(raw, own) {
             Content::Inline(items)
                 if crate::emit::has_atomic(&items)
-                    || crate::emit::needs_lines_for_boxes(&items)
-                    || crate::emit::sets_own_white_space(&items, own.white_space) =>
+                    || crate::emit::needs_lines_for_boxes(&items) =>
             {
                 Content::Inline(items)
             }
