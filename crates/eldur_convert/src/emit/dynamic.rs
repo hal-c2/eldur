@@ -1574,6 +1574,25 @@ impl Dynamic<'_, '_> {
                      only {MAX_WORLDS} are converted"
                 ),
             );
+            // The cut takes combinations first, but past one world each it
+            // takes classes and states whole, which the warning above hides.
+            let eligible: BTreeSet<u16> = each.iter().flatten().copied().collect();
+            let left_out = eligible
+                .iter()
+                .filter(|&&c| !set.contains(&(1, vec![c])))
+                .count();
+            if left_out > 0 {
+                self.diags.warning(
+                    "css",
+                    None,
+                    format!(
+                        "{left_out} of {} classes and states left out even on their own: \
+                         only {} fit beside the document",
+                        eligible.len(),
+                        MAX_WORLDS - 1
+                    ),
+                );
+            }
         }
         // A group goes in whole or not at all: a part of its worlds would
         // number some combinations and not others. Each step takes the
