@@ -436,7 +436,8 @@ Whether a page's created elements are styled by templates or at run time is
 decided per page, by `Analysis::open_elements`. It is set when analysis cannot
 name what an element is or which classes it gets: `createElement(expr)`,
 `el.className = expr` and other open class writes, a variable reassigned to
-another `createElement`, or markup with a variable inside a tag.
+another `createElement`, markup with a variable inside a tag, or `cloneNode`
+on anything but an element created at a site analysis can name.
 
 **Closed pages** (no such site) keep their templates and variants. A template
 can paint what one generic box cannot (gradients, shadows, transforms,
