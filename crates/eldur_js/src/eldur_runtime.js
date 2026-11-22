@@ -3109,6 +3109,15 @@ function _syncClassProp(raw, cls, active) {
         var holder = _elementsUnder(page, function(node) {
             return typeof node[carried] === "boolean";
         }, true)[0];
+        if (!holder) {
+            // A replaced box left the page, and the bindings written beside
+            // it still read it.
+            _gAdopted.forEach(function(m, old) {
+                if (!holder && _live(old) && typeof old[carried] === "boolean" && _pageOf(m.raw) === page) {
+                    holder = old;
+                }
+            });
+        }
         if (holder) {
             holder[carried] = Boolean(active);
         }
