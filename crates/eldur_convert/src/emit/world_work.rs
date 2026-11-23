@@ -629,6 +629,48 @@ fn a_box_deep_in_class_made_contexts_makes_the_first_worlds_only() {
     assert!(took.as_secs() < 120, "{took:?}");
 }
 
+/// [`deep_contexts`] with states for classes: each box the pointer is over
+/// is a stacking context, as is the box deep inside them.
+fn deep_hover_contexts(depth: usize) -> String {
+    let rules: String = (0..depth)
+        .map(|i| format!("#d{i}:hover {{ opacity: .9 }} "))
+        .collect();
+    let open: String = (0..depth).map(|i| format!("<div id=d{i}>")).collect();
+    format!(
+        "<!DOCTYPE html><style>{rules} #t {{ position: relative }} #t:hover {{ z-index: 3 }}</style>\
+         {open}<p id=t>x</p>{}",
+        "</div>".repeat(depth)
+    )
+}
+
+#[test]
+fn a_box_deep_in_hovered_contexts_makes_the_first_worlds_only() {
+    // As for classes: the stack is for the depth, the worlds are measured.
+    let run = std::thread::Builder::new()
+        .stack_size(256 << 20)
+        .spawn(|| {
+            let page = deep_hover_contexts(70);
+            let before = PAGE_EMISSIONS.with(std::cell::Cell::get);
+            let start = std::time::Instant::now();
+            let out = convert_str(&page, &Options::default());
+            let took = start.elapsed();
+            let made = PAGE_EMISSIONS.with(std::cell::Cell::get) - before;
+            (out, took, made)
+        })
+        .expect("spawn");
+    let (out, took, made) = run.join().expect("converts without a panic");
+    assert!(out.main_qml().is_some(), "converts");
+    assert!(
+        out.diagnostics
+            .iter()
+            .any(|d| d.message.contains("combine in more than 512 ways")),
+        "{:?}",
+        out.diagnostics
+    );
+    assert!(made <= 512, "{made} emissions");
+    assert!(took.as_secs() < 120, "{took:?}");
+}
+
 /// The warnings that count the classes and states with no world of their own.
 fn left_out_alone(out: &Output) -> Vec<String> {
     out.diagnostics

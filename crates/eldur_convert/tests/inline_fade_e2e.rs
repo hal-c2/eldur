@@ -554,3 +554,28 @@ fn an_animation_of_the_boxs_own_opacity_keeps_the_fade() {
         ),
     ]);
 }
+
+/// A box that paints more than one thing is faded as one picture, by a layer
+/// whose picture the item placing the box holds beside it: that item is
+/// still the one that carries the fade, faded once and following the element.
+#[test]
+fn a_box_with_content_and_a_margin_is_faded_once() {
+    use Want::Paints;
+    let held = |html: String| html.replace("<i id=ix></i>", "<i id=ix>x</i>");
+    check(&[
+        (
+            "content-margin-write",
+            held(live(
+                &format!("{HALF}#ix{{margin:4px;opacity:.8}}"),
+                "",
+                &["sp.style.opacity='1'"],
+            )),
+            Paints(0.8),
+        ),
+        (
+            "content-margin-animated",
+            held(live(&format!("{HALF}#ix{{margin:4px}}"), "", &[ANIMATE])),
+            Paints(0.4),
+        ),
+    ]);
+}
