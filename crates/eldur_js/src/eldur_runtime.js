@@ -19580,16 +19580,28 @@ function _vLineBox(kid) {
 // The box an item conversion made to place one on a line holds, by margin or
 // to carry its fade (`eldurPlacesBox`). A layer the box has puts its picture
 // beside it, in the same item, so the number of children says nothing.
+// An item the runtime places a box a script put into an inline element in (a
+// block's own item, `_vBlockPlace`, or the slot a risen box is painted in)
+// has no mark: the box says it is one (`_vSlottedSelf`), and is all it holds.
 function _placedBox(item) {
-    if (!item || item.eldurPlacesBox !== true) {
+    if (!item || !item.children) {
         return null;
     }
+    var only = null;
     for (var i = 0; i < item.children.length; ++i) {
-        if (item.children[i] && !_layerPart(item.children[i])) {
-            return item.children[i];
+        var kid = item.children[i];
+        if (!kid || _layerPart(kid)) {
+            continue;
         }
+        if (item.eldurPlacesBox === true) {
+            return kid;
+        }
+        if (only) {
+            return null;
+        }
+        only = kid;
     }
-    return null;
+    return only && _vSlottedSelf(only) ? only : null;
 }
 
 // A layer's source and effect, which Qt makes beside the item it belongs to.
