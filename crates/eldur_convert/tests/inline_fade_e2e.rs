@@ -52,6 +52,23 @@ TestCase {
         return all
     }
 
+    // Each layer picture beside `item` or an item holding it: whether it lies
+    // where what it draws lies, and where the two lie. Qt puts a layer's
+    // picture in the parent of what it draws.
+    function layers(item) {
+        const out = []
+        for (let at = item; at.parent && at !== host; at = at.parent) {
+            for (const k of at.parent.children) {
+                const from = k.sourceItem !== undefined ? k.sourceItem : k.source && k.source.sourceItem
+                if (k !== at && from === at) {
+                    out.push({ lies: k.x === at.x && k.y === at.y,
+                               what: k + " at " + k.x + "," + k.y + " draws what lies at " + at.x + "," + at.y })
+                }
+            }
+        }
+        return out
+    }
+
     function test_page() {
         const component = Qt.createComponent("Main.qml")
         verify(component.status === Component.Ready, component.errorString())
@@ -72,6 +89,10 @@ enum Want {
     /// It paints at this opacity, and its red on white is drawn at this point
     /// of the page and not a box further on: where CSS puts it.
     PaintsAt(f64, [u32; 2]),
+    /// It lies at this point of the page, and every layer picture beside it
+    /// or an item holding it lies where the item it draws lies. Offscreen Qt
+    /// runs no shaders, so a filtered box is checked by where things lie.
+    Lies([u32; 2]),
     /// It paints at these at rest, with the pointer over it, and after.
     Hovered([f64; 3]),
     /// Some `Text` holds this markup.
@@ -86,6 +107,7 @@ impl Want {
     fn label(&self) -> String {
         match self {
             Want::Paints(v) | Want::PaintsAt(v, _) => format!("paints {v}"),
+            Want::Lies([x, y]) => format!("lies {x} {y}"),
             Want::Hovered([rest, over, left]) => format!("hovered {rest} {over} {left}"),
             Want::Draws(markup) => format!("draws {markup}"),
             Want::Shows(word) => format!("shows {word}"),
@@ -110,6 +132,19 @@ impl Want {
                 ]
                 .join("\n")
             }
+            Want::Lies([x, y]) => [
+                "const box = named(page, 'ix')".to_owned(),
+                "verify(box !== null, '#ix is gone')".to_owned(),
+                "const at = box.mapToItem(page, 0, 0)".to_owned(),
+                format!(
+                    "verify(Math.abs(at.x - {x}) < 0.5 && Math.abs(at.y - {y}) < 0.5, \
+                     '#ix lies at ' + at.x + ',' + at.y)"
+                ),
+                "const drawn = layers(box)".to_owned(),
+                "verify(drawn.length > 0, 'no layer draws #ix or an item holding it')".to_owned(),
+                "for (const d of drawn) verify(d.lies, d.what)".to_owned(),
+            ]
+            .join("\n"),
             Want::Hovered([rest, over, left]) => [
                 paints(rest),
                 "mouseMove(page, 40, 20); wait(80)".to_owned(),
@@ -623,6 +658,31 @@ fn a_faded_box_is_drawn_where_it_lies() {
                 &["sp.style.opacity='1'"],
             )),
             PaintsAt(0.8, [60, 24]),
+        ),
+    ]);
+}
+
+/// A filtered box, and a faded box with content, lie where CSS puts them, as
+/// do their layers' pictures: no picture is a box on the line, and none
+/// lowers its baseline.
+#[test]
+fn a_layered_box_lies_where_css_puts_it() {
+    use Want::Lies;
+    let held = |html: String| html.replace("<i id=ix></i>", "<i id=ix>x</i>");
+    check(&[
+        (
+            "lies-filter",
+            live("#ix{filter:grayscale(1)}", "", &["sp.title='x'"]),
+            Lies([0, 0]),
+        ),
+        (
+            "lies-content",
+            held(live(
+                &format!("{HALF}#ix{{margin:4px;opacity:.8}}"),
+                "",
+                &["sp.style.opacity='1'"],
+            )),
+            Lies([4, 4]),
         ),
     ]);
 }
