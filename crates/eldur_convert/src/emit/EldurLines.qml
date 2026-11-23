@@ -138,6 +138,15 @@ Item {
         return item.lineLaidOut !== undefined && typeof item.text === "string";
     }
 
+    // Qt draws an item's layer by an item it puts beside it, in the same parent:
+    // a ShaderEffectSource, or the effect that takes the layer in. That item
+    // follows the one it draws, so it is no box on the line, and holds no
+    // baseline (the runtime's `_layerPart`).
+    function _layerPart(item) {
+        return item.sourceItem !== undefined || item.fragmentShader !== undefined
+            || item.blurMax !== undefined;
+    }
+
     function _watch(item) {
         if (_watched.has(item)) {
             return;
@@ -345,7 +354,8 @@ Item {
         }
         // A box taken out of flow (it has a slot where it would be) gives
         // its container no baseline (CSS 2.2 §10.8.1).
-        const kids = Array.from(item.children).filter(k => k.visible && k.eldurSlot === undefined);
+        const kids = Array.from(item.children).filter(k => k.visible && k.eldurSlot === undefined
+                                                         && !_layerPart(k));
         // A flex row, wrapping or not, takes its first item's baseline, that
         // item's bottom edge when it has no text (css-flexbox §8.5); a spacer
         // here has no height.
@@ -428,7 +438,7 @@ Item {
         }
         _running = true;
         _laidOut = true;
-        const children = Array.from(lines.children);
+        const children = Array.from(lines.children).filter(k => !_layerPart(k));
         const wraps = !noWrap && width > 0;
         const room = wraps ? width : 1e6;
         const space = metrics.advanceWidth(" ");
