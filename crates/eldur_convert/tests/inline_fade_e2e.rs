@@ -73,9 +73,22 @@ enum Want {
     Hovered([f64; 3]),
     /// Some `Text` holds this markup.
     Draws(&'static str),
+    /// Some `Text` draws this, in lower case as `drawn` gives it, and none
+    /// draws in a colour with no alpha.
+    Shows(&'static str),
 }
 
 impl Want {
+    /// The want as a check outside this test reads it.
+    fn label(&self) -> String {
+        match self {
+            Want::Paints(v) => format!("paints {v}"),
+            Want::Hovered([rest, over, left]) => format!("hovered {rest} {over} {left}"),
+            Want::Draws(markup) => format!("draws {markup}"),
+            Want::Shows(word) => format!("shows {word}"),
+        }
+    }
+
     fn checks(&self) -> String {
         let paints = |v: &f64| format!("fuzzyCompare(painted(page), {v}, 0.005)");
         match self {
@@ -91,6 +104,10 @@ impl Want {
             Want::Draws(markup) => {
                 format!("verify(drawn(page).indexOf('{markup}') >= 0, drawn(page))")
             }
+            Want::Shows(word) => format!(
+                "verify(drawn(page).indexOf('{word}') >= 0, drawn(page))\n\
+                 verify(!/#00[0-9a-f]{{6}}\\b/.test(drawn(page)), drawn(page))"
+            ),
         }
     }
 }
@@ -100,8 +117,17 @@ fn check(cases: &[(&str, String, Want)]) {
     if support::no_qt() {
         return;
     }
+    // A directory to keep each page and its want in, for Chromium to load
+    // the same pages and say whether it agrees with what is wanted.
+    let pages = std::env::var_os("ELDUR_FADE_PAGES").map(std::path::PathBuf::from);
     let mut failures = Vec::new();
     for (name, html, want) in cases {
+        if let Some(pages) = &pages {
+            let at = pages.join(name);
+            std::fs::create_dir_all(&at).expect("pages dir");
+            std::fs::write(at.join("page.html"), html).expect("write page");
+            std::fs::write(at.join("want"), want.label()).expect("write want");
+        }
         let options = Options {
             root: RootKind::Item,
             ..Options::default()
@@ -190,9 +216,18 @@ const MAY_GO: &str =
     "document.body.onclick=function(){document.getElementById('sp').classList.add('gone')}";
 const SET_C: &str = "document.getElementById('c').textContent='z'";
 
+/// Moves `#ix` and lays it out again, which replaces its item.
+const NUDGE: &str = "document.getElementById('ix').animate([{transform:'translateX(1px)'},\
+                     {transform:'translateX(2px)'}],{duration:20,fill:'forwards'})";
+/// Takes `#ix` out of the flow, which replaces its item again.
+const PLACE: &str = "document.getElementById('ix').style.position='absolute'";
+const MOVE_OUT: &str = "document.body.appendChild(document.getElementById('ix'))";
+
 const DIM: &str = ".dim{opacity:.5}";
 const GONE: &str = ".gone{opacity:0}";
 const HALF: &str = "#sp{opacity:.5}";
+/// A script that only finds `#ix`, so that it keeps its name in the QML.
+const NAMED: &str = "document.getElementById('ix');";
 const HOVER: &str = "a:hover{opacity:.5}";
 
 #[test]
@@ -318,6 +353,40 @@ fn the_fade_survives_an_item_that_replaces_the_box() {
             live(DIM, "class=dim", &[ANIMATE, DROP_DIM]),
             Paints(0.8),
         ),
+        // A box with a margin is placed by a wrapper, which takes the fade:
+        // the item that replaces the box must not take it again.
+        (
+            "margin-left",
+            live(&format!("{HALF}#ix{{margin-left:6px}}"), "", &[NUDGE]),
+            Paints(0.5),
+        ),
+        (
+            "margin-top",
+            live(&format!("{HALF}#ix{{margin-top:4px}}"), "", &[NUDGE]),
+            Paints(0.5),
+        ),
+        (
+            "margin",
+            live(&format!("{HALF}#ix{{margin:4px}}"), "", &[NUDGE]),
+            Paints(0.5),
+        ),
+        (
+            "margin-animated",
+            live(&format!("{HALF}#ix{{margin:4px}}"), "", &[ANIMATE]),
+            Paints(0.4),
+        ),
+        // A second replacement keeps it, as does one alone.
+        (
+            "animated-placed",
+            live(HALF, "", &[ANIMATE, PLACE]),
+            Paints(0.4),
+        ),
+        (
+            "animated-placed-hidden",
+            live("#sp{opacity:0}", "", &[ANIMATE, PLACE]),
+            Paints(0.0),
+        ),
+        ("placed", live(HALF, "", &[PLACE]), Paints(0.5)),
         // The replacement is the element's box still, whatever lays the line out.
         (
             "animated-classed",
@@ -367,6 +436,121 @@ fn a_redrawn_paragraph_keeps_its_texts_fade() {
                 &[ADD_DIM, SET_C],
             ),
             Draws("<font color=\"#80ff0000\">red"),
+        ),
+    ]);
+}
+
+/// `#sp` starts hidden by its opacity and something then shows it, or the
+/// other way round: what it holds follows it.
+#[test]
+fn what_shows_an_inline_element_shows_what_it_holds() {
+    use Want::{Draws, Paints, Shows};
+    const HIDDEN: &str = "#sp{opacity:0}";
+    const FADE_IN: &str = "{opacity:0;animation:i .2s forwards}@keyframes i{to{opacity:1}}";
+    let text = "<p>a <span id=sp>secret</span> b</p>";
+    let sp = "var sp=document.getElementById('sp');";
+    let in_text = |step: &str| paragraph(HIDDEN, text, &[&format!("{sp}{step}")]);
+    check(&[
+        (
+            "css-animation",
+            boxed(&format!("#sp{FADE_IN}"), "", NAMED),
+            Paints(1.0),
+        ),
+        (
+            "css-animation-text",
+            paragraph(
+                &format!(".fi{{color:red}}.fi{FADE_IN}"),
+                "<h1><span class=fi>RED</span> <span class=fi>TWO</span></h1>",
+                &[],
+            ),
+            Shows("red"),
+        ),
+        (
+            "write",
+            live(HIDDEN, "", &["sp.style.opacity='1'"]),
+            Paints(1.0),
+        ),
+        (
+            "set-property",
+            live(HIDDEN, "", &["sp.style.setProperty('opacity','1')"]),
+            Paints(1.0),
+        ),
+        (
+            "css-text",
+            live(HIDDEN, "", &["sp.style.cssText='opacity:1'"]),
+            Paints(1.0),
+        ),
+        (
+            "style-attribute",
+            live(HIDDEN, "", &["sp.setAttribute('style','opacity:1')"]),
+            Paints(1.0),
+        ),
+        (
+            "animate",
+            live(
+                HIDDEN,
+                "",
+                &["sp.animate([{opacity:0},{opacity:1}],{duration:60,fill:'forwards'})"],
+            ),
+            Paints(1.0),
+        ),
+        ("moved-out", live(HIDDEN, "", &[MOVE_OUT]), Paints(1.0)),
+        (
+            "moved-out-margin",
+            live(&format!("{HIDDEN}#ix{{margin-left:6px}}"), "", &[MOVE_OUT]),
+            Paints(1.0),
+        ),
+        (
+            "written-back",
+            live(HALF, "", &["sp.style.opacity='1'", "sp.style.opacity=''"]),
+            Paints(0.5),
+        ),
+        (
+            "text-write",
+            in_text("sp.style.opacity='1'"),
+            Shows("secret"),
+        ),
+        (
+            "text-animate",
+            in_text("sp.animate([{opacity:0},{opacity:1}],{duration:60,fill:'forwards'})"),
+            Shows("secret"),
+        ),
+        ("hide", live("", "", &["sp.style.opacity='0'"]), Paints(0.0)),
+        (
+            "hide-margin",
+            live("#ix{margin-left:6px}", "", &["sp.style.opacity='.5'"]),
+            Paints(0.5),
+        ),
+        (
+            "hide-text",
+            paragraph("", text, &[&format!("{sp}sp.style.opacity='0'")]),
+            Draws("<font color=\"#00000000\">secret"),
+        ),
+    ]);
+}
+
+/// A CSS animation of the box's own opacity is the box's: the element around
+/// it fades it still.
+#[test]
+fn an_animation_of_the_boxs_own_opacity_keeps_the_fade() {
+    use Want::Paints;
+    const STILL: &str = "#ix{animation:i 4s}@keyframes i{from{opacity:1}to{opacity:1}}";
+    const FADE_IN: &str = "#ix{animation:i .2s forwards}@keyframes i{to{opacity:1}}";
+    check(&[
+        (
+            "own",
+            boxed(&format!("{HALF}{STILL}"), "", NAMED),
+            Paints(0.5),
+        ),
+        (
+            "own-margin",
+            boxed(&format!("{HALF}{STILL}#ix{{margin-left:6px}}"), "", NAMED),
+            Paints(0.5),
+        ),
+        (
+            "own-hidden",
+            boxed(&format!("#sp{{opacity:0}}{FADE_IN}"), "", NAMED),
+            Paints(0.0),
         ),
     ]);
 }
