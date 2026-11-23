@@ -69,6 +69,9 @@ TestCase {
 enum Want {
     /// `#ix` paints at this opacity.
     Paints(f64),
+    /// It paints at this opacity, and its red on white is drawn at this point
+    /// of the page and not a box further on: where CSS puts it.
+    PaintsAt(f64, [u32; 2]),
     /// It paints at these at rest, with the pointer over it, and after.
     Hovered([f64; 3]),
     /// Some `Text` holds this markup.
@@ -82,7 +85,7 @@ impl Want {
     /// The want as a check outside this test reads it.
     fn label(&self) -> String {
         match self {
-            Want::Paints(v) => format!("paints {v}"),
+            Want::Paints(v) | Want::PaintsAt(v, _) => format!("paints {v}"),
             Want::Hovered([rest, over, left]) => format!("hovered {rest} {over} {left}"),
             Want::Draws(markup) => format!("draws {markup}"),
             Want::Shows(word) => format!("shows {word}"),
@@ -93,6 +96,20 @@ impl Want {
         let paints = |v: &f64| format!("fuzzyCompare(painted(page), {v}, 0.005)");
         match self {
             Want::Paints(v) => paints(v),
+            // Red faded on white keeps `1 - v` of the white's green.
+            Want::PaintsAt(v, [x, y]) => {
+                let on = x + 90;
+                [
+                    paints(v),
+                    "const shot = grabImage(page)".to_owned(),
+                    format!("fuzzyCompare(shot.green({x}, {y}) / 255, 1 - {v}, 0.02)"),
+                    format!(
+                        "verify(shot.green({on}, {y}) > 250, \
+                         '#ix is drawn a box further on: ' + shot.pixel({on}, {y}))"
+                    ),
+                ]
+                .join("\n")
+            }
             Want::Hovered([rest, over, left]) => [
                 paints(rest),
                 "mouseMove(page, 40, 20); wait(80)".to_owned(),
@@ -576,6 +593,36 @@ fn a_box_with_content_and_a_margin_is_faded_once() {
             "content-margin-animated",
             held(live(&format!("{HALF}#ix{{margin:4px}}"), "", &[ANIMATE])),
             Paints(0.4),
+        ),
+    ]);
+}
+
+/// The item that carries a box's fade is drawn where the box lies. Its layer's
+/// picture is beside it among the line's items, and is no box on the line.
+#[test]
+fn a_faded_box_is_drawn_where_it_lies() {
+    use Want::PaintsAt;
+    const STILL: &str = "#ix{animation:i 4s}@keyframes i{from{opacity:1}to{opacity:1}}";
+    let held = |html: String| html.replace("<i id=ix></i>", "<i id=ix>x</i>");
+    check(&[
+        (
+            "drawn-own",
+            boxed(&format!("{HALF}{STILL}"), "", NAMED),
+            PaintsAt(0.5, [40, 20]),
+        ),
+        (
+            "drawn-margin",
+            live(&format!("{HALF}#ix{{margin-left:6px}}"), "", &[NUDGE]),
+            PaintsAt(0.5, [46, 20]),
+        ),
+        (
+            "drawn-content",
+            held(live(
+                &format!("{HALF}#ix{{margin:4px;opacity:.8}}"),
+                "",
+                &["sp.style.opacity='1'"],
+            )),
+            PaintsAt(0.8, [60, 24]),
         ),
     ]);
 }
