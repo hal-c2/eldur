@@ -62,7 +62,16 @@ impl Emitter<'_, '_> {
         items: &[Inline<'_>],
         line: Option<u32>,
     ) -> Object {
-        let hoisted = whole_span(style, items);
+        let hoisted = whole_span(style, items).map(|(mut hoisted, raise)| {
+            // The `Text` is the block's item, which the span's opacity must
+            // not fade as a whole: the span's colour takes it, as a run's
+            // does (`span`).
+            if let [Inline::Span(span)] = items {
+                let fade = super::inline::span_fade(span.style, &self.styles.keyframes);
+                hoisted.color = faded(hoisted.color, fade);
+            }
+            (hoisted, raise)
+        });
         let (style, raise) = match &hoisted {
             Some((s, raise)) => (s, *raise),
             None => (style, 0.0),
@@ -415,8 +424,17 @@ impl Emitter<'_, '_> {
         // A run has no item to fade, so an element's `opacity` goes into the
         // alpha of its colours: what its glyphs fade to as a group wherever
         // they do not overlap each other or its background.
-        let alpha = parent.alpha * style.opacity;
+        let alpha = parent.alpha * super::inline::span_fade(style, &self.styles.keyframes);
         state.alpha = alpha;
+        if super::inline::animates_opacity(style, &self.styles.keyframes) {
+            self.diags.warning(
+                "css",
+                line,
+                format!(
+                    "{what}: an animation of `opacity` on an inline element is not converted; what it holds shows at full opacity"
+                ),
+            );
+        }
         // Its text is in the block's `Text`, at the block's level: only a box
         // it holds can take the element's level (`inline::context_level`).
         if style.z_index.is_some()
@@ -748,9 +766,7 @@ pub(super) fn whole_span(
     style.font_weight = s.font_weight;
     style.font_style = s.font_style;
     style.small_caps = s.small_caps;
-    // The `Text` is the block's item, which the span's opacity must not fade
-    // as a whole: the span's colour takes it, as a run's does (`span`).
-    style.color = faded(s.color, s.opacity);
+    style.color = s.color;
     style.letter_spacing = s.letter_spacing;
     style.word_spacing = s.word_spacing;
     style.text_transform = s.text_transform;
