@@ -8193,17 +8193,109 @@ function _shownByAttribute(raw, hidden) {
 // A box on a line inside an inline element with an opacity paints faded by
 // that element too, which has no item of its own: conversion puts the fade in
 // `eldurInlineFade`, which follows class and state. An item that replaced the
-// box has only its owner's key, and takes the fade from the element's style.
+// box has only its owner's key, and takes the fade from the element's style,
+// wherever it is placed, as CSS fades what an element holds out of its flow
+// too. Once a script writes the element's style or moves the box, the box
+// follows the style of the elements it is in (`_gRefade`). The item that
+// places a box with a margin carries the fade, and the box none of it.
 // What is written goes in with it, what is read leaves it out.
 function _fadeOf(raw) {
+    if (_fadeCarrier(raw.parent)) {
+        return undefined;
+    }
+    var m = _itemMeta.get(raw);
+    if (m && m.liveFade) {
+        return _liveFadeOf(raw);
+    }
     if (typeof raw.eldurInlineFade === "number") {
         return raw.eldurInlineFade;
     }
     if (raw.eldurCreatedBox === true && raw.eldurInlineOwner !== undefined) {
-        var up = _logicalParent(raw);
-        return up && up.__eldurInline ? _vFadeOf(up) : 1;
+        return _liveFadeOf(raw);
     }
     return undefined;
+}
+
+// Whether `item` places a box and fades it.
+function _fadeCarrier(item) {
+    if (!item || item.eldurInlineOwner !== undefined || item.children.length !== 1) {
+        return false;
+    }
+    var m = _itemMeta.get(item);
+    return typeof item.eldurInlineFade === "number" || Boolean(m && m.liveFade);
+}
+
+// What the inline elements `raw` (or the box it places) is in fade it by now.
+function _liveFadeOf(raw) {
+    var box = raw.eldurInlineOwner === undefined && !_vSlottedSelf(raw) && raw.children.length === 1
+        ? raw.children[0] : raw;
+    var up = _logicalParent(box);
+    // Out of its line, it is its element's still, unless a script moved it.
+    var moved = _itemMeta.get(box);
+    if (!(up && up.__eldurInline) && box.eldurInlineOwner !== undefined && !(moved && moved.fadeMoved)) {
+        up = _vKeyed[box.eldurInlineOwner];
+    }
+    return up && up.__eldurInline ? _vFadeOf(up) : 1;
+}
+
+// From here on `carrier`, a box on a line or the item that places one, fades
+// by the style of the inline elements it is in, which a script changed or
+// moved it out of: the fade conversion declared was for the page as loaded.
+function _gRefade(carrier) {
+    if (carrier.eldurCreatedBox === true) {
+        // Its paint reads the fade live (`_gPaintBox`).
+        _gTouch();
+        return;
+    }
+    var m = _meta(carrier);
+    if (!m.liveFade) {
+        // Its own opacity, as the declared fade leaves it; a placing item has none.
+        m.liveOwn = _fadeCarrier(carrier) ? 1 : _ownOpacity(carrier);
+        m.liveFade = true;
+    }
+    _inlineOpacity(carrier, m);
+}
+
+// The boxes on `v`'s line in `v` or an element in it fade by its style.
+function _vRefadeUnder(v) {
+    var line = v.model && v.model.text ? v.model.text.parent : null;
+    if (!line || typeof line.firstBaseline !== "number") {
+        return;
+    }
+    Array.from(line.children).forEach(function(kid) {
+        var box = _vLineBox(kid);
+        if (!box) {
+            return;
+        }
+        var up = _logicalParent(box);
+        if (!(up && up.__eldurInline) && box.eldurInlineOwner !== undefined) {
+            up = _vKeyed[box.eldurInlineOwner];
+        }
+        for (; up && up.__eldurInline; up = up.vparent) {
+            if (up === v) {
+                // An item that places the box fades it, and the box keeps its own.
+                _gRefade(kid);
+                return;
+            }
+        }
+    });
+}
+
+// Boxes a script put somewhere else fade by where they are now.
+function _gFadeMoved(nodes) {
+    nodes.forEach(function(n) {
+        if (!n || n.__eldurInline || n.opacity === undefined) {
+            return;
+        }
+        var m = _itemMeta.get(n);
+        var faded = n.eldurInlineOwner !== undefined || typeof n.eldurInlineFade === "number"
+            || Boolean(m && (m.liveFade || m.vSlotOf));
+        if (!faded) {
+            return;
+        }
+        _meta(n).fadeMoved = true;
+        _gRefade(n);
+    });
 }
 
 function _fadedOpacity(raw, opacity) {
@@ -8223,6 +8315,10 @@ function _ownOpacity(raw) {
     var fade = _fadeOf(raw);
     if (fade === undefined) {
         return raw.opacity;
+    }
+    var live = _itemMeta.get(raw);
+    if (live && live.liveFade) {
+        return typeof live.ownOpacity === "number" ? live.ownOpacity : live.liveOwn;
     }
     if (fade > 0) {
         return Math.round(raw.opacity / fade * 1e6) / 1e6;
@@ -8245,6 +8341,13 @@ function _inlineOpacity(raw, m) {
         // A cleared opacity goes back to the declared one, not the last write.
         delete m.ownOpacity;
     }
+    if (!hidden && !written && m.liveFade) {
+        // Not the declared fade's binding: the one the elements around have now.
+        var fade = _fadeOf(raw);
+        _inlineHold(raw, raw, "opacity", m.liveOwn * (fade === undefined ? 1 : fade));
+        _inlineRelease(raw, raw, "enabled");
+        return;
+    }
     if (!hidden && !written) {
         _inlineRelease(raw, raw, "opacity");
         _inlineRelease(raw, raw, "enabled");
@@ -8259,7 +8362,9 @@ function _inlineOpacity(raw, m) {
         opacity = parseFloat(s.opacity);
     } else if (hidden) {
         shown = hidden !== "hidden";
-        if (!written && typeof raw.eldurInlineFade === "number") {
+        if (!written && m.liveFade) {
+            opacity = m.liveOwn;
+        } else if (!written && typeof raw.eldurInlineFade === "number") {
             // Only `visibility` was written: the box keeps its own opacity,
             // the declared one, not what the hold still has.
             _inlineRelease(raw, raw, "opacity");
@@ -8273,7 +8378,7 @@ function _inlineOpacity(raw, m) {
         var own = isNaN(opacity) ? 1 : opacity;
         held = _fadedOpacity(raw, own);
         // The hold outlives the class or state that gave the fade.
-        if (typeof raw.eldurInlineFade === "number") {
+        if (typeof raw.eldurInlineFade === "number" && !m.liveFade && !_fadeCarrier(raw.parent)) {
             held = Qt.binding(function() { return own * raw.eldurInlineFade; });
         }
     }
@@ -13248,6 +13353,7 @@ function _insertChildren(raw, nodes, ref, going, atStart) {
     _ceLeft(leaving);
     _ceInserted(held);
     _detailsInserted(raw, placed);
+    _gFadeMoved(nodes);
 }
 
 function _insertChildrenAt(raw, nodes, ref) {
@@ -14195,7 +14301,7 @@ function _materializeSubtree(raw) {
         // A span the rules make a box is one, with or without a template for its text.
         if ((!res || !res.component) && _gActive() && !_gIsBox(cur) && _gWantsBox(m.createdTag)
             && _gStyle(cur).display !== "inline") {
-            cur = _swapRawItem(cur, null, _gBoxSource(m.createdTag, false));
+            cur = _swapRawItem(cur, null, _gBoxSource(m.createdTag, false, cur.eldurInlineOwner));
             _gLive.push(cur);
         } else if (res) {
             if (res.component) {
@@ -16385,6 +16491,10 @@ function _vBuild(json, parent, model) {
     v.eldurKey = json.key;
     // A class may make it a stacking context, and binds on a box it holds.
     v.eldurCarries = json.carries === true;
+    // An animation of its opacity is not played, so the opacity fades nothing.
+    if (json.fadeless === true) {
+        _meta(v).fadeless = true;
+    }
     if (json.key !== undefined) {
         _vKeyed[json.key] = v;
     }
@@ -16806,6 +16916,9 @@ function _vSetAttr(v, name, value) {
         v.sel = true;
     }
     _vAttrChanged(v);
+    if (key === "style") {
+        _vRefadeUnder(v);
+    }
 }
 
 function _vRemoveAttr(v, name) {
@@ -16915,6 +17028,7 @@ function _vSetStyle(v, prop, value) {
         _varDisplaysFollow(v);
     }
     _vChanged(v.model);
+    _vRefadeUnder(v);
 }
 
 function _vGetStyle(v, prop) {
@@ -17490,6 +17604,10 @@ function _vStyle(v) {
     }
     v.cleanNow = clean;
     v.style = clean ? v.c : _vCascade(v, pc);
+    if (typeof v.style.opacity === "number" && _meta(v).fadeless) {
+        v.style = Object.assign({}, v.style);
+        delete v.style.opacity;
+    }
     // `position: relative` stays what the converter resolved.
     if (!clean && v.c) {
         v.style.rel = v.c.rel;
@@ -23757,6 +23875,7 @@ function _vTryInsert(raw, nodes, ref, going) {
         return false;
     }
     _vPut(host, nodes, ref, going);
+    _gFadeMoved(nodes);
     return true;
 }
 
@@ -29623,6 +29742,14 @@ function _aAnimate(raw, keyframes, options) {
             : list.length === 1 ? 1 : i / (list.length - 1);
         return { offset: offset, values: values, ease: k.easing ? _aEasing(k.easing) : null };
     });
+    // An inline element has no item to play its opacity on: what it holds
+    // shows unfaded, as with a CSS animation of it (`span_fade`), not held
+    // at the opacity the animation was to change.
+    if (raw.__eldurInline && _vIsElement(raw) && frames.some(function(f) { return f.values.opacity !== undefined; })) {
+        _meta(raw).fadeless = true;
+        _vChanged(raw.model);
+        _vRefadeUnder(raw);
+    }
     var animation = new EldurAnimation(raw, "script", frames, _aTimingOf(options));
     if (options && options.id) {
         animation.id = options.id;
@@ -30565,7 +30692,7 @@ function _gSyncFlowForm(raw) {
     }
     var slot = raw.eldurSlot;
     var kept = wantOut ? null : slot;
-    var next = _swapRawItem(raw, null, _gBoxSource(m.createdTag, wantOut));
+    var next = _swapRawItem(raw, null, _gBoxSource(m.createdTag, wantOut, raw.eldurInlineOwner));
     _gLive.push(next);
     if (wantOut) {
         var place = _slotFor(next);

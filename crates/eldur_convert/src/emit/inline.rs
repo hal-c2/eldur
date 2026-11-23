@@ -304,6 +304,32 @@ enum Piece<'b, 'a> {
     ),
 }
 
+/// The `@keyframes` rules by name.
+pub(super) type Keyframes = std::collections::BTreeMap<String, Vec<eldur_css::Keyframe>>;
+
+/// Whether one of `style`'s animations changes its `opacity`.
+pub(super) fn animates_opacity(style: &ComputedStyle, keyframes: &Keyframes) -> bool {
+    style.animations.iter().any(|a| {
+        keyframes.get(&a.name).is_some_and(|frames| {
+            frames
+                .iter()
+                .any(|f| f.declarations.iter().any(|d| d.0 == "opacity"))
+        })
+    })
+}
+
+/// The opacity an inline element fades what it holds by. It has no item to
+/// play an animation of its opacity on, so with one it fades nothing, as an
+/// inline element did before it faded at all: its first frame held for good
+/// would keep what a fade-in shows hidden.
+pub(super) fn span_fade(style: &ComputedStyle, keyframes: &Keyframes) -> f32 {
+    if animates_opacity(style, keyframes) {
+        1.0
+    } else {
+        style.opacity
+    }
+}
+
 /// Whether a span has a `z-index` that applies to it, from its rules or a
 /// class, rather than making a stacking context at `auto`.
 fn has_own_level(span: &ComputedStyle) -> bool {
@@ -323,6 +349,7 @@ fn context_level(span: &ComputedStyle) -> Option<Level> {
 }
 
 fn pieces<'b, 'a>(
+    keyframes: &Keyframes,
     parent: &ComputedStyle,
     items: &'b [Inline<'a>],
     chain: &mut Vec<&'b Span<'a>>,
@@ -339,7 +366,10 @@ fn pieces<'b, 'a>(
                     .find(|span| super::flow::is_context(span.style))
                     .map(|span| span.style);
                 let around = chain.iter().filter_map(|span| span.node).collect();
-                let fade = chain.iter().map(|span| span.style.opacity).product();
+                let fade = chain
+                    .iter()
+                    .map(|span| span_fade(span.style, keyframes))
+                    .product();
                 out.push(Piece::Atomic(b, owner, kept, around, fade));
             }
             Inline::Span(span)
@@ -356,7 +386,7 @@ fn pieces<'b, 'a>(
                 if span.node.is_some() && !has_words(&span.children) {
                     push_in_chain(run, Inline::Text(String::new()), chain);
                 }
-                pieces(span.style, &span.children, chain, run, out);
+                pieces(keyframes, span.style, &span.children, chain, run, out);
                 chain.pop();
                 if own {
                     end_run(run, out);
@@ -530,10 +560,12 @@ fn each_span<'b, 'a>(items: &'b [Inline<'a>], out: &mut Vec<&'b Span<'a>>) {
 
 /// The opacity `span` and the elements in `items` around it fade it by,
 /// multiplied; `None` when it is not in `items`.
-fn faded_by(items: &[Inline<'_>], span: &Span<'_>) -> Option<f32> {
+fn faded_by(items: &[Inline<'_>], span: &Span<'_>, keyframes: &Keyframes) -> Option<f32> {
     items.iter().find_map(|item| match item {
-        Inline::Span(s) if std::ptr::addr_eq(s, span) => Some(s.style.opacity),
-        Inline::Span(s) => faded_by(&s.children, span).map(|a| a * s.style.opacity),
+        Inline::Span(s) if std::ptr::addr_eq(s, span) => Some(span_fade(s.style, keyframes)),
+        Inline::Span(s) => {
+            faded_by(&s.children, span, keyframes).map(|a| a * span_fade(s.style, keyframes))
+        }
         _ => None,
     })
 }
@@ -722,7 +754,14 @@ impl Emitter<'_, '_> {
             .claim(&format!("{} flow", super::hint(self.doc, b)));
         let mut list = Vec::new();
         let mut run = Vec::new();
-        pieces(style, items, &mut Vec::new(), &mut run, &mut list);
+        pieces(
+            &self.styles.keyframes,
+            style,
+            items,
+            &mut Vec::new(),
+            &mut run,
+            &mut list,
+        );
         end_run(&mut run, &mut list);
 
         let mut flow = Object::new("EldurLines").with_id(flow_id.clone());
@@ -927,10 +966,14 @@ impl Emitter<'_, '_> {
                         .position(|m| matches!(m, Member::PropertyDecl { name, .. } if name == "eldurPseudo"))
                         .filter(|_| !part.own)
                         .map(|at| obj.members.remove(at));
+                    // An animation of the box's own opacity sets it unfaded, so
+                    // the fade goes on an item around it, as with a margin.
+                    let wrap = (fade < 1.0 || owner.is_some())
+                        && animates_opacity(&a.style, &self.styles.keyframes);
                     let mut placed = if part.own {
                         obj
                     } else {
-                        self.place_atomic(obj, &part.hint, part.margins, 0.0)
+                        self.place_atomic(obj, &part.hint, part.margins, 0.0, wrap)
                     };
                     if let Some(pseudo) = pseudo {
                         placed.members.insert(0, pseudo);
@@ -1035,7 +1078,7 @@ impl Emitter<'_, '_> {
         for (span, opens, closes) in boxes.iter().rev() {
             let st = span.style;
             // Each element around a box fades it, as it fades its own text.
-            let alpha = faded_by(items, span).unwrap_or(1.0);
+            let alpha = faded_by(items, span, &self.styles.keyframes).unwrap_or(1.0);
             let pad = |l: &Length| l.as_px().unwrap_or(0.0).max(0.0);
             let (opens, closes) = (*opens, *closes);
             if opens {
@@ -1375,10 +1418,11 @@ impl Emitter<'_, '_> {
         hint: &str,
         margins: [f32; 4],
         shift: f32,
+        wrap: bool,
     ) -> Object {
         let [left, right, top, bottom] = margins;
         let shift = if round(shift) == 0.0 { 0.0 } else { shift };
-        if left == 0.0 && right == 0.0 && top == 0.0 && bottom == 0.0 && shift == 0.0 {
+        if !wrap && left == 0.0 && right == 0.0 && top == 0.0 && bottom == 0.0 && shift == 0.0 {
             return obj;
         }
         let id = match &obj.id {

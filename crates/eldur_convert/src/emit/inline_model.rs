@@ -238,6 +238,14 @@ impl Emitter<'_, '_> {
                 }
                 if let Some(c) = self.styles.computed(node) {
                     out["c"] = computed(&c.style);
+                    // Its opacity fades nothing, from its rules or a redraw's
+                    // cascade alike (`span_fade`).
+                    if super::inline::animates_opacity(&c.style, &self.styles.keyframes) {
+                        if let Some(c) = out["c"].as_object_mut() {
+                            c.remove("opacity");
+                        }
+                        out["fadeless"] = json!(true);
+                    }
                 }
                 if let Some((before, after)) = gen_boxes.get(&node) {
                     if let Some(g) = before {
