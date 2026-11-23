@@ -6150,8 +6150,7 @@ function _rawKids(raw, withText, withPseudo, asRuns) {
         if (!withPseudo && _pseudoBoxSide(child)) {
             continue;
         }
-        // A layer's source and effect are made beside the item it belongs to.
-        if (child.sourceItem !== undefined || child.fragmentShader !== undefined || child.blurMax !== undefined) {
+        if (_layerPart(child)) {
             continue;
         }
         if (_isAnonLines(child)) {
@@ -8218,7 +8217,7 @@ function _fadeOf(raw) {
 
 // Whether `item` places a box and fades it.
 function _fadeCarrier(item) {
-    if (!item || item.eldurInlineOwner !== undefined || item.children.length !== 1) {
+    if (!_placedBox(item)) {
         return false;
     }
     var m = _itemMeta.get(item);
@@ -8227,8 +8226,7 @@ function _fadeCarrier(item) {
 
 // What the inline elements `raw` (or the box it places) is in fade it by now.
 function _liveFadeOf(raw) {
-    var box = raw.eldurInlineOwner === undefined && !_vSlottedSelf(raw) && raw.children.length === 1
-        ? raw.children[0] : raw;
+    var box = _placedBox(raw) || raw;
     var up = _logicalParent(box);
     // Out of its line, it is its element's still, unless a script moved it.
     var moved = _itemMeta.get(box);
@@ -19117,8 +19115,8 @@ function _vPlaceSlots(line, made, slots) {
 // its place, when the element is drawn again.
 function _vParkSlots(line, slots, group) {
     Array.from(line.children).forEach(function(kid) {
-        var item = _vSlottedSelf(kid) ? kid
-            : kid.children && kid.children.length === 1 && _vSlottedSelf(kid.children[0]) ? kid.children[0] : null;
+        var placed = _placedBox(kid);
+        var item = _vSlottedSelf(kid) ? kid : placed && _vSlottedSelf(placed) ? placed : null;
         if (!item || slots.some(function(s) { return s.item === item; })) {
             return;
         }
@@ -19555,7 +19553,7 @@ function _vCutBoxes(v) {
     }
     var boxes = [];
     Array.from(line.children).forEach(function(kid) {
-        var box = kid.eldurInlineOwner !== undefined ? kid : kid.children && kid.children[0];
+        var box = kid.eldurInlineOwner !== undefined ? kid : _placedBox(kid);
         // A slotted box needs no key; a keyed one must not match a box with none.
         if (v.eldurKey !== undefined && box && box.eldurInlineOwner === v.eldurKey && box.visible) {
             boxes.push(kid);
@@ -19575,8 +19573,28 @@ function _vLineBox(kid) {
     if (kid.eldurInlineOwner !== undefined || _vSlottedSelf(kid)) {
         return kid;
     }
-    var inner = kid.children && kid.children.length === 1 ? kid.children[0] : null;
+    var inner = _placedBox(kid);
     return inner && (inner.eldurInlineOwner !== undefined || _vSlottedSelf(inner)) ? inner : null;
+}
+
+// The box an item conversion made to place one on a line holds, by margin or
+// to carry its fade (`eldurPlacesBox`). A layer the box has puts its picture
+// beside it, in the same item, so the number of children says nothing.
+function _placedBox(item) {
+    if (!item || item.eldurPlacesBox !== true) {
+        return null;
+    }
+    for (var i = 0; i < item.children.length; ++i) {
+        if (item.children[i] && !_layerPart(item.children[i])) {
+            return item.children[i];
+        }
+    }
+    return null;
+}
+
+// A layer's source and effect, which Qt makes beside the item it belongs to.
+function _layerPart(item) {
+    return item.sourceItem !== undefined || item.fragmentShader !== undefined || item.blurMax !== undefined;
 }
 
 // A box cut out of an inline element's line is still that element's child in
@@ -19645,7 +19663,8 @@ function _vSlotsOf(v) {
 
 // Whether a line's child is a box a script put into an inline element, or holds one.
 function _vSlotted(kid) {
-    return _vSlottedSelf(kid) || Boolean(kid.children && kid.children.length === 1 && _vSlottedSelf(kid.children[0]));
+    var placed = _placedBox(kid);
+    return _vSlottedSelf(kid) || Boolean(placed && _vSlottedSelf(placed));
 }
 
 function _vSlottedSelf(item) {
@@ -31795,8 +31814,8 @@ function _pseudoBoxSide(item) {
 function _pseudoOwner(box) {
     // A static page's says whose it is (`eldurInlineOwner`), on the box an item
     // placing it on its line holds.
-    var inner = box.eldurInlineOwner === undefined && box.children && box.children.length === 1
-        && box.children[0].eldurInlineOwner !== undefined ? box.children[0] : box;
+    var placed = _placedBox(box);
+    var inner = placed && placed.eldurInlineOwner !== undefined ? placed : box;
     // One the runtime made knows, wherever being out of flow has put it.
     return _meta(box).pseudoOf || _logicalParent(inner) || null;
 }
@@ -31863,7 +31882,7 @@ function _vPseudoCut(v, side) {
     }
     for (var i = 0; i < line.children.length; ++i) {
         var kid = line.children[i];
-        var box = kid.eldurInlineOwner !== undefined ? kid : kid.children && kid.children[0];
+        var box = kid.eldurInlineOwner !== undefined ? kid : _placedBox(kid);
         if (box && box.eldurInlineOwner === v.eldurKey && _pseudoBoxSide(kid) === side) {
             return kid;
         }

@@ -970,10 +970,14 @@ impl Emitter<'_, '_> {
                     // the fade goes on an item around it, as with a margin.
                     let wrap = (fade < 1.0 || owner.is_some())
                         && animates_opacity(&a.style, &self.styles.keyframes);
+                    // The runtime finds the box in an item that places it by
+                    // its key, and that item carries a fade it declares.
+                    let declare = self.runtime_dom || self.hides_items;
+                    let mark = (self.runtime_dom && owner.is_some()) || (declare && fade < 1.0);
                     let mut placed = if part.own {
                         obj
                     } else {
-                        self.place_atomic(obj, &part.hint, part.margins, 0.0, wrap)
+                        self.place_atomic(obj, &part.hint, part.margins, 0.0, wrap, mark)
                     };
                     if let Some(pseudo) = pseudo {
                         placed.members.insert(0, pseudo);
@@ -981,12 +985,7 @@ impl Emitter<'_, '_> {
                     vertical_align(&mut placed, &a.style);
                     // Only a box in an inline element has a fade to follow.
                     if fade < 1.0 || owner.is_some() {
-                        fade_atomic(
-                            &mut placed,
-                            fade,
-                            self.runtime_dom || self.hides_items,
-                            &a.style,
-                        );
+                        fade_atomic(&mut placed, fade, declare, &a.style);
                     }
                     if let Some(link) = a.node.and_then(|n| self.inline_link(n)) {
                         let first = named_links.insert(link);
@@ -1411,7 +1410,9 @@ impl Emitter<'_, '_> {
     }
 
     /// `obj` in its margin box, moved down by `shift`: a Flow places
-    /// items by their outer size.
+    /// items by their outer size. A `mark`ed item says it places a box
+    /// (`eldurPlacesBox`): a layer the box has puts its picture beside the
+    /// box, so how many children the item has does not say so.
     fn place_atomic(
         &mut self,
         mut obj: Object,
@@ -1419,6 +1420,7 @@ impl Emitter<'_, '_> {
         margins: [f32; 4],
         shift: f32,
         wrap: bool,
+        mark: bool,
     ) -> Object {
         let [left, right, top, bottom] = margins;
         let shift = if round(shift) == 0.0 { 0.0 } else { shift };
@@ -1459,6 +1461,18 @@ impl Emitter<'_, '_> {
             "height",
             Value::expr(plus(format!("{id}.height"), top + bottom + shift)),
         );
+        if mark {
+            wrapper.members.insert(
+                0,
+                Member::PropertyDecl {
+                    ty: "bool".to_owned(),
+                    name: "eldurPlacesBox".to_owned(),
+                    value: Some(Value::Bool(true)),
+                    readonly: true,
+                    required: false,
+                },
+            );
+        }
         wrapper.push_child(obj);
         wrapper
     }
