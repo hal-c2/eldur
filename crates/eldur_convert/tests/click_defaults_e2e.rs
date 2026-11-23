@@ -99,12 +99,33 @@ TestCase {
         return at.layers.every(function(layer) { return layer.later.length === 0 })
     }
 
+    // The runtime counts a second press as a double click's by the clock,
+    // within the platform's interval. The pages the first press makes are
+    // made in that time: where they took longer, the log says by how much
+    // (`LC!`), so a slow machine is told from a press counted wrong.
+    function timed(presses) {
+        const start = Date.now()
+        presses()
+        const took = Date.now() - start
+        const interval = Qt.styleHints.mouseDoubleClickInterval
+        if (took > interval) {
+            console.log("LC! the presses took " + took + " ms, over the "
+                + interval + " ms a double click has")
+        }
+    }
+
+    function doubleClicked(p) {
+        timed(function() { mouseDoubleClickSequence(host, p.x, p.y) })
+    }
+
     // A double click as a person makes one: what the first press's release
     // queued has run when the second comes, as it has in a browser.
     function twice(at, p) {
-        mouseClick(host, p.x, p.y)
-        tryVerify(function() { return settled(at) }, 1000, "the first press's click never ran")
-        mouseClick(host, p.x, p.y)
+        timed(function() {
+            mouseClick(host, p.x, p.y)
+            tryVerify(function() { return settled(at) }, 1000, "the first press's click never ran")
+            mouseClick(host, p.x, p.y)
+        })
     }
 
     // A person's press: the event loop turns while it is held.
@@ -169,7 +190,7 @@ TestCase {
         const at = pages()
         console.log("LC -- double click whose second press comes before the first click ran")
         const p = middle(at.a, "lab5")
-        mouseDoubleClickSequence(host, p.x, p.y)
+        doubleClicked(p)
         finish(at)
     }
 
@@ -178,7 +199,7 @@ TestCase {
         const at = pages()
         console.log("LC -- double click whose second press a move hands on to a third page")
         const p = middle(at.a, "lab7")
-        mouseDoubleClickSequence(host, p.x, p.y)
+        doubleClicked(p)
         finish(at)
     }
 
@@ -188,7 +209,7 @@ TestCase {
         const at = pages()
         console.log("LC -- double click whose second press is lost to a third page")
         const p = middle(at.a, "lab6")
-        mouseDoubleClickSequence(host, p.x, p.y)
+        doubleClicked(p)
         finish(at)
     }
 
@@ -230,7 +251,7 @@ TestCase {
         const at = pages()
         console.log("LC -- double click whose first press swaps, on a button's text")
         const p = middle(at.a, "in9")
-        mouseDoubleClickSequence(host, p.x, p.y)
+        doubleClicked(p)
         finish(at)
     }
 
@@ -290,7 +311,7 @@ TestCase {
         const at = pages()
         console.log("LC -- double click whose second press comes before the first click ran, on a label for a div")
         const p = middle(at.a, "lab10")
-        mouseDoubleClickSequence(host, p.x, p.y)
+        doubleClicked(p)
         finish(at)
     }
 
@@ -527,10 +548,26 @@ fn a_press_does_nothing_more_once_its_page_is_gone() {
         wanted.push(line.to_owned());
     }
     if logged != wanted {
+        // `LC!` is no line of the log: it says which double clicks came
+        // slower than one counts, which a differing count follows from.
+        let mut slow = Vec::new();
+        let mut case = "";
+        for line in text.lines() {
+            if let Some(at) = line.find("LC -- ") {
+                case = &line[at + 6..];
+            } else if let Some(at) = line.find("LC! ") {
+                slow.push(format!("{case}: {}", &line[at + 4..]));
+            }
+        }
         problems.push(format!(
-            "logged\n    {}\n  wanted\n    {}",
+            "logged\n    {}\n  wanted\n    {}\n  double clicks slower than the interval: {}",
             logged.join("\n    "),
-            wanted.join("\n    ")
+            wanted.join("\n    "),
+            if slow.is_empty() {
+                "none".to_owned()
+            } else {
+                slow.join("; ")
+            }
         ));
     }
     assert!(problems.is_empty(), "{}", problems.join("\n  "));
