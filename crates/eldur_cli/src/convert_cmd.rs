@@ -79,7 +79,7 @@ pub fn default_output_dir_for_url(url: &str) -> PathBuf {
     let parsed = url::Url::parse(url.trim()).ok();
     let segment = parsed.as_ref().and_then(|u| {
         u.path_segments()?.rev().find(|s| !s.is_empty()).map(|s| {
-            let s = percent_decoded(s);
+            let s = eldur_convert::percent_decoded(s);
             Path::new(&s)
                 .file_stem()
                 .map_or_else(|| s.clone(), |stem| stem.to_string_lossy().into_owned())
@@ -108,29 +108,6 @@ pub fn default_output_dir_for_url(url: &str) -> PathBuf {
         end -= 1;
     }
     PathBuf::from(format!("{}_qml", &name[..end]))
-}
-
-/// A URL path segment as it was written: `url` keeps segments
-/// percent-encoded, and the directory should read `café_qml`, not `caf_C3_A9_qml`.
-fn percent_decoded(segment: &str) -> String {
-    let bytes = segment.as_bytes();
-    let mut out = Vec::with_capacity(bytes.len());
-    let mut i = 0;
-    while i < bytes.len() {
-        let hex = bytes
-            .get(i + 1..i + 3)
-            .filter(|_| bytes[i] == b'%')
-            .and_then(|h| std::str::from_utf8(h).ok())
-            .and_then(|h| u8::from_str_radix(h, 16).ok());
-        if let Some(byte) = hex {
-            out.push(byte);
-            i += 3;
-        } else {
-            out.push(bytes[i]);
-            i += 1;
-        }
-    }
-    String::from_utf8_lossy(&out).into_owned()
 }
 
 /// Stable JSON serialisation of [`eldur_convert::Options`] for [`eldur_cache::CacheKey`].
@@ -364,9 +341,11 @@ fn execute_convert_url(
         .chain(&fetched)
         .map(|diagnostic| {
             // The page's own diagnostics name the URL it was fetched from,
-            // query and all; it is shown as the status line shows it.
+            // query and all, and a message can quote a reference's URL: both
+            // are shown as the status line shows the page.
             let mut record = DiagnosticRecord::from(diagnostic);
             record.source = eldur_fetch::redacted(&record.source);
+            record.message = eldur_fetch::redacted_in(&record.message);
             record
         })
         .collect();

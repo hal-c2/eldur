@@ -2,6 +2,7 @@
 //! to them relatively, with their intrinsic sizes read from the file
 //! headers (the converter lays out before Qt loads anything).
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
@@ -101,7 +102,7 @@ pub(crate) fn collect(
             images.by_node.insert(node, asset.clone());
             continue;
         }
-        let path = unique_path(asset_path(asset_name(src, &resolved)), &images.files);
+        let path = unique_path(asset_path(&asset_name(src, &resolved)), &images.files);
         // The size is read from the file as written, before the copy drops
         // what Chromium ignores: how Chromium sizes it depends on those.
         let asset = ImageAsset {
@@ -206,7 +207,7 @@ pub(crate) fn add_background_files(
                 })
             });
         let source = known.unwrap_or_else(|| {
-            let path = unique_path(asset_path(asset_name(&url, &url)), &images.files);
+            let path = unique_path(asset_path(&asset_name(&url, &url)), &images.files);
             let source = path.to_string_lossy().replace('\\', "/");
             images.files.push(OutputFile {
                 path,
@@ -219,12 +220,42 @@ pub(crate) fn add_background_files(
 }
 
 /// What names a copied file: the path as written, or a remote URL's path
-/// (its scheme and host are no file name).
-fn asset_name<'a>(written: &'a str, resolved: &'a str) -> &'a str {
+/// (its scheme and host are no file name), percent-decoded: Qt reads a
+/// relative `source` as a URL, so `my%20logo.gif` would send it looking for
+/// `my logo.gif`.
+fn asset_name<'a>(written: &'a str, resolved: &'a str) -> Cow<'a, str> {
     match resolved.split_once("://") {
-        Some((_, rest)) => rest.find('/').map_or("", |slash| &rest[slash..]),
-        None => written,
+        Some((_, rest)) => {
+            let path = rest.find('/').map_or("", |slash| &rest[slash..]);
+            let path = path.split(['?', '#']).next().unwrap_or(path);
+            Cow::Owned(percent_decoded(path))
+        }
+        None => Cow::Borrowed(written),
     }
+}
+
+/// `text` with each `%XX` read as the byte it stands for; what is not
+/// UTF-8 afterwards is replaced, so a name always comes out.
+#[must_use]
+pub fn percent_decoded(text: &str) -> String {
+    let bytes = text.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        let hex = bytes
+            .get(i + 1..i + 3)
+            .filter(|_| bytes[i] == b'%')
+            .and_then(|h| std::str::from_utf8(h).ok())
+            .and_then(|h| u8::from_str_radix(h, 16).ok());
+        if let Some(byte) = hex {
+            out.push(byte);
+            i += 3;
+        } else {
+            out.push(bytes[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
 }
 
 /// `assets/` plus the path as written, without its query, fragment and

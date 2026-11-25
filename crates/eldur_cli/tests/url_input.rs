@@ -37,11 +37,15 @@ impl Drop for TempDir {
     }
 }
 
+/// Each path asked for, with the `Authorization` it came with.
+type Asked = Vec<(String, Option<String>)>;
+
 /// Serves `files` (path → content type, body) on 127.0.0.1, 404 for the
-/// rest, and records every path asked for.
+/// rest, and records every path asked for with the `Authorization` it came
+/// with. A `redirect` content type answers 302 to the body.
 struct Server {
     origin: String,
-    asked: Arc<Mutex<Vec<String>>>,
+    asked: Arc<Mutex<Asked>>,
 }
 
 impl Server {
@@ -66,6 +70,15 @@ impl Server {
     }
 
     fn asked(&self) -> Vec<String> {
+        self.asked
+            .lock()
+            .expect("lock asked")
+            .iter()
+            .map(|(path, _)| path.clone())
+            .collect()
+    }
+
+    fn authorization(&self) -> Asked {
         self.asked.lock().expect("lock asked").clone()
     }
 }
@@ -73,20 +86,26 @@ impl Server {
 fn serve(
     mut stream: TcpStream,
     files: &BTreeMap<&'static str, (&'static str, Vec<u8>)>,
-    asked: &Mutex<Vec<String>>,
+    asked: &Mutex<Asked>,
 ) {
     let mut reader = BufReader::new(stream.try_clone().expect("clone stream"));
     let mut request_line = String::new();
     if reader.read_line(&mut request_line).is_err() {
         return;
     }
-    // The headers are read and dropped: nothing here depends on them.
+    let mut authorization = None;
     loop {
         let mut header = String::new();
         match reader.read_line(&mut header) {
             Ok(0) | Err(_) => break,
             Ok(_) if header == "\r\n" || header == "\n" => break,
-            Ok(_) => {}
+            Ok(_) => {
+                if let Some((name, value)) = header.split_once(':')
+                    && name.eq_ignore_ascii_case("authorization")
+                {
+                    authorization = Some(value.trim().to_owned());
+                }
+            }
         }
     }
     let path = request_line
@@ -94,15 +113,29 @@ fn serve(
         .nth(1)
         .unwrap_or("/")
         .to_owned();
-    asked.lock().expect("lock asked").push(path.clone());
-    let (status, content_type, body) = match files.get(path.as_str()) {
-        Some((content_type, body)) => ("200 OK", *content_type, body.clone()),
-        None => ("404 Not Found", "text/plain", b"not found".to_vec()),
+    asked
+        .lock()
+        .expect("lock asked")
+        .push((path.clone(), authorization));
+    let head = |status: &str, content_type: &str, extra: &str, len: usize| {
+        format!(
+            "HTTP/1.1 {status}\r\nContent-Type: {content_type}\r\n{extra}Content-Length: {len}\r\nConnection: close\r\n\r\n"
+        )
     };
-    let head = format!(
-        "HTTP/1.1 {status}\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
-        body.len()
-    );
+    let (head, body) = match files.get(path.as_str()) {
+        Some(("redirect", to)) => {
+            let to = String::from_utf8_lossy(to);
+            (
+                head("302 Found", "text/plain", &format!("Location: {to}\r\n"), 0),
+                Vec::new(),
+            )
+        }
+        Some((content_type, body)) => (head("200 OK", content_type, "", body.len()), body.clone()),
+        None => (
+            head("404 Not Found", "text/plain", "", 9),
+            b"not found".to_vec(),
+        ),
+    };
     let _ = stream.write_all(head.as_bytes());
     let _ = stream.write_all(&body);
     let _ = stream.flush();
@@ -437,12 +470,17 @@ fn a_url_is_neither_watched_nor_given_a_site_root() {
 
 #[test]
 fn json_output_for_a_url_names_its_files_and_leaves_out_credentials() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("bind 127.0.0.1");
+    let gone = format!(
+        "http://{}/gone.js?sig=hunter2",
+        listener.local_addr().expect("local addr")
+    );
+    drop(listener);
+    let page =
+        format!("<p>hi</p><img src=\"missing.gif\" alt=\"\"><script src=\"{gone}\"></script>");
     let server = Server::start(BTreeMap::from([(
         "/p.html?token=hunter2",
-        (
-            "text/html",
-            b"<p>hi</p><img src=\"missing.gif\" alt=\"\">".to_vec(),
-        ),
+        ("text/html", page.into_bytes()),
     )]));
     let td = TempDir::new("json_url");
     let origin = server.url("");
@@ -466,6 +504,13 @@ fn json_output_for_a_url_names_its_files_and_leaves_out_credentials() {
             .any(|l| l["type"] == "diagnostic" && l["source"] == server.url("/missing.gif")),
         "{stdout}"
     );
+    // A script that could not be fetched is named without its signed query.
+    assert!(
+        lines.iter().any(|l| l["message"]
+            .as_str()
+            .is_some_and(|m| m.contains(gone.split('?').next().unwrap_or_default()))),
+        "{stdout}"
+    );
     let done = lines.last().expect("a done line");
     assert_eq!(done["type"], "done", "{stdout}");
     assert_eq!(done["status"], "converted", "{stdout}");
@@ -483,4 +528,84 @@ fn json_output_for_a_url_names_its_files_and_leaves_out_credentials() {
         "stderr was: {}",
         String::from_utf8_lossy(&stderr)
     );
+}
+
+#[test]
+fn the_page_s_credentials_go_to_its_own_origin_only() {
+    let other = Server::start(BTreeMap::from([
+        ("/b.gif", ("image/gif", DOT_GIF.to_vec())),
+        ("/c.gif", ("image/gif", black_dot())),
+    ]));
+    let hop = other.url("/c.gif").into_bytes();
+    let html = format!(
+        r#"<!doctype html><html><body>
+<img src="/a.gif" width="1" height="1" alt="">
+<img src="{b}" width="1" height="1" alt="">
+<img src="/hop.gif" width="1" height="1" alt="">
+</body></html>"#,
+        b = other.url("/b.gif"),
+    );
+    let mut a = DOT_GIF.to_vec();
+    a[13..16].copy_from_slice(&[0, 0, 0xff]);
+    let page = Server::start(BTreeMap::from([
+        ("/index.html", ("text/html", html.into_bytes())),
+        ("/a.gif", ("image/gif", a)),
+        ("/hop.gif", ("redirect", hop)),
+    ]));
+    let td = TempDir::new("credentials");
+    let url = page
+        .url("/index.html")
+        .replacen("http://", "http://user:sesame@", 1);
+    let (outcome, stderr) = convert(&url, &td.0.join("out"));
+    outcome.expect("convert the page");
+
+    // `user:sesame`, as Basic sends it.
+    let basic = Some("Basic dXNlcjpzZXNhbWU=".to_owned());
+    let mut own = page.authorization();
+    own.sort();
+    assert_eq!(
+        own,
+        [
+            ("/a.gif".to_owned(), basic.clone()),
+            ("/hop.gif".to_owned(), basic.clone()),
+            ("/index.html".to_owned(), basic),
+        ],
+        "{stderr}"
+    );
+    // Another origin gets none, asked directly or by the page's redirect.
+    let mut elsewhere = other.authorization();
+    elsewhere.sort();
+    assert_eq!(
+        elsewhere,
+        [("/b.gif".to_owned(), None), ("/c.gif".to_owned(), None)],
+        "{stderr}"
+    );
+}
+
+#[test]
+fn a_remote_image_s_file_is_named_as_its_url_decodes() {
+    let server = Server::start(BTreeMap::from([(
+        "/my%20logo.gif",
+        ("image/gif", DOT_GIF.to_vec()),
+    )]));
+    let html = format!(
+        r#"<!doctype html><html><body><img src="{img}" width="1" height="1" alt=""></body></html>"#,
+        img = server.url("/my%20logo.gif"),
+    );
+    let page = Server::start(BTreeMap::from([(
+        "/index.html",
+        ("text/html", html.into_bytes()),
+    )]));
+    let td = TempDir::new("decoded");
+    let out = td.0.join("out");
+    let (outcome, stderr) = convert(&page.url("/index.html"), &out);
+    outcome.expect("convert the page");
+    // Qt reads a relative `source` as a URL: `my logo.gif` is the file it opens.
+    assert_eq!(
+        fs::read(out.join("assets/my logo.gif")).expect("the image, decoded"),
+        DOT_GIF,
+        "{stderr}"
+    );
+    let qml = fs::read_to_string(out.join("Main.qml")).expect("Main.qml");
+    assert!(qml.contains("\"assets/my logo.gif\""), "{qml}");
 }
