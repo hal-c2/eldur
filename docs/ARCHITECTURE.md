@@ -23,6 +23,8 @@ The project was formerly html-2-qml.
 flowchart LR
     cli[eldur_cli<br/>eldur binary] --> convert[eldur_convert]
     cli --> cache[eldur_cache]
+    cli --> fetch[eldur_fetch<br/>ureq + rustls]
+    fetch --> convert
     convert --> dom[eldur_dom<br/>html5ever]
     convert --> css[eldur_css<br/>swc_css_parser]
     convert --> js[eldur_js<br/>oxc]
@@ -38,6 +40,7 @@ flowchart LR
 | `eldur_qml` | QML document model and formatter | — |
 | `eldur_convert` | Box tree and the HTML/CSS → QML mapping | the above |
 | `eldur_cache` | Content-addressed build cache (BLAKE3) | blake3 (ideas from ljos-ui) |
+| `eldur_fetch` | A page given by `http(s)` URL and its sub-resources, as `eldur_convert::Resources`, bounded | ureq 3 on rustls (ring, the platform's verifier), url, data-url |
 | `eldur_cli` | `eldur convert/watch/check` | clap, notify |
 
 Why these parsers: html5ever is the spec-complete HTML parser (MIT/Apache).
@@ -46,6 +49,33 @@ drops that declaration, not the sheet) and gives a typed selector AST
 (Apache-2.0); raffia was tried and fails whole sheets. Servo's `selectors`,
 `cssparser` and `stylo`, and `lightningcss`, are MPL-2.0 and are not used.
 oxc is what ljos-ui already uses.
+
+## Input
+
+`eldur_convert::convert` reads nothing itself: an `Input` (the HTML and its
+URL) and a `Resources`, which returns each referenced file given the
+reference as written and the URL of the document or sheet holding it.
+References resolve as a browser's do: against the sheet for `@import` and
+`url()`, against `<base href>` (else the page) for `<link>`, `<script src>`
+and `<img src>`.
+
+- A local file: `eldur_cli::FsResources` reads the file system, with
+  `--site-root` for root-relative URLs, and reads no network.
+- An `http(s)` URL: `eldur_fetch::HttpResources` fetches the page
+  (`fetch_page`; its `Input::url` is where redirects end) and each
+  reference over HTTP(S), decodes `data:` URLs, and refuses other schemes.
+  It is bounded by `Limits`: a timeout per request, a size cap per
+  resource and in total, and a cap on the number of fetches. A reference
+  that fails or is refused is a `warning[fetch]` naming its URL; only the
+  page failing is an error. `MixedResources` puts it beside a local
+  resolver for a library user whose local page references the web, and
+  `convert_url` is the whole round. Web fonts are not fetched: the
+  converter asks for no `@font-face` source.
+
+`eldur convert <url>` writes to `<last path segment>_qml/` or
+`<host>_qml/`, skips the conversion cache (what a server answers cannot be
+fingerprinted without fetching it again), and `eldur watch <url>` is an
+error.
 
 ## Pipeline
 
@@ -183,7 +213,8 @@ Borrowed from ljos-ui:
   conversion read, keyed by entry file + converter version + options;
   outputs stored content-addressed; size+mtime as a fast path before
   hashing. `eldur watch` uses `Fingerprints` so touching or re-saving a
-  file without changes does nothing.
+  file without changes does nothing. A page given by URL is not cached
+  (see Input).
 
 ## Quality
 

@@ -39,7 +39,7 @@ mapping specifications are in `docs/spec/`.
 | Build the workspace and print the `eldur` binary's path | `mise run build [--release]` |
 | API docs of every crate | `mise run docs [--open]` |
 | Install the `eldur` CLI from the checkout | `mise run install [--root dir]` |
-| Convert a page | `mise run convert page.html -o out/` |
+| Convert a page, a local file or an `http(s)` URL (fetched with what it references; not cached) | `mise run convert page.html -o out/`, `mise run convert https://example.com/page.html` |
 | Convert every corpus case (default `<cargo target dir>/corpus`) | `mise run corpus [out]` |
 | Validate QML (qmllint + qml6 off-screen; default: what `mise run corpus` wrote) | `mise run qml:check [dir]` |
 | Visual parity harness (Chromium vs qml6; needs Playwright's Chromium, and sway unless `--backend software`) | `mise run visual [-- run.py args]` |
