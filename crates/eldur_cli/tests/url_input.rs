@@ -284,6 +284,106 @@ fn a_url_input_names_its_output_directory_after_its_last_segment_or_host() {
         dir("HTTPS://Example.COM/?q=1"),
         PathBuf::from("example.com_qml")
     );
+    // A file name has at most 255 bytes on most file systems.
+    let long = dir(&format!("https://example.com/{}.html", "é".repeat(200)));
+    let name = long.to_str().expect("UTF-8");
+    assert!(name.len() <= 255, "{} bytes", name.len());
+    assert!(name.starts_with("éé") && name.ends_with("_qml"), "{name}");
+}
+
+#[test]
+fn only_an_input_that_spells_out_http_or_https_is_a_url() {
+    let url = |input: &str| ConvertArgs::new(input).input_url().map(str::to_owned);
+    assert_eq!(
+        url("HTTPS://example.com/"),
+        Some("HTTPS://example.com/".to_owned())
+    );
+    assert_eq!(
+        url("http://example.com/a.html").as_deref(),
+        Some("http://example.com/a.html")
+    );
+    // A file of that name, for the URL parser a host.
+    assert_eq!(url("https:report.html"), None);
+    assert_eq!(url("http:/report.html"), None);
+}
+
+#[test]
+fn the_status_line_and_errors_leave_out_credentials_and_queries() {
+    let server = Server::start(BTreeMap::from([(
+        "/p.html?token=hunter2",
+        ("text/html", b"<p>hi</p>".to_vec()),
+    )]));
+    let td = TempDir::new("redact");
+    let origin = server.url("");
+    let with_secrets = |path: &str| origin.replacen("http://", "http://user:sesame@", 1) + path;
+
+    let mut args = ConvertArgs::new(with_secrets("/p.html?token=hunter2#top"));
+    args.output = Some(td.0.join("out"));
+    let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+    run_convert_with_io(&args, &RealConverter, &mut stdout, &mut stderr).expect("convert");
+    let stdout = String::from_utf8_lossy(&stdout);
+    assert!(stdout.contains(&server.url("/p.html")), "{stdout}");
+    for secret in ["sesame", "hunter2", "#top"] {
+        assert!(!stdout.contains(secret), "{secret} in {stdout}");
+    }
+
+    let (outcome, _) = convert(
+        &with_secrets("/gone.html?token=hunter2"),
+        &td.0.join("gone"),
+    );
+    let text = format!("{:#}", outcome.expect_err("a 404 page"));
+    assert!(
+        text.contains(&server.url("/gone.html")) && text.contains("404"),
+        "{text}"
+    );
+    for secret in ["sesame", "hunter2"] {
+        assert!(!text.contains(secret), "{secret} in {text}");
+    }
+}
+
+#[test]
+fn a_fetched_page_s_absolute_images_are_fetched_and_copied_too() {
+    let server = Server::start(BTreeMap::from([
+        ("/img/a.gif", ("image/gif", DOT_GIF.to_vec())),
+        ("/img/bg.gif", ("image/gif", DOT_GIF.to_vec())),
+    ]));
+    let html = format!(
+        r#"<!doctype html><html><body>
+<img src="{img}" width="1" height="1" alt="">
+<div style="width: 4px; height: 4px; background-image: url({bg})"></div>
+</body></html>"#,
+        img = server.url("/img/a.gif"),
+        bg = server.url("/img/bg.gif"),
+    );
+    let page = Server::start(BTreeMap::from([(
+        "/index.html",
+        ("text/html", html.into_bytes()),
+    )]));
+    let td = TempDir::new("absolute");
+    let out = td.0.join("out");
+    let (outcome, _) = convert(&page.url("/index.html"), &out);
+    let outcome = outcome.expect("convert the page");
+    assert!(
+        !outcome.diagnostics.iter().any(|d| d.starts_with("warning")),
+        "{:#?}",
+        outcome.diagnostics
+    );
+    assert_eq!(
+        fs::read(out.join("assets/img/a.gif")).expect("the image"),
+        DOT_GIF
+    );
+    assert_eq!(
+        fs::read(out.join("assets/img/bg.gif")).expect("the background"),
+        DOT_GIF
+    );
+    let qml = fs::read_to_string(out.join("Main.qml")).expect("Main.qml");
+    assert!(
+        !qml.contains(&server.url("")),
+        "Qt loads nothing remote:\n{qml}"
+    );
+    let mut asked = server.asked();
+    asked.sort();
+    assert_eq!(asked, ["/img/a.gif", "/img/bg.gif"]);
 }
 
 #[test]

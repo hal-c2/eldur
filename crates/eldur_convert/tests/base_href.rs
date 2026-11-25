@@ -89,3 +89,39 @@ fn scripts_and_images_resolve_against_the_base_href() {
         .expect("page.js");
     assert!(page_js.contains("From the base"), "{page_js}");
 }
+
+#[test]
+fn an_image_an_absolute_base_makes_remote_is_left_for_qt_to_load() {
+    // A local resolver serves no web URL: the image is passed to Qt as the
+    // base made it, as `<img src="https://…">` is.
+    let mut site = Site {
+        files: BTreeMap::from([("/site/logo.png".to_owned(), DOT_GIF.to_vec())]),
+        asked: Vec::new(),
+    };
+    let html = r#"<!doctype html><html><head><base href="https://cdn.example.com/img/">
+</head><body><img src="logo.png" width="1" height="1" alt=""></body></html>"#;
+    let out = eldur_convert::convert(
+        &Input {
+            html: html.to_owned(),
+            url: "/site/index.html".to_owned(),
+        },
+        &Options::default(),
+        &mut site,
+    );
+    let warnings: Vec<String> = out
+        .diagnostics
+        .iter()
+        .filter(|d| d.severity >= Severity::Warning)
+        .map(ToString::to_string)
+        .collect();
+    assert!(warnings.is_empty(), "{warnings:#?}");
+    let qml = out.main_qml().expect("Main.qml");
+    assert!(
+        qml.contains("https://cdn.example.com/img/logo.png"),
+        "the image keeps the URL the base gives it:\n{qml}"
+    );
+    assert!(
+        !out.files.iter().any(|f| f.contents == DOT_GIF),
+        "the local file beside the page is not the image"
+    );
+}
