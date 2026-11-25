@@ -30,4 +30,36 @@ eldur convert page.html -o out/
 qml6 out/Main.qml                 # or: ljos run out/Main.qml
 ```
 
+`eldur convert --help` lists the options.
+
+## Output for programs
+
+`eldur convert` and `eldur watch` take `--message-format <human|json>`.
+`human`, the default, prints each diagnostic as a
+`severity[stage]: source:line: message` line on stderr and a
+`converted`/`cached` line on stdout. A program should not split that line:
+a source that is a URL holds `:` itself. With `json`, stdout carries one JSON
+object per line, `type` first, and stderr carries nothing but `watch`'s own
+file-watching warnings:
+
+```json
+{"type":"diagnostic","severity":"warning","stage":"css","source":"site.css","line":3,"message":"approximated box-shadow"}
+{"type":"done","status":"converted","output":"out","files":["Main.qml","assets/logo.png"],"main":"Main.qml"}
+```
+
+- `diagnostic`: `severity` is `info`, `warning` or `error`; `stage` is
+  `html`, `css`, `js` or `qml`; `line` is left out when it is not known. A
+  run served from the build cache reports the same diagnostics, field by
+  field.
+- `done` ends a run: `status` is `converted` or `cached`, `output` is the
+  output directory as given (or defaulted), `files` are every file written
+  there, relative to it with `/` between parts, and `main` is the file to
+  run.
+- `error`: `{"type":"error","message":"…"}` when the conversion failed; the
+  exit status is then non-zero. `watch` reports every run this way; when a
+  run after the first fails, it goes on watching.
+
+`--quiet` leaves the `done` line in. Errors in the command line itself are
+clap's usage text on stderr, exit status 2.
+
 See `docs/ARCHITECTURE.md`. Licence: MIT.
