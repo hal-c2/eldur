@@ -1,0 +1,17 @@
+[package]
+name = "eldur_fetch"
+description = "Fetch a web page and its sub-resources over HTTP(S) for eldur_convert"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+eldur_convert.workspace = true
+data-url.workspace = true
+rustls.workspace = true
+thiserror.workspace = true
+ureq.workspace = true
+url.workspace = true
+
+[lints]
+workspace = true

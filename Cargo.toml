@@ -17,6 +17,7 @@ eldur_js = { path = "crates/eldur_js" }
 eldur_qml = { path = "crates/eldur_qml" }
 eldur_convert = { path = "crates/eldur_convert" }
 eldur_cache = { path = "crates/eldur_cache" }
+eldur_fetch = { path = "crates/eldur_fetch" }
 
 # Parsers. All permissively licensed (no MPL: no servo `selectors`,
 # `cssparser`, `stylo` or `lightningcss`).
@@ -52,6 +53,13 @@ imagesize = { version = "0.15", default-features = false, features = ["png", "jp
 anyhow = "1.0"
 # WHATWG URL parsing (`<base href>`), MIT/Apache.
 url = "2.5"
+# HTTP(S) for a page given by URL, MIT/Apache. Without ureq's default
+# webpki-roots (CDLA-Permissive-2.0): the platform's verifier and roots,
+# with rustls (Apache/MIT/ISC) on ring (Apache-2.0 AND ISC).
+ureq = { version = "3.4.2", default-features = false, features = ["rustls-no-provider", "platform-verifier", "gzip"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+# `data:` URLs (WHATWG Fetch), MIT/Apache.
+data-url = "0.3"
 clap = { version = "4.6", features = ["derive"] }
 notify = "8.2"
 insta = { version = "1.49", features = ["json"] }
