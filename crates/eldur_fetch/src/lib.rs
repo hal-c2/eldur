@@ -180,12 +180,16 @@ impl HttpResources {
     /// found after redirects, as a browser has it, so its references resolve
     /// there. The bytes are read as UTF-8, invalid sequences replaced. The
     /// fetch counts against the same [`Limits`] as the page's references.
+    /// Each page starts afresh: an earlier page's credentials and the
+    /// answers fetched with them do not carry over to it.
     pub fn fetch_page(&mut self, url: &str) -> Result<Input, FetchError> {
         let mut target = Url::parse(url.trim())
             .ok()
             .filter(|u| matches!(u.scheme(), "http" | "https"))
             .ok_or_else(|| FetchError::NotHttp { url: redacted(url) })?;
         target.set_fragment(None);
+        self.credentials = None;
+        self.answers.clear();
         if !target.username().is_empty() || target.password().is_some() {
             self.credentials = Some((
                 target.origin(),
