@@ -127,6 +127,8 @@ fn http_urls_are_told_from_paths() {
     assert!(!is_http_url("/var/www/page.html"));
     assert!(!is_http_url("file:///var/www/page.html"));
     assert!(!is_http_url("C:\\www\\page.html"));
+    // A file of that name; the URL parser takes it for a host.
+    assert!(!is_http_url("https:report.html"));
 }
 
 #[test]
@@ -220,20 +222,25 @@ fn a_reference_that_fails_is_a_warning_naming_its_url() {
 }
 
 #[test]
-fn a_reference_another_base_serves_is_not_reported() {
+fn a_lookup_another_base_serves_is_not_reported() {
     // As the converter tries a background image: against the page, then
     // against each sheet.
     let server = Server::start(BTreeMap::from([("/css/img/bg.png", ok(b"png"))]));
     let mut http = HttpResources::new();
-    assert!(
-        http.read("img/bg.png", &server.url("/index.html"))
-            .is_none()
-    );
-    assert!(
-        http.read("img/bg.png", &server.url("/css/site.css"))
-            .is_some()
-    );
+    let (page, sheet) = (server.url("/index.html"), server.url("/css/site.css"));
+    let found = http.read_any("img/bg.png", &[&page, &sheet]);
+    assert_eq!(found.expect("beside the sheet").bytes, b"png");
     assert!(messages(&http).is_empty(), "{:?}", messages(&http));
+
+    // A later lookup that needs the URL the first missed still reports it.
+    assert!(http.read("img/bg.png", &page).is_none());
+    let text = messages(&http).join("\n");
+    assert!(text.contains(&server.url("/img/bg.png")), "{text}");
+
+    // One no base serves reports each base's miss.
+    let mut none = HttpResources::new();
+    assert!(none.read_any("gone.png", &[&page, &sheet]).is_none());
+    assert_eq!(messages(&none).len(), 2, "{:?}", messages(&none));
 }
 
 #[test]
