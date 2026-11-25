@@ -12,12 +12,14 @@ path = "src/main.rs"
 [dependencies]
 eldur_convert.workspace = true
 eldur_cache.workspace = true
+eldur_fetch.workspace = true
 anyhow.workspace = true
 blake3.workspace = true
 clap.workspace = true
 notify.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+url.workspace = true
 
 [lints]
 workspace = true

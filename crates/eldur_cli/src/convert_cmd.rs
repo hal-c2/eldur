@@ -44,7 +44,8 @@ pub struct ConvertOutcome {
     pub diagnostics: Vec<String>,
     /// The same diagnostics, field by field.
     pub diagnostic_records: Vec<DiagnosticRecord>,
-    /// Every input dependency (entry HTML plus sub-resources, including missing ones).
+    /// Every input dependency (entry HTML plus sub-resources, including missing
+    /// ones). Empty for a page given by URL, which is neither cached nor watched.
     pub dependencies: Vec<eldur_cache::Input>,
     /// Wall-clock duration of the run.
     pub elapsed: Duration,
@@ -63,6 +64,41 @@ pub fn default_output_dir(input: &Path) -> PathBuf {
         Some(parent) if !parent.as_os_str().is_empty() => parent.join(dir_name),
         _ => PathBuf::from(dir_name),
     }
+}
+
+/// Computes the default output directory for a page given by an `http(s)`
+/// URL: `<last path segment's stem>_qml/`, or `<host>_qml/` when the path
+/// has no segment, in the current directory. Characters a file name should
+/// not carry become `_`.
+#[must_use]
+pub fn default_output_dir_for_url(url: &str) -> PathBuf {
+    let parsed = url::Url::parse(url.trim()).ok();
+    let segment = parsed.as_ref().and_then(|u| {
+        u.path_segments()?.rev().find(|s| !s.is_empty()).map(|s| {
+            Path::new(s)
+                .file_stem()
+                .map_or_else(|| s.to_owned(), |stem| stem.to_string_lossy().into_owned())
+        })
+    });
+    let host = parsed
+        .as_ref()
+        .and_then(|u| u.host_str())
+        .map(str::to_ascii_lowercase);
+    let name = segment
+        .or(host)
+        .filter(|n| !n.is_empty())
+        .unwrap_or_else(|| "out".to_owned());
+    let name: String = name
+        .chars()
+        .map(|c| {
+            if c.is_alphanumeric() || matches!(c, '-' | '_' | '.') {
+                c
+            } else {
+                '_'
+            }
+        })
+        .collect();
+    PathBuf::from(format!("{name}_qml"))
 }
 
 /// Stable JSON serialisation of [`eldur_convert::Options`] for [`eldur_cache::CacheKey`].
@@ -113,6 +149,10 @@ pub(crate) fn execute_convert(
     stderr: &mut dyn Write,
 ) -> anyhow::Result<ConvertOutcome> {
     let started = Instant::now();
+
+    if let Some(url) = args.input_url() {
+        return execute_convert_url(args, url, converter, stdout, stderr, started);
+    }
 
     let canonical_input = fs::canonicalize(&args.input)
         .with_context(|| format!("failed to resolve input file {}", args.input.display()))?;
@@ -252,6 +292,59 @@ pub(crate) fn execute_convert(
         diagnostics: records.iter().map(ToString::to_string).collect(),
         diagnostic_records: records,
         dependencies,
+        elapsed,
+    })
+}
+
+/// `eldur convert <http(s) URL>`: the page and what it references are
+/// fetched through [`eldur_fetch::HttpResources`]. Nothing is cached: what a
+/// server answers cannot be checked for change without fetching it again.
+fn execute_convert_url(
+    args: &ConvertArgs,
+    url: &str,
+    converter: &dyn Converter,
+    stdout: &mut dyn Write,
+    stderr: &mut dyn Write,
+    started: Instant,
+) -> anyhow::Result<ConvertOutcome> {
+    if args.site_root.is_some() {
+        bail!("--site-root is for a local page; {url} is fetched, its server is its root");
+    }
+    let out_dir = args.resolved_output_dir();
+    let options = args.to_convert_options();
+
+    let mut resources = eldur_fetch::HttpResources::new();
+    let conv_input = resources.fetch_page(url)?;
+    let output = converter.convert(&conv_input, &options, &mut resources);
+
+    let diagnostics: Vec<String> = output
+        .diagnostics
+        .iter()
+        .chain(&resources.diagnostics())
+        .map(ToString::to_string)
+        .collect();
+    let (written_files, skipped_files) = write_convert_outputs(&out_dir, &output.files)?;
+
+    for diag in &diagnostics {
+        writeln!(stderr, "{diag}").context("failed to write diagnostic to stderr")?;
+    }
+    let elapsed = started.elapsed();
+    if !args.quiet {
+        writeln!(
+            stdout,
+            "converted {url} -> {} ({elapsed:.2?})",
+            out_dir.display()
+        )
+        .context("failed to write status to stdout")?;
+    }
+
+    Ok(ConvertOutcome {
+        status: ConvertStatus::Converted,
+        output_dir: out_dir,
+        written_files,
+        skipped_files,
+        diagnostics,
+        dependencies: Vec::new(),
         elapsed,
     })
 }
