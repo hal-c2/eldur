@@ -609,3 +609,50 @@ fn a_remote_image_s_file_is_named_as_its_url_decodes() {
     let qml = fs::read_to_string(out.join("Main.qml")).expect("Main.qml");
     assert!(qml.contains("\"assets/my logo.gif\""), "{qml}");
 }
+
+#[test]
+fn a_remote_image_s_name_holds_no_byte_a_file_or_qt_cannot() {
+    let images = Server::start(BTreeMap::from([
+        ("/a%00b.gif", ("image/gif", DOT_GIF.to_vec())),
+        ("/%5C..%5Cup.gif", ("image/gif", DOT_GIF.to_vec())),
+        ("/%2541.gif", ("image/gif", DOT_GIF.to_vec())),
+    ]));
+    // Relative to the page and with no `<base>`: named as the URL it was
+    // read from decodes, as the absolute ones are.
+    let html = format!(
+        concat!(
+            r#"<!doctype html><html><body>"#,
+            r#"<div style="width: 4px; height: 4px; background-image: url(bg%20one.gif)"></div>"#,
+            r#"<img src="near%20by.gif" width="1" height="1" alt="">"#,
+            r#"<img src="{nul}" width="1" height="1" alt=""><img src="{slash}" width="1" height="1" alt="">"#,
+            r#"<img src="{percent}" width="1" height="1" alt=""></body></html>"#,
+        ),
+        nul = images.url("/a%00b.gif"),
+        slash = images.url("/%5C..%5Cup.gif"),
+        percent = images.url("/%2541.gif"),
+    );
+    let page = Server::start(BTreeMap::from([
+        ("/index.html", ("text/html", html.into_bytes())),
+        ("/near%20by.gif", ("image/gif", DOT_GIF.to_vec())),
+        // Its own bytes: a background the same as an image takes its file.
+        ("/bg%20one.gif", ("image/gif", black_dot())),
+    ]));
+    let td = TempDir::new("named");
+    let out = td.0.join("out");
+    let (outcome, stderr) = convert(&page.url("/index.html"), &out);
+    outcome.expect("one odd image name does not fail the page");
+    let qml = fs::read_to_string(out.join("Main.qml")).expect("Main.qml");
+    for name in [
+        "near by.gif",
+        "bg one.gif",
+        "a_b.gif",
+        "_.._up.gif",
+        "_41.gif",
+    ] {
+        assert!(
+            out.join("assets").join(name).is_file(),
+            "assets/{name}: {stderr}"
+        );
+        assert!(qml.contains(&format!("\"assets/{name}\"")), "{name}: {qml}");
+    }
+}
