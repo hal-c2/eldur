@@ -17,7 +17,7 @@
 //! agreement.
 
 use std::collections::HashMap;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::net::{IpAddr, Ipv4Addr};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -550,6 +550,11 @@ fn is_public(ip: IpAddr) -> bool {
                 || (s[0] & 0xffc0) == 0xfe80 // link-local
                 || (s[0] & 0xffc0) == 0xfec0 // site-local, deprecated
                 || (s[0] == 0x2001 && s[1] == 0x0db8) // documentation
+                // 6to4 and Teredo relay to an IPv4 address the check never
+                // sees, so neither is followed.
+                || s[0] == 0x2002 // 6to4
+                || (s[0] == 0x2001 && s[1] == 0) // Teredo
+                || s[..4] == [0x100, 0, 0, 0] // discard-only
                 || s[..6] == [0, 0, 0, 0, 0, 0]) // IPv4-compatible, deprecated
         }
     }
@@ -587,7 +592,6 @@ impl ureq::unversioned::resolver::Resolver for PublicOnly {
         config: &ureq::config::Config,
         timeout: ureq::unversioned::transport::NextTimeout,
     ) -> Result<ureq::unversioned::resolver::ResolvedSocketAddrs, ureq::Error> {
-        use ureq::unversioned::resolver::Resolver as _;
         let addrs = self.inner.resolve(uri, config, timeout)?;
         let host = uri.host().unwrap_or_default();
         if config
