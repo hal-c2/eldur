@@ -2,7 +2,6 @@
 //! to them relatively, with their intrinsic sizes read from the file
 //! headers (the converter lays out before Qt loads anything).
 
-use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
@@ -220,18 +219,29 @@ pub(crate) fn add_background_files(
 }
 
 /// What names a copied file: the path as written, or a remote URL's path
-/// (its scheme and host are no file name), percent-decoded: Qt reads a
-/// relative `source` as a URL, so `my%20logo.gif` would send it looking for
-/// `my logo.gif`.
-fn asset_name<'a>(written: &'a str, resolved: &'a str) -> Cow<'a, str> {
-    match resolved.split_once("://") {
-        Some((_, rest)) => {
-            let path = rest.find('/').map_or("", |slash| &rest[slash..]);
-            let path = path.split(['?', '#']).next().unwrap_or(path);
-            Cow::Owned(percent_decoded(path))
-        }
-        None => Cow::Borrowed(written),
-    }
+/// (its scheme and host are no file name); percent-decoded, relative or
+/// not, since Qt reads a relative `source` as a URL and would look for
+/// `my logo.gif` where `my%20logo.gif` was written.
+/// What decoding lets through that no file name, or no `source` Qt reads
+/// back, can hold is `_`: control bytes, `\` and what Windows refuses in a
+/// name, and `%`, `?` and `#`, which Qt would read as URL syntax.
+fn asset_name(written: &str, resolved: &str) -> String {
+    let path = match resolved.split_once("://") {
+        Some((_, rest)) => rest.find('/').map_or("", |slash| &rest[slash..]),
+        None => written,
+    };
+    let path = path.split(['?', '#']).next().unwrap_or(path);
+    percent_decoded(path)
+        .chars()
+        .map(|c| {
+            let bad = c.is_control()
+                || matches!(
+                    c,
+                    '\\' | '%' | '?' | '#' | ':' | '*' | '<' | '>' | '|' | '"'
+                );
+            if bad { '_' } else { c }
+        })
+        .collect()
 }
 
 /// `text` with each `%XX` read as the byte it stands for; what is not
