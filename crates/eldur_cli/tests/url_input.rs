@@ -337,10 +337,12 @@ fn the_status_line_and_errors_leave_out_credentials_and_queries() {
     for secret in ["sesame", "hunter2", "#top"] {
         assert!(!stdout.contains(secret), "{secret} in {stdout}");
     }
-    // The page's credentials are not in the URLs its warnings name.
+    // The page's credentials and query are not in the URLs its warnings name.
     let stderr = String::from_utf8_lossy(&stderr);
     assert!(stderr.contains(&server.url("/missing.gif")), "{stderr}");
-    assert!(!stderr.contains("sesame"), "{stderr}");
+    for secret in ["sesame", "hunter2"] {
+        assert!(!stderr.contains(secret), "{secret} in {stderr}");
+    }
 
     let (outcome, _) = convert(
         &with_secrets("/gone.html?token=hunter2"),
@@ -430,5 +432,55 @@ fn a_url_is_neither_watched_nor_given_a_site_root() {
         server.asked().is_empty(),
         "nothing is fetched: {:?}",
         server.asked()
+    );
+}
+
+#[test]
+fn json_output_for_a_url_names_its_files_and_leaves_out_credentials() {
+    let server = Server::start(BTreeMap::from([(
+        "/p.html?token=hunter2",
+        (
+            "text/html",
+            b"<p>hi</p><img src=\"missing.gif\" alt=\"\">".to_vec(),
+        ),
+    )]));
+    let td = TempDir::new("json_url");
+    let origin = server.url("");
+    let url = origin.replacen("http://", "http://user:sesame@", 1) + "/p.html?token=hunter2";
+
+    let mut args = ConvertArgs::new(url);
+    args.output = Some(td.0.join("out"));
+    args.message_format = eldur_cli::MessageFormat::Json;
+    let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+    run_convert_with_io(&args, &RealConverter, &mut stdout, &mut stderr).expect("convert");
+    let stdout = String::from_utf8_lossy(&stdout);
+    let lines: Vec<serde_json::Value> = stdout
+        .lines()
+        .map(|line| serde_json::from_str(line).unwrap_or_else(|e| panic!("{e}: {line}")))
+        .collect();
+    // The image that could not be fetched is a diagnostic, and the page's
+    // credentials are not in the URL it names.
+    assert!(
+        lines
+            .iter()
+            .any(|l| l["type"] == "diagnostic" && l["source"] == server.url("/missing.gif")),
+        "{stdout}"
+    );
+    let done = lines.last().expect("a done line");
+    assert_eq!(done["type"], "done", "{stdout}");
+    assert_eq!(done["status"], "converted", "{stdout}");
+    assert!(
+        done["files"]
+            .as_array()
+            .is_some_and(|files| files.iter().any(|f| f == "Main.qml")),
+        "{stdout}"
+    );
+    for secret in ["sesame", "hunter2"] {
+        assert!(!stdout.contains(secret), "{secret} in {stdout}");
+    }
+    assert!(
+        stderr.is_empty(),
+        "stderr was: {}",
+        String::from_utf8_lossy(&stderr)
     );
 }

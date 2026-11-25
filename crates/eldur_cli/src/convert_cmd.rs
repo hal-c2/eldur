@@ -357,33 +357,40 @@ fn execute_convert_url(
     })?;
     let output = converter.convert(&conv_input, &options, &mut resources);
 
-    let diagnostics: Vec<String> = output
+    let fetched = resources.diagnostics();
+    let records: Vec<DiagnosticRecord> = output
         .diagnostics
         .iter()
-        .chain(&resources.diagnostics())
-        .map(ToString::to_string)
+        .chain(&fetched)
+        .map(|diagnostic| {
+            // The page's own diagnostics name the URL it was fetched from,
+            // query and all; it is shown as the status line shows it.
+            let mut record = DiagnosticRecord::from(diagnostic);
+            record.source = eldur_fetch::redacted(&record.source);
+            record
+        })
         .collect();
     let (written_files, skipped_files) = write_convert_outputs(&out_dir, &output.files)?;
+    let files: Vec<PathBuf> = output.files.iter().map(|f| f.path.clone()).collect();
 
-    for diag in &diagnostics {
-        writeln!(stderr, "{diag}").context("failed to write diagnostic to stderr")?;
-    }
     let elapsed = started.elapsed();
-    if !args.quiet {
-        writeln!(
-            stdout,
-            "converted {shown} -> {} ({elapsed:.2?})",
-            out_dir.display()
-        )
-        .context("failed to write status to stdout")?;
+    Report {
+        status: ConvertStatus::Converted,
+        input: &shown,
+        output_dir: &out_dir,
+        files: files.iter().map(PathBuf::as_path).collect(),
+        diagnostics: &records,
+        elapsed,
     }
+    .write(args.message_format, args.quiet, stdout, stderr)?;
 
     Ok(ConvertOutcome {
         status: ConvertStatus::Converted,
         output_dir: out_dir,
         written_files,
         skipped_files,
-        diagnostics,
+        diagnostics: records.iter().map(ToString::to_string).collect(),
+        diagnostic_records: records,
         dependencies: Vec::new(),
         elapsed,
     })
