@@ -77,8 +77,8 @@ pub struct ConvertArgs {
     pub input: PathBuf,
 
     /// Output directory (defaults to `<input stem>_qml/`; for a URL, to
-    /// `<last path segment's stem>_qml/` or `<host>_qml/` in the current
-    /// directory).
+    /// `<host>-<last path segment's stem>_qml/` or `<host>_qml/` in the
+    /// current directory, the port after the host when the URL gives one).
     #[arg(short = 'o', long = "output", value_name = "DIR")]
     pub output: Option<PathBuf>,
 
@@ -91,6 +91,14 @@ pub struct ConvertArgs {
     /// resolve under the file system's root, as in a `file://` page.
     #[arg(long = "site-root", value_name = "DIR")]
     pub site_root: Option<PathBuf>,
+
+    /// For a URL: let the page and what it references reach this machine
+    /// and private networks (`localhost`, `10.0.0.0/8`, `169.254.0.0/16`,
+    /// …), as a page on a development server or an intranet needs. Without
+    /// it only the public internet is reached, so a page cannot turn the
+    /// conversion against the services beside it.
+    #[arg(long = "allow-private-hosts")]
+    pub allow_private_hosts: bool,
 
     /// Root QML element kind.
     #[arg(long = "root", value_enum, default_value_t = RootArg::Window)]
@@ -145,6 +153,7 @@ impl ConvertArgs {
             output: None,
             viewport: None,
             site_root: None,
+            allow_private_hosts: false,
             root: RootArg::Window,
             no_comments: false,
             no_states: false,

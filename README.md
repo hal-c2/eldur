@@ -29,6 +29,7 @@ mise run install --root ~/.local  # or under another prefix
 eldur convert page.html -o out/
 qml6 out/Main.qml                 # or: ljos run out/Main.qml
 eldur convert https://example.com/                 # into example.com_qml/
+eldur convert --allow-private-hosts http://localhost:8080/  # a dev server
 ```
 
 A URL's page is fetched over HTTP(S) with the style sheets, scripts and

@@ -70,18 +70,27 @@ and `<img src>`.
   a cap on the number of requests, each redirect hop one. A reference
   that fails or is refused is a `warning[fetch]` naming its URL; only the
   page failing is an error. Credentials in the page's URL go to its origin
-  only and are in no URL it reports. Absolute `<img>` and
-  `background-image` URLs are fetched and copied too; with a local page,
-  whose resolver serves no web URL, Qt loads them. `MixedResources` puts
-  it beside a local resolver for a library user whose local page
-  references the web; everything in a fetched document or sheet goes to
-  the web side, so fetched content never reads local files. `convert_url`
+  only and are in no URL it reports. It reaches only the public
+  internet (`Reach::Public`): the page, a reference or a redirect hop that
+  leads to this machine, a private network or a link-local address is
+  refused, a name checked against every address it resolves to and
+  connected only to those that pass; `Reach::Any` (`eldur convert
+  --allow-private-hosts`) is for a development server or an intranet.
+  Absolute `<img>` and `background-image` URLs are fetched and copied too;
+  one a fetching resolver refused is not handed to Qt
+  (`Resources::fetches_web`); with a local page, whose resolver fetches
+  nothing, Qt loads them. `MixedResources` puts it beside a local resolver
+  for a library user whose local page references the web; everything in a
+  fetched document or sheet goes to the web side, and a background whose
+  sheet is unknown is tried against the fetched bases only once one is
+  among them, so fetched content never reads local files. `convert_url`
   is the whole round. Web fonts are not fetched: the converter asks for
   no `@font-face` source.
 
 `eldur convert <url>` takes only an input spelled `http://` or `https://`
-(`https:report.html` is a file). It writes to `<last path segment's
-stem>_qml/` or `<host>_qml/` (the stem cut to 200 bytes), prints the URL
+(`https:report.html` is a file). It writes to `<host>-<last path
+segment's stem>_qml/` or `<host>_qml/` (a port after the host, the name
+cut to 200 bytes), prints the URL
 without credentials, query or fragment, skips the conversion cache (what a server answers cannot be
 fingerprinted without fetching it again), and `eldur watch <url>` is an
 error.

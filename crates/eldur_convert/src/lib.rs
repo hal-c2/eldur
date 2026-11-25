@@ -88,6 +88,15 @@ pub trait Resources {
     fn read_any(&mut self, url: &str, bases: &[&str]) -> Option<Resource> {
         bases.iter().find_map(|base| self.read(url, base))
     }
+
+    /// Whether this resolver fetches `http(s)` URLs itself, under a policy
+    /// of its own (what it may reach, how much). An absolute reference it
+    /// does not serve was then refused or failed, and is not handed to Qt
+    /// to load in its place, which would apply none of that policy. By
+    /// default `false`: Qt loads a remote reference the resolver leaves.
+    fn fetches_web(&self) -> bool {
+        false
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

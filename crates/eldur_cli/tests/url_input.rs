@@ -156,6 +156,8 @@ fn convert(url: &str, out: &Path) -> (anyhow::Result<eldur_cli::ConvertOutcome>,
     let mut args = ConvertArgs::new(url);
     args.output = Some(out.to_path_buf());
     args.quiet = true;
+    // The stand-in server is this machine.
+    args.allow_private_hosts = true;
     let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
     let outcome = run_convert_with_io(&args, &RealConverter, &mut stdout, &mut stderr);
     (outcome, String::from_utf8_lossy(&stderr).into_owned())
@@ -310,15 +312,28 @@ fn a_page_that_cannot_be_fetched_is_an_error() {
 }
 
 #[test]
-fn a_url_input_names_its_output_directory_after_its_last_segment_or_host() {
+fn a_url_input_names_its_output_directory_after_its_host_and_last_segment() {
     let dir = |url: &str| ConvertArgs::new(url).resolved_output_dir();
     assert_eq!(
         dir("https://example.com/blog/post.html"),
-        PathBuf::from("post_qml")
+        PathBuf::from("example.com-post_qml")
     );
     assert_eq!(
         dir("https://example.com/docs/guide/"),
-        PathBuf::from("guide_qml")
+        PathBuf::from("example.com-guide_qml")
+    );
+    // Two sites' `index.html`, and a local `index.html`, each their own.
+    assert_ne!(
+        dir("https://a.example/index.html"),
+        dir("https://b.example/index.html")
+    );
+    assert_ne!(
+        dir("https://a.example/index.html"),
+        ConvertArgs::new("index.html").resolved_output_dir()
+    );
+    assert_eq!(
+        dir("http://localhost:8080/index.html"),
+        PathBuf::from("localhost_8080-index_qml")
     );
     assert_eq!(dir("http://example.com"), PathBuf::from("example.com_qml"));
     assert_eq!(
@@ -329,7 +344,10 @@ fn a_url_input_names_its_output_directory_after_its_last_segment_or_host() {
     let long = dir(&format!("https://example.com/{}.html", "é".repeat(200)));
     let name = long.to_str().expect("UTF-8");
     assert!(name.len() <= 255, "{} bytes", name.len());
-    assert!(name.starts_with("éé") && name.ends_with("_qml"), "{name}");
+    assert!(
+        name.starts_with("example.com-éé") && name.ends_with("_qml"),
+        "{name}"
+    );
 }
 
 #[test]
@@ -362,6 +380,7 @@ fn the_status_line_and_errors_leave_out_credentials_and_queries() {
     let with_secrets = |path: &str| origin.replacen("http://", "http://user:sesame@", 1) + path;
 
     let mut args = ConvertArgs::new(with_secrets("/p.html?token=hunter2#top"));
+    args.allow_private_hosts = true;
     args.output = Some(td.0.join("out"));
     let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
     run_convert_with_io(&args, &RealConverter, &mut stdout, &mut stderr).expect("convert");
@@ -443,6 +462,7 @@ fn a_url_is_neither_watched_nor_given_a_site_root() {
     let td = TempDir::new("refused");
 
     let mut args = ConvertArgs::new(url.as_str());
+    args.allow_private_hosts = true;
     args.output = Some(td.0.join("out"));
     let (channel, _stop) = WatchChannel::new();
     let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
@@ -487,6 +507,7 @@ fn json_output_for_a_url_names_its_files_and_leaves_out_credentials() {
     let url = origin.replacen("http://", "http://user:sesame@", 1) + "/p.html?token=hunter2";
 
     let mut args = ConvertArgs::new(url);
+    args.allow_private_hosts = true;
     args.output = Some(td.0.join("out"));
     args.message_format = eldur_cli::MessageFormat::Json;
     let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
@@ -554,6 +575,7 @@ fn a_reference_that_is_not_found_is_named_without_its_secrets_under_any_base() {
         )]));
         let td = TempDir::new("secrets");
         let mut args = ConvertArgs::new(server.url("/index.html"));
+        args.allow_private_hosts = true;
         args.output = Some(td.0.join("out"));
         args.message_format = eldur_cli::MessageFormat::Json;
         let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
@@ -707,4 +729,29 @@ fn a_remote_image_s_name_holds_no_byte_a_file_or_qt_cannot() {
         );
         assert!(qml.contains(&format!("\"assets/{name}\"")), "{name}: {qml}");
     }
+}
+
+#[test]
+fn a_url_on_this_machine_is_refused_unless_private_hosts_are_allowed() {
+    let server = Server::start(BTreeMap::from([(
+        "/index.html",
+        ("text/html", b"<p>local</p>".to_vec()),
+    )]));
+    let td = TempDir::new("private");
+    let url = server.url("/index.html");
+    let mut args = ConvertArgs::new(&url);
+    args.output = Some(td.0.join("out"));
+    args.quiet = true;
+    let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+    let err = run_convert_with_io(&args, &RealConverter, &mut stdout, &mut stderr)
+        .expect_err("127.0.0.1 is not on the public internet");
+    assert!(
+        format!("{err:#}").contains("not on the public internet"),
+        "{err:#}"
+    );
+    assert!(server.asked().is_empty(), "{:?}", server.asked());
+    assert!(!td.0.join("out/Main.qml").exists());
+    let (outcome, _) = convert(&url, &td.0.join("out"));
+    outcome.expect("allowed, the page converts");
+    assert!(td.0.join("out/Main.qml").exists());
 }

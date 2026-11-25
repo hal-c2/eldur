@@ -14,7 +14,8 @@ use crate::{OutputFile, Resources};
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ImageAsset {
     /// The `Image.source`: a copied file under `assets/`, or the URL when
-    /// it is a `data:` URL or a remote one the resolver does not serve.
+    /// it is a `data:` URL or a remote one the resolver does not serve and
+    /// does not fetch ([`Resources::fetches_web`]).
     pub source: String,
     /// What the file says of its size; `None` when it was not read (a
     /// remote or `data:` URL, which Qt loads itself).
@@ -70,7 +71,9 @@ pub(crate) fn collect(
         let resolved = eldur_css::resolve_url(base_href.as_deref(), src);
         // Qt's Image loads these itself; the layout uses the element's
         // width and height attributes. A remote one is copied when the
-        // resolver serves it (a fetched page's does).
+        // resolver serves it (a fetched page's does); one a resolver that
+        // fetches refused is not handed to Qt, which would load it under
+        // none of the resolver's rules.
         let pass_through = |images: &mut Images| {
             images.by_node.insert(
                 node,
@@ -86,7 +89,7 @@ pub(crate) fn collect(
         }
         let remote = resolved.contains("://");
         let Some(resource) = resources.read(&resolved, base) else {
-            if remote {
+            if remote && !resources.fetches_web() {
                 pass_through(&mut images);
                 continue;
             }
@@ -175,7 +178,7 @@ pub(crate) fn add_background_files(
             continue;
         }
         // An absolute URL needs no base; a remote one Qt loads itself when
-        // the resolver does not serve it.
+        // the resolver neither serves nor fetches it.
         let remote = url.contains("://");
         let bases: Vec<&str> = if remote {
             vec![base]
@@ -185,7 +188,7 @@ pub(crate) fn add_background_files(
                 .collect()
         };
         let Some(mut resource) = resources.read_any(&url, &bases) else {
-            if remote {
+            if remote && !resources.fetches_web() {
                 images.backgrounds.insert(url.clone(), url);
                 continue;
             }

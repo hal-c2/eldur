@@ -17,6 +17,7 @@
 //! agreement.
 
 use std::collections::HashMap;
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -52,6 +53,26 @@ impl Default for Limits {
             max_fetches: 256,
         }
     }
+}
+
+/// Which machines a page and what it references may reach.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Reach {
+    /// Only addresses on the public internet (the default). A page, a
+    /// reference or a redirect that leads to this machine (`localhost`,
+    /// `127.0.0.1`, `::1`), a private network (`10.0.0.0/8`, `192.168.0.0/16`,
+    /// `fc00::/7`, …), a link-local address (`169.254.169.254`, a cloud's
+    /// metadata service) or any other address that is not globally routable
+    /// is refused, so a page cannot turn the conversion against the services
+    /// beside it. A name is checked against every address it resolves to,
+    /// and the connection is made only to the addresses that pass. Through a
+    /// proxy that resolves names itself, only an address written in the URL
+    /// is checked: where the name leads is the proxy's to decide.
+    #[default]
+    Public,
+    /// Every address, this machine's and its network's included: for a page
+    /// served locally (a development server) or on an intranet.
+    Any,
 }
 
 /// Why the page itself could not be fetched.
@@ -103,6 +124,7 @@ const MAX_REDIRECTS: usize = 10;
 pub struct HttpResources {
     agent: ureq::Agent,
     limits: Limits,
+    reach: Reach,
     fetches: usize,
     total_bytes: u64,
     /// By request URL: the resource, or why it was not served.
@@ -117,6 +139,7 @@ impl std::fmt::Debug for HttpResources {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("HttpResources")
             .field("limits", &self.limits)
+            .field("reach", &self.reach)
             .field("fetches", &self.fetches)
             .field("total_bytes", &self.total_bytes)
             // Counts only: a reference's URL can hold a user and a query.
@@ -139,9 +162,16 @@ impl HttpResources {
         Self::with_limits(Limits::default())
     }
 
-    /// With the given bounds.
+    /// With the given bounds, reaching only the public internet
+    /// ([`Reach::Public`]).
     #[must_use]
     pub fn with_limits(limits: Limits) -> Self {
+        Self::with_reach(limits, Reach::Public)
+    }
+
+    /// With the given bounds and reach.
+    #[must_use]
+    pub fn with_reach(limits: Limits, reach: Reach) -> Self {
         // The platform's verifier and roots rather than ureq's bundled
         // webpki-roots (CDLA-Permissive-2.0, not a licence this project
         // takes); ring as rustls's provider, passed here so that no
@@ -152,16 +182,24 @@ impl HttpResources {
             .build();
         // Redirects are followed here, not by ureq, so that each hop is a
         // fetch the limits count.
-        let agent = ureq::Agent::config_builder()
+        let config = ureq::Agent::config_builder()
             .timeout_global(Some(limits.timeout))
             .max_redirects(0)
             .tls_config(tls)
             .user_agent(concat!("eldur/", env!("CARGO_PKG_VERSION")))
-            .build()
-            .new_agent();
+            .build();
+        let agent = match reach {
+            Reach::Any => config.new_agent(),
+            Reach::Public => ureq::Agent::with_parts(
+                config,
+                ureq::unversioned::transport::DefaultConnector::default(),
+                PublicOnly::default(),
+            ),
+        };
         Self {
             agent,
             limits,
+            reach,
             fetches: 0,
             total_bytes: 0,
             answers: HashMap::new(),
@@ -175,6 +213,12 @@ impl HttpResources {
     #[must_use]
     pub fn limits(&self) -> &Limits {
         &self.limits
+    }
+
+    /// The machines this resolver may reach.
+    #[must_use]
+    pub fn reach(&self) -> Reach {
+        self.reach
     }
 
     /// Fetches the page at `url`. Its [`Input::url`] is where the page was
@@ -324,6 +368,11 @@ impl HttpResources {
     fn fetch(&mut self, target: &Url) -> Result<Resource, String> {
         let mut at = target.clone();
         for _ in 0..=MAX_REDIRECTS {
+            // Checked before each hop is counted: the page and every
+            // redirect it gives. The resolver checks what a name leads to.
+            if self.reach == Reach::Public {
+                refuse_written_host(&at)?;
+            }
             self.take_request()?;
             let mut response = self
                 .agent
@@ -423,6 +472,7 @@ fn describe(err: &ureq::Error) -> String {
     match err {
         ureq::Error::StatusCode(code) => format!("HTTP status {code}"),
         ureq::Error::Timeout(_) => "timed out".to_owned(),
+        ureq::Error::Other(inner) if inner.is::<NotPublic>() => inner.to_string(),
         other => other.to_string(),
     }
 }
@@ -435,6 +485,125 @@ fn describe_io(err: &std::io::Error) -> String {
         Some(inner) => describe(inner),
         None if err.kind() == std::io::ErrorKind::TimedOut => "timed out".to_owned(),
         None => err.to_string(),
+    }
+}
+
+/// A host that [`Reach::Public`] does not reach.
+#[derive(Debug)]
+struct NotPublic(String);
+
+impl std::fmt::Display for NotPublic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "refused: {} is not on the public internet (this machine, a private network or a link-local address)",
+            self.0
+        )
+    }
+}
+
+impl std::error::Error for NotPublic {}
+
+/// Refuses a URL whose host, as written, is this machine or an address
+/// that is not public. A name is left to [`PublicOnly`], which sees what it
+/// resolves to.
+fn refuse_written_host(at: &Url) -> Result<(), String> {
+    let refused = match at.host() {
+        Some(url::Host::Ipv4(ip)) => !is_public(IpAddr::V4(ip)),
+        Some(url::Host::Ipv6(ip)) => !is_public(IpAddr::V6(ip)),
+        // RFC 6761: `localhost` and every name under it is this machine,
+        // whatever a resolver says.
+        Some(url::Host::Domain(name)) => {
+            let name = name.trim_end_matches('.').to_ascii_lowercase();
+            name == "localhost" || name.ends_with(".localhost")
+        }
+        None => false,
+    };
+    if refused {
+        let host = at.host_str().unwrap_or_default().to_owned();
+        return Err(NotPublic(host).to_string());
+    }
+    Ok(())
+}
+
+/// Whether `ip` is a globally routable address: not this machine, not a
+/// private, shared, link-local, documentation, benchmarking, reserved,
+/// broadcast or multicast range (IANA's special-purpose registries).
+fn is_public(ip: IpAddr) -> bool {
+    match ip {
+        IpAddr::V4(ip) => is_public_v4(ip),
+        IpAddr::V6(ip) => {
+            if let Some(v4) = ip.to_ipv4_mapped() {
+                return is_public_v4(v4);
+            }
+            let s = ip.segments();
+            // NAT64 (64:ff9b::/96) carries an IPv4 address in its last 32 bits.
+            if s[..6] == [0x64, 0xff9b, 0, 0, 0, 0] {
+                let [a, b] = s[6].to_be_bytes();
+                let [c, d] = s[7].to_be_bytes();
+                return is_public_v4(Ipv4Addr::new(a, b, c, d));
+            }
+            !(ip.is_loopback()
+                || ip.is_unspecified()
+                || ip.is_multicast()
+                || (s[0] & 0xfe00) == 0xfc00 // unique local
+                || (s[0] & 0xffc0) == 0xfe80 // link-local
+                || (s[0] & 0xffc0) == 0xfec0 // site-local, deprecated
+                || (s[0] == 0x2001 && s[1] == 0x0db8) // documentation
+                || s[..6] == [0, 0, 0, 0, 0, 0]) // IPv4-compatible, deprecated
+        }
+    }
+}
+
+fn is_public_v4(ip: Ipv4Addr) -> bool {
+    let [a, b, c, _] = ip.octets();
+    !(ip.is_private()
+        || ip.is_loopback()
+        || ip.is_link_local()
+        || ip.is_unspecified()
+        || ip.is_broadcast()
+        || ip.is_documentation()
+        || ip.is_multicast()
+        || a == 0
+        || (a == 100 && (b & 0xc0) == 64) // shared address space (CGNAT)
+        || (a == 192 && b == 0 && c == 0) // IETF protocol assignments
+        || (a == 198 && (b & 0xfe) == 18) // benchmarking
+        || a >= 240) // reserved
+}
+
+/// ureq's resolver, keeping only public addresses ([`Reach::Public`]). The
+/// connection is made to what is kept, so a name cannot pass the check with
+/// one address and connect to another. A proxy's own address is the
+/// person's choice, not the page's, and is kept as it resolves.
+#[derive(Debug, Default)]
+struct PublicOnly {
+    inner: ureq::unversioned::resolver::DefaultResolver,
+}
+
+impl ureq::unversioned::resolver::Resolver for PublicOnly {
+    fn resolve(
+        &self,
+        uri: &ureq::http::Uri,
+        config: &ureq::config::Config,
+        timeout: ureq::unversioned::transport::NextTimeout,
+    ) -> Result<ureq::unversioned::resolver::ResolvedSocketAddrs, ureq::Error> {
+        use ureq::unversioned::resolver::Resolver as _;
+        let addrs = self.inner.resolve(uri, config, timeout)?;
+        let host = uri.host().unwrap_or_default();
+        if config
+            .proxy()
+            .is_some_and(|proxy| proxy.host().eq_ignore_ascii_case(host))
+        {
+            return Ok(addrs);
+        }
+        let mut public = self.inner.empty();
+        for addr in addrs.iter().filter(|addr| is_public(addr.ip())) {
+            public.push(*addr);
+        }
+        if public.is_empty() {
+            return Err(ureq::Error::Other(Box::new(NotPublic(host.to_owned()))));
+        }
+        Ok(public)
     }
 }
 
@@ -563,6 +732,10 @@ impl Resources for HttpResources {
         }
         found
     }
+
+    fn fetches_web(&self) -> bool {
+        true
+    }
 }
 
 /// A local page's resolver `L` with [`HttpResources`] beside it:
@@ -571,12 +744,12 @@ impl Resources for HttpResources {
 /// fetched content never reaches `local` (`remote` reads no `file:` URL or
 /// path). The rest (paths and `file:` URLs in local files) go to `local`.
 ///
-/// One lookup cannot keep to that: a relative `background-image` read with
-/// [`Resources::read_any`], whose computed style no longer says which sheet
-/// it came from, is tried against every base, the local page's too. A
-/// fetched sheet can so name a file `local` serves, and its bytes are copied
-/// into the output. A caller whose `local` holds what a fetched sheet must
-/// not see gives such a page no fetched sheets.
+/// A relative `background-image` is read with [`Resources::read_any`]: its
+/// computed style no longer says which sheet it came from. When a fetched
+/// sheet is among its bases, it may be that sheet's, so it is tried against
+/// the fetched bases only and never reaches `local`: a page that mixes a
+/// local sheet with a fetched one loses the local sheet's relative
+/// backgrounds (each a warning), and no fetched sheet reads a local file.
 #[derive(Debug, Default)]
 pub struct MixedResources<L> {
     pub local: L,
@@ -609,11 +782,21 @@ impl<L: Resources> Resources for MixedResources<L> {
 
     fn read_any(&mut self, url: &str, bases: &[&str]) -> Option<Resource> {
         let reported = self.remote.failures.len();
+        let fetched: Vec<&str> = bases.iter().copied().filter(|b| is_web_url(b)).collect();
+        let bases = if fetched.is_empty() {
+            bases
+        } else {
+            &fetched[..]
+        };
         let found = bases.iter().find_map(|base| self.read(url, base));
         if found.is_some() {
             self.remote.failures.truncate(reported);
         }
         found
+    }
+
+    fn fetches_web(&self) -> bool {
+        true
     }
 }
 
