@@ -115,7 +115,8 @@ pub enum Severity {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Diagnostic {
     pub severity: Severity,
-    /// `html`, `css`, `js` or `qml`.
+    /// `html`, `css`, `js` or `qml`; `fetch` for what a resolver that fetches
+    /// (`eldur_fetch`) reports.
     pub stage: &'static str,
     pub source: String,
     pub line: Option<u32>,

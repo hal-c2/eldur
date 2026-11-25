@@ -604,6 +604,23 @@ pub fn open_class_candidates(
     conditional::open_class_candidates(sheets, tag, known)
 }
 
+/// The `href` of the document's first `<base>` element, as written: the base
+/// URL (HTML §2.5.1) its relative URLs resolve against, the style sheets'
+/// and also `<script src>` and `<img src>`. `None` when there is none.
+#[must_use]
+pub fn document_base_href(doc: &Document) -> Option<String> {
+    collect::find_document_base_href(doc)
+}
+
+/// `href` resolved against `base` as a `<link href>` is: unchanged when it
+/// has a scheme or there is no base; otherwise joined to the base's
+/// directory, which may itself be relative (then so is the result) or carry
+/// a `scheme://origin`. Its query and fragment are kept.
+#[must_use]
+pub fn resolve_url(base: Option<&str>, href: &str) -> String {
+    collect::resolve_href(base, href)
+}
+
 /// Elements matching `selector` in document order, as `querySelectorAll`
 /// would return them for a page in its initial state (no hover/focus/active).
 /// `None` when the selector does not parse.

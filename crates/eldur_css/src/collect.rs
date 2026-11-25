@@ -230,7 +230,7 @@ fn collect_parsed_sheet(
     out_sheets.push(sheet);
 }
 
-fn find_document_base_href(doc: &Document) -> Option<String> {
+pub(crate) fn find_document_base_href(doc: &Document) -> Option<String> {
     for node in doc.descendants(doc.root()) {
         let Some(elem) = doc.element(node) else {
             continue;
