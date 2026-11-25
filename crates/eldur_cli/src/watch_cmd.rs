@@ -121,6 +121,11 @@ pub(crate) fn execute_watch<'cb>(
     stderr: &mut dyn Write,
     on_cycle: Option<&mut (dyn FnMut(&ConvertOutcome) + 'cb)>,
 ) -> anyhow::Result<()> {
+    if let Some(url) = args.input_url() {
+        // A server says nothing when its files change; watching would mean
+        // fetching the page and everything it references again and again.
+        anyhow::bail!("watch needs a local file; {url} is a URL (convert it with `eldur convert`)");
+    }
     let initial = execute_convert(args, converter, stdout, stderr)?;
 
     let out_dir = args.resolved_output_dir();

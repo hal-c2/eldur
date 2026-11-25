@@ -11,7 +11,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use eldur_cli::{ConvertArgs, ConvertStatus, RealConverter, run_convert_with_io};
+use eldur_cli::{
+    ConvertArgs, ConvertStatus, RealConverter, WatchChannel, run_convert_with_io,
+    run_watch_with_channel,
+};
 
 static SEQ: AtomicU64 = AtomicU64::new(0);
 
@@ -20,10 +23,8 @@ struct TempDir(PathBuf);
 impl TempDir {
     fn new(label: &str) -> Self {
         let n = SEQ.fetch_add(1, Ordering::Relaxed);
-        let dir = std::env::temp_dir().join(format!(
-            "eldur_cli_url_{label}_{}_{n}",
-            std::process::id()
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("eldur_cli_url_{label}_{}_{n}", std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).expect("create temp dir");
         Self(dir)
@@ -166,7 +167,10 @@ fn a_page_served_over_http_is_converted_with_what_it_references() {
 
     let qml = fs::read_to_string(out.join("Main.qml")).expect("Main.qml");
     assert!(qml.contains("#123456"), "the linked sheet applies:\n{qml}");
-    assert!(qml.contains("#abcdef"), "the @imported sheet applies:\n{qml}");
+    assert!(
+        qml.contains("#abcdef"),
+        "the @imported sheet applies:\n{qml}"
+    );
     let page_js = fs::read_to_string(out.join("page.js")).expect("page.js");
     assert!(page_js.contains("From the script"), "{page_js}");
     assert_eq!(
@@ -234,8 +238,10 @@ fn base_href_moves_where_a_fetched_page_finds_what_it_references() {
     let (outcome, _) = convert(&server.url("/site/index.html"), &out);
     let outcome = outcome.expect("convert the page");
     assert!(
-        !outcome.diagnostics.iter().any(|d| d.starts_with("warning")
-            || d.starts_with("error")),
+        !outcome
+            .diagnostics
+            .iter()
+            .any(|d| d.starts_with("warning") || d.starts_with("error")),
         "everything is found under the base (asked {:?}): {:#?}",
         server.asked(),
         outcome.diagnostics
@@ -244,7 +250,10 @@ fn base_href_moves_where_a_fetched_page_finds_what_it_references() {
     assert!(qml.contains("#123456"), "{qml}");
     let page_js = fs::read_to_string(out.join("page.js")).expect("page.js");
     assert!(page_js.contains("From the base"), "{page_js}");
-    assert_eq!(fs::read(out.join("assets/dot.gif")).expect("image"), DOT_GIF);
+    assert_eq!(
+        fs::read(out.join("assets/dot.gif")).expect("image"),
+        DOT_GIF
+    );
 }
 
 #[test]
@@ -274,5 +283,37 @@ fn a_url_input_names_its_output_directory_after_its_last_segment_or_host() {
     assert_eq!(
         dir("HTTPS://Example.COM/?q=1"),
         PathBuf::from("example.com_qml")
+    );
+}
+
+#[test]
+fn a_url_is_neither_watched_nor_given_a_site_root() {
+    let server = Server::start(BTreeMap::new());
+    let url = server.url("/page.html");
+    let td = TempDir::new("refused");
+
+    let mut args = ConvertArgs::new(url.as_str());
+    args.output = Some(td.0.join("out"));
+    let (channel, _stop) = WatchChannel::new();
+    let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+    let err = run_watch_with_channel(
+        &args,
+        &RealConverter,
+        channel,
+        &mut stdout,
+        &mut stderr,
+        None,
+    )
+    .expect_err("watch refuses a URL");
+    assert!(format!("{err:#}").contains("local file"), "{err:#}");
+
+    args.site_root = Some(td.0.clone());
+    let err = run_convert_with_io(&args, &RealConverter, &mut stdout, &mut stderr)
+        .expect_err("--site-root is for a local page");
+    assert!(format!("{err:#}").contains("--site-root"), "{err:#}");
+    assert!(
+        server.asked().is_empty(),
+        "nothing is fetched: {:?}",
+        server.asked()
     );
 }

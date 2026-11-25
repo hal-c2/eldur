@@ -18,7 +18,8 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 
 pub use check_cmd::{QmlTools, check_dir_with_tools};
 pub use convert_cmd::{
-    CONVERTER_FORMAT_VERSION, ConvertOutcome, ConvertStatus, default_output_dir, serialize_options,
+    CONVERTER_FORMAT_VERSION, ConvertOutcome, ConvertStatus, default_output_dir,
+    default_output_dir_for_url, serialize_options,
 };
 pub use message::{DiagnosticRecord, MessageFormat};
 pub use resources::FsResources;
@@ -70,11 +71,13 @@ impl From<RootArg> for eldur_convert::RootKind {
 /// Arguments shared by `eldur convert` and `eldur watch`.
 #[derive(Debug, Clone, Args)]
 pub struct ConvertArgs {
-    /// Path to the entry HTML document.
+    /// Path to the entry HTML document, or (for `convert`) an `http(s)` URL,
+    /// whose page and sub-resources are fetched.
     #[arg(value_name = "INPUT")]
     pub input: PathBuf,
 
-    /// Output directory (defaults to `<input stem>_qml/`).
+    /// Output directory (defaults to `<input stem>_qml/`; for a URL, to
+    /// `<last path segment>_qml/` or `<host>_qml/` in the current directory).
     #[arg(short = 'o', long = "output", value_name = "DIR")]
     pub output: Option<PathBuf>,
 
@@ -153,12 +156,24 @@ impl ConvertArgs {
         }
     }
 
-    /// Output directory after applying the `<input stem>_qml/` default.
+    /// The input when it is an `http(s)` URL rather than a file path.
+    #[must_use]
+    pub fn input_url(&self) -> Option<&str> {
+        self.input
+            .to_str()
+            .filter(|input| eldur_fetch::is_http_url(input))
+    }
+
+    /// Output directory after applying the `<input stem>_qml/` default (for a
+    /// URL, [`default_output_dir_for_url`]).
     #[must_use]
     pub fn resolved_output_dir(&self) -> PathBuf {
         self.output
             .clone()
-            .unwrap_or_else(|| default_output_dir(&self.input))
+            .unwrap_or_else(|| match self.input_url() {
+                Some(url) => default_output_dir_for_url(url),
+                None => default_output_dir(&self.input),
+            })
     }
 
     /// Cache directory after applying the `<out>/.eldur-cache` default.
