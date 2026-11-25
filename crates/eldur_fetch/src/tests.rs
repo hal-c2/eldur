@@ -508,3 +508,37 @@ fn mixed_resources_do_not_let_a_fetched_sheet_read_local_files() {
     let text = messages(&mixed.remote).join("\n");
     assert!(text.contains("file:"), "{text}");
 }
+
+#[test]
+fn a_message_s_urls_are_shown_without_secrets_wherever_they_end() {
+    let cases = [
+        // At the end of the text, with nothing after it.
+        (
+            "failed http://h.invalid/a.js?sig=s1",
+            "failed http://h.invalid/a.js",
+        ),
+        // Two in one message, `https` and `http`, the scheme in any case.
+        (
+            "`HTTPS://u:p@h.invalid/a?sig=s2` then `http://h.invalid/b#t=s3`",
+            "`https://h.invalid/a` then `http://h.invalid/b`",
+        ),
+        // Closed by a bracket or a quote.
+        (
+            "error (Http://h.invalid/c?sig=s4) and \"https://h.invalid/d?sig=s5\"",
+            "error (http://h.invalid/c) and \"https://h.invalid/d\"",
+        ),
+        // A reference relative to the page, and one without a scheme.
+        (
+            "script `missing.js?sig=s6` and `//u:p@h.invalid/e.js?sig=s7`",
+            "script `missing.js` and `//h.invalid/e.js`",
+        ),
+        // A local diagnostic is shown as it is.
+        (
+            "image `img/a b.png` was not found",
+            "image `img/a b.png` was not found",
+        ),
+    ];
+    for (text, shown) in cases {
+        assert_eq!(redacted_in(text), shown, "{text}");
+    }
+}
