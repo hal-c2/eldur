@@ -55,6 +55,8 @@ pub(crate) fn collect(
     let mut images = Images::default();
     // Resolved file → asset path, so a file used twice is copied once.
     let mut copied: BTreeMap<String, ImageAsset> = BTreeMap::new();
+    // A `src` resolves against `<base href>` as a style sheet's does.
+    let base_href = eldur_css::document_base_href(doc);
     for node in doc.descendants(doc.root()) {
         let Some(element) = doc.element(node) else {
             continue;
@@ -77,7 +79,8 @@ pub(crate) fn collect(
             );
             continue;
         }
-        let Some(resource) = resources.read(src, base) else {
+        let resolved = eldur_css::resolve_url(base_href.as_deref(), src);
+        let Some(resource) = resources.read(&resolved, base) else {
             diags.warning(
                 "html",
                 crate::boxes::node_line(doc, node),

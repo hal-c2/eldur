@@ -206,6 +206,8 @@ pub(crate) fn collect(
     let mut files: HashSet<String> = HashSet::new();
     let mut keys = HashMap::new();
     let mut inline = 0;
+    // A `src` resolves against `<base href>` as a style sheet's does.
+    let base_href = eldur_css::document_base_href(doc);
     for node in doc.descendants(doc.root()) {
         let Some(element) = doc.element(node) else {
             continue;
@@ -242,23 +244,25 @@ pub(crate) fn collect(
             Some(_) => continue,
         };
         match element.attr("src") {
-            Some(src) => match resources.read(src, url) {
-                Some(resource) => {
-                    files.insert(resource.resolved.clone());
-                    inputs.push(ScriptInput {
-                        source: String::from_utf8_lossy(&resource.bytes).into_owned(),
-                        name: resource.resolved,
-                        kind,
-                        line_offset: 1,
-                        imports: Vec::new(),
-                    });
+            Some(src) => {
+                match resources.read(&eldur_css::resolve_url(base_href.as_deref(), src), url) {
+                    Some(resource) => {
+                        files.insert(resource.resolved.clone());
+                        inputs.push(ScriptInput {
+                            source: String::from_utf8_lossy(&resource.bytes).into_owned(),
+                            name: resource.resolved,
+                            kind,
+                            line_offset: 1,
+                            imports: Vec::new(),
+                        });
+                    }
+                    None => diags.error(
+                        "js",
+                        line,
+                        format!("script `{src}` could not be read; it is skipped"),
+                    ),
                 }
-                None => diags.error(
-                    "js",
-                    line,
-                    format!("script `{src}` could not be read; it is skipped"),
-                ),
-            },
+            }
             None => {
                 inline += 1;
                 inputs.push(ScriptInput {
