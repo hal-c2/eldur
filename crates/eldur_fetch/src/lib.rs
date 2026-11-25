@@ -438,18 +438,25 @@ pub fn redacted(url: &str) -> String {
     parsed.to_string()
 }
 
-/// `text` with every `http(s)` URL in it [`redacted`]: a diagnostic's
-/// message can quote a reference that carries a signed query. A URL ends at
-/// whitespace or at the quote, bracket or backtick around it.
+/// `text` with every `http(s)` URL in it [`redacted`], the scheme in any
+/// case, and every reference quoted in backticks without its query and
+/// fragment: a diagnostic's message can quote a reference that carries a
+/// signed query, absolute or relative to the page. A URL ends at whitespace
+/// or at the quote, bracket or backtick around it.
 #[must_use]
 pub fn redacted_in(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
-    while let Some(at) = ["http://", "https://"]
-        .iter()
-        .filter_map(|scheme| rest.find(scheme))
-        .min()
-    {
+    loop {
+        // ASCII lowering keeps every byte where it was.
+        let lower = rest.to_ascii_lowercase();
+        let Some(at) = ["http://", "https://"]
+            .iter()
+            .filter_map(|scheme| lower.find(scheme))
+            .min()
+        else {
+            break;
+        };
         out.push_str(&rest[..at]);
         let url = &rest[at..];
         let end = url
@@ -459,6 +466,31 @@ pub fn redacted_in(text: &str) -> String {
         rest = &url[end..];
     }
     out.push_str(rest);
+    quoted_redacted(&out)
+}
+
+/// `text` with each backtick-quoted reference that is not an absolute URL
+/// (those are [`redacted`] already) cut at its query or fragment, and one
+/// without a scheme (`//user:pw@host/x`) also without its user.
+fn quoted_redacted(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut parts = text.split('`');
+    out.push_str(parts.next().unwrap_or(""));
+    let mut inside = true;
+    for part in parts {
+        out.push('`');
+        if inside && !part.contains("://") {
+            if let Some(rest) = part.strip_prefix("//") {
+                let shown = redacted(&format!("http://{rest}"));
+                out.push_str(shown.strip_prefix("http:").unwrap_or(&shown));
+            } else {
+                out.push_str(part.split(['?', '#']).next().unwrap_or(part));
+            }
+        } else {
+            out.push_str(part);
+        }
+        inside = !inside;
+    }
     out
 }
 
