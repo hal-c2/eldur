@@ -7,7 +7,7 @@ use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
-use anyhow::{Context, bail};
+use anyhow::{Context, anyhow, bail};
 
 use crate::message::{self, DiagnosticRecord, Report};
 use crate::{ConvertArgs, Converter, FsResources};
@@ -66,18 +66,23 @@ pub fn default_output_dir(input: &Path) -> PathBuf {
     }
 }
 
+/// The longest stem [`default_output_dir_for_url`] takes from a URL.
+const MAX_URL_STEM_BYTES: usize = 200;
+
 /// Computes the default output directory for a page given by an `http(s)`
 /// URL: `<last path segment's stem>_qml/`, or `<host>_qml/` when the path
 /// has no segment, in the current directory. Characters a file name should
-/// not carry become `_`.
+/// not carry become `_`, and a long name is cut to 200 bytes, so that the
+/// directory's name fits the 255 bytes most file systems allow.
 #[must_use]
 pub fn default_output_dir_for_url(url: &str) -> PathBuf {
     let parsed = url::Url::parse(url.trim()).ok();
     let segment = parsed.as_ref().and_then(|u| {
         u.path_segments()?.rev().find(|s| !s.is_empty()).map(|s| {
-            Path::new(s)
+            let s = percent_decoded(s);
+            Path::new(&s)
                 .file_stem()
-                .map_or_else(|| s.to_owned(), |stem| stem.to_string_lossy().into_owned())
+                .map_or_else(|| s.clone(), |stem| stem.to_string_lossy().into_owned())
         })
     });
     let host = parsed
@@ -98,7 +103,34 @@ pub fn default_output_dir_for_url(url: &str) -> PathBuf {
             }
         })
         .collect();
-    PathBuf::from(format!("{name}_qml"))
+    let mut end = name.len().min(MAX_URL_STEM_BYTES);
+    while !name.is_char_boundary(end) {
+        end -= 1;
+    }
+    PathBuf::from(format!("{}_qml", &name[..end]))
+}
+
+/// A URL path segment as it was written: `url` keeps segments
+/// percent-encoded, and the directory should read `café_qml`, not `caf_C3_A9_qml`.
+fn percent_decoded(segment: &str) -> String {
+    let bytes = segment.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        let hex = bytes
+            .get(i + 1..i + 3)
+            .filter(|_| bytes[i] == b'%')
+            .and_then(|h| std::str::from_utf8(h).ok())
+            .and_then(|h| u8::from_str_radix(h, 16).ok());
+        if let Some(byte) = hex {
+            out.push(byte);
+            i += 3;
+        } else {
+            out.push(bytes[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
 }
 
 /// Stable JSON serialisation of [`eldur_convert::Options`] for [`eldur_cache::CacheKey`].
@@ -307,14 +339,22 @@ fn execute_convert_url(
     stderr: &mut dyn Write,
     started: Instant,
 ) -> anyhow::Result<ConvertOutcome> {
+    // What is printed of the URL: credentials and a query can be secrets
+    // (a token in a URL handed over by a script).
+    let shown = eldur_fetch::redacted(url);
     if args.site_root.is_some() {
-        bail!("--site-root is for a local page; {url} is fetched, its server is its root");
+        bail!("--site-root is for a local page; {shown} is fetched, its server is its root");
     }
     let out_dir = args.resolved_output_dir();
     let options = args.to_convert_options();
 
     let mut resources = eldur_fetch::HttpResources::new();
-    let conv_input = resources.fetch_page(url)?;
+    let conv_input = resources.fetch_page(url).map_err(|err| match err {
+        eldur_fetch::FetchError::NotHttp { .. } => anyhow!("{shown} is not an http(s) URL"),
+        eldur_fetch::FetchError::Failed { reason, .. } => {
+            anyhow!("failed to fetch {shown}: {reason}")
+        }
+    })?;
     let output = converter.convert(&conv_input, &options, &mut resources);
 
     let diagnostics: Vec<String> = output
@@ -332,7 +372,7 @@ fn execute_convert_url(
     if !args.quiet {
         writeln!(
             stdout,
-            "converted {url} -> {} ({elapsed:.2?})",
+            "converted {shown} -> {} ({elapsed:.2?})",
             out_dir.display()
         )
         .context("failed to write status to stdout")?;

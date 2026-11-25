@@ -77,7 +77,8 @@ pub struct ConvertArgs {
     pub input: PathBuf,
 
     /// Output directory (defaults to `<input stem>_qml/`; for a URL, to
-    /// `<last path segment>_qml/` or `<host>_qml/` in the current directory).
+    /// `<last path segment's stem>_qml/` or `<host>_qml/` in the current
+    /// directory).
     #[arg(short = 'o', long = "output", value_name = "DIR")]
     pub output: Option<PathBuf>,
 
