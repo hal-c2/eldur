@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Convert an HTML5 + CSS + JS page to QML"
 #USAGE arg "<input>" help="Entry HTML document, or an http(s) URL to fetch"
-#USAGE flag "-o --output <dir>" help="Output directory (default <input stem>_qml/; for a URL, <last segment or host>_qml/)"
+#USAGE flag "-o --output <dir>" help="Output directory (default <input stem>_qml/; for a URL, <last path segment's stem or host>_qml/)"
 #USAGE flag "--viewport <WxH>" help="Conversion viewport in logical pixels (default 1280x800)"
 #USAGE flag "--site-root <dir>" help="Directory root-relative URLs (/css/site.css) resolve under"
 #USAGE flag "--root <kind>" help="Root QML element: window (runnable ApplicationWindow, the default) or item (embeddable Item)" {
