@@ -111,6 +111,14 @@ fn serve(
 /// A 1×1 GIF.
 const DOT_GIF: &[u8] = b"GIF89a\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;";
 
+/// [`DOT_GIF`] with its first palette entry black: other bytes, so the
+/// converter does not share one file for both images.
+fn black_dot() -> Vec<u8> {
+    let mut gif = DOT_GIF.to_vec();
+    gif[13..16].copy_from_slice(&[0, 0, 0]);
+    gif
+}
+
 fn convert(url: &str, out: &Path) -> (anyhow::Result<eldur_cli::ConvertOutcome>, String) {
     let mut args = ConvertArgs::new(url);
     args.output = Some(out.to_path_buf());
@@ -311,7 +319,10 @@ fn only_an_input_that_spells_out_http_or_https_is_a_url() {
 fn the_status_line_and_errors_leave_out_credentials_and_queries() {
     let server = Server::start(BTreeMap::from([(
         "/p.html?token=hunter2",
-        ("text/html", b"<p>hi</p>".to_vec()),
+        (
+            "text/html",
+            b"<p>hi</p><img src=\"missing.gif\" alt=\"\">".to_vec(),
+        ),
     )]));
     let td = TempDir::new("redact");
     let origin = server.url("");
@@ -326,6 +337,10 @@ fn the_status_line_and_errors_leave_out_credentials_and_queries() {
     for secret in ["sesame", "hunter2", "#top"] {
         assert!(!stdout.contains(secret), "{secret} in {stdout}");
     }
+    // The page's credentials are not in the URLs its warnings name.
+    let stderr = String::from_utf8_lossy(&stderr);
+    assert!(stderr.contains(&server.url("/missing.gif")), "{stderr}");
+    assert!(!stderr.contains("sesame"), "{stderr}");
 
     let (outcome, _) = convert(
         &with_secrets("/gone.html?token=hunter2"),
@@ -345,7 +360,7 @@ fn the_status_line_and_errors_leave_out_credentials_and_queries() {
 fn a_fetched_page_s_absolute_images_are_fetched_and_copied_too() {
     let server = Server::start(BTreeMap::from([
         ("/img/a.gif", ("image/gif", DOT_GIF.to_vec())),
-        ("/img/bg.gif", ("image/gif", DOT_GIF.to_vec())),
+        ("/img/bg.gif", ("image/gif", black_dot())),
     ]));
     let html = format!(
         r#"<!doctype html><html><body>
@@ -374,7 +389,7 @@ fn a_fetched_page_s_absolute_images_are_fetched_and_copied_too() {
     );
     assert_eq!(
         fs::read(out.join("assets/img/bg.gif")).expect("the background"),
-        DOT_GIF
+        black_dot()
     );
     let qml = fs::read_to_string(out.join("Main.qml")).expect("Main.qml");
     assert!(

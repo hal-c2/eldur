@@ -124,7 +124,10 @@ pub(crate) fn execute_watch<'cb>(
     if let Some(url) = args.input_url() {
         // A server says nothing when its files change; watching would mean
         // fetching the page and everything it references again and again.
-        anyhow::bail!("watch needs a local file; {url} is a URL (convert it with `eldur convert`)");
+        anyhow::bail!(
+            "watch needs a local file; {} is a URL (convert it with `eldur convert`)",
+            eldur_fetch::redacted(url)
+        );
     }
     let initial = execute_convert(args, converter, stdout, stderr)?;
 
