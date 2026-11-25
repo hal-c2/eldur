@@ -542,3 +542,37 @@ fn a_message_s_urls_are_shown_without_secrets_wherever_they_end() {
         assert_eq!(redacted_in(text), shown, "{text}");
     }
 }
+
+#[test]
+fn a_second_page_takes_no_credentials_or_answers_from_the_first() {
+    let server = Server::start(BTreeMap::from([
+        ("/one.html", ok(b"<p>one</p>")),
+        ("/two.html", ok(b"<p>two</p>")),
+        ("/a.gif", ok(b"GIF89a")),
+    ]));
+    let mut resources = HttpResources::new();
+    let with_user = server.url("/one.html").replace("http://", "http://u:p@");
+    resources.fetch_page(&with_user).expect("the first page");
+    let a = Url::parse(&server.url("/a.gif")).expect("a URL");
+    assert!(resources.request_url(&a).password().is_some());
+    resources
+        .read(&server.url("/a.gif"), "")
+        .expect("its image");
+
+    resources
+        .fetch_page(&server.url("/two.html"))
+        .expect("the second page");
+    assert_eq!(
+        resources.request_url(&a).as_str(),
+        a.as_str(),
+        "the second page's requests carry no credentials"
+    );
+    resources
+        .read(&server.url("/a.gif"), "")
+        .expect("its image");
+    assert_eq!(
+        server.asked().iter().filter(|p| *p == "/a.gif").count(),
+        2,
+        "the image is asked for again, not answered from the first page"
+    );
+}
