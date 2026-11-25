@@ -3,7 +3,8 @@ use std::process::ExitCode;
 
 use clap::Parser;
 use eldur_cli::{
-    Cli, Command, QmlTools, RealConverter, check_dir_with_tools, run_convert, run_watch,
+    Cli, Command, ConvertArgs, MessageFormat, QmlTools, RealConverter, check_dir_with_tools,
+    run_convert, run_watch,
 };
 
 fn main() -> ExitCode {
@@ -12,17 +13,11 @@ fn main() -> ExitCode {
     match cli.command {
         Command::Convert(args) => match run_convert(&args, &RealConverter) {
             Ok(_) => ExitCode::SUCCESS,
-            Err(err) => {
-                eprintln!("error: {err:#}");
-                ExitCode::from(1)
-            }
+            Err(err) => failed(&args, &err),
         },
         Command::Watch(args) => match run_watch(&args, &RealConverter) {
             Ok(()) => ExitCode::SUCCESS,
-            Err(err) => {
-                eprintln!("error: {err:#}");
-                ExitCode::from(1)
-            }
+            Err(err) => failed(&args, &err),
         },
         Command::Check(args) => {
             let mut stdout = io::stdout();
@@ -36,4 +31,13 @@ fn main() -> ExitCode {
             }
         }
     }
+}
+
+/// With `--message-format json` the failure is already on stdout as an
+/// `error` object, and stderr stays quiet.
+fn failed(args: &ConvertArgs, err: &anyhow::Error) -> ExitCode {
+    if args.message_format == MessageFormat::Human {
+        eprintln!("error: {err:#}");
+    }
+    ExitCode::from(1)
 }

@@ -341,6 +341,7 @@ dependencies = [
  "eldur_cache",
  "eldur_convert",
  "notify",
+ "serde",
  "serde_json",
 ]
 

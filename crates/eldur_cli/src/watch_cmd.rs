@@ -10,6 +10,7 @@ use notify::event::{AccessKind, AccessMode};
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 
 use crate::convert_cmd::execute_convert;
+use crate::message;
 use crate::{ConvertArgs, ConvertOutcome, Converter};
 
 const DEBOUNCE_WINDOW: Duration = Duration::from_millis(100);
@@ -102,7 +103,7 @@ impl WatchLoopState<'_, '_> {
                     // entry file does not spin; restoring the file changes its
                     // fingerprint again and triggers recovery.
                     refresh_fingerprints_from_disk(&self.tracked_paths, &mut self.fingerprints);
-                    writeln!(self.stderr, "error: {err:#}")
+                    message::write_error(self.args.message_format, &err, self.stdout, self.stderr)
                         .context("failed to write watch error")?;
                     break;
                 }

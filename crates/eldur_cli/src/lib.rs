@@ -6,6 +6,7 @@
 
 mod check_cmd;
 mod convert_cmd;
+mod message;
 mod resources;
 mod watch_cmd;
 
@@ -19,6 +20,7 @@ pub use check_cmd::{QmlTools, check_dir_with_tools};
 pub use convert_cmd::{
     CONVERTER_FORMAT_VERSION, ConvertOutcome, ConvertStatus, default_output_dir, serialize_options,
 };
+pub use message::{DiagnosticRecord, MessageFormat};
 pub use resources::FsResources;
 pub use watch_cmd::{WatchChannel, WatchStop};
 
@@ -118,6 +120,16 @@ pub struct ConvertArgs {
     /// Suppress `cached` / `converted` timing lines.
     #[arg(short = 'q', long = "quiet")]
     pub quiet: bool,
+
+    /// How diagnostics and the outcome are reported: `human` lines (on
+    /// stderr and stdout), or `json`, one JSON object per line on stdout.
+    #[arg(
+        long = "message-format",
+        value_enum,
+        value_name = "FORMAT",
+        default_value_t = MessageFormat::Human
+    )]
+    pub message_format: MessageFormat,
 }
 
 impl ConvertArgs {
@@ -137,6 +149,7 @@ impl ConvertArgs {
             no_cache: false,
             cache_dir: None,
             quiet: false,
+            message_format: MessageFormat::Human,
         }
     }
 
@@ -280,7 +293,9 @@ pub fn run_convert_with_io(
     stdout: &mut dyn Write,
     stderr: &mut dyn Write,
 ) -> anyhow::Result<ConvertOutcome> {
-    convert_cmd::execute_convert(args, converter, stdout, stderr)
+    let result = convert_cmd::execute_convert(args, converter, stdout, stderr);
+    report_json_failure(args, result.as_ref().err(), stdout, stderr);
+    result
 }
 
 /// Executes `eldur watch` until interrupted.
@@ -301,7 +316,25 @@ pub fn run_watch_with_channel(
     stderr: &mut dyn Write,
     on_cycle: Option<&mut dyn FnMut(&ConvertOutcome)>,
 ) -> anyhow::Result<()> {
-    watch_cmd::execute_watch(args, converter, channel, stdout, stderr, on_cycle)
+    let result = watch_cmd::execute_watch(args, converter, channel, stdout, stderr, on_cycle);
+    report_json_failure(args, result.as_ref().err(), stdout, stderr);
+    result
+}
+
+/// With `--message-format json` a failure is an `error` object on stdout;
+/// the human `error:` line is the caller's to print, as it is for any other
+/// error. Writing it is best effort: the failure itself is what is returned.
+fn report_json_failure(
+    args: &ConvertArgs,
+    err: Option<&anyhow::Error>,
+    stdout: &mut dyn Write,
+    stderr: &mut dyn Write,
+) {
+    if let Some(err) = err
+        && args.message_format == MessageFormat::Json
+    {
+        let _ = message::write_error(MessageFormat::Json, err, stdout, stderr);
+    }
 }
 
 /// Executes `eldur check` using `qmllint` and `qml6` from `PATH`.
