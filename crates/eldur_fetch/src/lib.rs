@@ -16,7 +16,7 @@
 //! against. Add to it freely; change or remove items only with the lead's
 //! agreement.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -30,15 +30,16 @@ pub const STAGE: &str = "fetch";
 /// How much a page may fetch. [`Limits::default`] suits a single web page.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Limits {
-    /// The most one request may take, from connecting to the body's end
-    /// (redirects included).
+    /// The most one request may take, from connecting to the body's end.
     pub timeout: Duration,
     /// The largest body one resource may have, in bytes.
     pub max_resource_bytes: u64,
-    /// The most bytes all of a page's fetches together may bring.
+    /// The most bytes all of a page's fetches together may bring, decoded
+    /// `data:` URLs included.
     pub max_total_bytes: u64,
-    /// The most HTTP requests a page may make, the page's own included.
-    /// `data:` URLs are decoded, not fetched, and do not count.
+    /// The most HTTP requests a page may make, the page's own and each
+    /// redirect hop included. `data:` URLs are decoded, not fetched, and do
+    /// not count.
     pub max_fetches: usize,
 }
 
@@ -65,39 +66,51 @@ pub enum FetchError {
     Failed { url: String, reason: String },
 }
 
-/// Whether `input` is an absolute `http` or `https` URL (any case), i.e. a
-/// page [`HttpResources::fetch_page`] takes rather than a file path.
+/// Whether `input` is an `http://` or `https://` URL (the scheme in any
+/// case), i.e. a page [`HttpResources::fetch_page`] takes rather than a file
+/// path. The `//` must be written: `https:report.html` can name a file.
 #[must_use]
 pub fn is_http_url(input: &str) -> bool {
-    Url::parse(input.trim()).is_ok_and(|u| matches!(u.scheme(), "http" | "https"))
+    let input = input.trim();
+    let spelled = ["http://", "https://"].iter().any(|prefix| {
+        input
+            .get(..prefix.len())
+            .is_some_and(|head| head.eq_ignore_ascii_case(prefix))
+    });
+    spelled && Url::parse(input).is_ok()
 }
 
 /// A reference that was not served, kept to report it.
 #[derive(Debug, Clone)]
 struct Failure {
-    /// The reference as written, to drop the report when another base
-    /// serves it (see [`HttpResources::diagnostics`]).
-    written: String,
     url: String,
     reason: String,
 }
+
+/// The most redirects one request follows, as browsers allow (Fetch's
+/// limit of 20 is for a navigation; ureq's default is 10).
+const MAX_REDIRECTS: usize = 10;
 
 /// An [`eldur_convert::Resources`] over HTTP(S) and `data:` URLs, for a page
 /// given by URL. See the crate documentation.
 ///
 /// A resource is fetched once per URL (without its fragment); asking again
 /// returns the first answer.
+///
+/// Credentials in the page's URL (`https://user:secret@host/`) are sent to
+/// that origin only and appear in no URL it reports: not in
+/// [`Input::url`], a [`Resource::resolved`], a diagnostic or an error.
 pub struct HttpResources {
     agent: ureq::Agent,
     limits: Limits,
     fetches: usize,
     total_bytes: u64,
-    /// By request URL: the resource, or `None` when it was not served.
-    answers: HashMap<String, Option<Resource>>,
-    /// References as written that some base served.
-    served: HashSet<String>,
+    /// By request URL: the resource, or why it was not served.
+    answers: HashMap<String, Result<Resource, String>>,
     failures: Vec<Failure>,
     fetched: Vec<String>,
+    /// The page's origin and the user name and password its URL gave.
+    credentials: Option<(url::Origin, String, Option<String>)>,
 }
 
 impl std::fmt::Debug for HttpResources {
@@ -136,8 +149,11 @@ impl HttpResources {
             .root_certs(RootCerts::PlatformVerifier)
             .unversioned_rustls_crypto_provider(Arc::new(rustls::crypto::ring::default_provider()))
             .build();
+        // Redirects are followed here, not by ureq, so that each hop is a
+        // fetch the limits count.
         let agent = ureq::Agent::config_builder()
             .timeout_global(Some(limits.timeout))
+            .max_redirects(0)
             .tls_config(tls)
             .user_agent(concat!("eldur/", env!("CARGO_PKG_VERSION")))
             .build()
@@ -148,9 +164,9 @@ impl HttpResources {
             fetches: 0,
             total_bytes: 0,
             answers: HashMap::new(),
-            served: HashSet::new(),
             failures: Vec::new(),
             fetched: Vec::new(),
+            credentials: None,
         }
     }
 
@@ -165,18 +181,25 @@ impl HttpResources {
     /// there. The bytes are read as UTF-8, invalid sequences replaced. The
     /// fetch counts against the same [`Limits`] as the page's references.
     pub fn fetch_page(&mut self, url: &str) -> Result<Input, FetchError> {
-        let not_http = || FetchError::NotHttp {
-            url: url.to_owned(),
-        };
-        let mut target = Url::parse(url.trim()).map_err(|_| not_http())?;
-        if !matches!(target.scheme(), "http" | "https") {
-            return Err(not_http());
-        }
+        let mut target = Url::parse(url.trim())
+            .ok()
+            .filter(|u| matches!(u.scheme(), "http" | "https"))
+            .ok_or_else(|| FetchError::NotHttp { url: redacted(url) })?;
         target.set_fragment(None);
+        if !target.username().is_empty() || target.password().is_some() {
+            self.credentials = Some((
+                target.origin(),
+                target.username().to_owned(),
+                target.password().map(str::to_owned),
+            ));
+            // Both are set on a URL with a host, which an http(s) URL has.
+            let _ = target.set_username("");
+            let _ = target.set_password(None);
+        }
         match self.fetch(&target) {
             Ok(resource) => {
                 self.answers
-                    .insert(target.to_string(), Some(resource.clone()));
+                    .insert(target.to_string(), Ok(resource.clone()));
                 Ok(Input {
                     html: String::from_utf8_lossy(&resource.bytes).into_owned(),
                     url: resource.resolved,
@@ -189,15 +212,14 @@ impl HttpResources {
         }
     }
 
-    /// A warning for every reference that was not served, in the order they
-    /// were asked for, naming its URL and why. A reference the converter
-    /// tried against several bases (a `background-image` is tried against
-    /// the page and then each style sheet) and some base served is left out.
+    /// A warning for every lookup that was not served, in the order they
+    /// were asked for, naming its URL and why. A lookup tried against
+    /// several bases ([`Resources::read_any`]) that one base served is left
+    /// out.
     #[must_use]
     pub fn diagnostics(&self) -> Vec<Diagnostic> {
         self.failures
             .iter()
-            .filter(|f| !self.served.contains(&f.written))
             .map(|f| Diagnostic {
                 severity: Severity::Warning,
                 stage: STAGE,
@@ -215,33 +237,42 @@ impl HttpResources {
         &self.fetched
     }
 
-    /// The number of HTTP requests made so far.
+    /// The number of HTTP requests made so far, each redirect hop one.
     #[must_use]
     pub fn fetch_count(&self) -> usize {
         self.fetches
     }
 
-    /// The bytes all fetches have brought so far.
+    /// The bytes all fetches have brought so far, those of a body that broke
+    /// off included, and the bytes of decoded `data:` URLs.
     #[must_use]
     pub fn total_bytes(&self) -> u64 {
         self.total_bytes
     }
 
-    fn fail(&mut self, written: &str, url: String, reason: String) {
-        self.failures.push(Failure {
-            written: written.to_owned(),
-            url,
-            reason,
-        });
+    /// Reports `url` as not served, once however often it is asked for.
+    fn fail(&mut self, url: String, reason: String) {
+        if !self.failures.iter().any(|f| f.url == url) {
+            self.failures.push(Failure { url, reason });
+        }
     }
 
-    fn fetch(&mut self, target: &Url) -> Result<Resource, String> {
+    /// Room for one more request, which it takes, and for some bytes.
+    fn take_request(&mut self) -> Result<(), String> {
         if self.fetches >= self.limits.max_fetches {
             return Err(format!(
                 "refused: the page has made {} requests, the most allowed",
                 self.limits.max_fetches
             ));
         }
+        self.room()?;
+        self.fetches += 1;
+        Ok(())
+    }
+
+    /// The bytes one more resource may have: within its own cap and what is
+    /// left of the page's.
+    fn room(&self) -> Result<u64, String> {
         let room = self.limits.max_total_bytes.saturating_sub(self.total_bytes);
         if room == 0 {
             return Err(format!(
@@ -249,37 +280,111 @@ impl HttpResources {
                 self.limits.max_total_bytes
             ));
         }
-        self.fetches += 1;
-        let mut response = self
-            .agent
-            .get(target.as_str())
-            .call()
-            .map_err(|err| describe(&err))?;
-        let resolved = {
-            use ureq::ResponseExt as _;
-            response.get_uri().to_string()
-        };
-        let cap = self.limits.max_resource_bytes.min(room);
-        let bytes = response
-            .body_mut()
-            .with_config()
-            .limit(cap)
-            .read_to_vec()
-            .map_err(|err| match err {
-                ureq::Error::BodyExceedsLimit(_) if cap < self.limits.max_resource_bytes => {
-                    format!(
-                        "refused: it would take the page past {} bytes in all",
-                        self.limits.max_total_bytes
-                    )
+        Ok(self.limits.max_resource_bytes.min(room))
+    }
+
+    fn too_large(&self, cap: u64) -> String {
+        if cap < self.limits.max_resource_bytes {
+            format!(
+                "refused: it would take the page past {} bytes in all",
+                self.limits.max_total_bytes
+            )
+        } else {
+            format!("refused: it is larger than {cap} bytes")
+        }
+    }
+
+    /// `at` as requested: with the page's credentials when it is the page's
+    /// origin and gives none of its own.
+    fn request_url(&self, at: &Url) -> Url {
+        let mut request = at.clone();
+        if let Some((origin, user, password)) = &self.credentials
+            && at.origin() == *origin
+            && at.username().is_empty()
+            && at.password().is_none()
+        {
+            let _ = request.set_username(user);
+            let _ = request.set_password(password.as_deref());
+        }
+        request
+    }
+
+    fn fetch(&mut self, target: &Url) -> Result<Resource, String> {
+        let mut at = target.clone();
+        for _ in 0..=MAX_REDIRECTS {
+            self.take_request()?;
+            let mut response = self
+                .agent
+                .get(self.request_url(&at).as_str())
+                .call()
+                .map_err(|err| describe(&err))?;
+            let location = response
+                .status()
+                .is_redirection()
+                .then(|| response.headers().get(ureq::http::header::LOCATION))
+                .flatten();
+            if let Some(location) = location {
+                let location = location
+                    .to_str()
+                    .map_err(|_| "a redirect whose Location is not text".to_owned())?;
+                let mut next = at
+                    .join(location)
+                    .map_err(|err| format!("a redirect to `{location}`: {err}"))?;
+                if !matches!(next.scheme(), "http" | "https") {
+                    return Err(format!(
+                        "refused: a redirect to {}:, not http or https",
+                        next.scheme()
+                    ));
                 }
-                ureq::Error::BodyExceedsLimit(_) => {
-                    format!("refused: it is larger than {cap} bytes")
-                }
-                other => describe(&other),
-            })?;
-        self.total_bytes += bytes.len() as u64;
-        self.fetched.push(target.to_string());
-        Ok(Resource { resolved, bytes })
+                next.set_fragment(None);
+                at = next;
+                continue;
+            }
+            let cap = self.room()?;
+            // A body that says it is too large is refused unread, so it costs
+            // the page nothing; one that says nothing or lies is metered.
+            if response
+                .body()
+                .content_length()
+                .is_some_and(|length| length > cap)
+            {
+                return Err(self.too_large(cap));
+            }
+            let bytes = self.read_body(response.body_mut())?;
+            self.fetched.push(target.to_string());
+            return Ok(Resource {
+                resolved: at.to_string(),
+                bytes,
+            });
+        }
+        Err(format!("refused: more than {MAX_REDIRECTS} redirects"))
+    }
+
+    /// The body, each byte counted toward the page's total as it arrives,
+    /// so a body that breaks off is charged what it brought.
+    fn read_body(&mut self, body: &mut ureq::Body) -> Result<Vec<u8>, String> {
+        use std::io::Read as _;
+        let cap = self.room()?;
+        // ureq's own limit is turned off: `cap` is enforced here.
+        let mut reader = body.with_config().limit(u64::MAX).reader();
+        let mut bytes = Vec::new();
+        let mut chunk = vec![0; 64 * 1024];
+        loop {
+            // One byte past the cap shows that the body is larger.
+            let left = cap.saturating_add(1) - bytes.len() as u64;
+            let want = usize::try_from(left).map_or(chunk.len(), |left| left.min(chunk.len()));
+            let n = match reader.read(&mut chunk[..want]) {
+                Ok(0) => return Ok(bytes),
+                Ok(n) => n,
+                Err(err) if err.kind() == std::io::ErrorKind::Interrupted => continue,
+                Err(err) => return Err(describe_io(&err)),
+            };
+            self.total_bytes += n as u64;
+            bytes.extend_from_slice(&chunk[..n]);
+            if bytes.len() as u64 > cap {
+                return Err(self.too_large(cap));
+            }
+        }
     }
 
     fn decode_data(&mut self, url: &str) -> Result<Resource, String> {
@@ -287,12 +392,11 @@ impl HttpResources {
         let (bytes, _) = data
             .decode_to_vec()
             .map_err(|_| "a data: URL with invalid base64")?;
-        if bytes.len() as u64 > self.limits.max_resource_bytes {
-            return Err(format!(
-                "refused: it is larger than {} bytes",
-                self.limits.max_resource_bytes
-            ));
+        let cap = self.room()?;
+        if bytes.len() as u64 > cap {
+            return Err(self.too_large(cap));
         }
+        self.total_bytes += bytes.len() as u64;
         Ok(Resource {
             resolved: url.to_owned(),
             bytes,
@@ -308,23 +412,51 @@ fn describe(err: &ureq::Error) -> String {
     }
 }
 
+fn describe_io(err: &std::io::Error) -> String {
+    match err
+        .get_ref()
+        .and_then(|inner| inner.downcast_ref::<ureq::Error>())
+    {
+        Some(inner) => describe(inner),
+        None if err.kind() == std::io::ErrorKind::TimedOut => "timed out".to_owned(),
+        None => err.to_string(),
+    }
+}
+
+/// `url` as it may be shown: without user name, password, query and
+/// fragment, which can carry secrets. A string that is not a URL is shown
+/// as it is.
+#[must_use]
+pub fn redacted(url: &str) -> String {
+    let Ok(mut parsed) = Url::parse(url.trim()) else {
+        return url.to_owned();
+    };
+    let _ = parsed.set_username("");
+    let _ = parsed.set_password(None);
+    parsed.set_query(None);
+    parsed.set_fragment(None);
+    parsed.to_string()
+}
+
 /// `written` resolved against `base`, without its fragment: `None` for a
-/// reference to nothing (empty, or only a fragment).
+/// reference to nothing (empty, or only a fragment). Against a URL base, as
+/// a browser resolves it (`http:x.css` on an `http` page is relative); an
+/// absolute reference needs no base.
 fn resolve(written: &str, base: &str) -> Option<Result<Url, String>> {
     if written.is_empty() || written.starts_with('#') {
         return None;
     }
-    let joined = match Url::parse(written) {
-        Ok(absolute) => Ok(absolute),
-        Err(url::ParseError::RelativeUrlWithoutBase) => match Url::parse(base.trim()) {
-            Ok(base) => base
-                .join(written)
-                .map_err(|err| format!("cannot be resolved against {base}: {err}")),
-            Err(_) => Err(format!(
+    let joined = match Url::parse(base.trim()) {
+        Ok(base) => base
+            .join(written)
+            .map_err(|err| format!("cannot be resolved against {base}: {err}")),
+        Err(_) => match Url::parse(written) {
+            Ok(absolute) => Ok(absolute),
+            Err(url::ParseError::RelativeUrlWithoutBase) => Err(format!(
                 "a relative reference in `{base}`, which is not a URL"
             )),
+            Err(err) => Err(format!("not a URL: {err}")),
         },
-        Err(err) => Err(format!("not a URL: {err}")),
     };
     Some(joined.map(|mut url| {
         url.set_fragment(None);
@@ -338,46 +470,58 @@ impl Resources for HttpResources {
         let target = match resolve(written, base)? {
             Ok(target) => target,
             Err(reason) => {
-                self.fail(written, written.to_owned(), reason);
+                self.fail(written.to_owned(), reason);
                 return None;
             }
         };
         let key = target.to_string();
-        if let Some(answer) = self.answers.get(&key) {
-            let answer = answer.clone();
-            if answer.is_some() {
-                self.served.insert(written.to_owned());
+        let answer = match self.answers.get(&key) {
+            Some(answer) => answer.clone(),
+            None => {
+                let answer = match target.scheme() {
+                    "http" | "https" => self.fetch(&target),
+                    // The fragment is part of a data: URL's body, so it is
+                    // decoded as written.
+                    "data" => self.decode_data(written),
+                    scheme => Err(format!(
+                        "refused: a fetched page reads only http, https and data URLs, not {scheme}:"
+                    )),
+                };
+                self.answers.insert(key.clone(), answer.clone());
+                answer
             }
-            return answer;
-        }
-        let answer = match target.scheme() {
-            "http" | "https" => self.fetch(&target),
-            // The fragment is part of a data: URL's body, so it is decoded
-            // as written.
-            "data" => self.decode_data(written),
-            scheme => Err(format!(
-                "refused: a fetched page reads only http, https and data URLs, not {scheme}:"
-            )),
         };
-        let answer = match answer {
-            Ok(resource) => {
-                self.served.insert(written.to_owned());
-                Some(resource)
-            }
+        match answer {
+            Ok(resource) => Some(resource),
             Err(reason) => {
-                self.fail(written, key.clone(), reason);
+                // A data: URL is named by its start: it can be the size of
+                // the file it holds.
+                let name = if target.scheme() == "data" {
+                    written.chars().take(64).collect()
+                } else {
+                    key
+                };
+                self.fail(name, reason);
                 None
             }
-        };
-        self.answers.insert(key, answer.clone());
-        answer
+        }
+    }
+
+    fn read_any(&mut self, url: &str, bases: &[&str]) -> Option<Resource> {
+        let reported = self.failures.len();
+        let found = bases.iter().find_map(|base| self.read(url, base));
+        if found.is_some() {
+            self.failures.truncate(reported);
+        }
+        found
     }
 }
 
-/// A local page's resolver `L` with [`HttpResources`] beside it: references
-/// that are `http(s)` or `data:` URLs, or relative ones in a document or
-/// sheet that was itself fetched, go to `remote`; the rest (paths, `file:`
-/// URLs) to `local`.
+/// A local page's resolver `L` with [`HttpResources`] beside it:
+/// references that are `http(s)` or `data:` URLs go to `remote`, and so does
+/// everything in a document or sheet that was itself fetched, so that
+/// fetched content never reaches `local` (`remote` reads no `file:` URL or
+/// path). The rest (paths and `file:` URLs in local files) go to `local`.
 #[derive(Debug, Default)]
 pub struct MixedResources<L> {
     pub local: L,
@@ -401,15 +545,20 @@ fn is_web_url(s: &str) -> bool {
 
 impl<L: Resources> Resources for MixedResources<L> {
     fn read(&mut self, url: &str, base: &str) -> Option<Resource> {
-        let remote = match Url::parse(url.trim()) {
-            Ok(absolute) => matches!(absolute.scheme(), "http" | "https" | "data"),
-            Err(_) => is_web_url(base),
-        };
-        if remote {
+        if is_web_url(base) || is_web_url(url) {
             self.remote.read(url, base)
         } else {
             self.local.read(url, base)
         }
+    }
+
+    fn read_any(&mut self, url: &str, bases: &[&str]) -> Option<Resource> {
+        let reported = self.remote.failures.len();
+        let found = bases.iter().find_map(|base| self.read(url, base));
+        if found.is_some() {
+            self.remote.failures.truncate(reported);
+        }
+        found
     }
 }
 
