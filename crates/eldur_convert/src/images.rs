@@ -93,7 +93,10 @@ pub(crate) fn collect(
             diags.warning(
                 "html",
                 crate::boxes::node_line(doc, node),
-                format!("image `{src}` was not found; an empty placeholder keeps its space"),
+                format!(
+                    "image `{}` was not found; an empty placeholder keeps its space",
+                    eldur_css::quoted_reference(src)
+                ),
             );
             continue;
         };
@@ -189,7 +192,10 @@ pub(crate) fn add_background_files(
             diags.warning(
                 "css",
                 None,
-                format!("background image `{url}` was not found; it paints nothing"),
+                format!(
+                    "background image `{}` was not found; it paints nothing",
+                    eldur_css::quoted_reference(&url)
+                ),
             );
             continue;
         };
@@ -231,17 +237,24 @@ fn asset_name(written: &str, resolved: &str) -> String {
         None => written,
     };
     let path = path.split(['?', '#']).next().unwrap_or(path);
-    percent_decoded(path)
-        .chars()
-        .map(|c| {
-            let bad = c.is_control()
-                || matches!(
-                    c,
-                    '\\' | '%' | '?' | '#' | ':' | '*' | '<' | '>' | '|' | '"'
-                );
-            if bad { '_' } else { c }
+    // Each segment decoded alone: an encoded `/` stays in its name, so no
+    // name becomes a folder another file's name already is.
+    path.split('/')
+        .map(|segment| {
+            percent_decoded(segment)
+                .chars()
+                .map(|c| {
+                    let bad = c.is_control()
+                        || matches!(
+                            c,
+                            '/' | '\\' | '%' | '?' | '#' | ':' | '*' | '<' | '>' | '|' | '"'
+                        );
+                    if bad { '_' } else { c }
+                })
+                .collect::<String>()
         })
-        .collect()
+        .collect::<Vec<_>>()
+        .join("/")
 }
 
 /// `text` with each `%XX` read as the byte it stands for; what is not

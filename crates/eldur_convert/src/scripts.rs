@@ -259,7 +259,10 @@ pub(crate) fn collect(
                     None => diags.error(
                         "js",
                         line,
-                        format!("script `{src}` could not be read; it is skipped"),
+                        format!(
+                            "script `{}` could not be read; it is skipped",
+                            eldur_css::quoted_reference(src)
+                        ),
                     ),
                 }
             }

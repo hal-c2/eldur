@@ -109,9 +109,6 @@ pub struct HttpResources {
     answers: HashMap<String, Result<Resource, String>>,
     failures: Vec<Failure>,
     fetched: Vec<String>,
-    /// The references the page read that are not absolute URLs, as written:
-    /// what a diagnostic quotes, which [`HttpResources::shown`] redacts.
-    written: Vec<String>,
     /// The page's origin and the user name and password its URL gave.
     credentials: Option<(url::Origin, String, Option<String>)>,
 }
@@ -122,8 +119,9 @@ impl std::fmt::Debug for HttpResources {
             .field("limits", &self.limits)
             .field("fetches", &self.fetches)
             .field("total_bytes", &self.total_bytes)
-            .field("fetched", &self.fetched)
-            .field("failures", &self.failures)
+            // Counts only: a reference's URL can hold a user and a query.
+            .field("fetched", &self.fetched.len())
+            .field("failures", &self.failures.len())
             .finish_non_exhaustive()
     }
 }
@@ -169,7 +167,6 @@ impl HttpResources {
             answers: HashMap::new(),
             failures: Vec::new(),
             fetched: Vec::new(),
-            written: Vec::new(),
             credentials: None,
         }
     }
@@ -199,7 +196,6 @@ impl HttpResources {
         self.total_bytes = 0;
         self.failures.clear();
         self.fetched.clear();
-        self.written.clear();
         if !target.username().is_empty() || target.password().is_some() {
             self.credentials = Some((
                 target.origin(),
@@ -237,9 +233,11 @@ impl HttpResources {
             .map(|f| Diagnostic {
                 severity: Severity::Warning,
                 stage: STAGE,
-                source: f.url.clone(),
+                // Shown without the user, query and fragment a reference
+                // or a redirect's URL can carry.
+                source: redacted(&eldur_convert::quoted_reference(&f.url)),
                 line: None,
-                message: format!("not fetched: {}", f.reason),
+                message: redacted_in(&format!("not fetched: {}", f.reason)),
             })
             .collect()
     }
@@ -255,23 +253,6 @@ impl HttpResources {
     #[must_use]
     pub fn fetch_count(&self) -> usize {
         self.fetches
-    }
-
-    /// `text`, a diagnostic of this page, as it may be shown: every
-    /// `http(s)` URL [`redacted`], and every reference the page read quoted
-    /// in backticks without the query, fragment or user it was written
-    /// with. Other quoted text (a CSS value such as `#fff`, a selector) is
-    /// shown as it is.
-    #[must_use]
-    pub fn shown(&self, text: &str) -> String {
-        let mut out = redacted_in(text);
-        for written in &self.written {
-            let cut = redacted_reference(written);
-            if cut != *written {
-                out = out.replace(&format!("`{written}`"), &format!("`{cut}`"));
-            }
-        }
-        out
     }
 
     /// The bytes all fetches have brought so far, those of a body that broke
@@ -358,9 +339,12 @@ impl HttpResources {
                 let location = location
                     .to_str()
                     .map_err(|_| "a redirect whose Location is not text".to_owned())?;
-                let mut next = at
-                    .join(location)
-                    .map_err(|err| format!("a redirect to `{location}`: {err}"))?;
+                let mut next = at.join(location).map_err(|err| {
+                    format!(
+                        "a redirect to `{}`: {err}",
+                        eldur_convert::quoted_reference(location)
+                    )
+                })?;
                 if !matches!(next.scheme(), "http" | "https") {
                     return Err(format!(
                         "refused: a redirect to {}:, not http or https",
@@ -498,21 +482,6 @@ pub fn redacted_in(text: &str) -> String {
     out
 }
 
-/// A reference as written, as it may be shown: a relative one without its
-/// query and fragment, one without a scheme (`//user:pw@host/x`) also
-/// without its user.
-fn redacted_reference(written: &str) -> String {
-    if let Some(rest) = written.strip_prefix("//") {
-        let shown = redacted(&format!("http://{rest}"));
-        return shown.strip_prefix("http:").unwrap_or(&shown).to_owned();
-    }
-    written
-        .split(['?', '#'])
-        .next()
-        .unwrap_or(written)
-        .to_owned()
-}
-
 /// `written` resolved against `base`, without its fragment: `None` for a
 /// reference to nothing (empty, or only a fragment). Against a URL base, as
 /// a browser resolves it (`http:x.css` on an `http` page is relative); an
@@ -522,13 +491,17 @@ fn resolve(written: &str, base: &str) -> Option<Result<Url, String>> {
         return None;
     }
     let joined = match Url::parse(base.trim()) {
-        Ok(base) => base
-            .join(written)
-            .map_err(|err| format!("cannot be resolved against {base}: {err}")),
+        Ok(base) => base.join(written).map_err(|err| {
+            format!(
+                "cannot be resolved against {}: {err}",
+                redacted(base.as_str())
+            )
+        }),
         Err(_) => match Url::parse(written) {
             Ok(absolute) => Ok(absolute),
             Err(url::ParseError::RelativeUrlWithoutBase) => Err(format!(
-                "a relative reference in `{base}`, which is not a URL"
+                "a relative reference in `{}`, which is not a URL",
+                eldur_convert::quoted_reference(base)
             )),
             Err(err) => Err(format!("not a URL: {err}")),
         },
@@ -542,12 +515,6 @@ fn resolve(written: &str, base: &str) -> Option<Result<Url, String>> {
 impl Resources for HttpResources {
     fn read(&mut self, url: &str, base: &str) -> Option<Resource> {
         let written = url.trim();
-        if !written.contains("://")
-            && !written.starts_with("data:")
-            && !self.written.iter().any(|w| w == written)
-        {
-            self.written.push(written.to_owned());
-        }
         let target = match resolve(written, base)? {
             Ok(target) => target,
             Err(reason) => {

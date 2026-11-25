@@ -249,7 +249,7 @@ fn image_json(
         ),
         Some(Image::Url(url)) => (
             files.get(url).map_or_else(
-                || json!({"kind": "unpainted", "what": format!("image `{url}` was not found and")}),
+                || json!({"kind": "unpainted", "what": format!("image `{}` was not found and", eldur_css::quoted_reference(url))}),
                 |source| json!({"kind": "image", "source": source}),
             ),
             format!("url(\"{url}\")"),

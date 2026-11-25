@@ -220,7 +220,10 @@ impl Emitter<'_, '_> {
                     self.diags.warning(
                         "css",
                         line,
-                        format!("`list-style-image` `{url}` was not found; a disc is drawn"),
+                        format!(
+                            "`list-style-image` `{}` was not found; a disc is drawn",
+                            eldur_css::quoted_reference(url)
+                        ),
                     );
                     return bullet(&MarkerKind::Disc);
                 };

@@ -18,7 +18,7 @@
 
 use std::path::PathBuf;
 
-pub use eldur_css::Viewport;
+pub use eldur_css::{Viewport, quoted_reference};
 
 /// Options that change the output (they are part of the cache key; keep
 /// `Debug` output stable).

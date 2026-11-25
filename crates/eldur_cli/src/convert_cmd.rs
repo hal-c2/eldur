@@ -340,12 +340,14 @@ fn execute_convert_url(
         .iter()
         .chain(&fetched)
         .map(|diagnostic| {
-            // The page's own diagnostics name the URL it was fetched from,
-            // query and all, and a message can quote a reference's URL: both
-            // are shown as the status line shows the page.
+            // A diagnostic's source is the page's URL or a reference's, and
+            // its message can name the page's URL in passing: both are shown
+            // as the status line shows the page. A reference a message
+            // quotes is quoted without its secrets where it is made
+            // (`eldur_convert::quoted_reference`).
             let mut record = DiagnosticRecord::from(diagnostic);
-            record.source = eldur_fetch::redacted(&record.source);
-            record.message = resources.shown(&record.message);
+            record.source = eldur_fetch::redacted(&eldur_convert::quoted_reference(&record.source));
+            record.message = eldur_fetch::redacted_in(&record.message);
             record
         })
         .collect();
