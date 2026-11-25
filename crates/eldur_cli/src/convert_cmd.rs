@@ -9,11 +9,12 @@ use std::time::{Duration, Instant};
 
 use anyhow::{Context, bail};
 
+use crate::message::{self, DiagnosticRecord, Report};
 use crate::{ConvertArgs, Converter, FsResources};
 
 /// Format constant mixed into [`eldur_cache::CacheKey::converter_version`].
 /// Bump whenever output generation changes without a crate version bump.
-pub const CONVERTER_FORMAT_VERSION: u32 = 1;
+pub const CONVERTER_FORMAT_VERSION: u32 = 2;
 
 static OUT_TMP_SEQ: AtomicU64 = AtomicU64::new(0);
 
@@ -38,8 +39,11 @@ pub struct ConvertOutcome {
     pub written_files: usize,
     /// Number of output files skipped because identical bytes were already on disk.
     pub skipped_files: usize,
-    /// Formatted diagnostics printed to stderr.
+    /// Diagnostics formatted as the human lines (`--message-format human`
+    /// prints them to stderr).
     pub diagnostics: Vec<String>,
+    /// The same diagnostics, field by field.
+    pub diagnostic_records: Vec<DiagnosticRecord>,
     /// Every input dependency (entry HTML plus sub-resources, including missing ones).
     pub dependencies: Vec<eldur_cache::Input>,
     /// Wall-clock duration of the run.
@@ -158,27 +162,26 @@ pub(crate) fn execute_convert(
 
     if let Some(cache) = &cache
         && let Some((cached, dependencies)) = cache.lookup_with_inputs(&key)
+        && let Some(records) = message::decode_cached(&cached.diagnostics)
     {
         let (written_files, skipped_files) = write_cached_outputs(&out_dir, &cached.outputs)?;
-        for diag in &cached.diagnostics {
-            writeln!(stderr, "{diag}").context("failed to write diagnostic to stderr")?;
-        }
         let elapsed = started.elapsed();
-        if !args.quiet {
-            writeln!(
-                stdout,
-                "cached {} -> {} ({elapsed:.2?})",
-                args.input.display(),
-                out_dir.display()
-            )
-            .context("failed to write status to stdout")?;
+        Report {
+            status: ConvertStatus::Cached,
+            input: args.input.display(),
+            output_dir: &out_dir,
+            files: cached.outputs.iter().map(|f| f.path.as_path()).collect(),
+            diagnostics: &records,
+            elapsed,
         }
+        .write(args.message_format, args.quiet, stdout, stderr)?;
         return Ok(ConvertOutcome {
             status: ConvertStatus::Cached,
             output_dir: out_dir,
             written_files,
             skipped_files,
-            diagnostics: cached.diagnostics,
+            diagnostics: records.iter().map(ToString::to_string).collect(),
+            diagnostic_records: records,
             dependencies,
             elapsed,
         });
@@ -199,8 +202,9 @@ pub(crate) fn execute_convert(
     }
     let output = converter.convert(&conv_input, &options, &mut resources);
 
-    let diagnostics: Vec<String> = output.diagnostics.iter().map(ToString::to_string).collect();
+    let records: Vec<DiagnosticRecord> = output.diagnostics.iter().map(Into::into).collect();
     let (written_files, skipped_files) = write_convert_outputs(&out_dir, &output.files)?;
+    let files: Vec<PathBuf> = output.files.iter().map(|f| f.path.clone()).collect();
 
     let mut dep_map = BTreeMap::new();
     for dep in resources.into_inputs() {
@@ -222,33 +226,31 @@ pub(crate) fn execute_convert(
                     contents: f.contents,
                 })
                 .collect(),
-            diagnostics: diagnostics.clone(),
+            diagnostics: message::encode_cached(&records),
         };
         cache
             .store(&key, &dependencies, &cached)
             .with_context(|| format!("failed to write build cache at {}", cache.dir().display()))?;
     }
 
-    for diag in &diagnostics {
-        writeln!(stderr, "{diag}").context("failed to write diagnostic to stderr")?;
-    }
     let elapsed = started.elapsed();
-    if !args.quiet {
-        writeln!(
-            stdout,
-            "converted {} -> {} ({elapsed:.2?})",
-            args.input.display(),
-            out_dir.display()
-        )
-        .context("failed to write status to stdout")?;
+    Report {
+        status: ConvertStatus::Converted,
+        input: args.input.display(),
+        output_dir: &out_dir,
+        files: files.iter().map(PathBuf::as_path).collect(),
+        diagnostics: &records,
+        elapsed,
     }
+    .write(args.message_format, args.quiet, stdout, stderr)?;
 
     Ok(ConvertOutcome {
         status: ConvertStatus::Converted,
         output_dir: out_dir,
         written_files,
         skipped_files,
-        diagnostics,
+        diagnostics: records.iter().map(ToString::to_string).collect(),
+        diagnostic_records: records,
         dependencies,
         elapsed,
     })
