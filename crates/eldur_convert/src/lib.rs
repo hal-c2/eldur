@@ -200,6 +200,7 @@ mod diag;
 mod emit;
 mod filter;
 mod images;
+pub use images::percent_decoded;
 mod metadata;
 mod paint_values;
 mod pipeline;

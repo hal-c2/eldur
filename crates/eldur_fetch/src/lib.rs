@@ -438,6 +438,30 @@ pub fn redacted(url: &str) -> String {
     parsed.to_string()
 }
 
+/// `text` with every `http(s)` URL in it [`redacted`]: a diagnostic's
+/// message can quote a reference that carries a signed query. A URL ends at
+/// whitespace or at the quote, bracket or backtick around it.
+#[must_use]
+pub fn redacted_in(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(at) = ["http://", "https://"]
+        .iter()
+        .filter_map(|scheme| rest.find(scheme))
+        .min()
+    {
+        out.push_str(&rest[..at]);
+        let url = &rest[at..];
+        let end = url
+            .find(|c: char| c.is_whitespace() || matches!(c, '`' | '"' | '\'' | ')' | '>' | '<'))
+            .unwrap_or(url.len());
+        out.push_str(&redacted(&url[..end]));
+        rest = &url[end..];
+    }
+    out.push_str(rest);
+    out
+}
+
 /// `written` resolved against `base`, without its fragment: `None` for a
 /// reference to nothing (empty, or only a fragment). Against a URL base, as
 /// a browser resolves it (`http:x.css` on an `http` page is relative); an
@@ -522,6 +546,13 @@ impl Resources for HttpResources {
 /// everything in a document or sheet that was itself fetched, so that
 /// fetched content never reaches `local` (`remote` reads no `file:` URL or
 /// path). The rest (paths and `file:` URLs in local files) go to `local`.
+///
+/// One lookup cannot keep to that: a relative `background-image` read with
+/// [`Resources::read_any`], whose computed style no longer says which sheet
+/// it came from, is tried against every base, the local page's too. A
+/// fetched sheet can so name a file `local` serves, and its bytes are copied
+/// into the output. A caller whose `local` holds what a fetched sheet must
+/// not see gives such a page no fetched sheets.
 #[derive(Debug, Default)]
 pub struct MixedResources<L> {
     pub local: L,
