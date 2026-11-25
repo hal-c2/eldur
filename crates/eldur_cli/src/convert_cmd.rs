@@ -345,7 +345,7 @@ fn execute_convert_url(
             // are shown as the status line shows the page.
             let mut record = DiagnosticRecord::from(diagnostic);
             record.source = eldur_fetch::redacted(&record.source);
-            record.message = eldur_fetch::redacted_in(&record.message);
+            record.message = resources.shown(&record.message);
             record
         })
         .collect();
