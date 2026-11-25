@@ -612,6 +612,47 @@ pub fn document_base_href(doc: &Document) -> Option<String> {
     collect::find_document_base_href(doc)
 }
 
+/// `reference` as a message quotes it: without the query and fragment,
+/// which can carry a signed token, and without a user name and password; a
+/// long `data:` URL by its start. Every diagnostic that names a reference
+/// quotes it this way, so none shows a secret its URL held, whether the page
+/// was read from disk or fetched, relative, absolute or scheme-relative.
+#[must_use]
+pub fn quoted_reference(reference: &str) -> String {
+    let reference = reference.trim();
+    if reference
+        .get(..5)
+        .is_some_and(|scheme| scheme.eq_ignore_ascii_case("data:"))
+    {
+        let start: String = reference.chars().take(48).collect();
+        return if start.len() < reference.len() {
+            format!("{start}…")
+        } else {
+            start
+        };
+    }
+    let cut = reference.split(['?', '#']).next().unwrap_or(reference);
+    // The authority follows a `//` at the start or right after a scheme.
+    let authority = cut.find("//").filter(|&at| {
+        let before = &cut[..at];
+        before.is_empty()
+            || before.strip_suffix(':').is_some_and(|scheme| {
+                scheme.starts_with(|c: char| c.is_ascii_alphabetic())
+                    && scheme
+                        .chars()
+                        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'))
+            })
+    });
+    let Some(at) = authority.map(|at| at + 2) else {
+        return cut.to_owned();
+    };
+    let end = cut[at..].find('/').map_or(cut.len(), |slash| at + slash);
+    match cut[at..end].rfind('@') {
+        Some(user) => format!("{}{}", &cut[..at], &cut[at + user + 1..]),
+        None => cut.to_owned(),
+    }
+}
+
 /// `href` resolved against `base` as a `<link href>` is: unchanged when it
 /// has a scheme or there is no base; otherwise joined to the base's
 /// directory, which may itself be relative (then so is the result) or carry

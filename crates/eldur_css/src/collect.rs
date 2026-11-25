@@ -83,7 +83,10 @@ pub(crate) fn collect_stylesheets(
                         severity: Severity::Invalid,
                         source: resolved.clone(),
                         line: Some(elem.line as u32),
-                        message: format!("failed to load stylesheet `{resolved}`"),
+                        message: format!(
+                            "failed to load stylesheet `{}`",
+                            crate::quoted_reference(&resolved)
+                        ),
                     });
                     continue;
                 };
@@ -165,7 +168,10 @@ fn collect_parsed_sheet(
                 severity: Severity::Invalid,
                 source: source_name.to_owned(),
                 line: Some(imp.line),
-                message: format!("`@import` cycle detected for `{resolved}`"),
+                message: format!(
+                    "`@import` cycle detected for `{}`",
+                    crate::quoted_reference(&resolved)
+                ),
             });
             continue;
         }
@@ -175,7 +181,10 @@ fn collect_parsed_sheet(
                 severity: Severity::Invalid,
                 source: source_name.to_owned(),
                 line: Some(imp.line),
-                message: format!("failed to load imported stylesheet `{resolved}`"),
+                message: format!(
+                    "failed to load imported stylesheet `{}`",
+                    crate::quoted_reference(&resolved)
+                ),
             });
             continue;
         };
@@ -185,7 +194,10 @@ fn collect_parsed_sheet(
                 severity: Severity::Invalid,
                 source: source_name.to_owned(),
                 line: Some(imp.line),
-                message: format!("`@import` cycle detected for `{}`", loaded.url),
+                message: format!(
+                    "`@import` cycle detected for `{}`",
+                    crate::quoted_reference(&loaded.url)
+                ),
             });
             continue;
         }
@@ -316,7 +328,12 @@ pub(crate) fn resolve_href(base: Option<&str>, href: &str) -> String {
         return format!("{origin_prefix}{norm}{href_suffix}");
     }
 
-    // Filesystem or relative path base without `scheme://`.
+    // Filesystem or relative path base without `scheme://`. A `//host/x`
+    // names a host whatever the base's path: whoever reads it puts the
+    // page's scheme in front, as with no base.
+    if href.starts_with("//") {
+        return href.to_owned();
+    }
     let (base_path, _) = split_query_or_fragment(base_raw);
     if href_path.starts_with('/') {
         let norm = normalize_segments(href_path, true);
@@ -477,6 +494,11 @@ mod tests {
     #[test]
     fn url_resolution_handles_urls_and_relative_paths() {
         assert_eq!(resolve_href(None, "main.css"), "main.css");
+        // A host named with no scheme is not a path under a relative base.
+        assert_eq!(
+            resolve_href(Some("sub/"), "//cdn.example/x.js?v=1"),
+            "//cdn.example/x.js?v=1"
+        );
         assert_eq!(resolve_href(Some("main.css"), "sub.css"), "sub.css");
         assert_eq!(
             resolve_href(Some("css/main.css"), "reset/norm.css"),

@@ -531,6 +531,50 @@ fn json_output_for_a_url_names_its_files_and_leaves_out_credentials() {
 }
 
 #[test]
+fn a_reference_that_is_not_found_is_named_without_its_secrets_under_any_base() {
+    let server = Server::start(BTreeMap::new());
+    let host = server.url("").replacen("http://", "", 1);
+    for base in ["sub/".to_owned(), server.url("/cdn/")] {
+        let page = format!(
+            concat!(
+                r#"<html><head><base href="{base}">"#,
+                r#"<link rel="stylesheet" href="s.css?sig=hunter5">"#,
+                r#"<script src=" app.js?sig=hunter3 "></script>"#,
+                r#"<script src="//user:sesame@{host}/x.js?next=ftp://o.invalid&sig=hunter6"></script>"#,
+                r#"</head><body><img src="pic.gif?sig=hunter4#t=hunter7" alt="">"#,
+                r#"<div style="width: 2px; height: 2px; background-image: url(bg.gif?sig=hunter8)"></div>"#,
+                r#"</body></html>"#,
+            ),
+            base = base,
+            host = host,
+        );
+        let server = Server::start(BTreeMap::from([(
+            "/index.html",
+            ("text/html", page.into_bytes()),
+        )]));
+        let td = TempDir::new("secrets");
+        let mut args = ConvertArgs::new(server.url("/index.html"));
+        args.output = Some(td.0.join("out"));
+        args.message_format = eldur_cli::MessageFormat::Json;
+        let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+        run_convert_with_io(&args, &RealConverter, &mut stdout, &mut stderr).expect("convert");
+        let shown = format!(
+            "{}{}",
+            String::from_utf8_lossy(&stdout),
+            String::from_utf8_lossy(&stderr)
+        );
+        for named in ["app.js`", "pic.gif", "s.css`", "x.js"] {
+            assert!(shown.contains(named), "{base}: {named} in {shown}");
+        }
+        for secret in [
+            "hunter3", "hunter4", "hunter5", "hunter6", "hunter7", "hunter8", "sesame",
+        ] {
+            assert!(!shown.contains(secret), "{base}: {secret} in {shown}");
+        }
+    }
+}
+
+#[test]
 fn the_page_s_credentials_go_to_its_own_origin_only() {
     let other = Server::start(BTreeMap::from([
         ("/b.gif", ("image/gif", DOT_GIF.to_vec())),
@@ -616,6 +660,8 @@ fn a_remote_image_s_name_holds_no_byte_a_file_or_qt_cannot() {
         ("/a%00b.gif", ("image/gif", DOT_GIF.to_vec())),
         ("/%5C..%5Cup.gif", ("image/gif", DOT_GIF.to_vec())),
         ("/%2541.gif", ("image/gif", DOT_GIF.to_vec())),
+        ("/x", ("image/gif", DOT_GIF.to_vec())),
+        ("/x%2Fy.gif", ("image/gif", DOT_GIF.to_vec())),
     ]));
     // Relative to the page and with no `<base>`: named as the URL it was
     // read from decodes, as the absolute ones are.
@@ -625,8 +671,11 @@ fn a_remote_image_s_name_holds_no_byte_a_file_or_qt_cannot() {
             r#"<div style="width: 4px; height: 4px; background-image: url(bg%20one.gif)"></div>"#,
             r#"<img src="near%20by.gif" width="1" height="1" alt="">"#,
             r#"<img src="{nul}" width="1" height="1" alt=""><img src="{slash}" width="1" height="1" alt="">"#,
-            r#"<img src="{percent}" width="1" height="1" alt=""></body></html>"#,
+            r#"<img src="{percent}" width="1" height="1" alt="">"#,
+            r#"<img src="{x}" width="1" height="1" alt=""><img src="{xy}" width="1" height="1" alt=""></body></html>"#,
         ),
+        x = images.url("/x"),
+        xy = images.url("/x%2Fy.gif"),
         nul = images.url("/a%00b.gif"),
         slash = images.url("/%5C..%5Cup.gif"),
         percent = images.url("/%2541.gif"),
@@ -648,6 +697,9 @@ fn a_remote_image_s_name_holds_no_byte_a_file_or_qt_cannot() {
         "a_b.gif",
         "_.._up.gif",
         "_41.gif",
+        // An encoded `/` is part of the name: no folder where `x` is a file.
+        "x",
+        "x_y.gif",
     ] {
         assert!(
             out.join("assets").join(name).is_file(),

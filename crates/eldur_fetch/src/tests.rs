@@ -527,19 +527,8 @@ fn a_message_s_urls_are_shown_without_secrets_wherever_they_end() {
             "error (Http://h.invalid/c?sig=s4) and \"https://h.invalid/d?sig=s5\"",
             "error (http://h.invalid/c) and \"https://h.invalid/d\"",
         ),
-        // A reference the page read, relative to it, and one without a
-        // scheme.
-        (
-            "script `missing.js?sig=s6` and `//u:p@h.invalid/e.js?sig=s7`",
-            "script `missing.js` and `//h.invalid/e.js`",
-        ),
-        // A reference without a query is shown as it is.
-        (
-            "image `img/a b.png` was not found",
-            "image `img/a b.png` was not found",
-        ),
-        // Quoted text that is no reference the page read keeps its `#`
-        // and `?`, a backtick inside it too.
+        // Quoted text that is no URL keeps its `#` and `?`, a backtick
+        // inside it too.
         (
             "invalid value `#zzz` for property `color`",
             "invalid value `#zzz` for property `color`",
@@ -549,18 +538,30 @@ fn a_message_s_urls_are_shown_without_secrets_wherever_they_end() {
             "selector `a#x:::` does not parse in `q(`a`)?b#c`",
         ),
     ];
-    let mut resources = HttpResources::new();
-    for written in [
-        "missing.js?sig=s6",
-        "//u:p@h.invalid/e.js?sig=s7",
-        "img/a b.png",
-    ] {
-        // Against no base, nothing is fetched: the reference is only read.
-        assert!(resources.read(written, "").is_none());
-    }
     for (text, shown) in cases {
-        assert_eq!(resources.shown(text), shown, "{text}");
+        assert_eq!(redacted_in(text), shown, "{text}");
     }
+}
+
+#[test]
+fn a_reference_is_quoted_without_its_secrets() {
+    for (written, shown) in [
+        ("missing.js?sig=s6", "missing.js"),
+        (" app.js?sig=s ", "app.js"),
+        ("//u:p@h.invalid/e.js?sig=s7", "//h.invalid/e.js"),
+        (
+            "//u:p@h.invalid/a.js?next=ftp://o.invalid&sig=s8",
+            "//h.invalid/a.js",
+        ),
+        ("HTTPS://u:p@h.invalid/a?sig=s2", "HTTPS://h.invalid/a"),
+        ("img/a b.png#t=s9", "img/a b.png"),
+        ("img/a b.png", "img/a b.png"),
+        ("mailto:a@b.invalid", "mailto:a@b.invalid"),
+    ] {
+        assert_eq!(eldur_convert::quoted_reference(written), shown, "{written}");
+    }
+    let long = format!("data:image/gif;base64,{}", "A".repeat(500));
+    assert!(eldur_convert::quoted_reference(&long).chars().count() < 60);
 }
 
 #[test]

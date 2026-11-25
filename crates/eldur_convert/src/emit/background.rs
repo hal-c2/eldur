@@ -527,7 +527,10 @@ impl Emitter<'_, '_> {
                         self.diags.warning(
                             "css",
                             line,
-                            format!("background image `{url}` was not found; it paints nothing"),
+                            format!(
+                                "background image `{}` was not found; it paints nothing",
+                                eldur_css::quoted_reference(url)
+                            ),
                         );
                         continue;
                     };
