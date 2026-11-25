@@ -8,6 +8,15 @@ use std::thread;
 
 use super::*;
 
+/// The stand-in server is this machine, which [`Reach::Public`] refuses.
+fn local_http() -> HttpResources {
+    local_http_with(Limits::default())
+}
+
+fn local_http_with(limits: Limits) -> HttpResources {
+    HttpResources::with_reach(limits, Reach::Any)
+}
+
 /// What a path answers: a status line and headers after it, and a body.
 #[derive(Clone)]
 struct Reply {
@@ -138,7 +147,7 @@ fn a_reference_resolves_against_the_document_or_sheet_holding_it() {
         ("/a/css/theme.css", ok(b"theme")),
         ("/root.css", ok(b"root")),
     ]));
-    let mut http = HttpResources::new();
+    let mut http = local_http();
     let page = server.url("/a/index.html#top");
     let sheet = http.read("css/site.css", &page).expect("beside the page");
     assert_eq!(sheet.bytes, b"site");
@@ -157,7 +166,7 @@ fn a_reference_resolves_against_the_document_or_sheet_holding_it() {
 #[test]
 fn a_url_is_fetched_once() {
     let server = Server::start(BTreeMap::from([("/x.css", ok(b"x"))]));
-    let mut http = HttpResources::new();
+    let mut http = local_http();
     let base = server.url("/index.html");
     assert!(http.read("x.css", &base).is_some());
     assert!(http.read("/x.css#again", &base).is_some());
@@ -171,7 +180,7 @@ fn a_page_is_where_its_redirects_end() {
         ("/old", redirect("/new/index.html")),
         ("/new/index.html", ok(b"<p>moved</p>")),
     ]));
-    let mut http = HttpResources::new();
+    let mut http = local_http();
     let input = http.fetch_page(&server.url("/old")).expect("the page");
     assert_eq!(input.html, "<p>moved</p>");
     assert_eq!(input.url, server.url("/new/index.html"));
@@ -180,7 +189,7 @@ fn a_page_is_where_its_redirects_end() {
 #[test]
 fn a_page_that_fails_is_an_error_naming_its_url() {
     let server = Server::start(BTreeMap::new());
-    let mut http = HttpResources::new();
+    let mut http = local_http();
     let url = server.url("/gone.html");
     let err = http.fetch_page(&url).expect_err("404");
     assert_eq!(
@@ -204,7 +213,7 @@ fn a_page_that_fails_is_an_error_naming_its_url() {
 #[test]
 fn a_reference_that_fails_is_a_warning_naming_its_url() {
     let server = Server::start(BTreeMap::new());
-    let mut http = HttpResources::new();
+    let mut http = local_http();
     assert!(
         http.read("missing.png", &server.url("/index.html"))
             .is_none()
@@ -226,7 +235,7 @@ fn a_lookup_another_base_serves_is_not_reported() {
     // As the converter tries a background image: against the page, then
     // against each sheet.
     let server = Server::start(BTreeMap::from([("/css/img/bg.png", ok(b"png"))]));
-    let mut http = HttpResources::new();
+    let mut http = local_http();
     let (page, sheet) = (server.url("/index.html"), server.url("/css/site.css"));
     let found = http.read_any("img/bg.png", &[&page, &sheet]);
     assert_eq!(found.expect("beside the sheet").bytes, b"png");
@@ -238,14 +247,14 @@ fn a_lookup_another_base_serves_is_not_reported() {
     assert!(text.contains(&server.url("/img/bg.png")), "{text}");
 
     // One no base serves reports each base's miss.
-    let mut none = HttpResources::new();
+    let mut none = local_http();
     assert!(none.read_any("gone.png", &[&page, &sheet]).is_none());
     assert_eq!(messages(&none).len(), 2, "{:?}", messages(&none));
 }
 
 #[test]
 fn only_http_https_and_data_urls_are_read() {
-    let mut http = HttpResources::new();
+    let mut http = local_http();
     assert!(
         http.read("file:///etc/hostname", "https://example.com/")
             .is_none()
@@ -265,7 +274,7 @@ fn only_http_https_and_data_urls_are_read() {
 
 #[test]
 fn a_data_url_is_decoded_without_a_fetch() {
-    let mut http = HttpResources::new();
+    let mut http = local_http();
     let plain = http
         .read(
             "data:text/css,h1%20%7B%20color%3A%20red%20%7D",
@@ -283,7 +292,7 @@ fn a_data_url_is_decoded_without_a_fetch() {
 
 #[test]
 fn a_relative_reference_needs_a_url_to_resolve_against() {
-    let mut http = HttpResources::new();
+    let mut http = local_http();
     assert!(http.read("site.css", "index.html").is_none());
     let text = messages(&http).join("\n");
     assert!(
@@ -299,7 +308,7 @@ fn the_number_of_fetches_is_capped() {
         ("/b.css", ok(b"b")),
         ("/c.css", ok(b"c")),
     ]));
-    let mut http = HttpResources::with_limits(Limits {
+    let mut http = local_http_with(Limits {
         max_fetches: 2,
         ..Limits::default()
     });
@@ -321,7 +330,7 @@ fn a_resource_larger_than_its_cap_is_refused() {
         ("/small.css", ok(&[b'a'; 8])),
         ("/big.css", ok(&[b'a'; 9])),
     ]));
-    let mut http = HttpResources::with_limits(Limits {
+    let mut http = local_http_with(Limits {
         max_resource_bytes: 8,
         ..Limits::default()
     });
@@ -346,7 +355,7 @@ fn all_fetches_together_are_capped() {
         ("/b.css", ok(&[b'b'; 6])),
         ("/c.css", ok(&[b'c'; 1])),
     ]));
-    let mut http = HttpResources::with_limits(Limits {
+    let mut http = local_http_with(Limits {
         max_total_bytes: 10,
         ..Limits::default()
     });
@@ -368,7 +377,7 @@ fn a_request_that_takes_too_long_is_a_warning() {
     // no answer comes while the listener is held.
     let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
     let url = format!("http://{}/slow.css", listener.local_addr().expect("addr"));
-    let mut http = HttpResources::with_limits(Limits {
+    let mut http = local_http_with(Limits {
         timeout: Duration::from_millis(200),
         ..Limits::default()
     });
@@ -395,7 +404,10 @@ impl Resources for Local {
 #[test]
 fn mixed_resources_send_web_references_to_the_web_and_the_rest_to_disk() {
     let server = Server::start(BTreeMap::from([("/lib.js", ok(b"web"))]));
-    let mut mixed = MixedResources::new(Local::default());
+    let mut mixed = MixedResources {
+        local: Local::default(),
+        remote: local_http(),
+    };
     let page = "/home/me/site/index.html";
     assert_eq!(mixed.read("app.js", page).expect("local").bytes, b"local");
     assert_eq!(
@@ -419,7 +431,7 @@ fn every_redirect_hop_is_a_fetch() {
         ("/new.html", ok(b"<p>moved</p>")),
     ]));
     let with_fetches = |max_fetches| {
-        HttpResources::with_limits(Limits {
+        local_http_with(Limits {
             max_fetches,
             ..Limits::default()
         })
@@ -447,7 +459,7 @@ fn a_body_that_breaks_off_still_counts_what_it_brought() {
             ..ok(b"abc")
         },
     )]));
-    let mut http = HttpResources::new();
+    let mut http = local_http();
     assert!(http.read("cut.css", &server.url("/")).is_none());
     assert_eq!(http.total_bytes(), 3, "{:?}", messages(&http));
 }
@@ -455,7 +467,7 @@ fn a_body_that_breaks_off_still_counts_what_it_brought() {
 #[test]
 fn data_urls_count_toward_the_total() {
     let server = Server::start(BTreeMap::from([("/a.css", ok(&[b'a'; 6]))]));
-    let mut http = HttpResources::with_limits(Limits {
+    let mut http = local_http_with(Limits {
         max_total_bytes: 10,
         max_resource_bytes: 8,
         ..Limits::default()
@@ -490,7 +502,7 @@ fn a_reference_with_the_base_scheme_and_no_slashes_is_relative() {
 fn a_lookup_that_fails_is_reported_though_another_finds_its_spelling() {
     // Two sheets each import `theme.css`; only the second's exists.
     let server = Server::start(BTreeMap::from([("/b/theme.css", ok(b"theme"))]));
-    let mut http = HttpResources::new();
+    let mut http = local_http();
     assert!(http.read("theme.css", &server.url("/a/site.css")).is_none());
     assert!(http.read("theme.css", &server.url("/b/site.css")).is_some());
     let text = messages(&http).join("\n");
@@ -500,7 +512,10 @@ fn a_lookup_that_fails_is_reported_though_another_finds_its_spelling() {
 #[test]
 fn mixed_resources_do_not_let_a_fetched_sheet_read_local_files() {
     let server = Server::start(BTreeMap::new());
-    let mut mixed = MixedResources::new(Local::default());
+    let mut mixed = MixedResources {
+        local: Local::default(),
+        remote: local_http(),
+    };
     let sheet = server.url("/css/site.css");
     assert!(mixed.read("file:///etc/hostname", &sheet).is_none());
     assert!(mixed.read("/etc/hostname", &sheet).is_none());
@@ -571,7 +586,7 @@ fn a_second_page_takes_no_credentials_or_answers_from_the_first() {
         ("/two.html", ok(b"<p>two</p>")),
         ("/a.gif", ok(b"GIF89a")),
     ]));
-    let mut resources = HttpResources::new();
+    let mut resources = local_http();
     let with_user = server.url("/one.html").replace("http://", "http://u:p@");
     resources.fetch_page(&with_user).expect("the first page");
     let a = Url::parse(&server.url("/a.gif")).expect("a URL");
@@ -610,7 +625,7 @@ fn a_second_page_has_its_own_limits_and_failures() {
         ("/one.html", ok(b"<p>one</p>")),
         ("/two.html", ok(b"<p>two</p>")),
     ]));
-    let mut resources = HttpResources::with_limits(Limits {
+    let mut resources = local_http_with(Limits {
         max_fetches: 1,
         ..Limits::default()
     });
@@ -628,4 +643,159 @@ fn a_second_page_has_its_own_limits_and_failures() {
         "no failure of the first page is reported against the second"
     );
     assert_eq!(resources.fetch_count(), 1);
+}
+
+#[test]
+fn a_page_on_this_machine_or_a_private_network_is_refused_unless_reach_is_any() {
+    let server = Server::start(BTreeMap::from([("/page.html", ok(b"<p>local</p>"))]));
+    let mut public = HttpResources::new();
+    assert_eq!(public.reach(), Reach::Public);
+    for url in [
+        server.url("/page.html"),
+        server.url("/page.html").replace("127.0.0.1", "localhost"),
+        "http://app.localhost/".to_owned(),
+        "http://10.0.0.1/".to_owned(),
+        "http://192.168.1.1/".to_owned(),
+        "http://169.254.169.254/latest/meta-data/".to_owned(),
+        "http://100.64.0.1/".to_owned(),
+        "http://0.0.0.0/".to_owned(),
+        "http://[::1]/".to_owned(),
+        "http://[fd00::1]/".to_owned(),
+        "http://[fe80::1]/".to_owned(),
+        "http://[::ffff:127.0.0.1]/".to_owned(),
+        "http://[64:ff9b::a00:1]/".to_owned(),
+    ] {
+        let err = public.fetch_page(&url).expect_err(&url);
+        let FetchError::Failed { reason, .. } = err else {
+            panic!("{url}: {err:?}");
+        };
+        assert!(
+            reason.contains("not on the public internet"),
+            "{url}: {reason}"
+        );
+    }
+    assert!(server.asked().is_empty(), "nothing reached the server");
+    let mut any = local_http();
+    assert!(any.fetch_page(&server.url("/page.html")).is_ok());
+}
+
+#[test]
+fn a_public_page_cannot_redirect_or_refer_to_this_machine() {
+    let server = Server::start(BTreeMap::from([("/secret", ok(b"secret"))]));
+    let mut public = HttpResources::new();
+    // A reference read as a public page's: refused before any request.
+    assert!(
+        public
+            .read(&server.url("/secret"), "https://example.com/")
+            .is_none()
+    );
+    assert!(
+        public
+            .read("http://[::1]/x.png", "https://example.com/")
+            .is_none()
+    );
+    let diags = public.diagnostics();
+    assert_eq!(diags.len(), 2, "{diags:?}");
+    assert!(
+        diags
+            .iter()
+            .all(|d| d.message.contains("not on the public internet")),
+        "{diags:?}"
+    );
+    assert_eq!(public.fetch_count(), 0);
+    assert!(server.asked().is_empty());
+    // A redirect's target is checked like the page: the hop is refused.
+    let hop = refuse_written_host(&Url::parse("http://127.0.0.1:9/secret").unwrap());
+    assert!(hop.is_err_and(|e| e.contains("127.0.0.1")));
+}
+
+#[test]
+fn public_addresses_are_told_from_the_rest() {
+    for ip in [
+        "93.184.215.14",
+        "1.1.1.1",
+        "2606:4700::1111",
+        "::ffff:8.8.8.8",
+    ] {
+        assert!(is_public(ip.parse().unwrap()), "{ip}");
+    }
+    for ip in [
+        "127.0.0.1",
+        "10.1.2.3",
+        "172.16.0.1",
+        "192.168.0.1",
+        "169.254.0.1",
+        "100.100.0.1",
+        "192.0.0.1",
+        "198.18.0.1",
+        "192.0.2.1",
+        "240.0.0.1",
+        "255.255.255.255",
+        "224.0.0.1",
+        "::1",
+        "::",
+        "fc00::1",
+        "fe80::1",
+        "fec0::1",
+        "2001:db8::1",
+        "ff02::1",
+        "::ffff:10.0.0.1",
+        "64:ff9b::7f00:1",
+        "::127.0.0.1",
+    ] {
+        assert!(!is_public(ip.parse().unwrap()), "{ip}");
+    }
+}
+
+#[test]
+fn a_background_whose_sheet_is_unknown_never_reaches_local_when_a_sheet_was_fetched() {
+    let server = Server::start(BTreeMap::new());
+    let mut mixed = MixedResources {
+        local: Local::default(),
+        remote: local_http(),
+    };
+    let sheet = server.url("/css/site.css");
+    // The page is local, one of its sheets fetched: `secret.png` may be the
+    // fetched sheet's, so the local page's base is not tried.
+    assert!(
+        mixed
+            .read_any("secret.png", &["/home/me/page.html", &sheet])
+            .is_none()
+    );
+    assert!(mixed.local.0.is_empty(), "{:?}", mixed.local.0);
+    // With no fetched sheet among the bases, the local page reads its own.
+    assert!(
+        mixed
+            .read_any("logo.png", &["/home/me/page.html"])
+            .is_some()
+    );
+    assert_eq!(mixed.local.0, ["logo.png"]);
+}
+
+#[test]
+fn a_remote_image_a_fetching_resolver_refused_is_not_handed_to_qt() {
+    assert!(HttpResources::new().fetches_web());
+    assert!(MixedResources::new(Local::default()).fetches_web());
+    let input = Input {
+        html: r#"<img src="http://10.0.0.1/admin.png" width="10" height="10">
+            <div style="width:10px;height:10px;background-image:url(http://169.254.169.254/x.png)"></div>"#
+            .to_owned(),
+        url: "https://example.com/page.html".to_owned(),
+    };
+    let mut resources = HttpResources::new();
+    let output = eldur_convert::convert(&input, &Options::default(), &mut resources);
+    let qml = output.main_qml().expect("Main.qml");
+    assert!(
+        !qml.contains("10.0.0.1") && !qml.contains("169.254.169.254"),
+        "{qml}"
+    );
+    let text = output
+        .diagnostics
+        .iter()
+        .chain(&resources.diagnostics())
+        .map(|d| d.message.clone())
+        .collect::<Vec<_>>()
+        .join("\n");
+    assert!(text.contains("not on the public internet"), "{text}");
+    assert_eq!(resources.fetch_count(), 0);
 }

@@ -70,10 +70,13 @@ pub fn default_output_dir(input: &Path) -> PathBuf {
 const MAX_URL_STEM_BYTES: usize = 200;
 
 /// Computes the default output directory for a page given by an `http(s)`
-/// URL: `<last path segment's stem>_qml/`, or `<host>_qml/` when the path
-/// has no segment, in the current directory. Characters a file name should
-/// not carry become `_`, and a long name is cut to 200 bytes, so that the
-/// directory's name fits the 255 bytes most file systems allow.
+/// URL: `<host>-<last path segment's stem>_qml/`, or `<host>_qml/` when the
+/// path has no segment, in the current directory; a port the URL gives
+/// follows the host (`localhost_8080-index_qml/`). The host keeps pages of
+/// different sites that share a file name, and a local conversion's
+/// `<stem>_qml/`, out of each other's directory. Characters a file name
+/// should not carry become `_`, and a long name is cut to 200 bytes, so that
+/// the directory's name fits the 255 bytes most file systems allow.
 #[must_use]
 pub fn default_output_dir_for_url(url: &str) -> PathBuf {
     let parsed = url::Url::parse(url.trim()).ok();
@@ -85,14 +88,21 @@ pub fn default_output_dir_for_url(url: &str) -> PathBuf {
                 .map_or_else(|| s.clone(), |stem| stem.to_string_lossy().into_owned())
         })
     });
-    let host = parsed
-        .as_ref()
-        .and_then(|u| u.host_str())
-        .map(str::to_ascii_lowercase);
-    let name = segment
-        .or(host)
-        .filter(|n| !n.is_empty())
-        .unwrap_or_else(|| "out".to_owned());
+    let host = parsed.as_ref().and_then(|u| {
+        let host = u.host_str()?.to_ascii_lowercase();
+        Some(match u.port() {
+            Some(port) => format!("{host}_{port}"),
+            None => host,
+        })
+    });
+    let segment = segment.filter(|s| !s.is_empty());
+    let name = match (host, segment) {
+        (Some(host), Some(segment)) => format!("{host}-{segment}"),
+        (host, segment) => segment
+            .or(host)
+            .filter(|n| !n.is_empty())
+            .unwrap_or_else(|| "out".to_owned()),
+    };
     let name: String = name
         .chars()
         .map(|c| {
@@ -325,7 +335,13 @@ fn execute_convert_url(
     let out_dir = args.resolved_output_dir();
     let options = args.to_convert_options();
 
-    let mut resources = eldur_fetch::HttpResources::new();
+    let reach = if args.allow_private_hosts {
+        eldur_fetch::Reach::Any
+    } else {
+        eldur_fetch::Reach::Public
+    };
+    let mut resources =
+        eldur_fetch::HttpResources::with_reach(eldur_fetch::Limits::default(), reach);
     let conv_input = resources.fetch_page(url).map_err(|err| match err {
         eldur_fetch::FetchError::NotHttp { .. } => anyhow!("{shown} is not an http(s) URL"),
         eldur_fetch::FetchError::Failed { reason, .. } => {
