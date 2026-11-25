@@ -28,7 +28,7 @@ mise run install                  # eldur onto ~/.cargo/bin
 mise run install --root ~/.local  # or under another prefix
 eldur convert page.html -o out/
 qml6 out/Main.qml                 # or: ljos run out/Main.qml
-eldur convert https://example.com/blog/post.html   # into post_qml/
+eldur convert https://example.com/                 # into example.com_qml/
 ```
 
 A URL's page is fetched over HTTP(S) with the style sheets, scripts and
