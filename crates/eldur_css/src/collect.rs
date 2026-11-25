@@ -281,6 +281,24 @@ pub(crate) fn resolve_href(base: Option<&str>, href: &str) -> String {
 
     let (href_path, href_suffix) = split_query_or_fragment(href);
 
+    // A `//host/path` base keeps its host: the page's scheme is put in front
+    // of it by whoever fetches (HTML's `<base href="//cdn.example/">`).
+    if let Some((authority, base_path)) = split_protocol_relative(base_raw) {
+        if href.starts_with("//") {
+            return href.to_owned();
+        }
+        let path = if href_path.starts_with('/') {
+            href_path.to_owned()
+        } else {
+            format!(
+                "{}{href_path}",
+                parent_dir_with_trailing_slash(base_path, true)
+            )
+        };
+        let norm = normalize_segments(&path, true);
+        return format!("{authority}{norm}{href_suffix}");
+    }
+
     if let Some((origin_prefix, base_path)) = split_url_origin_and_path(base_raw) {
         if href.starts_with("//") {
             if let Some(colon) = origin_prefix.find(':') {
@@ -330,6 +348,20 @@ fn split_query_or_fragment(s: &str) -> (&str, &str) {
     match s.find(['?', '#']) {
         Some(idx) => (&s[..idx], &s[idx..]),
         None => (s, ""),
+    }
+}
+
+/// `//host/dir/` as (`//host`, `/dir/`); `None` for anything else (`///x`
+/// is a path).
+fn split_protocol_relative(url: &str) -> Option<(&str, &str)> {
+    let rest = url.strip_prefix("//")?;
+    if rest.is_empty() || rest.starts_with('/') {
+        return None;
+    }
+    let (url, _) = split_query_or_fragment(url);
+    match url[2..].find('/') {
+        Some(slash) => Some((&url[..2 + slash], &url[2 + slash..])),
+        None => Some((url, "/")),
     }
 }
 
