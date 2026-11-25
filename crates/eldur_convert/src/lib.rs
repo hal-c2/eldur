@@ -78,6 +78,16 @@ pub trait Resources {
     /// `base`, the URL of the document or style sheet that references it).
     /// Returns its resolved name and bytes.
     fn read(&mut self, url: &str, base: &str) -> Option<Resource>;
+
+    /// Reads `url` against each of `bases` in turn and returns the first
+    /// answer: one lookup whose base is not known (a `background-image`,
+    /// whose computed style no longer says which sheet it came from). A
+    /// resolver that reports what it could not read reports nothing of this
+    /// lookup when a base serves it. By default, [`Resources::read`] for
+    /// each base.
+    fn read_any(&mut self, url: &str, bases: &[&str]) -> Option<Resource> {
+        bases.iter().find_map(|base| self.read(url, base))
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
