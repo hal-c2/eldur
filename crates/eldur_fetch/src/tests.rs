@@ -705,8 +705,30 @@ fn a_public_page_cannot_redirect_or_refer_to_this_machine() {
     assert_eq!(public.fetch_count(), 0);
     assert!(server.asked().is_empty());
     // A redirect's target is checked like the page: the hop is refused.
-    let hop = refuse_written_host(&Url::parse("http://127.0.0.1:9/secret").unwrap());
+    let hop = refuse_written_host(&Url::parse("http://127.0.0.1:9/secret").expect("a URL"));
     assert!(hop.is_err_and(|e| e.contains("127.0.0.1")));
+}
+
+#[test]
+fn a_name_that_resolves_only_to_this_machine_is_refused_by_the_resolver() {
+    use ureq::unversioned::resolver::Resolver as _;
+    let config = ureq::config::Config::default();
+    let resolve = |uri: &str| {
+        PublicOnly::default().resolve(
+            &uri.parse().expect("a URI"),
+            &config,
+            ureq::unversioned::transport::NextTimeout::default(),
+        )
+    };
+    // `localhost` is a name, not a literal: what refuses it here is the
+    // address it resolves to, as for any name a page writes.
+    let refused = resolve("http://localhost:9/secret").expect_err("localhost is this machine");
+    assert!(
+        matches!(&refused, ureq::Error::Other(e) if e.to_string().contains("not on the public internet")),
+        "{refused:?}"
+    );
+    let kept = resolve("http://93.184.215.14:80/").expect("a public address");
+    assert!(kept.iter().all(|addr| is_public(addr.ip())), "{kept:?}");
 }
 
 #[test]
@@ -717,7 +739,7 @@ fn public_addresses_are_told_from_the_rest() {
         "2606:4700::1111",
         "::ffff:8.8.8.8",
     ] {
-        assert!(is_public(ip.parse().unwrap()), "{ip}");
+        assert!(is_public(ip.parse().expect("an address")), "{ip}");
     }
     for ip in [
         "127.0.0.1",
@@ -742,8 +764,12 @@ fn public_addresses_are_told_from_the_rest() {
         "::ffff:10.0.0.1",
         "64:ff9b::7f00:1",
         "::127.0.0.1",
+        "2002:7f00:1::1",
+        "2002:a00:1::1",
+        "2001:0:4136:e378:8000:63bf:3fff:fdd2",
+        "100::1",
     ] {
-        assert!(!is_public(ip.parse().unwrap()), "{ip}");
+        assert!(!is_public(ip.parse().expect("an address")), "{ip}");
     }
 }
 
