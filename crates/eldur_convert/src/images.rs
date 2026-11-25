@@ -13,8 +13,8 @@ use crate::{OutputFile, Resources};
 /// What an `<img>` shows.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ImageAsset {
-    /// The `Image.source`: a copied file under `assets/`, or the URL as
-    /// written when it is not a local file.
+    /// The `Image.source`: a copied file under `assets/`, or the URL when
+    /// it is a `data:` URL or a remote one the resolver does not serve.
     pub source: String,
     /// What the file says of its size; `None` when it was not read (a
     /// remote or `data:` URL, which Qt loads itself).
@@ -67,20 +67,29 @@ pub(crate) fn collect(
         let Some(src) = element.attr("src").map(str::trim).filter(|s| !s.is_empty()) else {
             continue;
         };
-        if src.contains("://") || src.starts_with("data:") {
-            // Qt's Image loads these itself; the layout uses the
-            // element's width and height attributes.
+        let resolved = eldur_css::resolve_url(base_href.as_deref(), src);
+        // Qt's Image loads these itself; the layout uses the element's
+        // width and height attributes. A remote one is copied when the
+        // resolver serves it (a fetched page's does).
+        let pass_through = |images: &mut Images| {
             images.by_node.insert(
                 node,
                 ImageAsset {
-                    source: src.to_owned(),
+                    source: resolved.clone(),
                     natural: None,
                 },
             );
+        };
+        if resolved.starts_with("data:") {
+            pass_through(&mut images);
             continue;
         }
-        let resolved = eldur_css::resolve_url(base_href.as_deref(), src);
+        let remote = resolved.contains("://");
         let Some(resource) = resources.read(&resolved, base) else {
+            if remote {
+                pass_through(&mut images);
+                continue;
+            }
             diags.warning(
                 "html",
                 crate::boxes::node_line(doc, node),
@@ -92,7 +101,7 @@ pub(crate) fn collect(
             images.by_node.insert(node, asset.clone());
             continue;
         }
-        let path = unique_path(asset_path(src), &images.files);
+        let path = unique_path(asset_path(asset_name(src, &resolved)), &images.files);
         // The size is read from the file as written, before the copy drops
         // what Chromium ignores: how Chromium sizes it depends on those.
         let asset = ImageAsset {
@@ -158,14 +167,25 @@ pub(crate) fn add_background_files(
         if images.backgrounds.contains_key(&url) {
             continue;
         }
-        if url.contains("://") || url.starts_with("data:") {
+        if url.starts_with("data:") {
             images.backgrounds.insert(url.clone(), url);
             continue;
         }
-        let bases =
-            std::iter::once(base).chain(sheets.iter().filter_map(|s| s.base_url.as_deref()));
-        let found = bases.into_iter().find_map(|b| resources.read(&url, b));
-        let Some(mut resource) = found else {
+        // An absolute URL needs no base; a remote one Qt loads itself when
+        // the resolver does not serve it.
+        let remote = url.contains("://");
+        let bases: Vec<&str> = if remote {
+            vec![base]
+        } else {
+            std::iter::once(base)
+                .chain(sheets.iter().filter_map(|s| s.base_url.as_deref()))
+                .collect()
+        };
+        let Some(mut resource) = resources.read_any(&url, &bases) else {
+            if remote {
+                images.backgrounds.insert(url.clone(), url);
+                continue;
+            }
             diags.warning(
                 "css",
                 None,
@@ -186,7 +206,7 @@ pub(crate) fn add_background_files(
                 })
             });
         let source = known.unwrap_or_else(|| {
-            let path = unique_path(asset_path(&url), &images.files);
+            let path = unique_path(asset_path(asset_name(&url, &url)), &images.files);
             let source = path.to_string_lossy().replace('\\', "/");
             images.files.push(OutputFile {
                 path,
@@ -195,6 +215,15 @@ pub(crate) fn add_background_files(
             source
         });
         images.backgrounds.insert(url, source);
+    }
+}
+
+/// What names a copied file: the path as written, or a remote URL's path
+/// (its scheme and host are no file name).
+fn asset_name<'a>(written: &'a str, resolved: &'a str) -> &'a str {
+    match resolved.split_once("://") {
+        Some((_, rest)) => rest.find('/').map_or("", |slash| &rest[slash..]),
+        None => written,
     }
 }
 
@@ -207,6 +236,10 @@ fn asset_path(src: &str) -> PathBuf {
         if !matches!(part, "" | "." | "..") {
             out.push(part);
         }
+    }
+    // A URL with no path (`https://example.com`) still names a file.
+    if out.as_os_str() == "assets" {
+        out.push("image");
     }
     out
 }
