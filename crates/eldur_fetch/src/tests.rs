@@ -14,6 +14,9 @@ struct Reply {
     status: &'static str,
     headers: Vec<(String, String)>,
     body: Vec<u8>,
+    /// The `Content-Length` sent, when it is not the body's: a body that
+    /// breaks off.
+    length: Option<usize>,
 }
 
 fn ok(body: &[u8]) -> Reply {
@@ -21,6 +24,7 @@ fn ok(body: &[u8]) -> Reply {
         status: "200 OK",
         headers: Vec::new(),
         body: body.to_vec(),
+        length: None,
     }
 }
 
@@ -29,6 +33,7 @@ fn redirect(to: &str) -> Reply {
         status: "302 Found",
         headers: vec![("Location".to_owned(), to.to_owned())],
         body: Vec::new(),
+        length: None,
     }
 }
 
@@ -91,6 +96,7 @@ fn serve(
         status: "404 Not Found",
         headers: Vec::new(),
         body: b"not found".to_vec(),
+        length: None,
     });
     let mut head = format!("HTTP/1.1 {}\r\n", reply.status);
     for (name, value) in &reply.headers {
@@ -98,7 +104,7 @@ fn serve(
     }
     head.push_str(&format!(
         "Content-Length: {}\r\nConnection: close\r\n\r\n",
-        reply.body.len()
+        reply.length.unwrap_or(reply.body.len())
     ));
     let _ = stream.write_all(head.as_bytes());
     let _ = stream.write_all(&reply.body);
@@ -397,4 +403,101 @@ fn mixed_resources_send_web_references_to_the_web_and_the_rest_to_disk() {
     let remote = mixed.read("lib.js", &server.url("/css/../site.css"));
     assert_eq!(remote.expect("beside the remote sheet").bytes, b"web");
     assert_eq!(mixed.local.0, ["app.js"]);
+}
+
+#[test]
+fn every_redirect_hop_is_a_fetch() {
+    let server = Server::start(BTreeMap::from([
+        ("/old", redirect("/new.html")),
+        ("/new.html", ok(b"<p>moved</p>")),
+    ]));
+    let with_fetches = |max_fetches| {
+        HttpResources::with_limits(Limits {
+            max_fetches,
+            ..Limits::default()
+        })
+    };
+    let mut one = with_fetches(1);
+    let err = one
+        .fetch_page(&server.url("/old"))
+        .expect_err("the redirect needs a second request");
+    assert!(err.to_string().contains("requests"), "{err}");
+    assert_eq!(one.fetch_count(), 1);
+
+    let mut two = with_fetches(2);
+    let input = two.fetch_page(&server.url("/old")).expect("both fit");
+    assert_eq!(input.html, "<p>moved</p>");
+    assert_eq!(input.url, server.url("/new.html"));
+    assert_eq!(two.fetch_count(), 2);
+}
+
+#[test]
+fn a_body_that_breaks_off_still_counts_what_it_brought() {
+    let server = Server::start(BTreeMap::from([(
+        "/cut.css",
+        Reply {
+            length: Some(10),
+            ..ok(b"abc")
+        },
+    )]));
+    let mut http = HttpResources::new();
+    assert!(http.read("cut.css", &server.url("/")).is_none());
+    assert_eq!(http.total_bytes(), 3, "{:?}", messages(&http));
+}
+
+#[test]
+fn data_urls_count_toward_the_total() {
+    let server = Server::start(BTreeMap::from([("/a.css", ok(&[b'a'; 6]))]));
+    let mut http = HttpResources::with_limits(Limits {
+        max_total_bytes: 10,
+        max_resource_bytes: 8,
+        ..Limits::default()
+    });
+    let base = server.url("/");
+    assert!(http.read("a.css", &base).is_some());
+    assert!(http.read("data:,12345", &base).is_none(), "6 + 5 > 10");
+    assert!(http.read("data:,1234", &base).is_some(), "6 + 4 <= 10");
+    assert_eq!(http.total_bytes(), 10);
+    let text = messages(&http).join("\n");
+    assert!(
+        text.contains("data:,12345") && text.contains("in all"),
+        "{text}"
+    );
+}
+
+#[test]
+fn a_reference_with_the_base_scheme_and_no_slashes_is_relative() {
+    // WHATWG URL: a special scheme matching the base's, without `//`, is a
+    // relative reference.
+    let joined = resolve("http:assets/x.css", "http://example.com/blog/index.html")
+        .expect("a reference")
+        .expect("resolves");
+    assert_eq!(joined.as_str(), "http://example.com/blog/assets/x.css");
+    let other = resolve("https:x.css", "http://example.com/blog/index.html")
+        .expect("a reference")
+        .expect("resolves");
+    assert_eq!(other.as_str(), "https://x.css/");
+}
+
+#[test]
+fn a_lookup_that_fails_is_reported_though_another_finds_its_spelling() {
+    // Two sheets each import `theme.css`; only the second's exists.
+    let server = Server::start(BTreeMap::from([("/b/theme.css", ok(b"theme"))]));
+    let mut http = HttpResources::new();
+    assert!(http.read("theme.css", &server.url("/a/site.css")).is_none());
+    assert!(http.read("theme.css", &server.url("/b/site.css")).is_some());
+    let text = messages(&http).join("\n");
+    assert!(text.contains(&server.url("/a/theme.css")), "{text}");
+}
+
+#[test]
+fn mixed_resources_do_not_let_a_fetched_sheet_read_local_files() {
+    let server = Server::start(BTreeMap::new());
+    let mut mixed = MixedResources::new(Local::default());
+    let sheet = server.url("/css/site.css");
+    assert!(mixed.read("file:///etc/hostname", &sheet).is_none());
+    assert!(mixed.read("/etc/hostname", &sheet).is_none());
+    assert!(mixed.local.0.is_empty(), "{:?}", mixed.local.0);
+    let text = messages(&mixed.remote).join("\n");
+    assert!(text.contains("file:"), "{text}");
 }

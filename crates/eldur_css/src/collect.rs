@@ -427,6 +427,22 @@ mod tests {
     }
 
     #[test]
+    fn a_protocol_relative_base_keeps_its_host() {
+        let base = Some("//cdn.example/assets/");
+        assert_eq!(resolve_href(base, "app.js"), "//cdn.example/assets/app.js");
+        assert_eq!(resolve_href(base, "../app.js"), "//cdn.example/app.js");
+        assert_eq!(resolve_href(base, "/root.css"), "//cdn.example/root.css");
+        assert_eq!(
+            resolve_href(base, "//other.example/x.css"),
+            "//other.example/x.css"
+        );
+        assert_eq!(
+            resolve_href(Some("//cdn.example"), "app.js"),
+            "//cdn.example/app.js"
+        );
+    }
+
+    #[test]
     fn url_resolution_handles_urls_and_relative_paths() {
         assert_eq!(resolve_href(None, "main.css"), "main.css");
         assert_eq!(resolve_href(Some("main.css"), "sub.css"), "sub.css");
