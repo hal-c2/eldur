@@ -527,19 +527,39 @@ fn a_message_s_urls_are_shown_without_secrets_wherever_they_end() {
             "error (Http://h.invalid/c?sig=s4) and \"https://h.invalid/d?sig=s5\"",
             "error (http://h.invalid/c) and \"https://h.invalid/d\"",
         ),
-        // A reference relative to the page, and one without a scheme.
+        // A reference the page read, relative to it, and one without a
+        // scheme.
         (
             "script `missing.js?sig=s6` and `//u:p@h.invalid/e.js?sig=s7`",
             "script `missing.js` and `//h.invalid/e.js`",
         ),
-        // A local diagnostic is shown as it is.
+        // A reference without a query is shown as it is.
         (
             "image `img/a b.png` was not found",
             "image `img/a b.png` was not found",
         ),
+        // Quoted text that is no reference the page read keeps its `#`
+        // and `?`, a backtick inside it too.
+        (
+            "invalid value `#zzz` for property `color`",
+            "invalid value `#zzz` for property `color`",
+        ),
+        (
+            "selector `a#x:::` does not parse in `q(`a`)?b#c`",
+            "selector `a#x:::` does not parse in `q(`a`)?b#c`",
+        ),
     ];
+    let mut resources = HttpResources::new();
+    for written in [
+        "missing.js?sig=s6",
+        "//u:p@h.invalid/e.js?sig=s7",
+        "img/a b.png",
+    ] {
+        // Against no base, nothing is fetched: the reference is only read.
+        assert!(resources.read(written, "").is_none());
+    }
     for (text, shown) in cases {
-        assert_eq!(redacted_in(text), shown, "{text}");
+        assert_eq!(resources.shown(text), shown, "{text}");
     }
 }
 
@@ -575,4 +595,36 @@ fn a_second_page_takes_no_credentials_or_answers_from_the_first() {
         2,
         "the image is asked for again, not answered from the first page"
     );
+    assert_eq!(resources.fetch_count(), 2, "the page and its image");
+    assert_eq!(
+        resources.fetched().len(),
+        2,
+        "only the second page's requests"
+    );
+}
+
+#[test]
+fn a_second_page_has_its_own_limits_and_failures() {
+    let server = Server::start(BTreeMap::from([
+        ("/one.html", ok(b"<p>one</p>")),
+        ("/two.html", ok(b"<p>two</p>")),
+    ]));
+    let mut resources = HttpResources::with_limits(Limits {
+        max_fetches: 1,
+        ..Limits::default()
+    });
+    resources
+        .fetch_page(&server.url("/one.html"))
+        .expect("the first page");
+    assert!(resources.read(&server.url("/gone.gif"), "").is_none());
+    assert_eq!(resources.diagnostics().len(), 1, "the first page's cap");
+
+    resources
+        .fetch_page(&server.url("/two.html"))
+        .expect("the second page, under its own cap");
+    assert!(
+        resources.diagnostics().is_empty(),
+        "no failure of the first page is reported against the second"
+    );
+    assert_eq!(resources.fetch_count(), 1);
 }

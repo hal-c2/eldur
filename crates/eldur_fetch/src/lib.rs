@@ -109,6 +109,9 @@ pub struct HttpResources {
     answers: HashMap<String, Result<Resource, String>>,
     failures: Vec<Failure>,
     fetched: Vec<String>,
+    /// The references the page read that are not absolute URLs, as written:
+    /// what a diagnostic quotes, which [`HttpResources::shown`] redacts.
+    written: Vec<String>,
     /// The page's origin and the user name and password its URL gave.
     credentials: Option<(url::Origin, String, Option<String>)>,
 }
@@ -166,6 +169,7 @@ impl HttpResources {
             answers: HashMap::new(),
             failures: Vec::new(),
             fetched: Vec::new(),
+            written: Vec::new(),
             credentials: None,
         }
     }
@@ -180,8 +184,9 @@ impl HttpResources {
     /// found after redirects, as a browser has it, so its references resolve
     /// there. The bytes are read as UTF-8, invalid sequences replaced. The
     /// fetch counts against the same [`Limits`] as the page's references.
-    /// Each page starts afresh: an earlier page's credentials and the
-    /// answers fetched with them do not carry over to it.
+    /// Each page starts afresh: an earlier page's credentials, answers,
+    /// failures and requests do not carry over to it, and [`Limits`] are
+    /// counted per page.
     pub fn fetch_page(&mut self, url: &str) -> Result<Input, FetchError> {
         let mut target = Url::parse(url.trim())
             .ok()
@@ -190,6 +195,11 @@ impl HttpResources {
         target.set_fragment(None);
         self.credentials = None;
         self.answers.clear();
+        self.fetches = 0;
+        self.total_bytes = 0;
+        self.failures.clear();
+        self.fetched.clear();
+        self.written.clear();
         if !target.username().is_empty() || target.password().is_some() {
             self.credentials = Some((
                 target.origin(),
@@ -245,6 +255,23 @@ impl HttpResources {
     #[must_use]
     pub fn fetch_count(&self) -> usize {
         self.fetches
+    }
+
+    /// `text`, a diagnostic of this page, as it may be shown: every
+    /// `http(s)` URL [`redacted`], and every reference the page read quoted
+    /// in backticks without the query, fragment or user it was written
+    /// with. Other quoted text (a CSS value such as `#fff`, a selector) is
+    /// shown as it is.
+    #[must_use]
+    pub fn shown(&self, text: &str) -> String {
+        let mut out = redacted_in(text);
+        for written in &self.written {
+            let cut = redacted_reference(written);
+            if cut != *written {
+                out = out.replace(&format!("`{written}`"), &format!("`{cut}`"));
+            }
+        }
+        out
     }
 
     /// The bytes all fetches have brought so far, those of a body that broke
@@ -443,10 +470,8 @@ pub fn redacted(url: &str) -> String {
 }
 
 /// `text` with every `http(s)` URL in it [`redacted`], the scheme in any
-/// case, and every reference quoted in backticks without its query and
-/// fragment: a diagnostic's message can quote a reference that carries a
-/// signed query, absolute or relative to the page. A URL ends at whitespace
-/// or at the quote, bracket or backtick around it.
+/// case. A URL ends at whitespace or at the quote, bracket or backtick
+/// around it.
 #[must_use]
 pub fn redacted_in(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
@@ -470,32 +495,22 @@ pub fn redacted_in(text: &str) -> String {
         rest = &url[end..];
     }
     out.push_str(rest);
-    quoted_redacted(&out)
+    out
 }
 
-/// `text` with each backtick-quoted reference that is not an absolute URL
-/// (those are [`redacted`] already) cut at its query or fragment, and one
-/// without a scheme (`//user:pw@host/x`) also without its user.
-fn quoted_redacted(text: &str) -> String {
-    let mut out = String::with_capacity(text.len());
-    let mut parts = text.split('`');
-    out.push_str(parts.next().unwrap_or(""));
-    let mut inside = true;
-    for part in parts {
-        out.push('`');
-        if inside && !part.contains("://") {
-            if let Some(rest) = part.strip_prefix("//") {
-                let shown = redacted(&format!("http://{rest}"));
-                out.push_str(shown.strip_prefix("http:").unwrap_or(&shown));
-            } else {
-                out.push_str(part.split(['?', '#']).next().unwrap_or(part));
-            }
-        } else {
-            out.push_str(part);
-        }
-        inside = !inside;
+/// A reference as written, as it may be shown: a relative one without its
+/// query and fragment, one without a scheme (`//user:pw@host/x`) also
+/// without its user.
+fn redacted_reference(written: &str) -> String {
+    if let Some(rest) = written.strip_prefix("//") {
+        let shown = redacted(&format!("http://{rest}"));
+        return shown.strip_prefix("http:").unwrap_or(&shown).to_owned();
     }
-    out
+    written
+        .split(['?', '#'])
+        .next()
+        .unwrap_or(written)
+        .to_owned()
 }
 
 /// `written` resolved against `base`, without its fragment: `None` for a
@@ -527,6 +542,12 @@ fn resolve(written: &str, base: &str) -> Option<Result<Url, String>> {
 impl Resources for HttpResources {
     fn read(&mut self, url: &str, base: &str) -> Option<Resource> {
         let written = url.trim();
+        if !written.contains("://")
+            && !written.starts_with("data:")
+            && !self.written.iter().any(|w| w == written)
+        {
+            self.written.push(written.to_owned());
+        }
         let target = match resolve(written, base)? {
             Ok(target) => target,
             Err(reason) => {
