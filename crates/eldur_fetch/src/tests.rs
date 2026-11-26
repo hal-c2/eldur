@@ -776,6 +776,9 @@ fn a_redirect_or_a_name_that_leads_off_the_public_internet_is_refused() {
             "{diags:?}"
         );
     }
+    // The hop check refuses before a fetch is counted, the resolver after:
+    // /page 1, /to-ip 1 (refused at its hop), /to-name 2, private.test 1.
+    assert_eq!(http.fetch_count(), 5);
     assert_eq!(server.asked(), ["/page", "/to-ip", "/to-name"]);
 }
 
