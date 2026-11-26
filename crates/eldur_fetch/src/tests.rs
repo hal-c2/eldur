@@ -704,9 +704,79 @@ fn a_public_page_cannot_redirect_or_refer_to_this_machine() {
     );
     assert_eq!(public.fetch_count(), 0);
     assert!(server.asked().is_empty());
-    // A redirect's target is checked like the page: the hop is refused.
-    let hop = refuse_written_host(&Url::parse("http://127.0.0.1:9/secret").expect("a URL"));
-    assert!(hop.is_err_and(|e| e.contains("127.0.0.1")));
+}
+
+/// Plays the public internet in the tests below: 127.0.0.1, where the
+/// local server is, and nothing else.
+fn only_the_server_is_public(ip: IpAddr) -> bool {
+    ip == IpAddr::V4(Ipv4Addr::LOCALHOST)
+}
+
+/// Resolves `public.test` to the server and every other name to
+/// 127.0.0.2, which [`only_the_server_is_public`] counts as private.
+#[derive(Debug)]
+struct Names;
+
+impl ureq::unversioned::resolver::Resolver for Names {
+    fn resolve(
+        &self,
+        uri: &ureq::http::Uri,
+        _: &ureq::config::Config,
+        _: ureq::unversioned::transport::NextTimeout,
+    ) -> Result<ureq::unversioned::resolver::ResolvedSocketAddrs, ureq::Error> {
+        let ip = if uri.host() == Some("public.test") {
+            Ipv4Addr::LOCALHOST
+        } else {
+            Ipv4Addr::new(127, 0, 0, 2)
+        };
+        let port = uri.port_u16().unwrap_or(80);
+        let mut addrs = self.empty();
+        addrs.push((ip, port).into());
+        Ok(addrs)
+    }
+}
+
+#[test]
+fn a_redirect_or_a_name_that_leads_off_the_public_internet_is_refused() {
+    // Refused before any connection, so no server needs to listen there.
+    let to_private_ip = "http://127.0.0.2:9/secret";
+    let to_private_name = "http://private.test:9/secret";
+    let server = Server::start(BTreeMap::from([
+        ("/page", ok(b"<p>hi</p>")),
+        ("/to-ip", redirect(to_private_ip)),
+        ("/to-name", redirect(to_private_name)),
+    ]));
+    let port = server.origin.rsplit(':').next().expect("a port").to_owned();
+    let mut http = HttpResources::with_public(Limits::default(), only_the_server_is_public, Names);
+    let at = |path: &str| format!("http://public.test:{port}{path}");
+    // A name that resolves to the public stand-in is fetched: the refusals
+    // below are the resolver's and the hop check's, not a broken agent.
+    assert!(http.read(&at("/page"), "https://example.com/").is_some());
+    // A redirect to a private address is refused at the hop, and one to a
+    // name resolving to it by the resolver; neither reaches the server.
+    assert!(http.read(&at("/to-ip"), "https://example.com/").is_none());
+    assert!(http.read(&at("/to-name"), "https://example.com/").is_none());
+    // A page given by a name that resolves only to a private address.
+    assert!(
+        http.read(
+            &format!("http://private.test:{port}/page"),
+            "https://example.com/"
+        )
+        .is_none()
+    );
+    let diags = http.diagnostics();
+    assert_eq!(diags.len(), 3, "{diags:?}");
+    for (diag, host) in diags
+        .iter()
+        .zip(["127.0.0.2", "private.test", "private.test"])
+    {
+        assert!(
+            diag.message
+                .contains(&format!("refused: {host} is not on the public internet")),
+            "{diags:?}"
+        );
+    }
+    assert_eq!(server.asked(), ["/page", "/to-ip", "/to-name"]);
 }
 
 #[test]

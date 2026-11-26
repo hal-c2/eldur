@@ -125,6 +125,10 @@ pub struct HttpResources {
     agent: ureq::Agent,
     limits: Limits,
     reach: Reach,
+    /// What [`Reach::Public`] counts as the public internet: [`is_public`],
+    /// and in tests a stand-in, so that a local server can play a public
+    /// host.
+    public: fn(IpAddr) -> bool,
     fetches: usize,
     total_bytes: u64,
     /// By request URL: the resource, or why it was not served.
@@ -172,6 +176,30 @@ impl HttpResources {
     /// With the given bounds and reach.
     #[must_use]
     pub fn with_reach(limits: Limits, reach: Reach) -> Self {
+        Self::with_parts(limits, reach, PublicOnly::default())
+    }
+
+    /// Reaching what `public` counts as public, names resolved by `inner`:
+    /// the whole fetch, the resolver and every hop's check, driven against
+    /// a local server.
+    #[cfg(test)]
+    fn with_public(
+        limits: Limits,
+        public: fn(IpAddr) -> bool,
+        inner: impl ureq::unversioned::resolver::Resolver,
+    ) -> Self {
+        Self::with_parts(
+            limits,
+            Reach::Public,
+            PublicOnly {
+                inner: Box::new(inner),
+                public,
+            },
+        )
+    }
+
+    fn with_parts(limits: Limits, reach: Reach, resolver: PublicOnly) -> Self {
+        let public = resolver.public;
         // The platform's verifier and roots rather than ureq's bundled
         // webpki-roots (CDLA-Permissive-2.0, not a licence this project
         // takes); ring as rustls's provider, passed here so that no
@@ -193,13 +221,14 @@ impl HttpResources {
             Reach::Public => ureq::Agent::with_parts(
                 config,
                 ureq::unversioned::transport::DefaultConnector::default(),
-                PublicOnly::default(),
+                resolver,
             ),
         };
         Self {
             agent,
             limits,
             reach,
+            public,
             fetches: 0,
             total_bytes: 0,
             answers: HashMap::new(),
@@ -371,7 +400,7 @@ impl HttpResources {
             // Checked before each hop is counted: the page and every
             // redirect it gives. The resolver checks what a name leads to.
             if self.reach == Reach::Public {
-                refuse_written_host(&at)?;
+                refuse_written_host(&at, self.public)?;
             }
             self.take_request()?;
             let mut response = self
@@ -507,10 +536,10 @@ impl std::error::Error for NotPublic {}
 /// Refuses a URL whose host, as written, is this machine or an address
 /// that is not public. A name is left to [`PublicOnly`], which sees what it
 /// resolves to.
-fn refuse_written_host(at: &Url) -> Result<(), String> {
+fn refuse_written_host(at: &Url, public: fn(IpAddr) -> bool) -> Result<(), String> {
     let refused = match at.host() {
-        Some(url::Host::Ipv4(ip)) => !is_public(IpAddr::V4(ip)),
-        Some(url::Host::Ipv6(ip)) => !is_public(IpAddr::V6(ip)),
+        Some(url::Host::Ipv4(ip)) => !public(IpAddr::V4(ip)),
+        Some(url::Host::Ipv6(ip)) => !public(IpAddr::V6(ip)),
         // RFC 6761: `localhost` and every name under it is this machine,
         // whatever a resolver says.
         Some(url::Host::Domain(name)) => {
@@ -580,9 +609,19 @@ fn is_public_v4(ip: Ipv4Addr) -> bool {
 /// connection is made to what is kept, so a name cannot pass the check with
 /// one address and connect to another. A proxy's own address is the
 /// person's choice, not the page's, and is kept as it resolves.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct PublicOnly {
-    inner: ureq::unversioned::resolver::DefaultResolver,
+    inner: Box<dyn ureq::unversioned::resolver::Resolver>,
+    public: fn(IpAddr) -> bool,
+}
+
+impl Default for PublicOnly {
+    fn default() -> Self {
+        Self {
+            inner: Box::new(ureq::unversioned::resolver::DefaultResolver::default()),
+            public: is_public,
+        }
+    }
 }
 
 impl ureq::unversioned::resolver::Resolver for PublicOnly {
@@ -601,7 +640,7 @@ impl ureq::unversioned::resolver::Resolver for PublicOnly {
             return Ok(addrs);
         }
         let mut public = self.inner.empty();
-        for addr in addrs.iter().filter(|addr| is_public(addr.ip())) {
+        for addr in addrs.iter().filter(|addr| (self.public)(addr.ip())) {
             public.push(*addr);
         }
         if public.is_empty() {
